@@ -1,5 +1,5 @@
 # used to create the object
-name: Cartpole
+name: FloatingPlatform
 
 physics_engine: ${..physics_engine}
 
