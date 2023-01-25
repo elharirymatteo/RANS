@@ -1,7 +1,7 @@
 
 from omniisaacgymenvs.tasks.base.rl_task import RLTask
 from omniisaacgymenvs.robots.articulations.floating_platform import FloatingPlatform
-from omniisaacgymenvs.robots.articulations.views.floating_platform_view import FloatingPlarformView
+from omniisaacgymenvs.robots.articulations.views.floating_platform_view import FloatingPlatformView
 from omni.isaac.core.articulations import ArticulationView
 
 from omni.isaac.core.utils.torch.rotations import *
@@ -40,34 +40,35 @@ class FloatingPlatformTask(RLTask):
 
         self._fp_position = torch.tensor([0, 0, 1.0])
         self._ball_position = torch.tensor([0, 0, 1.0])
-        print("PRE INIT")
+
         # call parent class’s __init__
         RLTask.__init__(self, name, env)
-            
+
+        self.all_indices = torch.arange(self._num_envs, dtype=torch.int32, device=self._device)
+
+        return
 
     def set_up_scene(self, scene) -> None:
-        fp = self.get_floating_platform()
-        self.get_target()
 
-        # self.get_target()
-        # implement environment setup here
-        scene.add(fp) # add a robot actor to the stage
+        self.get_floating_platform()
+        self.get_target()
         RLTask.set_up_scene(self, scene) # pass scene to parent class - this method in RLTask also uses GridCloner to clone the robot and adds a ground plane if desired
 
-        root_path = "/robot/" 
-        #self._my_robots = RigidPrimView(prim_paths_expr=root_path, name="robot") 
+        root_path = "/World/envs/.*/robot" 
+       # self._fp = FloatingPlatformView(prim_paths_expr=root_path, name="floating_platform_view") 
         self._balls = RigidPrimView(prim_paths_expr="/World/envs/.*/ball")
-
-        #scene.add(self._my_robots) # add view to scene for initialization
+       # print(f'\n\n FP: {self._fp} \n\n') 
+      #  scene.add(self._fp) # add view to scene for initialization
         scene.add(self._balls)
+      #  for i in range(4):
+           # scene.add(self._fp.thrusters[i])
         return
 
     def get_floating_platform(self):
-        fp = FloatingPlatform(prim_path="/robot", name="robot",
+        fp = FloatingPlatform(prim_path=self.default_zero_env_path + "/robot/base_link/Cylinder", name="floating_platform",
                             translation=self._fp_position)
-        return fp
-        # self._sim_config.apply_articulation_settings("floating_platform", get_prim_at_path(fp.prim_path),
-        #                                                self._sim_config.parse_actor_config("floating_platofrm"))
+        self._sim_config.apply_articulation_settings("floating_platform", get_prim_at_path(fp.prim_path),
+                                                        self._sim_config.parse_actor_config("floating_platform"))
 
     def get_target(self):
         radius = 0.2
@@ -90,45 +91,50 @@ class FloatingPlatformTask(RLTask):
         if not self._env._world.is_playing():
             return
         # implement logic to be performed before physics steps
-        self.perform_reset()
-        self.apply_action(actions)
+        
+        # self.perform_reset()
+        # self.apply_action(actions)
+        # fp.apply_forces(np.array([0, 0, 1e3]), indices=[0], is_global=False)
+        pass
 
     def get_observations(self) -> dict:
         # implement logic to retrieve observation states
-        self.root_pos, self.root_rot = self._my_robots.get_world_poses(clone=False)
-        self.root_velocities = self._my_robots.get_velocities(clone=False)
-        print("ENTERED get_observations()")
-        root_positions = self.root_pos - self._env_pos
-        root_quats = self.root_rot
+        # self.root_pos, self.root_rot = self._actuators.get_world_poses(clone=False)
+        # self.root_velocities = self._actuators.get_velocities(clone=False)
+        # root_positions = self.root_pos - self._env_pos
+        # root_quats = self.root_rot
 
-        rot_x = quat_axis(root_quats, 0)
-        rot_y = quat_axis(root_quats, 1)
-        rot_z = quat_axis(root_quats, 2)
+        # rot_x = quat_axis(root_quats, 0)
+        # rot_y = quat_axis(root_quats, 1)
+        # rot_z = quat_axis(root_quats, 2)
 
-        root_linvels = self.root_velocities[:, :3]
-        root_angvels = self.root_velocities[:, 3:]
+        # root_linvels = self.root_velocities[:, :3]
+        # root_angvels = self.root_velocities[:, 3:]
 
-        self.obs_buf[..., 0:3] = self.target_positions - root_positions
+        # self.obs_buf[..., 0:3] = self.target_positions - root_positions
 
-        self.obs_buf[..., 3:6] = rot_x
-        self.obs_buf[..., 6:9] = rot_y
-        self.obs_buf[..., 9:12] = rot_z
+        # self.obs_buf[..., 3:6] = rot_x
+        # self.obs_buf[..., 6:9] = rot_y
+        # self.obs_buf[..., 9:12] = rot_z
 
-        self.obs_buf[..., 12:15] = root_linvels
-        self.obs_buf[..., 15:18] = root_angvels
+        # self.obs_buf[..., 12:15] = root_linvels
+        # self.obs_buf[..., 15:18] = root_angvels
 
         observations = {
-            self._my_robots.name: {
-                "obs_buf": self.obs_buf
-            }
+            #self._my_robots.name: {
+            #    "obs_buf": self.obs_buf
+            #}
         }
         return observations
 
 
     def calculate_metrics(self) -> None:
         # implement logic to compute rewards
-        self.rew_buf = self.compute_rewards()
+        
+        #self.rew_buf = self.compute_rewards()
+        pass
 
     def is_done(self) -> None:
         # implement logic to update dones/reset buffer
-        self.reset_buf = self.compute_resets()
+        # self.reset_buf = self.compute_resets()
+        pass

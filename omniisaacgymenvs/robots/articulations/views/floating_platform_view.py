@@ -32,11 +32,11 @@ from omni.isaac.core.articulations import ArticulationView
 from omni.isaac.core.prims import RigidPrimView
 
 
-class FloatingPlarformView(ArticulationView):
+class FloatingPlatformView(ArticulationView):
     def __init__(
         self,
         prim_paths_expr: str,
-        name: Optional[str] = "FloatingPlatform"
+        name: Optional[str] = "FloatingPlatformView"
     ) -> None:
         """[summary]
         """
@@ -46,5 +46,5 @@ class FloatingPlarformView(ArticulationView):
             name=name,
         )
 
-        self.physics_rotors = [RigidPrimView(prim_paths_expr=f"/World/envs/.*/Crazyflie/m{i}_prop",
-                                             name=f"m{i}_prop_view") for i in range(1, 5)]
+        self.thrusters = [RigidPrimView(prim_paths_expr=f"/World/envs/.*/robot/t{i}/thruster_{i}",
+                                             name=f"thruster_{i}_view") for i in range(1, 5)]
