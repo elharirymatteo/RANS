@@ -46,5 +46,5 @@ class FloatingPlatformView(ArticulationView):
             name=name,
         )
 
-        self.thrusters = [RigidPrimView(prim_paths_expr=f"/World/envs/.*/robot/t{i}/thruster_{i}",
+        self.thrusters = [RigidPrimView(prim_paths_expr=f"/World/envs/.*/floating_platform/t{i}/thruster_{i}",
                                              name=f"thruster_{i}_view") for i in range(1, 5)]

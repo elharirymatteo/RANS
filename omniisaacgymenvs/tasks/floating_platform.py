@@ -35,8 +35,8 @@ class FloatingPlatformTask(RLTask):
 
         self.dt = self._task_cfg["sim"]["dt"]
         
-        self._num_observations = 4
-        self._num_actions = 1
+        self._num_observations = 18
+        self._num_actions = 4
 
         self._fp_position = torch.tensor([0, 0, 1.0])
         self._ball_position = torch.tensor([0, 0, 1.0])
@@ -44,6 +44,9 @@ class FloatingPlatformTask(RLTask):
         # call parent class’s __init__
         RLTask.__init__(self, name, env)
 
+
+        self.target_positions = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
+        self.target_positions[:, 2] = 1
         self.all_indices = torch.arange(self._num_envs, dtype=torch.int32, device=self._device)
 
         return
@@ -54,18 +57,19 @@ class FloatingPlatformTask(RLTask):
         self.get_target()
         RLTask.set_up_scene(self, scene) # pass scene to parent class - this method in RLTask also uses GridCloner to clone the robot and adds a ground plane if desired
 
-        root_path = "/World/envs/.*/robot" 
-       # self._fp = FloatingPlatformView(prim_paths_expr=root_path, name="floating_platform_view") 
+        root_path = "/World/envs/.*/floating_platform" 
+        self._platforms = FloatingPlatformView(prim_paths_expr=root_path, name="floating_platform_view") 
+        print()
         self._balls = RigidPrimView(prim_paths_expr="/World/envs/.*/ball")
-       # print(f'\n\n FP: {self._fp} \n\n') 
-      #  scene.add(self._fp) # add view to scene for initialization
+        
+        scene.add(self._platforms) # add view to scene for initialization
         scene.add(self._balls)
-      #  for i in range(4):
-           # scene.add(self._fp.thrusters[i])
+        for i in range(4):
+            scene.add(self._platforms.thrusters[i])
         return
 
     def get_floating_platform(self):
-        fp = FloatingPlatform(prim_path=self.default_zero_env_path + "/robot/base_link/Cylinder", name="floating_platform",
+        fp = FloatingPlatform(prim_path=self.default_zero_env_path + "/floating_platform", name="floating_platform",
                             translation=self._fp_position)
         self._sim_config.apply_articulation_settings("floating_platform", get_prim_at_path(fp.prim_path),
                                                         self._sim_config.parse_actor_config("floating_platform"))
@@ -99,32 +103,33 @@ class FloatingPlatformTask(RLTask):
 
     def get_observations(self) -> dict:
         # implement logic to retrieve observation states
-        # self.root_pos, self.root_rot = self._actuators.get_world_poses(clone=False)
-        # self.root_velocities = self._actuators.get_velocities(clone=False)
-        # root_positions = self.root_pos - self._env_pos
-        # root_quats = self.root_rot
+        self.root_pos, self.root_rot = self._platforms.get_world_poses(clone=False)
+        self.root_velocities = self._platforms.get_velocities(clone=False)
+        root_positions = self.root_pos - self._env_pos
+        root_quats = self.root_rot
 
-        # rot_x = quat_axis(root_quats, 0)
-        # rot_y = quat_axis(root_quats, 1)
-        # rot_z = quat_axis(root_quats, 2)
+        rot_x = quat_axis(root_quats, 0)
+        rot_y = quat_axis(root_quats, 1)
+        rot_z = quat_axis(root_quats, 2)
 
-        # root_linvels = self.root_velocities[:, :3]
-        # root_angvels = self.root_velocities[:, 3:]
+        root_linvels = self.root_velocities[:, :3]
+        root_angvels = self.root_velocities[:, 3:]
 
-        # self.obs_buf[..., 0:3] = self.target_positions - root_positions
+        self.obs_buf[..., 0:3] = self.target_positions - root_positions
+        self.obs_buf[..., 3:6] = rot_x
+        self.obs_buf[..., 6:9] = rot_y
+        self.obs_buf[..., 9:12] = rot_z
 
-        # self.obs_buf[..., 3:6] = rot_x
-        # self.obs_buf[..., 6:9] = rot_y
-        # self.obs_buf[..., 9:12] = rot_z
-
-        # self.obs_buf[..., 12:15] = root_linvels
-        # self.obs_buf[..., 15:18] = root_angvels
+        self.obs_buf[..., 12:15] = root_linvels
+        self.obs_buf[..., 15:18] = root_angvels
 
         observations = {
-            #self._my_robots.name: {
-            #    "obs_buf": self.obs_buf
-            #}
+            self._platforms.name: {
+               "obs_buf": self.obs_buf
+            }
         }
+        print(f'\n\n\n\n observation 1: {observations[0]} \n\n\n')
+
         return observations
 
 
