@@ -96,6 +96,10 @@ class FloatingPlatformTask(RLTask):
             return
         # implement logic to be performed before physics steps
         
+       # idx = np.random.randint(0,4)
+        self._platforms.thrusters[0].apply_forces(torch.tensor([0, 0, 10.]), is_global=False)
+
+ 
         # self.perform_reset()
         # self.apply_action(actions)
         # fp.apply_forces(np.array([0, 0, 1e3]), indices=[0], is_global=False)
@@ -128,7 +132,6 @@ class FloatingPlatformTask(RLTask):
                "obs_buf": self.obs_buf
             }
         }
-        print(f'\n\n\n\n observation 1: {observations[0]} \n\n\n')
 
         return observations
 
