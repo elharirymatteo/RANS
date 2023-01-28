@@ -38,12 +38,14 @@ class FloatingPlatformTask(RLTask):
         self._num_observations = 18
         self._num_actions = 4
 
-        self._fp_position = torch.tensor([0, 0, 1.0])
-        self._ball_position = torch.tensor([0, 0, 1.0])
+        self._fp_position = torch.tensor([0, 0, 0])
+        self._ball_position = torch.tensor([0, 0, 3.0])
 
         # call parent class’s __init__
         RLTask.__init__(self, name, env)
 
+        thrust_max = 20
+        self.thrust_max = torch.tensor(thrust_max, device=self._device, dtype=torch.float32)
 
         self.target_positions = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
         self.target_positions[:, 2] = 1
@@ -87,24 +89,6 @@ class FloatingPlatformTask(RLTask):
                                                         self._sim_config.parse_actor_config("ball"))
         ball.set_collision_enabled(False)
 
-    def post_reset(self):
-        # implement any logic required for simulation on-start here
-        pass
-
-    def pre_physics_step(self, actions: torch.Tensor) -> None:
-        if not self._env._world.is_playing():
-            return
-        # implement logic to be performed before physics steps
-        
-       # idx = np.random.randint(0,4)
-        self._platforms.thrusters[0].apply_forces(torch.tensor([0, 0, 10.]), is_global=False)
-
- 
-        # self.perform_reset()
-        # self.apply_action(actions)
-        # fp.apply_forces(np.array([0, 0, 1e3]), indices=[0], is_global=False)
-        pass
-
     def get_observations(self) -> dict:
         # implement logic to retrieve observation states
         self.root_pos, self.root_rot = self._platforms.get_world_poses(clone=False)
@@ -132,17 +116,150 @@ class FloatingPlatformTask(RLTask):
                "obs_buf": self.obs_buf
             }
         }
-
         return observations
+
+    def pre_physics_step(self, actions: torch.Tensor) -> None:
+        # implement logic to be performed before physics steps
+
+        if not self._env._world.is_playing():
+            return        
+        reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
+        if len(reset_env_ids) > 0:
+            self.reset_idx(reset_env_ids)
+
+        set_target_ids = (self.progress_buf % 500 == 0).nonzero(as_tuple=False).squeeze(-1)
+        if len(set_target_ids) > 0:
+            self.set_targets(set_target_ids)
+
+        actions = actions.clone().to(self._device)
+        self.actions = actions
+
+        # clamp to [-1.0, 1.0]
+        thrust_cmds = torch.clamp(actions, min=-1.0, max=1.0)
+       
+        thrusts = self.thrust_max * thrust_cmds
+
+        # thrusts given rotation
+        root_quats = self.root_rot
+        rot_x = quat_axis(root_quats, 0)
+        rot_y = quat_axis(root_quats, 1)
+        rot_z = quat_axis(root_quats, 2)
+        rot_matrix = torch.cat((rot_x, rot_y, rot_z), 1).reshape(-1, 3, 3)
+
+        force_x = torch.zeros(self._num_envs, 4, dtype=torch.float32, device=self._device)
+        force_y = torch.zeros(self._num_envs, 4, dtype=torch.float32, device=self._device)
+        force_xy = torch.cat((force_x, force_y), 1).reshape(-1, 4, 2)
+        thrusts = thrusts.reshape(-1, 4, 1)
+        thrusts = torch.cat((force_xy, thrusts), 2)
+
+        thrusts_0 = thrusts[:, 0]
+        thrusts_0 = thrusts_0[:, :, None]
+
+        thrusts_1 = thrusts[:, 1]
+        thrusts_1 = thrusts_1[:, :, None]
+
+        thrusts_2 = thrusts[:, 2]
+        thrusts_2 = thrusts_2[:, :, None]\
+
+        thrusts_3 = thrusts[:, 3]
+        thrusts_3 = thrusts_3[:, :, None]
+
+        mod_thrusts_0 = torch.matmul(rot_matrix, thrusts_0)
+        mod_thrusts_1 = torch.matmul(rot_matrix, thrusts_1)
+        mod_thrusts_2 = torch.matmul(rot_matrix, thrusts_2)
+        mod_thrusts_3 = torch.matmul(rot_matrix, thrusts_3)
+
+        self.thrusts[:, 0] = torch.squeeze(mod_thrusts_0)
+        self.thrusts[:, 1] = torch.squeeze(mod_thrusts_1)
+        self.thrusts[:, 2] = torch.squeeze(mod_thrusts_2)
+        self.thrusts[:, 3] = torch.squeeze(mod_thrusts_3)
+        # clear actions for reset envs
+        self.thrusts[reset_env_ids] = 0
+
+        # Apply forces
+        self._platforms.thrusters[0].apply_forces(torch.tensor([0, 0, 10.]), is_global=False)
+        # apply actions
+        for i in range(4):
+            self._platforms.thrusters[i].apply_forces(self.thrusts[:, i], indices=self.all_indices, is_global=False)
+
+        # self.perform_reset()
+        # self.apply_action(actions)
+        # fp.apply_forces(np.array([0, 0, 1e3]), indices=[0], is_global=False)
+        pass
+
+    def post_reset(self):
+        # implement any logic required for simulation on-start here
+        self.root_pos, self.root_rot = self._platforms.get_world_poses()
+        self.root_velocities = self._platforms.get_velocities()
+        self.dof_pos = self._platforms.get_joint_positions()
+        self.dof_vel = self._platforms.get_joint_velocities()
+
+        self.initial_ball_pos, self.initial_ball_rot = self._balls.get_world_poses(clone=False)
+        self.initial_root_pos, self.initial_root_rot = self.root_pos.clone(), self.root_rot.clone()
+
+        # control parameters
+        self.thrusts = torch.zeros((self._num_envs, 4, 3), dtype=torch.float32, device=self._device)
+        
+        self.set_targets(self.all_indices)
+
+    def set_targets(self, env_ids):
+        num_sets = len(env_ids)
+        envs_long = env_ids.long()
+        # set target position randomly with x, y in (0, 0) and z in (2)
+        self.target_positions[envs_long, 0:2] = torch.zeros((num_sets, 2), device=self._device)
+        self.target_positions[envs_long, 2] = torch.ones(num_sets, device=self._device) * 2.0
+
+        # shift the target up so it visually aligns better
+        ball_pos = self.target_positions[envs_long] + self._env_pos[envs_long]
+        ball_pos[:, 2] += 0.0
+        self._balls.set_world_poses(ball_pos[:, 0:3], self.initial_ball_rot[envs_long].clone(), indices=env_ids)
+
+    def reset_idx(self, env_ids):
+        num_resets = len(env_ids)
+
+        self.dof_pos[env_ids, :] = torch_rand_float(-0.0, 0.0, (num_resets, self._platforms.num_dof), device=self._device)
+        self.dof_vel[env_ids, :] = 0
+
+        root_pos = self.initial_root_pos.clone()
+        root_pos[env_ids, 0] += torch_rand_float(-0.0, 0.0, (num_resets, 1), device=self._device).view(-1)
+        root_pos[env_ids, 1] += torch_rand_float(-0.0, 0.0, (num_resets, 1), device=self._device).view(-1)
+        root_pos[env_ids, 2] += torch_rand_float(-0.0, 0.0, (num_resets, 1), device=self._device).view(-1)
+        root_velocities = self.root_velocities.clone()
+        root_velocities[env_ids] = 0
+
+        # apply resets
+        self._platforms.set_joint_positions(self.dof_pos[env_ids], indices=env_ids)
+        self._platforms.set_joint_velocities(self.dof_vel[env_ids], indices=env_ids)
+
+        self._platforms.set_world_poses(root_pos[env_ids], self.initial_root_rot[env_ids].clone(), indices=env_ids)
+        self._platforms.set_velocities(root_velocities[env_ids], indices=env_ids)
+
+        # bookkeeping
+        self.reset_buf[env_ids] = 0
+        self.progress_buf[env_ids] = 0
 
 
     def calculate_metrics(self) -> None:
-        # implement logic to compute rewards
-        
-        #self.rew_buf = self.compute_rewards()
-        pass
+        root_positions = self.root_pos - self._env_pos
+        root_quats = self.root_rot
+        root_angvels = self.root_velocities[:, 3:]
+
+        # pos reward
+        target_dist = torch.sqrt(torch.square(self.target_positions - root_positions).sum(-1))
+        pos_reward = 1.0 / (1.0 + target_dist)
+        self.target_dist = target_dist
+        self.root_positions = root_positions
 
     def is_done(self) -> None:
-        # implement logic to update dones/reset buffer
-        # self.reset_buf = self.compute_resets()
-        pass
+        # resets due to misbehavior
+        ones = torch.ones_like(self.reset_buf)
+        die = torch.zeros_like(self.reset_buf)
+        die = torch.where(self.target_dist > 5.0, ones, die)
+
+        # z >= 0.5 & z <= 5.0 & up > 0
+        die = torch.where(self.root_positions[..., 2] < 0.5, ones, die)
+        die = torch.where(self.root_positions[..., 2] > 5.0, ones, die)
+        # die = torch.where(self.orient_z < 0.0, ones, die)
+
+        # resets due to episode length
+        self.reset_buf[:] = torch.where(self.progress_buf >= self._max_episode_length - 1, ones, die)
