@@ -44,7 +44,7 @@ class FloatingPlatformTask(RLTask):
         # call parent class’s __init__
         RLTask.__init__(self, name, env)
 
-        thrust_max = 20
+        thrust_max = 40
         self.thrust_max = torch.tensor(thrust_max, device=self._device, dtype=torch.float32)
 
         self.target_positions = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
