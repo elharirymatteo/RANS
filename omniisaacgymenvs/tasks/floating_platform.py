@@ -38,7 +38,7 @@ class FloatingPlatformTask(RLTask):
         self._num_observations = 18
         self._num_actions = 4
 
-        self._fp_position = torch.tensor([0, 0, 0])
+        self._fp_position = torch.tensor([0, 0., 0.5])
         self._ball_position = torch.tensor([0, 0, 3.0])
 
         # call parent class’s __init__
@@ -49,6 +49,8 @@ class FloatingPlatformTask(RLTask):
 
         self.target_positions = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
         self.target_positions[:, 2] = 1
+        self.actions = torch.zeros((self._num_envs, 4), device=self._device, dtype=torch.float32)
+
         self.all_indices = torch.arange(self._num_envs, dtype=torch.int32, device=self._device)
 
         return
@@ -59,11 +61,11 @@ class FloatingPlatformTask(RLTask):
         self.get_target()
         RLTask.set_up_scene(self, scene) # pass scene to parent class - this method in RLTask also uses GridCloner to clone the robot and adds a ground plane if desired
 
-        root_path = "/World/envs/.*/floating_platform" 
+        root_path = "/World/envs/.*/Floating_platform" 
         self._platforms = FloatingPlatformView(prim_paths_expr=root_path, name="floating_platform_view") 
-        print()
         self._balls = RigidPrimView(prim_paths_expr="/World/envs/.*/ball")
-        
+        print(len(self._platforms.thrusters))
+
         scene.add(self._platforms) # add view to scene for initialization
         scene.add(self._balls)
         for i in range(4):
@@ -71,7 +73,7 @@ class FloatingPlatformTask(RLTask):
         return
 
     def get_floating_platform(self):
-        fp = FloatingPlatform(prim_path=self.default_zero_env_path + "/floating_platform", name="floating_platform",
+        fp = FloatingPlatform(prim_path=self.default_zero_env_path + "/Floating_platform", name="floating_platform",
                             translation=self._fp_position)
         self._sim_config.apply_articulation_settings("floating_platform", get_prim_at_path(fp.prim_path),
                                                         self._sim_config.parse_actor_config("floating_platform"))
@@ -136,7 +138,6 @@ class FloatingPlatformTask(RLTask):
 
         # clamp to [-1.0, 1.0]
         thrust_cmds = torch.clamp(actions, min=-1.0, max=1.0)
-       
         thrusts = self.thrust_max * thrust_cmds
 
         # thrusts given rotation
@@ -180,7 +181,6 @@ class FloatingPlatformTask(RLTask):
         #self._platforms.thrusters[0].apply_forces(torch.tensor([0, 0, 10.]), is_global=False)
         for i in range(4):
             self._platforms.thrusters[i].apply_forces(self.thrusts[:, i], indices=self.all_indices, is_global=False)
-
 
     def post_reset(self):
         # implement any logic required for simulation on-start here
