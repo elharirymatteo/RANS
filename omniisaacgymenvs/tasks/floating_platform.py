@@ -159,7 +159,7 @@ class FloatingPlatformTask(RLTask):
         thrusts_1 = thrusts_1[:, :, None]
 
         thrusts_2 = thrusts[:, 2]
-        thrusts_2 = thrusts_2[:, :, None]\
+        thrusts_2 = thrusts_2[:, :, None]
 
         thrusts_3 = thrusts[:, 3]
         thrusts_3 = thrusts_3[:, :, None]
@@ -177,15 +177,10 @@ class FloatingPlatformTask(RLTask):
         self.thrusts[reset_env_ids] = 0
 
         # Apply forces
-        self._platforms.thrusters[0].apply_forces(torch.tensor([0, 0, 10.]), is_global=False)
-        # apply actions
+        #self._platforms.thrusters[0].apply_forces(torch.tensor([0, 0, 10.]), is_global=False)
         for i in range(4):
             self._platforms.thrusters[i].apply_forces(self.thrusts[:, i], indices=self.all_indices, is_global=False)
 
-        # self.perform_reset()
-        # self.apply_action(actions)
-        # fp.apply_forces(np.array([0, 0, 1e3]), indices=[0], is_global=False)
-        pass
 
     def post_reset(self):
         # implement any logic required for simulation on-start here
