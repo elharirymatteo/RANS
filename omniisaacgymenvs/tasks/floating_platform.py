@@ -15,7 +15,6 @@ import torch
 EPS = 1e-6   # small constant to avoid divisions by 0 and log(0)
 
 
-
 class FloatingPlatformTask(RLTask):
     def __init__(
         self,
@@ -45,6 +44,7 @@ class FloatingPlatformTask(RLTask):
         RLTask.__init__(self, name, env)
 
         thrust_max = 40
+        self.reset_dist = 5.
         self.thrust_max = torch.tensor(thrust_max, device=self._device, dtype=torch.float32)
 
         self.target_positions = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
@@ -52,6 +52,12 @@ class FloatingPlatformTask(RLTask):
         self.actions = torch.zeros((self._num_envs, 4), device=self._device, dtype=torch.float32)
 
         self.all_indices = torch.arange(self._num_envs, dtype=torch.int32, device=self._device)
+     
+        # Extra info
+        self.extras = {}
+
+        torch_zeros = lambda: torch.zeros(self.num_envs, dtype=torch.float, device=self.device, requires_grad=False)
+        self.episode_sums = {"rew_pos": torch_zeros(), "raw_dist": torch_zeros()}
 
         return
 
@@ -216,8 +222,8 @@ class FloatingPlatformTask(RLTask):
         self.dof_vel[env_ids, :] = 0
 
         root_pos = self.initial_root_pos.clone()
-        root_pos[env_ids, 0] += torch_rand_float(-0.0, 0.0, (num_resets, 1), device=self._device).view(-1)
-        root_pos[env_ids, 1] += torch_rand_float(-0.0, 0.0, (num_resets, 1), device=self._device).view(-1)
+        root_pos[env_ids, 0] += torch_rand_float(-self.reset_dist, self.reset_dist, (num_resets, 1), device=self._device).view(-1)
+        root_pos[env_ids, 1] += torch_rand_float(-self.reset_dist, self.reset_dist, (num_resets, 1), device=self._device).view(-1)
         root_pos[env_ids, 2] += torch_rand_float(-0.0, 0.0, (num_resets, 1), device=self._device).view(-1)
         root_velocities = self.root_velocities.clone()
         root_velocities[env_ids] = 0
@@ -244,6 +250,13 @@ class FloatingPlatformTask(RLTask):
         pos_reward = 1.0 / (1.0 + target_dist)
         self.target_dist = target_dist
         self.root_positions = root_positions
+
+            # combined reward
+        self.rew_buf[:] = pos_reward 
+        # log episode reward sums
+        self.episode_sums["rew_pos"] += pos_reward
+        # log raw info
+        self.episode_sums["raw_dist"] += target_dist
 
     def is_done(self) -> None:
         # resets due to misbehavior
