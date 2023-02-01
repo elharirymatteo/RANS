@@ -150,7 +150,7 @@ class CrazyflieTask(RLTask):
         self.root_pos, self.root_rot = self._copters.get_world_poses(clone=False)
         self.root_velocities = self._copters.get_velocities(clone=False)
 
-        root_positions = self.root_pos - self._env_pos
+        root_positions = seContenutolf.root_pos - self._env_pos
         root_quats = self.root_rot
 
         rot_x = quat_axis(root_quats, 0)
