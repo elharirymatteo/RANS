@@ -262,7 +262,7 @@ class FloatingPlatformTask(RLTask):
         # resets due to misbehavior
         ones = torch.ones_like(self.reset_buf)
         die = torch.zeros_like(self.reset_buf)
-        die = torch.where(self.target_dist > 5.0, ones, die) # die if going to far from target
+        die = torch.where(self.target_dist > self.reset_dist * 2, ones, die) # die if going to far from target
 
         # z >= 0.5 & z <= 5.0 & up > 0
         # die = torch.where(self.root_positions[..., 2] < 0.5, ones, die)
