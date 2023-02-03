@@ -39,12 +39,12 @@ class FloatingPlatformTask(RLTask):
 
         self._fp_position = torch.tensor([0, 0., 0.5])
         self._ball_position = torch.tensor([0, 0, 3.0])
+        self._reset_dist = 5.
 
         # call parent class’s __init__
         RLTask.__init__(self, name, env)
 
         thrust_max = 40
-        self.reset_dist = 5.
         self.thrust_max = torch.tensor(thrust_max, device=self._device, dtype=torch.float32)
 
         self.target_positions = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
@@ -222,8 +222,8 @@ class FloatingPlatformTask(RLTask):
         self.dof_vel[env_ids, :] = 0
 
         root_pos = self.initial_root_pos.clone()
-        root_pos[env_ids, 0] += torch_rand_float(-self.reset_dist, self.reset_dist, (num_resets, 1), device=self._device).view(-1)
-        root_pos[env_ids, 1] += torch_rand_float(-self.reset_dist, self.reset_dist, (num_resets, 1), device=self._device).view(-1)
+        root_pos[env_ids, 0] += torch_rand_float(-self._reset_dist, self._reset_dist, (num_resets, 1), device=self._device).view(-1)
+        root_pos[env_ids, 1] += torch_rand_float(-self._reset_dist, self._reset_dist, (num_resets, 1), device=self._device).view(-1)
         root_pos[env_ids, 2] += torch_rand_float(-0.0, 0.0, (num_resets, 1), device=self._device).view(-1)
         root_velocities = self.root_velocities.clone()
         root_velocities[env_ids] = 0
@@ -262,7 +262,7 @@ class FloatingPlatformTask(RLTask):
         # resets due to misbehavior
         ones = torch.ones_like(self.reset_buf)
         die = torch.zeros_like(self.reset_buf)
-        die = torch.where(self.target_dist > self.reset_dist * 2, ones, die) # die if going to far from target
+        die = torch.where(self.target_dist > self._reset_dist * 2, ones, die) # die if going to far from target
 
         # z >= 0.5 & z <= 5.0 & up > 0
         # die = torch.where(self.root_positions[..., 2] < 0.5, ones, die)
