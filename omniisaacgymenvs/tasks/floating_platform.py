@@ -11,6 +11,7 @@ from omni.isaac.core.utils.prims import get_prim_at_path
 
 import numpy as np
 import torch
+from gym import spaces
 
 EPS = 1e-6   # small constant to avoid divisions by 0 and log(0)
 
@@ -31,11 +32,21 @@ class FloatingPlatformTask(RLTask):
         self._num_envs = self._task_cfg["env"]["numEnvs"]
         self._env_spacing = self._task_cfg["env"]["envSpacing"]
         self._max_episode_length = self._task_cfg["env"]["maxEpisodeLength"]
+        self._discrete_actions = self._task_cfg["env"]["discreteActions"]
+
 
         self.dt = self._task_cfg["sim"]["dt"]
         
         self._num_observations = 18
-        self._num_actions = 4
+
+        # define action space
+        if self._discrete_actions:    
+            self._num_actions = 1
+            self.action_space = spaces.Discrete(8)
+        
+        else:
+            self._num_actions = 4
+
 
         self._fp_position = torch.tensor([0, 0., 0.5])
         self._ball_position = torch.tensor([0, 0, 3.0])
@@ -142,51 +153,59 @@ class FloatingPlatformTask(RLTask):
         actions = actions.clone().to(self._device)
         self.actions = actions
 
-        # clamp to [-1.0, 1.0]
-        thrust_cmds = torch.clamp(actions, min=-1.0, max=1.0)
-        thrusts = self.thrust_max * thrust_cmds
+        if  self._discrete_actions:
+            # Apply forces
+            thrusts = self.thrust_max * thrust_cmds
 
-        # thrusts given rotation
-        root_quats = self.root_rot
-        rot_x = quat_axis(root_quats, 0)
-        rot_y = quat_axis(root_quats, 1)
-        rot_z = quat_axis(root_quats, 2)
-        rot_matrix = torch.cat((rot_x, rot_y, rot_z), 1).reshape(-1, 3, 3)
+            for i in range(4):
+                self._platforms.thrusters[i].apply_forces(self.thrusts[:, i], indices=self.all_indices, is_global=False)
 
-        force_x = torch.zeros(self._num_envs, 4, dtype=torch.float32, device=self._device)
-        force_y = torch.zeros(self._num_envs, 4, dtype=torch.float32, device=self._device)
-        force_xy = torch.cat((force_x, force_y), 1).reshape(-1, 4, 2)
-        thrusts = thrusts.reshape(-1, 4, 1)
-        thrusts = torch.cat((force_xy, thrusts), 2)
 
-        thrusts_0 = thrusts[:, 0]
-        thrusts_0 = thrusts_0[:, :, None]
+        else:  
+            # clamp to [-1.0, 1.0]
+            thrust_cmds = torch.clamp(actions, min=-1.0, max=1.0)
+            thrusts = self.thrust_max * thrust_cmds
 
-        thrusts_1 = thrusts[:, 1]
-        thrusts_1 = thrusts_1[:, :, None]
+            # thrusts given rotation
+            root_quats = self.root_rot
+            rot_x = quat_axis(root_quats, 0)
+            rot_y = quat_axis(root_quats, 1)
+            rot_z = quat_axis(root_quats, 2)
+            rot_matrix = torch.cat((rot_x, rot_y, rot_z), 1).reshape(-1, 3, 3)
 
-        thrusts_2 = thrusts[:, 2]
-        thrusts_2 = thrusts_2[:, :, None]
+            force_x = torch.zeros(self._num_envs, 4, dtype=torch.float32, device=self._device)
+            force_y = torch.zeros(self._num_envs, 4, dtype=torch.float32, device=self._device)
+            force_xy = torch.cat((force_x, force_y), 1).reshape(-1, 4, 2)
+            thrusts = thrusts.reshape(-1, 4, 1)
+            thrusts = torch.cat((force_xy, thrusts), 2)
 
-        thrusts_3 = thrusts[:, 3]
-        thrusts_3 = thrusts_3[:, :, None]
+            thrusts_0 = thrusts[:, 0]
+            thrusts_0 = thrusts_0[:, :, None]
 
-        mod_thrusts_0 = torch.matmul(rot_matrix, thrusts_0)
-        mod_thrusts_1 = torch.matmul(rot_matrix, thrusts_1)
-        mod_thrusts_2 = torch.matmul(rot_matrix, thrusts_2)
-        mod_thrusts_3 = torch.matmul(rot_matrix, thrusts_3)
+            thrusts_1 = thrusts[:, 1]
+            thrusts_1 = thrusts_1[:, :, None]
 
-        self.thrusts[:, 0] = torch.squeeze(mod_thrusts_0)
-        self.thrusts[:, 1] = torch.squeeze(mod_thrusts_1)
-        self.thrusts[:, 2] = torch.squeeze(mod_thrusts_2)
-        self.thrusts[:, 3] = torch.squeeze(mod_thrusts_3)
-        # clear actions for reset envs
-        self.thrusts[reset_env_ids] = 0
+            thrusts_2 = thrusts[:, 2]
+            thrusts_2 = thrusts_2[:, :, None]
 
-        # Apply forces
-        #self._platforms.thrusters[0].apply_forces(torch.tensor([0, 0, 10.]), is_global=False)
-        for i in range(4):
-            self._platforms.thrusters[i].apply_forces(self.thrusts[:, i], indices=self.all_indices, is_global=False)
+            thrusts_3 = thrusts[:, 3]
+            thrusts_3 = thrusts_3[:, :, None]
+
+            mod_thrusts_0 = torch.matmul(rot_matrix, thrusts_0)
+            mod_thrusts_1 = torch.matmul(rot_matrix, thrusts_1)
+            mod_thrusts_2 = torch.matmul(rot_matrix, thrusts_2)
+            mod_thrusts_3 = torch.matmul(rot_matrix, thrusts_3)
+
+            self.thrusts[:, 0] = torch.squeeze(mod_thrusts_0)
+            self.thrusts[:, 1] = torch.squeeze(mod_thrusts_1)
+            self.thrusts[:, 2] = torch.squeeze(mod_thrusts_2)
+            self.thrusts[:, 3] = torch.squeeze(mod_thrusts_3)
+            # clear actions for reset envs
+            self.thrusts[reset_env_ids] = 0
+
+            # Apply forces
+            for i in range(4):
+                self._platforms.thrusters[i].apply_forces(self.thrusts[:, i], indices=self.all_indices, is_global=False)
 
     def post_reset(self):
         # implement any logic required for simulation on-start here
