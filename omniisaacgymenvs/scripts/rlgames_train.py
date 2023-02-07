@@ -37,7 +37,7 @@ from omniisaacgymenvs.envs.vec_env_rlgames import VecEnvRLGames
 import hydra
 from omegaconf import DictConfig
 
-from rl_games.common import env_configurations, vecenv
+from rl_games.common import env_configurations, vecenv, a2c_common
 from rl_games.torch_runner import Runner
 
 import datetime
