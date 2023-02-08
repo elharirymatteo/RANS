@@ -41,8 +41,8 @@ class FloatingPlatformTask(RLTask):
 
         # define action space
         if self._discrete_actions:    
-            self._num_actions = 1
-            self.action_space = spaces.Discrete(8)
+            self._num_actions = 4
+            self.action_space = spaces.MultiDiscrete([3, 3, 3, 3])
         
         else:
             self._num_actions = 4
@@ -60,7 +60,7 @@ class FloatingPlatformTask(RLTask):
 
         self.target_positions = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
         self.target_positions[:, 2] = 1
-        self.actions = torch.zeros((self._num_envs, 4), device=self._device, dtype=torch.float32)
+        self.actions = torch.zeros((self._num_envs, self._num_actions), device=self._device, dtype=torch.float32)
 
         self.all_indices = torch.arange(self._num_envs, dtype=torch.int32, device=self._device)
      
@@ -153,18 +153,22 @@ class FloatingPlatformTask(RLTask):
         actions = actions.clone().to(self._device)
         self.actions = actions
 
+        print(f'Actions: {actions}')
+
         if  self._discrete_actions:
             # Apply forces
-            thrusts = self.thrust_max * thrust_cmds
-
-            for i in range(4):
-                self._platforms.thrusters[i].apply_forces(self.thrusts[:, i], indices=self.all_indices, is_global=False)
+            thrusts = self.actions
+            
+            #for i in range(4):
+             #   self._platforms.thrusters[i].apply_forces(self.thrusts[:, i], indices=self.all_indices, is_global=False)
 
 
         else:  
             # clamp to [-1.0, 1.0]
             thrust_cmds = torch.clamp(actions, min=-1.0, max=1.0)
             thrusts = self.thrust_max * thrust_cmds
+
+            print(f'thrusts: {thrusts}')
 
             # thrusts given rotation
             root_quats = self.root_rot
@@ -177,8 +181,11 @@ class FloatingPlatformTask(RLTask):
             force_y = torch.zeros(self._num_envs, 4, dtype=torch.float32, device=self._device)
             force_xy = torch.cat((force_x, force_y), 1).reshape(-1, 4, 2)
             thrusts = thrusts.reshape(-1, 4, 1)
-            thrusts = torch.cat((force_xy, thrusts), 2)
+            thrusts = torch.cat((force_xy, thrusts), 2)        
+            
+            print(f'thrusts cat: {thrusts}')
 
+            
             thrusts_0 = thrusts[:, 0]
             thrusts_0 = thrusts_0[:, :, None]
 
@@ -202,6 +209,8 @@ class FloatingPlatformTask(RLTask):
             self.thrusts[:, 3] = torch.squeeze(mod_thrusts_3)
             # clear actions for reset envs
             self.thrusts[reset_env_ids] = 0
+
+            print(f'self thrusts: {self.thrusts}')
 
             # Apply forces
             for i in range(4):
