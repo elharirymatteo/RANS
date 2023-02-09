@@ -2,7 +2,6 @@
 from omniisaacgymenvs.tasks.base.rl_task import RLTask
 from omniisaacgymenvs.robots.articulations.floating_platform import FloatingPlatform
 from omniisaacgymenvs.robots.articulations.views.floating_platform_view import FloatingPlatformView
-from omni.isaac.core.articulations import ArticulationView
 
 from omni.isaac.core.utils.torch.rotations import *
 from omni.isaac.core.objects import DynamicSphere
@@ -263,6 +262,13 @@ class FloatingPlatformTask(RLTask):
         self.reset_buf[env_ids] = 0
         self.progress_buf[env_ids] = 0
 
+        # fill extras
+        self.extras["episode"] = {}
+        for key in self.episode_sums.keys():
+            self.extras["episode"][key] = torch.mean(
+                self.episode_sums[key][env_ids]) / self._max_episode_length
+            self.episode_sums[key][env_ids] = 0.
+
 
     def calculate_metrics(self) -> None:
         root_positions = self.root_pos - self._env_pos
@@ -286,7 +292,7 @@ class FloatingPlatformTask(RLTask):
         # resets due to misbehavior
         ones = torch.ones_like(self.reset_buf)
         die = torch.zeros_like(self.reset_buf)
-        die = torch.where(self.target_dist > self._reset_dist * 2, ones, die) # die if going to far from target
+        die = torch.where(self.target_dist > self._reset_dist * 2, ones, die) # die if going too far from target
 
         # z >= 0.5 & z <= 5.0 & up > 0
         # die = torch.where(self.root_positions[..., 2] < 0.5, ones, die)
