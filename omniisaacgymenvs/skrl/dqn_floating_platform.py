@@ -31,22 +31,16 @@ class Shared(DeterministicMixin, Model):
                                  nn.Linear(256, 256),
                                  nn.Tanh(),
                                  nn.Linear(256, 128),
-                                 nn.Rel())
+                                 nn.ReLU(),
+                                  nn.Linear(128, self.num_actions))
 
-        self.mean_layer = nn.Linear(128, self.num_actions)
-        self.log_std_parameter = nn.Parameter(torch.zeros(self.num_actions))
-
-        self.value_layer = nn.Linear(128, 1)
 
     def act(self, inputs, role):
 
         return DeterministicMixin.act(self, inputs, role)
 
     def compute(self, inputs, role):
-        if role == "q_network":
-            return self.mean_layer(self.net(inputs["states"])), self.log_std_parameter, {}
-        elif role == "target_q_network":
-            return self.value_layer(self.net(inputs["states"])), {}
+        return nn.Linear(self.net(inputs["states"])), {}
 
 
 # Load and wrap the Omniverse Isaac Gym environment
