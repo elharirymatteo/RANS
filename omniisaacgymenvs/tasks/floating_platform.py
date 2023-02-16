@@ -167,7 +167,7 @@ class FloatingPlatformTask(RLTask):
             thrust_cmds = torch.clamp(actions, min=-1.0, max=1.0)
             thrusts = self.thrust_max * thrust_cmds
 
-        #print(f'thrusts: {thrusts}')
+        print(f'thrusts: {thrusts}')
 
         # thrusts given rotation
         root_quats = self.root_rot
@@ -181,7 +181,7 @@ class FloatingPlatformTask(RLTask):
         force_xy = torch.cat((force_x, force_y), 1).reshape(-1, 4, 2)
         thrusts = thrusts.reshape(-1, 4, 1)
         thrusts = torch.cat((force_xy, thrusts), 2)        
-    
+
         
         thrusts_0 = thrusts[:, 0]
         thrusts_0 = thrusts_0[:, :, None]
