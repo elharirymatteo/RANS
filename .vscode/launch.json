@@ -5,6 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python: DQN Floating platform debug",
+            "type": "python",
+            "request": "launch",
+            "program": "omniisaacgymenvs/skrl/dqn_floating_platform.py",
+            "console": "integratedTerminal",
+            "args": [],
+            "justMyCode": false
+        },
+        {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
@@ -26,12 +35,16 @@
         },
         {
             "name": "(Linux) isaac-sim",
-            "type": "cppdbg",
+            "type": "node",
             "request": "launch",
             "program": "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.0/kit/kit",
-            "args": ["/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.0/apps/omni.isaac.sim.kit",
-                "--ext-folder", "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.0/exts",
-                "--ext-folder", "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.0/apps"],
+            "args": [
+                "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.0/apps/omni.isaac.sim.kit",
+                "--ext-folder",
+                "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.0/exts",
+                "--ext-folder",
+                "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.0/apps"
+            ],
             "stopAtEntry": false,
             "cwd": "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.0",
             "environment": [],
