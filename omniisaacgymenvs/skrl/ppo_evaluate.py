@@ -60,6 +60,7 @@ env = wrap_env(env)
 
 device = env.device
 
+
 # Instantiate a RandomMemory as rollout buffer (any memory can be used for this)
 memory = RandomMemory(memory_size=16, num_envs=env.num_envs, device=device)
 
@@ -72,15 +73,54 @@ models_ppo["policy"] = Shared(env.observation_space, env.action_space, device)
 models_ppo["value"] = models_ppo["policy"]  # same instance: shared model
 
 
-# Load the trained agent
+# Configure and instantiate the agent.
+# Only modify some of the default configuration, visit its documentation to see all the options
+# https://skrl.readthedocs.io/en/latest/modules/skrl.agents.ppo.html#configuration-and-hyperparameters
+cfg_ppo = PPO_DEFAULT_CONFIG.copy()
+cfg_ppo["rollouts"] = 16  # memory_size
+cfg_ppo["learning_epochs"] = 8
+cfg_ppo["mini_batches"] = 4  # 16 * 4096 / 16384
+cfg_ppo["discount_factor"] = 0.99
+cfg_ppo["lambda"] = 0.95
+cfg_ppo["learning_rate"] = 1e-4
+cfg_ppo["learning_rate_scheduler"] = KLAdaptiveRL
+cfg_ppo["learning_rate_scheduler_kwargs"] = {"kl_threshold": 0.016}
+cfg_ppo["random_timesteps"] = 0
+cfg_ppo["learning_starts"] = 0
+cfg_ppo["grad_norm_clip"] = 1.0
+cfg_ppo["ratio_clip"] = 0.2
+cfg_ppo["value_clip"] = 0.2
+cfg_ppo["clip_predicted_values"] = True
+cfg_ppo["entropy_loss_scale"] = 0.0
+cfg_ppo["value_loss_scale"] = 1.0
+cfg_ppo["kl_threshold"] = 0
+cfg_ppo["rewards_shaper"] = lambda rewards, timestep, timesteps: rewards * 0.01
+cfg_ppo["state_preprocessor"] = RunningStandardScaler
+cfg_ppo["state_preprocessor_kwargs"] = {"size": env.observation_space, "device": device}
+cfg_ppo["value_preprocessor"] = RunningStandardScaler
+cfg_ppo["value_preprocessor_kwargs"] = {"size": 1, "device": device}
+# logging to TensorBoard and write checkpoints each 80 and 800 timesteps respectively
+cfg_ppo["experiment"]["write_interval"] = 80
+cfg_ppo["experiment"]["checkpoint_interval"] = 800
+cfg_ppo["experiment"]["wandb"] = False
 
-model_path = "skrl/runs/23-02-09_17-50-28-649005_PPO"
-agent = PPO.load(models_ppo, path=model_path)
+agent = PPO(models=models_ppo,
+            memory=memory,
+            cfg=cfg_ppo,
+            observation_space=env.observation_space,
+            action_space=env.action_space,
+            device=device)
 
 
 # Configure and instantiate the RL trainer
-cfg_trainer = {"timesteps": 300, "headless": False}
+cfg_trainer = {"timesteps": 500, "headless": False}
 trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)
+
+# Load the trained agent
+
+model_path = "skrl/runs/23-02-14_13-35-20-844853_PPO/checkpoints/best_agent.pt"
+agent = agent.load(path=model_path)
 
 # start training
 trainer.eval()
+

@@ -14,6 +14,16 @@ from gym import spaces
 
 EPS = 1e-6   # small constant to avoid divisions by 0 and log(0)
 
+# creating set of allowed thrust actions
+DISCRETE_ACTIONS = torch.tensor([[1, 0, 0, 0],[0, 1, 0, 0], # single thrusts positive
+                        [0, 0, 1, 0], [0, 0, 0, 1], 
+                        [-1, 0, 0, 0],[0, -1, 0, 0], # single thrusts negative
+                        [0, 0, -1, 0], [0, 0, 0, -1],
+                        [1, 1, 0, 0],[-1, -1, 0, 0], # thr 1 & thr 2, move forward, backward on X axis
+                        [1, -1, 0, 0], [-1, 1, 0, 0], # rotate clock/counter-clockwise
+                        [0, 0, 1, 1],[0, 0, -1, -1], # thr 3 & thr 4, move forward, backward on Y axis
+                        [0, 0, 1, -1], [0, 0, -1, 1]], # rotate clock/counter-clockwise
+                        device="cuda") 
 
 class FloatingPlatformTask(RLTask):
     def __init__(
@@ -39,9 +49,13 @@ class FloatingPlatformTask(RLTask):
         self._num_observations = 18
 
         # define action space
-        if self._discrete_actions:    
+        if self._discrete_actions=="MultiDiscrete":    
             self._num_actions = 4
             self.action_space = spaces.MultiDiscrete([3, 3, 3, 3])
+        
+        elif self._discrete_actions=="Discrete":
+            self._num_actions = 16
+            self.action_space = spaces.Discrete(self._num_actions)          
         
         else:
             self._num_actions = 4
@@ -152,22 +166,27 @@ class FloatingPlatformTask(RLTask):
         actions = actions.clone().to(self._device)
         self.actions = actions
 
-        #print(f'Actions: {actions}')
+        print(f'Actions: {actions}')
 
         ## DISCRETE ACTIONS MAPPING
         #### the agents selectes for 4 thrusters, a value between [0,2]
         #### then this values are shifter left to have values centered in 0 (-1, 0, 1)
         #### to which a thrust_max is multiplied, obtainig the final actinon to be delivered
-        if  self._discrete_actions:
-            # convert actions from [0, 1, 2, 2] to [-1, 0, 1, 1] to real force commands
+        if  self._discrete_actions=="MultiDiscrete":
+            # convert actions from [0, 1, 2] to [-1, 0, 1] to real force commands
             thrust_cmds = torch.sub(self.actions, 1.) 
-            thrusts = self.thrust_max * thrust_cmds
+
+        elif self._discrete_actions=="Discrete":
+            # get the allowed actions based on the agent discrete actions selected
+            thrust_cmds = DISCRETE_ACTIONS.index_select(0, self.actions)
+
         else:  
             # clamp to [-1.0, 1.0] the continuos actions
             thrust_cmds = torch.clamp(actions, min=-1.0, max=1.0)
-            thrusts = self.thrust_max * thrust_cmds
+        
+        thrusts = self.thrust_max * thrust_cmds
 
-        print(f'thrusts: {thrusts}')
+        # print(f'thrusts: {thrusts}')
 
         # thrusts given rotation
         root_quats = self.root_rot
@@ -272,7 +291,7 @@ class FloatingPlatformTask(RLTask):
 
     def calculate_metrics(self) -> None:
         root_positions = self.root_pos - self._env_pos
-        root_quats = self.root_rot
+        root_quats = self.root_rot 
         root_angvels = self.root_velocities[:, 3:]
 
         # pos reward
