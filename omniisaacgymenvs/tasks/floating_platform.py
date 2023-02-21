@@ -165,8 +165,8 @@ class FloatingPlatformTask(RLTask):
 
         actions = actions.clone().to(self._device)
         self.actions = actions
-
-        print(f'Actions: {actions}')
+        print(f'ACTIONS: {self.actions} \n TYPE:{self.actions.dtype}')
+        print(f' ACTIONS SHAPE : {self.actions.shape}')
 
         ## DISCRETE ACTIONS MAPPING
         #### the agents selectes for 4 thrusters, a value between [0,2]
@@ -177,6 +177,7 @@ class FloatingPlatformTask(RLTask):
             thrust_cmds = torch.sub(self.actions, 1.) 
 
         elif self._discrete_actions=="Discrete":
+            self.actions = self.actions.squeeze(-1) if self.actions.ndim==2 else self.actions
             # get the allowed actions based on the agent discrete actions selected
             thrust_cmds = DISCRETE_ACTIONS.index_select(0, self.actions)
 
@@ -186,7 +187,8 @@ class FloatingPlatformTask(RLTask):
         
         thrusts = self.thrust_max * thrust_cmds
 
-        # print(f'thrusts: {thrusts}')
+        #print(f'Actions space: {self.action_space}')
+        #print(f'thrusts: {thrusts}')
 
         # thrusts given rotation
         root_quats = self.root_rot

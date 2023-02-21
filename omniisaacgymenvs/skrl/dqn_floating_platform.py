@@ -7,11 +7,10 @@ from skrl.memories.torch import RandomMemory
 from skrl.agents.torch.dqn import DQN, DQN_DEFAULT_CONFIG
 from skrl.resources.schedulers.torch import KLAdaptiveRL
 from skrl.resources.preprocessors.torch import RunningStandardScaler
-from skrl.trainers.torch import SequentialTrainer
+from skrl.trainers.torch import SequentialTrainer, ParallelTrainer
 from skrl.utils.model_instantiators import deterministic_model, Shape
 from skrl.envs.torch import wrap_env
 from skrl.envs.torch import load_omniverse_isaacgym_env
-
 from skrl.utils import set_seed
 
 # set the seed for reproducibility
@@ -39,8 +38,6 @@ env = load_omniverse_isaacgym_env(task_name="FloatingPlatform")
 env = wrap_env(env)
 
 device = env.device
-
-
 
 # Instantiate a RandomMemory (without replacement) as experience replay memory
 memory = RandomMemory(memory_size=50000, num_envs=env.num_envs, device=device, replacement=False)
@@ -77,10 +74,9 @@ agent_dqn = DQN(models=models,
                 action_space=env.action_space,
                 device=device)
 
-
 # Configure and instantiate the RL trainer
 cfg_trainer = {"timesteps": 50000, "headless": True}
-trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent_dqn)
+trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent_dqn, agents_scope=env.num_envs)
 
 # start training
 trainer.train()
