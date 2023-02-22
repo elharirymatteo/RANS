@@ -24,11 +24,13 @@ class QNetwork(DeterministicMixin, Model):
         Model.__init__(self, observation_space, action_space, device)
         DeterministicMixin.__init__(self, clip_actions)
 
-        self.net = nn.Sequential(nn.Linear(self.num_observations, 64),
+        self.net = nn.Sequential(nn.Linear(self.num_observations, 256),
                                  nn.ReLU(),
-                                 nn.Linear(64, 64),
+                                 nn.Linear(256, 256),
                                  nn.ReLU(),
-                                 nn.Linear(64, self.num_actions))
+                                 nn.Linear(256, 128),
+                                 nn.ReLU(),
+                                 nn.Linear(128, self.num_actions))
 
     def compute(self, inputs, role):
         return self.net(inputs["states"]), {}
@@ -81,3 +83,9 @@ trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent_dqn, agents_s
 
 # start training
 trainer.train()
+
+model_path = "skrl/runs/23-02-22_13-50-43-826289_DQN/checkpoints/best_agent.pt"
+agent = agent_dqn.load(path=model_path)
+
+# start training
+trainer.eval()
