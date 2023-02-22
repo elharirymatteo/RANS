@@ -15,7 +15,8 @@ from gym import spaces
 EPS = 1e-6   # small constant to avoid divisions by 0 and log(0)
 
 # creating set of allowed thrust actions
-DISCRETE_ACTIONS = torch.tensor([[1, 0, 0, 0],[0, 1, 0, 0], # single thrusts positive
+DISCRETE_ACTIONS = torch.tensor([[0, 0, 0, 0], # no action
+                        [1, 0, 0, 0],[0, 1, 0, 0], # single thrusts positive
                         [0, 0, 1, 0], [0, 0, 0, 1], 
                         [-1, 0, 0, 0],[0, -1, 0, 0], # single thrusts negative
                         [0, 0, -1, 0], [0, 0, 0, -1],
@@ -54,7 +55,7 @@ class FloatingPlatformTask(RLTask):
             self.action_space = spaces.MultiDiscrete([3, 3, 3, 3])
         
         elif self._discrete_actions=="Discrete":
-            self._num_actions = 16
+            self._num_actions = 17
             self.action_space = spaces.Discrete(self._num_actions)          
         
         else:
@@ -178,7 +179,7 @@ class FloatingPlatformTask(RLTask):
 
         elif self._discrete_actions=="Discrete":
             self.actions = self.actions.squeeze(-1) if self.actions.ndim==2 else self.actions
-            print(f'ACTIONS: {self.actions} \n TYPE:{self.actions.dtype}, NDIM: {self.actions.ndim}')
+            # print(f'ACTIONS: {self.actions} \n TYPE:{self.actions.dtype}, NDIM: {self.actions.ndim}')
 
             # get the allowed actions based on the agent discrete actions selected
             thrust_cmds = DISCRETE_ACTIONS.index_select(0, self.actions)
