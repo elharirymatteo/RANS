@@ -165,8 +165,8 @@ class FloatingPlatformTask(RLTask):
 
         actions = actions.clone().to(self._device)
         self.actions = actions
-        print(f'ACTIONS: {self.actions} \n TYPE:{self.actions.dtype}')
-        print(f' ACTIONS SHAPE : {self.actions.shape}')
+        #print(f'ACTIONS: {self.actions} \n TYPE:{self.actions.dtype}')
+        #print(f' ACTIONS SHAPE : {self.actions.shape} NDIM: {self.actions.ndim}')
 
         ## DISCRETE ACTIONS MAPPING
         #### the agents selectes for 4 thrusters, a value between [0,2]
@@ -178,6 +178,8 @@ class FloatingPlatformTask(RLTask):
 
         elif self._discrete_actions=="Discrete":
             self.actions = self.actions.squeeze(-1) if self.actions.ndim==2 else self.actions
+            print(f'ACTIONS: {self.actions} \n TYPE:{self.actions.dtype}, NDIM: {self.actions.ndim}')
+
             # get the allowed actions based on the agent discrete actions selected
             thrust_cmds = DISCRETE_ACTIONS.index_select(0, self.actions)
 
