@@ -85,6 +85,7 @@ cfg_ddpg["learning_starts"] = 100
 # logging to TensorBoard and write checkpoints each 1000 and 1000 timesteps respectively
 cfg_ddpg["experiment"]["write_interval"] = 1000
 cfg_ddpg["experiment"]["checkpoint_interval"] = 1000
+cfg_ddpg["experiment"]["wandb"] = True
 
 agent_ddpg = DDPG(models=models_ddpg,
                   memory=memory,
@@ -95,7 +96,7 @@ agent_ddpg = DDPG(models=models_ddpg,
 
 
 # Configure and instantiate the RL trainer
-cfg_trainer = {"timesteps": 15000, "headless": True}
+cfg_trainer = {"timesteps": 100000, "headless": True}
 trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent_ddpg)
 
 # start training
