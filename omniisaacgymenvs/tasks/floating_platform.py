@@ -21,8 +21,10 @@ DISCRETE_ACTIONS = torch.tensor([[0, 0, 0, 0], # no action
                         [-1, 0, 0, 0],[0, -1, 0, 0], # single thrusts negative
                         [0, 0, -1, 0], [0, 0, 0, -1],
                         [1, 1, 0, 0],[-1, -1, 0, 0], # thr 1 & thr 2, move forward, backward on X axis
-                        [1, -1, 0, 0], [-1, 1, 0, 0], # rotate clock/counter-clockwise
                         [0, 0, 1, 1],[0, 0, -1, -1], # thr 3 & thr 4, move forward, backward on Y axis
+                        [1, 0, 1, 0], [-1, 0, -1, 0], # move diagonal  NE & SW (using t1-t3)
+                        [1, 0, 0, -1], [-1, 0, 0, 1], # move diagonal  NW & SE (using t1-t4)                       
+                        [1, -1, 0, 0], [-1, 1, 0, 0], # rotate clock/counter-clockwise
                         [0, 0, 1, -1], [0, 0, -1, 1]], # rotate clock/counter-clockwise
                         device="cuda") 
 
@@ -55,7 +57,7 @@ class FloatingPlatformTask(RLTask):
             self.action_space = spaces.MultiDiscrete([3, 3, 3, 3])
         
         elif self._discrete_actions=="Discrete":
-            self._num_actions = 17
+            self._num_actions = 21
             self.action_space = spaces.Discrete(self._num_actions)          
         
         else:

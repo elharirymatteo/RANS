@@ -24,11 +24,13 @@ class QNetwork(DeterministicMixin, Model):
         Model.__init__(self, observation_space, action_space, device)
         DeterministicMixin.__init__(self, clip_actions)
 
-        self.net = nn.Sequential(nn.Linear(self.num_observations, 64),
+        self.net = nn.Sequential(nn.Linear(self.num_observations, 128),
                                  nn.ReLU(),
-                                 nn.Linear(64, 64),
+                                 nn.Linear(128, 256),
                                  nn.ReLU(),
-                                 nn.Linear(64, self.num_actions))
+                                 nn.Linear(256, 256),
+                                 nn.ReLU(),
+                                 nn.Linear(256, self.num_actions))
 
     def compute(self, inputs, role):
         return self.net(inputs["states"]), {}
@@ -76,7 +78,7 @@ agent_dqn = DQN(models=models,
                 device=device)
 
 # Configure and instantiate the RL trainer
-cfg_trainer = {"timesteps": 50000, "headless": True}
+cfg_trainer = {"timesteps": 100000, "headless": True}
 trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent_dqn, agents_scope=env.num_envs)
 
 # start training

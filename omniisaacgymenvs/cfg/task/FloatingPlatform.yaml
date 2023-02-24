@@ -9,7 +9,7 @@ env:
   envSpacing: 12
   maxEpisodeLength: 700
   enableDebugVis: False
-  discreteActions: Discrete
+  discreteActions: None
 
   clipObservations: 5.0
   clipActions: 1.0
