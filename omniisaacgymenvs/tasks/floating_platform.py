@@ -2,6 +2,7 @@
 from omniisaacgymenvs.tasks.base.rl_task import RLTask
 from omniisaacgymenvs.robots.articulations.floating_platform import FloatingPlatform
 from omniisaacgymenvs.robots.articulations.views.floating_platform_view import FloatingPlatformView
+from omniisaacgymenvs.tasks.utils.fp_utils import quantize_tensor_values
 
 from omni.isaac.core.utils.torch.rotations import *
 from omni.isaac.core.objects import DynamicSphere
@@ -46,7 +47,6 @@ class FloatingPlatformTask(RLTask):
         self._max_episode_length = self._task_cfg["env"]["maxEpisodeLength"]
         self._discrete_actions = self._task_cfg["env"]["discreteActions"]
 
-
         self.dt = self._task_cfg["sim"]["dt"]
         
         self._num_observations = 18
@@ -58,7 +58,11 @@ class FloatingPlatformTask(RLTask):
         
         elif self._discrete_actions=="Discrete":
             self._num_actions = 21
-            self.action_space = spaces.Discrete(self._num_actions)          
+            self.action_space = spaces.Discrete(self._num_actions)  
+
+        elif self._discrete_actions=="Quantised":
+            self._num_actions = 4     
+            self._num_quantized_actions = 20
         
         else:
             self._num_actions = 4
@@ -172,9 +176,9 @@ class FloatingPlatformTask(RLTask):
         #print(f' ACTIONS SHAPE : {self.actions.shape} NDIM: {self.actions.ndim}')
 
         ## DISCRETE ACTIONS MAPPING
-        #### the agents selectes for 4 thrusters, a value between [0,2]
-        #### then this values are shifter left to have values centered in 0 (-1, 0, 1)
-        #### to which a thrust_max is multiplied, obtainig the final actinon to be delivered
+         # the agents selectes for 4 thrusters, a value between [0,2]                       #
+         # then this values are shifter left to have values centered in 0 (-1, 0, 1)        #
+         # to which a thrust_max is multiplied, obtainig the final actinon to be delivered  #
         if  self._discrete_actions=="MultiDiscrete":
             # convert actions from [0, 1, 2] to [-1, 0, 1] to real force commands
             thrust_cmds = torch.sub(self.actions, 1.) 
@@ -182,14 +186,18 @@ class FloatingPlatformTask(RLTask):
         elif self._discrete_actions=="Discrete":
             self.actions = self.actions.squeeze(-1) if self.actions.ndim==2 else self.actions
             # print(f'ACTIONS: {self.actions} \n TYPE:{self.actions.dtype}, NDIM: {self.actions.ndim}')
-
             # get the allowed actions based on the agent discrete actions selected
             thrust_cmds = DISCRETE_ACTIONS.index_select(0, self.actions)
-
+        elif self._discrete_actions=="Quantised":
+            # clamp to [-1.0, 1.0] the continuos actions
+            thrust_cmds = torch.clamp(actions, min=-1.0, max=1.0)
+            thrust_cmds = quantize_tensor_values(thrust_cmds, self._num_quantized_actions).to(self._device)
+            # print(f'ACTIONS: {thrust_cmds} \n TYPE:{thrust_cmds.dtype}, NDIM: {thrust_cmds.ndim}')
         else:  
             # clamp to [-1.0, 1.0] the continuos actions
             thrust_cmds = torch.clamp(actions, min=-1.0, max=1.0)
-        
+            # write a mapping for the continuos actions to N quantised actions (N=20) 
+
         thrusts = self.thrust_max * thrust_cmds
 
         #print(f'Actions space: {self.action_space}')
