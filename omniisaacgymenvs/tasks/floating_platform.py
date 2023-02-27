@@ -46,6 +46,7 @@ class FloatingPlatformTask(RLTask):
         self._env_spacing = self._task_cfg["env"]["envSpacing"]
         self._max_episode_length = self._task_cfg["env"]["maxEpisodeLength"]
         self._discrete_actions = self._task_cfg["env"]["discreteActions"]
+        self._num_quantized_actions = self._task_cfg["env"]["numQuantizedActions"]
 
         self.dt = self._task_cfg["sim"]["dt"]
         
@@ -62,8 +63,7 @@ class FloatingPlatformTask(RLTask):
 
         elif self._discrete_actions=="Quantised":
             self._num_actions = 4     
-            self._num_quantized_actions = 20
-        
+
         else:
             self._num_actions = 4
 
@@ -201,7 +201,7 @@ class FloatingPlatformTask(RLTask):
         thrusts = self.thrust_max * thrust_cmds
 
         #print(f'Actions space: {self.action_space}')
-        #print(f'thrusts: {thrusts}')
+        print(f'thrusts: {thrusts}')
 
         # thrusts given rotation
         root_quats = self.root_rot
@@ -314,6 +314,9 @@ class FloatingPlatformTask(RLTask):
         pos_reward = 1.0 / (1.0 + target_dist)
         self.target_dist = target_dist
         self.root_positions = root_positions
+
+        # orinetation reward
+
 
             # combined reward
         self.rew_buf[:] = pos_reward 
