@@ -46,6 +46,7 @@ class FloatingPlatformTask(RLTask):
         self._env_spacing = self._task_cfg["env"]["envSpacing"]
         self._max_episode_length = self._task_cfg["env"]["maxEpisodeLength"]
         self._discrete_actions = self._task_cfg["env"]["discreteActions"]
+        # _num_quantized_actions has to be N whwere the final action space is N*2 +1
         self._num_quantized_actions = self._task_cfg["env"]["numQuantizedActions"]
 
         self.dt = self._task_cfg["sim"]["dt"]
@@ -192,7 +193,6 @@ class FloatingPlatformTask(RLTask):
             # clamp to [-1.0, 1.0] the continuos actions
             thrust_cmds = torch.clamp(actions, min=-1.0, max=1.0)
             thrust_cmds = quantize_tensor_values(thrust_cmds, self._num_quantized_actions).to(self._device)
-            # print(f'ACTIONS: {thrust_cmds} \n TYPE:{thrust_cmds.dtype}, NDIM: {thrust_cmds.ndim}')
         else:  
             # clamp to [-1.0, 1.0] the continuos actions
             thrust_cmds = torch.clamp(actions, min=-1.0, max=1.0)
@@ -201,8 +201,8 @@ class FloatingPlatformTask(RLTask):
         thrusts = self.thrust_max * thrust_cmds
 
         #print(f'Actions space: {self.action_space}')
-        print(f'thrusts: {thrusts}')
-
+        #print(f'Actions: {thrust_cmds}')
+        
         # thrusts given rotation
         root_quats = self.root_rot
         rot_x = quat_axis(root_quats, 0)

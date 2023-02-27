@@ -10,7 +10,7 @@ env:
   maxEpisodeLength: 700
   enableDebugVis: False
   discreteActions: None
-  numQuantizedActions: 3
+  numQuantizedActions: 1
 
   clipObservations: 5.0
   clipActions: 1.0
