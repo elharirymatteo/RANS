@@ -49,6 +49,9 @@ class RLGTrainer():
         self.cfg = cfg
         self.cfg_dict = cfg_dict
 
+        self.experiment_name = self.cfg.train.params.config.name + f"_{1/self.cfg_dict['task']['sim']['dt']}Hz"
+        self.cfg.train.params.config.name = self.experiment_name
+
     def launch_rlg_hydra(self, env):
         # `create_rlgpu_env` is environment construction function which is passed to RL Games and called internally.
         # We use the helper function here to specify the environment config.
@@ -70,6 +73,7 @@ class RLGTrainer():
         runner.load(self.rlg_config_dict)
         runner.reset()
 
+        print(f' Experiment name: {self.cfg.train.params.config.name}')
         # dump config dict
         experiment_dir = os.path.join('runs', self.cfg.train.params.config.name)
         os.makedirs(experiment_dir, exist_ok=True)
@@ -118,6 +122,7 @@ def parse_hydra_configs(cfg: DictConfig):
             project=cfg.wandb_project,
             group=cfg.wandb_group,
             entity=cfg.wandb_entity,
+            name=cfg.train.params.config.name,
             config=cfg_dict,
             sync_tensorboard=True,
             id=run_name,
