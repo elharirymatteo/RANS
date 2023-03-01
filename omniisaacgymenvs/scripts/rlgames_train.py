@@ -49,7 +49,7 @@ class RLGTrainer():
         self.cfg = cfg
         self.cfg_dict = cfg_dict
 
-        self.experiment_name = self.cfg.train.params.config.name + f"_{1/self.cfg_dict['task']['sim']['dt']}Hz"
+        self.experiment_name = self.cfg.train.params.config.name + f"_{int(1/self.cfg_dict['task']['sim']['dt'])}Hz"
         self.cfg.train.params.config.name = self.experiment_name
 
     def launch_rlg_hydra(self, env):
@@ -122,7 +122,6 @@ def parse_hydra_configs(cfg: DictConfig):
             project=cfg.wandb_project,
             group=cfg.wandb_group,
             entity=cfg.wandb_entity,
-            name=cfg.train.params.config.name,
             config=cfg_dict,
             sync_tensorboard=True,
             id=run_name,

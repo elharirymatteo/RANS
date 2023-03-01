@@ -45,6 +45,8 @@ class FloatingPlatformView(ArticulationView):
             prim_paths_expr=prim_paths_expr,
             name=name,
         )
+        self.base = RigidPrimView(prim_paths_expr=f"/World/envs/.*/Floating_platform/base_link/Cylinder",
+                                        name="base_view")
 
         self.thrusters = [RigidPrimView(prim_paths_expr=f"/World/envs/.*/Floating_platform/t{i}/thruster_{i}",
                                              name=f"thruster_{i}_view") for i in range(1, 5)]
