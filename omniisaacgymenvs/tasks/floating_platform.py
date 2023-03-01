@@ -102,7 +102,15 @@ class FloatingPlatformTask(RLTask):
         root_path = "/World/envs/.*/Floating_platform" 
         self._platforms = FloatingPlatformView(prim_paths_expr=root_path, name="floating_platform_view") 
         self._balls = RigidPrimView(prim_paths_expr="/World/envs/.*/ball")
-        print(len(self._platforms.thrusters))
+
+        space_margin = " "*25
+        print("\n########################  Floating platform set up ####################### \n")
+        print(f'{space_margin} Number of thrusters: {len(self._platforms.thrusters)}')
+        print(f'{space_margin} Mass base: {self._platforms.base.get_masses()[0]:.2f} kg')
+        for i in range(len(self._platforms.thrusters)):
+            # self._platforms.thrusters[i].set_masses(torch.tensor([50, 5], device=self._device))
+            print(f'{space_margin} Mass thruster {i+1}: {self._platforms.thrusters[i].get_masses()[0]:.2f} kg')
+        print("\n##########################################################################")
 
         scene.add(self._platforms) # add view to scene for initialization
         scene.add(self._balls)
@@ -113,6 +121,7 @@ class FloatingPlatformTask(RLTask):
     def get_floating_platform(self):
         fp = FloatingPlatform(prim_path=self.default_zero_env_path + "/Floating_platform", name="floating_platform",
                             translation=self._fp_position)
+        
         self._sim_config.apply_articulation_settings("floating_platform", get_prim_at_path(fp.prim_path),
                                                         self._sim_config.parse_actor_config("floating_platform"))
 
