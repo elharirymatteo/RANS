@@ -103,6 +103,9 @@ class FloatingPlatformTask(RLTask):
         root_path = "/World/envs/.*/Floating_platform" 
         self._platforms = FloatingPlatformView(prim_paths_expr=root_path, name="floating_platform_view") 
         self._balls = RigidPrimView(prim_paths_expr="/World/envs/.*/ball")
+        # set fp base masses according to the task config
+        masses = torch.tensor(self.mass, device=self._device, dtype=torch.float).repeat(self.num_envs)
+        self._platforms.base.set_masses(masses)
 
         space_margin = " "*25
         print("\n########################  Floating platform set up ####################### \n")
