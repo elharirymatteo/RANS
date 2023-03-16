@@ -49,9 +49,6 @@ class RLGTrainer():
         self.cfg = cfg
         self.cfg_dict = cfg_dict
 
-        self.experiment_name = self.cfg.train.params.config.name + f"_{int(1/self.cfg_dict['task']['sim']['dt'])}Hz"
-        self.cfg.train.params.config.name = self.experiment_name
-
     def launch_rlg_hydra(self, env):
         # `create_rlgpu_env` is environment construction function which is passed to RL Games and called internally.
         # We use the helper function here to specify the environment config.
