@@ -27,7 +27,7 @@
   },
   "experiment3": {
       "task": "FloatingPlatform",
-      "experiment": "fp_3kg_1N",
+      "experiment": "fp_3kg_2N",
       "headless": "True",
       "task.env.thrustForce": "2.0",
       "task.env.mass": "3.0",
@@ -40,7 +40,7 @@
   },
   "experiment4": {
     "task": "FloatingPlatform",
-    "experiment": "fp_5kg_1N",
+    "experiment": "fp_5kg_2N",
     "headless": "True",
     "task.env.thrustForce": "2.0",
     "task.env.mass": "5.0",
@@ -50,5 +50,33 @@
     "wandb_activate": "True",
     "wandb_entity": "matteohariry",
     "wandb_project": "fp_mass"
-  }
+  },
+  "experiment5": {
+    "task": "FloatingPlatform",
+    "experiment": "fp_3kg_1N_5Hz",
+    "headless": "True",
+    "task.env.thrustForce": "1.0",
+    "task.env.mass": "3.0",
+    "task.env.discreteActions": "Quantised",
+    "task.sim.dt": "0.2",
+    "num_envs": "2048",
+    "max_iterations": "2000",
+    "wandb_activate": "True",
+    "wandb_entity": "matteohariry",
+    "wandb_project": "fp_mass"
+},
+"experiment6": {
+  "task": "FloatingPlatform",
+  "experiment": "fp_5kg_1N_5Hz",
+  "headless": "True",
+  "task.env.thrustForce": "1.0",
+  "task.env.mass": "5.0",
+  "task.env.discreteActions": "Quantised",
+  "task.sim.dt": "0.2",
+  "num_envs": "2048",
+  "max_iterations": "2000",
+  "wandb_activate": "True",
+  "wandb_entity": "matteohariry",
+  "wandb_project": "fp_mass"
+}
 }
