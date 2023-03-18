@@ -10,7 +10,7 @@
       "max_iterations": "2000",
       "wandb_activate": "True",
       "wandb_entity": "matteohariry",
-      "wandb_project": "fp_mass"
+      "wandb_project": "fp_32x32"
   },
   "experiment2": {
     "task": "FloatingPlatform",
@@ -23,7 +23,7 @@
     "max_iterations": "2000",
     "wandb_activate": "True",
     "wandb_entity": "matteohariry",
-    "wandb_project": "fp_mass"
+    "wandb_project": "fp_32x32"
   },
   "experiment3": {
       "task": "FloatingPlatform",
@@ -36,7 +36,7 @@
       "max_iterations": "2000",
       "wandb_activate": "True",
       "wandb_entity": "matteohariry",
-      "wandb_project": "fp_mass"
+      "wandb_project": "fp_32x32"
   },
   "experiment4": {
     "task": "FloatingPlatform",
@@ -49,7 +49,7 @@
     "max_iterations": "2000",
     "wandb_activate": "True",
     "wandb_entity": "matteohariry",
-    "wandb_project": "fp_mass"
+    "wandb_project": "fp_32x32"
   },
   "experiment5": {
     "task": "FloatingPlatform",
@@ -63,7 +63,7 @@
     "max_iterations": "2000",
     "wandb_activate": "True",
     "wandb_entity": "matteohariry",
-    "wandb_project": "fp_mass"
+    "wandb_project": "fp_32x32"
 },
 "experiment6": {
   "task": "FloatingPlatform",
@@ -77,6 +77,6 @@
   "max_iterations": "2000",
   "wandb_activate": "True",
   "wandb_entity": "matteohariry",
-  "wandb_project": "fp_mass"
+  "wandb_project": "fp_32x32"
 }
 }
