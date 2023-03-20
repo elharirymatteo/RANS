@@ -50,9 +50,11 @@ class FloatingPlatformTask(RLTask):
         self._num_quantized_actions = self._task_cfg["env"]["numQuantizedActions"]
         self.mass = self._task_cfg["env"]["mass"]
         self.thrust_force = self._task_cfg["env"]["thrustForce"]
-
         self.dt = self._task_cfg["sim"]["dt"]
         
+        # subtasks legend: 0 - reach_zero, 1 - reach_target, 2 - reach_target & orientation, 
+        #                  3 - reach_target & orientation & velocity
+        self.subtask = self._task_cfg["env"]["subtask"]
         self._num_observations = 18
 
         # define action space
@@ -276,13 +278,19 @@ class FloatingPlatformTask(RLTask):
     def set_targets(self, env_ids):
         num_sets = len(env_ids)
         envs_long = env_ids.long()
-        # set target position randomly with x, y in (0, 0) and z in (2)
-        self.target_positions[envs_long, 0:2] = torch.zeros((num_sets, 2), device=self._device)
-        self.target_positions[envs_long, 2] = torch.ones(num_sets, device=self._device) * 2.0
 
+        if self.subtask == 0: # reach_zero
+            # set target position randomly with x, y in (0, 0) and z in (2)
+            self.target_positions[envs_long, 0:2] = torch.zeros((num_sets, 2), device=self._device)
+            self.target_positions[envs_long, 2] = torch.ones(num_sets, device=self._device) * 2.0
+
+        elif self.subtask == 1: # reach_target
+            # set target position randomly with x, y in (-reset_dist, reset_dist) and z in (2)
+            self.target_positions[envs_long, 0:2] = torch_rand_float(-self._reset_dist, self._reset_dist, (num_sets, 2), device=self._device)
+            self.target_positions[envs_long, 2] = torch.ones(num_sets, device=self._device) * 2.0
+        
         # shift the target up so it visually aligns better
         ball_pos = self.target_positions[envs_long] + self._env_pos[envs_long]
-        ball_pos[:, 2] += 0.0
         self._balls.set_world_poses(ball_pos[:, 0:3], self.initial_ball_rot[envs_long].clone(), indices=env_ids)
 
     def reset_idx(self, env_ids):
@@ -329,8 +337,12 @@ class FloatingPlatformTask(RLTask):
         self.root_positions = root_positions
 
         # orinetation reward
-
-
+        orient_z = torch.cos(root_quats[:, 0]) * torch.sin(root_quats[:, 1]) * torch.cos(root_quats[:, 2]) + torch.sin(root_quats[:, 0]) * torch.cos(root_quats[:, 1]) * torch.sin(root_quats[:, 2])
+        self.orient_z = orient_z
+        orient_reward = torch.where(orient_z > 0.0, torch.ones_like(orient_z), torch.zeros_like(orient_z))
+        self.orient_reward = orient_reward
+        print(f'orient_reward: {orient_reward[0]}')
+        print(f'pos_reward: {pos_reward[0]}')
             # combined reward
         self.rew_buf[:] = pos_reward 
         # log episode reward sums
