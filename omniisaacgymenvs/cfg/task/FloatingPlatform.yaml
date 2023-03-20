@@ -15,6 +15,7 @@ env:
   thrustForce: 1.0 
   clipObservations: 5.0
   clipActions: 1.0
+  subtask: 0
 
 sim:
   dt: 0.01
