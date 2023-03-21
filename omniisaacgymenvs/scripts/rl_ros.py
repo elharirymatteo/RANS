@@ -55,9 +55,13 @@ input_dict = {
     'obs' : processed_obs,
     'rnn_states' : None
 }
-res_dict = model(input_dict)
+#res_dict = model(input_dict)
 
-print(res_dict)
+model = torch.load('././fuck_nvidia.pt')
+
+print(model)
+#print(res_dict)
+
 
 # runner.load(params)
 # # runner.run({
