@@ -28,40 +28,32 @@ name = config['train']['params']['algo']['name']
 mode_builder = ModelBuilder()
 model = mode_builder.load(params)
 
+build_config = {
+    'actions_num' : 8,
+    'input_shape' : (18, 1),
+    'num_seqs' : 1,
+    'value_size': 1,
+    'normalize_value' : False,
+    'normalize_input': False,
+}
+        
+model = model.build(build_config)
 
-def preproc_obs(obs_batch):
-    if type(obs_batch) is dict:
-        obs_batch = copy.copy(obs_batch)
-        for k,v in obs_batch.items():
-            if v.dtype == torch.uint8:
-                obs_batch[k] = v.float() / 255.0
-            else:
-                obs_batch[k] = v
-    else:
-        if obs_batch.dtype == torch.uint8:
-            obs_batch = obs_batch.float() / 255.0
-    return obs_batch
 
-obs = {'obs1': torch.randn(18),
-        'obs2': torch.randn(18),
-        'obs3': torch.randn(18),
-        'obs4': torch.randn(18)}
-print(f'obs: {obs}')
-processed_obs = preproc_obs(obs)
+obs = torch.randn(1,18)
 
 input_dict = {
     'is_train': False,
     'prev_actions': None, 
-    'obs' : processed_obs,
+    'obs' : obs,
     'rnn_states' : None
 }
-#res_dict = model(input_dict)
-
-model = torch.load('././fuck_nvidia.pt')
 
 print(model)
-#print(res_dict)
 
+res_dict = model(input_dict)
+
+print(res_dict)
 
 # runner.load(params)
 # # runner.run({
