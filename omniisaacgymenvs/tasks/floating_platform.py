@@ -59,7 +59,7 @@ class FloatingPlatformTask(RLTask):
 
         # define action space
         if self._discrete_actions=="MultiDiscrete":    
-            self._num_actions = 4
+            self._num_actions = (4)
             self.action_space = spaces.MultiDiscrete([3, 3, 3, 3])
         
         elif self._discrete_actions=="Discrete":
