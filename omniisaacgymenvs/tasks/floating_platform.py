@@ -59,8 +59,9 @@ class FloatingPlatformTask(RLTask):
 
         # define action space
         if self._discrete_actions=="MultiDiscrete":    
-            self._num_actions = (4)
-            self.action_space = spaces.MultiDiscrete([3, 3, 3, 3])
+            self._num_actions = 4
+            self.action_space = spaces.Tuple([spaces.Discrete(3), spaces.Discrete(3), spaces.Discrete(3), spaces.Discrete(3)])
+            #self.action_space = spaces.MultiDiscrete([3, 3, 3, 3])
         
         elif self._discrete_actions=="Discrete":
             self._num_actions = 21
@@ -214,7 +215,7 @@ class FloatingPlatformTask(RLTask):
             # write a mapping for the continuos actions to N quantised actions (N=20) 
 
         thrusts = self.thrust_max * thrust_cmds
-
+        
         #print(f'Actions space: {self.action_space}')
         #print(f'Actions: {thrust_cmds}')
         
@@ -341,8 +342,8 @@ class FloatingPlatformTask(RLTask):
         self.orient_z = orient_z
         orient_reward = torch.where(orient_z > 0.0, torch.ones_like(orient_z), torch.zeros_like(orient_z))
         self.orient_reward = orient_reward
-        print(f'orient_reward: {orient_reward[0]}')
-        print(f'pos_reward: {pos_reward[0]}')
+        #print(f'orient_reward: {orient_reward[0]}')
+        #print(f'pos_reward: {pos_reward[0]}')
             # combined reward
         self.rew_buf[:] = pos_reward 
         # log episode reward sums
