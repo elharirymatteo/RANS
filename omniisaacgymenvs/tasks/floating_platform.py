@@ -60,6 +60,7 @@ class FloatingPlatformTask(RLTask):
         # define action space
         if self._discrete_actions=="MultiDiscrete":    
             self._num_actions = 4
+            # RLGames implementation of MultiDiscrete action space requires a tuple of Discrete spaces
             self.action_space = spaces.Tuple([spaces.Discrete(3), spaces.Discrete(3), spaces.Discrete(3), spaces.Discrete(3)])
             #self.action_space = spaces.MultiDiscrete([3, 3, 3, 3])
         
@@ -110,6 +111,12 @@ class FloatingPlatformTask(RLTask):
         masses = torch.tensor(self.mass, device=self._device, dtype=torch.float).repeat(self.num_envs)
         self._platforms.base.set_masses(masses)
 
+        # Add views to scene
+        scene.add(self._platforms) # add view to scene for initialization
+        scene.add(self._balls)
+        for i in range(4):
+            scene.add(self._platforms.thrusters[i])
+        
         space_margin = " "*25
         print("\n########################  Floating platform set up ####################### \n")
         print(f'{space_margin} Number of thrusters: {len(self._platforms.thrusters)}')
@@ -119,10 +126,6 @@ class FloatingPlatformTask(RLTask):
             print(f'{space_margin} Mass thruster {i+1}: {self._platforms.thrusters[i].get_masses()[0]:.2f} kg')
         print("\n##########################################################################")
 
-        scene.add(self._platforms) # add view to scene for initialization
-        scene.add(self._balls)
-        for i in range(4):
-            scene.add(self._platforms.thrusters[i])
         return
 
     def get_floating_platform(self):
@@ -192,7 +195,7 @@ class FloatingPlatformTask(RLTask):
         #print(f'ACTIONS: {self.actions} \n TYPE:{self.actions.dtype}')
         #print(f' ACTIONS SHAPE : {self.actions.shape} NDIM: {self.actions.ndim}')
 
-        ## DISCRETE ACTIONS MAPPING
+        ## MULTI-DISCRETE ACTIONS MAPPING
          # the agents selectes for 4 thrusters, a value between [0,2]                       #
          # then this values are shifter left to have values centered in 0 (-1, 0, 1)        #
          # to which a thrust_max is multiplied, obtainig the final actinon to be delivered  #
@@ -283,12 +286,10 @@ class FloatingPlatformTask(RLTask):
         if self.subtask == 0: # reach_zero
             # set target position randomly with x, y in (0, 0) and z in (2)
             self.target_positions[envs_long, 0:2] = torch.zeros((num_sets, 2), device=self._device)
-            self.target_positions[envs_long, 2] = torch.ones(num_sets, device=self._device) * 2.0
-
         elif self.subtask == 1: # reach_target
             # set target position randomly with x, y in (-reset_dist, reset_dist) and z in (2)
-            self.target_positions[envs_long, 0:2] = torch_rand_float(-self._reset_dist, self._reset_dist, (num_sets, 2), device=self._device)
-            self.target_positions[envs_long, 2] = torch.ones(num_sets, device=self._device) * 2.0
+            self.target_positions[envs_long, 0:2] = torch_rand_float(-self._reset_dist, self._reset_dist, (num_sets, 2), device=self._device) 
+        self.target_positions[envs_long, 2] = torch.ones(num_sets, device=self._device) * 2.0
         
         # shift the target up so it visually aligns better
         ball_pos = self.target_positions[envs_long] + self._env_pos[envs_long]
@@ -300,9 +301,11 @@ class FloatingPlatformTask(RLTask):
         self.dof_pos[env_ids, :] = torch_rand_float(-0.0, 0.0, (num_resets, self._platforms.num_dof), device=self._device)
         self.dof_vel[env_ids, :] = 0
 
+        # TODO: make sure resets are coherent for all different subtasks
+        reset_pos = self._reset_dist if self.subtask == 0 else 0.0
         root_pos = self.initial_root_pos.clone()
-        root_pos[env_ids, 0] += torch_rand_float(-self._reset_dist, self._reset_dist, (num_resets, 1), device=self._device).view(-1)
-        root_pos[env_ids, 1] += torch_rand_float(-self._reset_dist, self._reset_dist, (num_resets, 1), device=self._device).view(-1)
+        root_pos[env_ids, 0] += torch_rand_float(-reset_pos, reset_pos, (num_resets, 1), device=self._device).view(-1)
+        root_pos[env_ids, 1] += torch_rand_float(-reset_pos, reset_pos, (num_resets, 1), device=self._device).view(-1)
         root_pos[env_ids, 2] += torch_rand_float(-0.0, 0.0, (num_resets, 1), device=self._device).view(-1)
         root_velocities = self.root_velocities.clone()
         root_velocities[env_ids] = 0
@@ -355,8 +358,10 @@ class FloatingPlatformTask(RLTask):
         # resets due to misbehavior
         ones = torch.ones_like(self.reset_buf)
         die = torch.zeros_like(self.reset_buf)
-        die = torch.where(self.target_dist > self._reset_dist * 2, ones, die) # die if going too far from target
-
+        if self.subtask == 0:
+            die = torch.where(self.target_dist > self._reset_dist * 2, ones, die) # die if going too far from target
+        elif self.subtask == 1:
+            die = torch.where(self.target_dist > self._reset_dist * 4, ones, die)
         # z >= 0.5 & z <= 5.0 & up > 0
         # die = torch.where(self.root_positions[..., 2] < 0.5, ones, die)
         # die = torch.where(self.root_positions[..., 2] > 5.0, ones, die)
