@@ -16,6 +16,7 @@ env:
   clipObservations: 5.0
   clipActions: 1.0
   subtask: 0
+  actionDelay: 0.0
 
 sim:
   dt: 0.01

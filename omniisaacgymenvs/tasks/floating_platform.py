@@ -10,6 +10,7 @@ from omni.isaac.core.prims import RigidPrimView
 from omni.isaac.core.utils.prims import get_prim_at_path
 
 import numpy as np
+import time
 import torch
 from gym import spaces
 
@@ -51,7 +52,7 @@ class FloatingPlatformTask(RLTask):
         self.mass = self._task_cfg["env"]["mass"]
         self.thrust_force = self._task_cfg["env"]["thrustForce"]
         self.dt = self._task_cfg["sim"]["dt"]
-        
+        self.action_delay = self._task_cfg["env"]["actionDelay"]
         # subtasks legend: 0 - reach_zero, 1 - reach_target, 2 - reach_target & orientation, 
         #                  3 - reach_target & orientation & velocity
         self.subtask = self._task_cfg["env"]["subtask"]
@@ -124,6 +125,7 @@ class FloatingPlatformTask(RLTask):
         for i in range(len(self._platforms.thrusters)):
             # self._platforms.thrusters[i].set_masses(torch.tensor([50, 5], device=self._device))
             print(f'{space_margin} Mass thruster {i+1}: {self._platforms.thrusters[i].get_masses()[0]:.2f} kg')
+        print(f'{space_margin} Thrust force: {self.thrust_force} N')
         print("\n##########################################################################")
 
         return
@@ -260,6 +262,9 @@ class FloatingPlatformTask(RLTask):
         # clear actions for reset envs
         self.thrusts[reset_env_ids] = 0
 
+        # Apply action delay if required
+        if self.action_delay > 0:
+            time.sleep(self.action_delay)
         # Apply forces
         for i in range(4):
             self._platforms.thrusters[i].apply_forces(self.thrusts[:, i], indices=self.all_indices, is_global=False)
