@@ -205,15 +205,17 @@ class FloatingPlatformTask(RLTask):
         rot_z = quat_axis(root_quats, 2)
         rot_matrix = torch.cat((rot_x, rot_y, rot_z), 1).reshape(-1, 3, 3)
 
-        force_x = torch.zeros(self._num_envs, 4, dtype=torch.float32, device=self._device)
-        force_y = torch.zeros(self._num_envs, 4, dtype=torch.float32, device=self._device)
+        force_x = torch.zeros(self._num_envs, self._num_actions, dtype=torch.float32, device=self._device)
+        force_y = torch.zeros(self._num_envs, self._num_actions, dtype=torch.float32, device=self._device)
         force_xy = torch.cat((force_x, force_y), 1).reshape(-1, 4, 2)
         thrusts = thrusts.reshape(-1, 4, 1)
         thrusts = torch.cat((force_xy, thrusts), 2)        
-
         
-        thrusts_0 = thrusts[:, 0]
-        thrusts_0 = thrusts_0[:, :, None]
+        thrusts_transformed = []        
+        for i in self._num_actions:
+            thrusts_transformed.append(thrusts[:, 0])
+            thrusts_transformed[-1] = thrusts[:, :, None]
+            thrusts_0 = thrusts_0[:, :, None]
 
         thrusts_1 = thrusts[:, 1]
         thrusts_1 = thrusts_1[:, :, None]
