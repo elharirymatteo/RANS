@@ -46,19 +46,19 @@ class ModularFloatingPlatformTask(RLTask):
 
         # define action space
         if self._discrete_actions=="MultiDiscrete":    
-            self._num_actions = 8
+            self._num_actions = 4
             # RLGames implementation of MultiDiscrete action space requires a tuple of Discrete spaces
             self.action_space = spaces.Tuple([spaces.Discrete(2), spaces.Discrete(2), spaces.Discrete(2), spaces.Discrete(2)])
             #self.action_space = spaces.MultiDiscrete([3, 3, 3, 3])
         elif self._discrete_actions=="Discrete":
             raise NotImplementedError("The Discrete control mode is not supported.")
         elif self._discrete_actions=="Quantised":
-            self._num_actions = 8
+            self._num_actions = 4
         else:
-            self._num_actions = 8
+            self._num_actions = 4
 
         self._fp_position = torch.tensor([0, 0., 0.5])
-        self._ball_position = torch.tensor([0, 0, 3.0])
+        self._ball_position = torch.tensor([0, 0, 1.0])
         self._reset_dist = 5.
 
         # call parent class’s __init__
@@ -174,42 +174,27 @@ class ModularFloatingPlatformTask(RLTask):
 
         actions = actions.clone().to(self._device)
         self.actions = actions
-        #print(f'ACTIONS: {self.actions} \n TYPE:{self.actions.dtype}')
-        #print(f' ACTIONS SHAPE : {self.actions.shape} NDIM: {self.actions.ndim}')
 
-        ## MULTI-DISCRETE ACTIONS MAPPING
-         # the agents selectes for 4 thrusters, a value between [0,2]                       #
-         # then this values are shifter left to have values centered in 0 (-1, 0, 1)        #
-         # to which a thrust_max is multiplied, obtainig the final actinon to be delivered  #
         if  self._discrete_actions=="MultiDiscrete":
             # convert actions from [0, 1, 2] to [-1, 0, 1] to real force commands
             thrust_cmds = torch.sub(self.actions, 1.) 
         elif self._discrete_actions=="Quantised":
             # clamp to [-1.0, 1.0] the continuos actions
-            thrust_cmds = torch.clamp(actions, min=-1.0, max=1.0)
+            thrust_cmds = torch.clamp(self.actions, min=-1.0, max=1.0)
             thrust_cmds = quantize_tensor_values(thrust_cmds, self._num_quantized_actions).to(self._device)
         else:  
             # clamp to [-1.0, 1.0] the continuos actions
-            thrust_cmds = (torch.clamp(actions, min=-1.0, max=1.0) + 1.0) / 2
-            # write a mapping for the continuos actions to N quantised actions (N=20) 
+            thrust_cmds = torch.clamp(self.actions, min=-1.0, max=1.0)
+            # write a mapping for the continuos actions to N quantised actions (N=20)
 
         thrusts = self.thrust_max * thrust_cmds
-        
-        #print(f'Actions space: {self.action_space}')
-        #print(f'Actions: {thrust_cmds}')
-        
         # thrusts given rotation
         root_quats = self.root_rot
         rot_x = quat_axis(root_quats, 0)
         rot_y = quat_axis(root_quats, 1)
         rot_z = quat_axis(root_quats, 2)
         rot_matrix = torch.cat((rot_x, rot_y, rot_z), 1).reshape(-1, 3, 3)
-        print("====")
-        print(rot_matrix[0])
         rot_matrix = rot_matrix.repeat_interleave(self._num_actions, dim=0)
-        print(rot_matrix[0])
-        print(rot_matrix[1])
-
         force_x = torch.zeros(self._num_envs, self._num_actions, dtype=torch.float32, device=self._device)
         force_y = torch.zeros(self._num_envs, self._num_actions, dtype=torch.float32, device=self._device)
         force_xy = torch.cat((force_x, force_y), 1).reshape(-1, self._num_actions, 2)
@@ -217,32 +202,6 @@ class ModularFloatingPlatformTask(RLTask):
         thrusts = torch.cat((force_xy, thrusts), 2)
         thrusts = thrusts.reshape(-1, 3)
         self.thrusts = torch.matmul(rot_matrix, thrusts[:,:,None]).squeeze().reshape(self._num_envs, self.num_actions, 3)
-        """"
-        thrusts_transformed = []        
-        for i in self._num_actions:
-            thrusts_transformed.append(thrusts[:, 0])
-            thrusts_transformed[-1] = thrusts[:, :, None]
-            thrusts_0 = thrusts_0[:, :, None]
-
-        thrusts_1 = thrusts[:, 1]
-        thrusts_1 = thrusts_1[:, :, None]
-
-        thrusts_2 = thrusts[:, 2]
-        thrusts_2 = thrusts_2[:, :, None]
-
-        thrusts_3 = thrusts[:, 3]
-        thrusts_3 = thrusts_3[:, :, None]
-
-        mod_thrusts_0 = torch.matmul(rot_matrix, thrusts_0)
-        mod_thrusts_1 = torch.matmul(rot_matrix, thrusts_1)
-        mod_thrusts_2 = torch.matmul(rot_matrix, thrusts_2)
-        mod_thrusts_3 = torch.matmul(rot_matrix, thrusts_3)
-
-        self.thrusts[:, 0] = torch.squeeze(mod_thrusts_0)
-        self.thrusts[:, 1] = torch.squeeze(mod_thrusts_1)
-        self.thrusts[:, 2] = torch.squeeze(mod_thrusts_2)
-        self.thrusts[:, 3] = torch.squeeze(mod_thrusts_3)
-        """
         # clear actions for reset envs
         self.thrusts[reset_env_ids] = 0
 
@@ -251,7 +210,7 @@ class ModularFloatingPlatformTask(RLTask):
             time.sleep(self.action_delay)
         # Apply forces
         for i in range(self._num_actions):
-            self._platforms.thrusters[i].apply_forces(self.thrusts[:, i], indices=self.all_indices, is_global=False)
+            self._platforms.thrusters[i].apply_forces(self.thrusts[:,i], indices=self.all_indices, is_global=False)
 
     def post_reset(self):
         # implement any logic required for simulation on-start here

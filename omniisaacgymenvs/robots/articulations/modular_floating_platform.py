@@ -116,9 +116,9 @@ class CreatePlatform:
     def createXformArticulationAndJoins(self):
         # Creates the Xform of the platform
         platform_path, platform_prim = createXform(self.stage, self.platform_path)
+        setScale(platform_prim, Gf.Vec3d([1, 1, 1]))
         setTranslate(platform_prim, Gf.Vec3d([0, 0, 0]))
         setOrient(platform_prim, Gf.Quatd(1,Gf.Vec3d([0, 0, 0])))
-        setScale(platform_prim, Gf.Vec3d([1, 1, 1]))
         # Creates the Articulation root
         UsdPhysics.ArticulationRootAPI.Apply(self.stage.GetPrimAtPath(self.platform_path))
         # Creates an Xform to store the joints in
@@ -128,9 +128,9 @@ class CreatePlatform:
     def createRigidSphere(self, path, radius, CoM, mass):
         # Creates an Xform to store the sphere
         core_path, core_prim = createXform(self.stage, path)
+        setScale(core_prim, Gf.Vec3d([1, 1, 1]))
         setTranslate(core_prim, Gf.Vec3d([0, 0, 0]))
         setOrient(core_prim, Gf.Quatd(1, Gf.Vec3d([0, 0, 0])))
-        setScale(core_prim, Gf.Vec3d([1, 1, 1]))
         # Creates a sphere
         sphere_path = core_path+"/sphere"
         createSphere(self.stage, sphere_path, radius, self.refinement)
@@ -157,7 +157,7 @@ class CreatePlatform:
             quat2 = Gf.Quatd(Q2[-1], Gf.Vec3d([Q2[0], Q2[1], Q2[2]]))
             # Create thrusters
             self.createThruster(parent_path + "/thruster_" + str(num_thrusters)+"_0", joints_path+"/thruster_joint_"+str(num_thrusters)+"_0", translate, quat1, attachement_path)
-            self.createThruster(parent_path + "/thruster_" + str(num_thrusters)+"_1", joints_path+"/thruster_joint_"+str(num_thrusters)+"_1", translate, quat2, attachement_path)
+            #self.createThruster(parent_path + "/thruster_" + str(num_thrusters)+"_1", joints_path+"/thruster_joint_"+str(num_thrusters)+"_1", translate, quat2, attachement_path)
             num_thrusters += 1
         return num_thrusters
 
@@ -170,6 +170,7 @@ class CreatePlatform:
         thruster_base_geom.GetRadiusAttr().Set(radius)
         thruster_base_geom.GetHeightAttr().Set(height)
         # move it such that it stays flush
+        setScale(thruster_base_geom, Gf.Vec3d([1, 1, 1]))
         setTranslate(thruster_base_geom, Gf.Vec3d([0, 0, height*0.5]))
         # add a cone to show the direction of the thrust
         cone_path = path + "/cone"
@@ -177,6 +178,7 @@ class CreatePlatform:
         thruster_cone_geom.GetRadiusAttr().Set(radius)
         thruster_cone_geom.GetHeightAttr().Set(height)
         # move and rotate to match reality
+        setScale(thruster_cone_geom, Gf.Vec3d([1, 1, 1]))
         setTranslate(thruster_cone_geom, Gf.Vec3d([0, 0, height*1.5]))
         setRotateXYZ(thruster_cone_geom, Gf.Vec3d([0, 180, 0]))
         # Refine
@@ -225,6 +227,7 @@ class CreatePlatform:
         # Create Xform
         thruster_path, thruster_prim = createXform(self.stage, path)
         # Move the Xform at the correct position
+        setScale(thruster_prim, Gf.Vec3d([1, 1, 1]))
         setTranslate(thruster_prim, translate)
         setOrient(thruster_prim, quat)
         # Add shapes
