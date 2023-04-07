@@ -76,7 +76,7 @@ def setOrient(prim, value):
 def setTransform(prim, value: Gf.Matrix4d):
     setXformOp(prim, value, UsdGeom.XformOp.TypeTransform)
 
-def refineShape(path, refinement):
+def refineShape(stage, path, refinement):
     prim = stage.GetPrimAtPath(path)
     prim.CreateAttribute("refinementLevel", Sdf.ValueTypeNames.Int)
     prim.GetAttribute("refinementLevel").Set(refinement)
@@ -86,7 +86,7 @@ def refineShape(path, refinement):
 def createSphere(stage, path, radius, refinement):
     sphere_geom = UsdGeom.Sphere.Define(stage, path)
     sphere_geom.GetRadiusAttr().Set(radius)
-    refineShape(path, refinement)
+    refineShape(stage, path, refinement)
     return sphere_geom
 
 class CreatePlatform:
@@ -98,7 +98,7 @@ class CreatePlatform:
         self.core_mass = 5.0
         self.refinement = 2
         self.core_radius = 0.5
-        self.num_thrusters_per_ring = [4, 6, 8]
+        self.num_thrusters_per_ring = [8, 12, 16]
         self.rings_radius = [0.5, 0.75, 1]
         self.thruster_radius = 0.05
         self.thruster_length = 0.1
@@ -111,14 +111,14 @@ class CreatePlatform:
         self.createRevoluteJoint(self.stage, joints_path+"/dummy_link", core_path, dummy_path)
         num_thrusters = 0
         for radius, num_ring_thrusters in zip(self.rings_radius, self.num_thrusters_per_ring):
-            self.generateThrusterRing(radius, num_ring_thrusters, num_thrusters, platform_path, joints_path, core_path)
+            num_thrusters = self.generateThrusterRing(radius, num_ring_thrusters, num_thrusters, platform_path, joints_path, core_path)
 
     def createXformArticulationAndJoins(self):
         # Creates the Xform of the platform
         platform_path, platform_prim = createXform(self.stage, self.platform_path)
-        setTranslate(platform_prim, Gf.Vec3d([0,0,0]))
-        setOrient(platform_prim, Gf.Quatd(1,Gf.Vec3d([0,0,0])))
-        setScale(platform_prim, Gf.Vec3d([1,1,1]))
+        setTranslate(platform_prim, Gf.Vec3d([0, 0, 0]))
+        setOrient(platform_prim, Gf.Quatd(1,Gf.Vec3d([0, 0, 0])))
+        setScale(platform_prim, Gf.Vec3d([1, 1, 1]))
         # Creates the Articulation root
         UsdPhysics.ArticulationRootAPI.Apply(self.stage.GetPrimAtPath(self.platform_path))
         # Creates an Xform to store the joints in
@@ -159,6 +159,7 @@ class CreatePlatform:
             self.createThruster(parent_path + "/thruster_" + str(num_thrusters)+"_0", joints_path+"/thruster_joint_"+str(num_thrusters)+"_0", translate, quat1, attachement_path)
             self.createThruster(parent_path + "/thruster_" + str(num_thrusters)+"_1", joints_path+"/thruster_joint_"+str(num_thrusters)+"_1", translate, quat2, attachement_path)
             num_thrusters += 1
+        return num_thrusters
 
     @staticmethod
     def createThrusterShape(stage, path, radius, height, refinement):
@@ -179,8 +180,8 @@ class CreatePlatform:
         setTranslate(thruster_cone_geom, Gf.Vec3d([0, 0, height*1.5]))
         setRotateXYZ(thruster_cone_geom, Gf.Vec3d([0, 180, 0]))
         # Refine
-        refineShape(cylinder_path, refinement)
-        refineShape(cone_path, refinement)
+        refineShape(stage, cylinder_path, refinement)
+        refineShape(stage, cone_path, refinement)
 
     @staticmethod
     def createFixedJoint(stage, path, body_path1, body_path2):
@@ -254,14 +255,16 @@ class FloatingPlatform(Robot):
         self._usd_path = usd_path
         self._name = name
 
-        if self._usd_path is None:
-            assets_root_path = get_assets_root_path()
-            if assets_root_path is None:
-                carb.log_error("Could not find Isaac Sim assets folder")
-            self._usd_path = "/home/matteo/Projects/OmniIsaacGymEnvs/omniisaacgymenvs/robots/usd/fp3.usd"
+        #if self._usd_path is None:
+        #    assets_root_path = get_assets_root_path()
+        #    if assets_root_path is None:
+        #        carb.log_error("Could not find Isaac Sim assets folder")
+        #    self._usd_path = "/home/matteo/Projects/OmniIsaacGymEnvs/omniisaacgymenvs/robots/usd/fp3.usd"
 
-        add_reference_to_stage(self._usd_path, prim_path)
-        scale = torch.tensor([1, 1, 1])
+        #add_reference_to_stage(self._usd_path, prim_path)
+        #scale = torch.tensor([1, 1, 1])
+        fp = CreatePlatform(prim_path)
+        fp.build()
 
         super().__init__(
             prim_path=prim_path,
