@@ -45,6 +45,7 @@ def initialize_task(config, env, init_sim=True):
     from omniisaacgymenvs.tasks.shadow_hand import ShadowHandTask
     from omniisaacgymenvs.tasks.crazyflie import CrazyflieTask
     from omniisaacgymenvs.tasks.floating_platform import FloatingPlatformTask
+    from omniisaacgymenvs.tasks.modular_floating_platform import ModularFloatingPlatformTask
 
     # Mappings from strings to environments
     task_map = {
@@ -64,6 +65,7 @@ def initialize_task(config, env, init_sim=True):
         "ShadowHandOpenAI_FF": ShadowHandTask,
         "ShadowHandOpenAI_LSTM": ShadowHandTask,
         "FloatingPlatform": FloatingPlatformTask,
+        "ModularFloatingPlatform": ModularFloatingPlatformTask,
     }
 
     cfg = sim_config.config
