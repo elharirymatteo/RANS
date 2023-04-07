@@ -12,7 +12,7 @@ env:
   discreteActions: Continuous
   numQuantizedActions: 1
   mass: 5.0
-  thrustForce: 1.0 
+  thrustForce: 10.0 
   clipObservations: 5.0
   clipActions: 1.0
   subtask: 0
@@ -22,7 +22,7 @@ sim:
   dt: 0.01
   use_gpu_pipeline: ${eq:${...pipeline},"gpu"}
   gravity: [0.0, 0.0, 0.0]
-  add_ground_plane: True
+  add_ground_plane: False
   add_distant_light: True
   use_flatcache: True
   enable_scene_query_support: False
@@ -60,7 +60,7 @@ sim:
   floating_platform:
     # -1 to use default values
     override_usd_defaults: False
-    enable_self_collisions: True
+    enable_self_collisions: False
     enable_gyroscopic_forces: True
     # also in stage params
     # per-actor
