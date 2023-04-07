@@ -207,10 +207,12 @@ class FloatingPlatformTask(RLTask):
 
         force_x = torch.zeros(self._num_envs, self._num_actions, dtype=torch.float32, device=self._device)
         force_y = torch.zeros(self._num_envs, self._num_actions, dtype=torch.float32, device=self._device)
-        force_xy = torch.cat((force_x, force_y), 1).reshape(-1, 4, 2)
-        thrusts = thrusts.reshape(-1, 4, 1)
+        force_xy = torch.cat((force_x, force_y), 1).reshape(-1, self._num_actions, 2)
+        thrusts = thrusts.reshape(-1, self._num_actions, 1)
         thrusts = torch.cat((force_xy, thrusts), 2)        
-        
+        thrusts = thrusts.reshape(-1, 3)
+        self.thrusts = torch.matmul(rot_matrix, thrusts).squeeze().reshape(self._num_envs, self.num_actions, 3)
+        """"
         thrusts_transformed = []        
         for i in self._num_actions:
             thrusts_transformed.append(thrusts[:, 0])
@@ -235,6 +237,7 @@ class FloatingPlatformTask(RLTask):
         self.thrusts[:, 1] = torch.squeeze(mod_thrusts_1)
         self.thrusts[:, 2] = torch.squeeze(mod_thrusts_2)
         self.thrusts[:, 3] = torch.squeeze(mod_thrusts_3)
+        """
         # clear actions for reset envs
         self.thrusts[reset_env_ids] = 0
 
