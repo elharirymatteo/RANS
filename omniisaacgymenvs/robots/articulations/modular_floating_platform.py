@@ -42,7 +42,7 @@ import math
 from pxr import UsdGeom, Sdf, Gf, UsdPhysics
 from scipy.spatial.transform import Rotation as SSTR
 
-# Code to create a modular platform
+NUM_THRUSTERS = 4*2 + 8*2 + 16*2
 
 def createXform(stage, path):
     path = omni.usd.get_stage_next_free_path(stage, path, False)
@@ -239,11 +239,11 @@ class CreatePlatform:
         # Create joint
         self.createFixedJoint(self.stage, joint_path, parent_path, thruster_path)
 
-class FloatingPlatform(Robot):
+class ModularFloatingPlatform(Robot):
     def __init__(
         self,
         prim_path: str,
-        name: Optional[str] = "floating_platform",
+        name: Optional[str] = "modular_floating_platform",
         usd_path: Optional[str] = None,
         translation: Optional[np.ndarray] = None,
         orientation: Optional[np.ndarray] = None,
