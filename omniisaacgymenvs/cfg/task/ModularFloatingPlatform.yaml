@@ -1,5 +1,5 @@
 # used to create the object
-name: FloatingPlatform
+name: ModularFloatingPlatform
 
 physics_engine: ${..physics_engine}
 

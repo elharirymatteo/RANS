@@ -16,7 +16,7 @@ from gym import spaces
 
 EPS = 1e-6   # small constant to avoid divisions by 0 and log(0)
 
-class FloatingPlatformTask(RLTask):
+class ModularFloatingPlatformTask(RLTask):
     def __init__(
         self,
         name: str,                # name of the Task
@@ -48,7 +48,7 @@ class FloatingPlatformTask(RLTask):
         if self._discrete_actions=="MultiDiscrete":    
             self._num_actions = 8
             # RLGames implementation of MultiDiscrete action space requires a tuple of Discrete spaces
-            self.action_space = spaces.Tuple([spaces.Discrete(3), spaces.Discrete(3), spaces.Discrete(3), spaces.Discrete(3)])
+            self.action_space = spaces.Tuple([spaces.Discrete(2), spaces.Discrete(2), spaces.Discrete(2), spaces.Discrete(2)])
             #self.action_space = spaces.MultiDiscrete([3, 3, 3, 3])
         elif self._discrete_actions=="Discrete":
             raise NotImplementedError("The Discrete control mode is not supported.")
@@ -96,7 +96,7 @@ class FloatingPlatformTask(RLTask):
         # Add views to scene
         scene.add(self._platforms) # add view to scene for initialization
         scene.add(self._balls)
-        for i in range(4):
+        for i in range(len(self._platforms.thrusters)):
             scene.add(self._platforms.thrusters[i])
         
         space_margin = " "*25
@@ -190,7 +190,7 @@ class FloatingPlatformTask(RLTask):
             thrust_cmds = quantize_tensor_values(thrust_cmds, self._num_quantized_actions).to(self._device)
         else:  
             # clamp to [-1.0, 1.0] the continuos actions
-            thrust_cmds = torch.clamp(actions, min=-1.0, max=1.0)
+            thrust_cmds = (torch.clamp(actions, min=-1.0, max=1.0) + 1.0) / 2
             # write a mapping for the continuos actions to N quantised actions (N=20) 
 
         thrusts = self.thrust_max * thrust_cmds
@@ -204,14 +204,19 @@ class FloatingPlatformTask(RLTask):
         rot_y = quat_axis(root_quats, 1)
         rot_z = quat_axis(root_quats, 2)
         rot_matrix = torch.cat((rot_x, rot_y, rot_z), 1).reshape(-1, 3, 3)
+        print("====")
+        print(rot_matrix[0])
+        rot_matrix = rot_matrix.repeat_interleave(self._num_actions, dim=0)
+        print(rot_matrix[0])
+        print(rot_matrix[1])
 
         force_x = torch.zeros(self._num_envs, self._num_actions, dtype=torch.float32, device=self._device)
         force_y = torch.zeros(self._num_envs, self._num_actions, dtype=torch.float32, device=self._device)
         force_xy = torch.cat((force_x, force_y), 1).reshape(-1, self._num_actions, 2)
         thrusts = thrusts.reshape(-1, self._num_actions, 1)
-        thrusts = torch.cat((force_xy, thrusts), 2)        
+        thrusts = torch.cat((force_xy, thrusts), 2)
         thrusts = thrusts.reshape(-1, 3)
-        self.thrusts = torch.matmul(rot_matrix, thrusts).squeeze().reshape(self._num_envs, self.num_actions, 3)
+        self.thrusts = torch.matmul(rot_matrix, thrusts[:,:,None]).squeeze().reshape(self._num_envs, self.num_actions, 3)
         """"
         thrusts_transformed = []        
         for i in self._num_actions:
@@ -259,7 +264,7 @@ class FloatingPlatformTask(RLTask):
         self.initial_root_pos, self.initial_root_rot = self.root_pos.clone(), self.root_rot.clone()
 
         # control parameters
-        self.thrusts = torch.zeros((self._num_envs, 4, 3), dtype=torch.float32, device=self._device)
+        self.thrusts = torch.zeros((self._num_envs, self._num_actions, 3), dtype=torch.float32, device=self._device)
         
         self.set_targets(self.all_indices)
 

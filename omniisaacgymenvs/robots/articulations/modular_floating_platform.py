@@ -42,7 +42,7 @@ import math
 from pxr import UsdGeom, Sdf, Gf, UsdPhysics
 from scipy.spatial.transform import Rotation as SSTR
 
-NUM_THRUSTERS = 4*2 + 8*2 + 16*2
+NUM_THRUSTERS = 4*2# + 6*2 + 8*2
 
 def createXform(stage, path):
     path = omni.usd.get_stage_next_free_path(stage, path, False)
@@ -98,8 +98,8 @@ class CreatePlatform:
         self.core_mass = 5.0
         self.refinement = 2
         self.core_radius = 0.5
-        self.num_thrusters_per_ring = [8, 12, 16]
-        self.rings_radius = [0.5, 0.75, 1]
+        self.num_thrusters_per_ring = [4]#, 6, 8]
+        self.rings_radius = [0.5]#, 0.75, 1]
         self.thruster_radius = 0.05
         self.thruster_length = 0.1
         self.stage = omni.usd.get_context().get_stage()
