@@ -16,20 +16,6 @@ from gym import spaces
 
 EPS = 1e-6   # small constant to avoid divisions by 0 and log(0)
 
-# creating set of allowed thrust actions
-DISCRETE_ACTIONS = torch.tensor([[0, 0, 0, 0], # no action
-                        [1, 0, 0, 0],[0, 1, 0, 0], # single thrusts positive
-                        [0, 0, 1, 0], [0, 0, 0, 1], 
-                        [-1, 0, 0, 0],[0, -1, 0, 0], # single thrusts negative
-                        [0, 0, -1, 0], [0, 0, 0, -1],
-                        [1, 1, 0, 0],[-1, -1, 0, 0], # thr 1 & thr 2, move forward, backward on X axis
-                        [0, 0, 1, 1],[0, 0, -1, -1], # thr 3 & thr 4, move forward, backward on Y axis
-                        [1, 0, 1, 0], [-1, 0, -1, 0], # move diagonal  NE & SW (using t1-t3)
-                        [1, 0, 0, -1], [-1, 0, 0, 1], # move diagonal  NW & SE (using t1-t4)                       
-                        [1, -1, 0, 0], [-1, 1, 0, 0], # rotate clock/counter-clockwise
-                        [0, 0, 1, -1], [0, 0, -1, 1]], # rotate clock/counter-clockwise
-                        device="cuda") 
-
 class FloatingPlatformTask(RLTask):
     def __init__(
         self,
@@ -60,21 +46,16 @@ class FloatingPlatformTask(RLTask):
 
         # define action space
         if self._discrete_actions=="MultiDiscrete":    
-            self._num_actions = 4
+            self._num_actions = 8
             # RLGames implementation of MultiDiscrete action space requires a tuple of Discrete spaces
             self.action_space = spaces.Tuple([spaces.Discrete(3), spaces.Discrete(3), spaces.Discrete(3), spaces.Discrete(3)])
             #self.action_space = spaces.MultiDiscrete([3, 3, 3, 3])
-        
         elif self._discrete_actions=="Discrete":
-            self._num_actions = 21
-            self.action_space = spaces.Discrete(self._num_actions)  
-
+            raise NotImplementedError("The Discrete control mode is not supported.")
         elif self._discrete_actions=="Quantised":
-            self._num_actions = 4     
-
+            self._num_actions = 8
         else:
-            self._num_actions = 4
-
+            self._num_actions = 8
 
         self._fp_position = torch.tensor([0, 0., 0.5])
         self._ball_position = torch.tensor([0, 0, 3.0])
@@ -127,11 +108,10 @@ class FloatingPlatformTask(RLTask):
             print(f'{space_margin} Mass thruster {i+1}: {self._platforms.thrusters[i].get_masses()[0]:.2f} kg')
         print(f'{space_margin} Thrust force: {self.thrust_force} N')
         print("\n##########################################################################")
-
         return
 
     def get_floating_platform(self):
-        fp = ModularFloatingPlatform(prim_path=self.default_zero_env_path + "/Modular_Floating_platform", name="modular_floating_platform",
+        fp = ModularFloatingPlatform(prim_path=self.default_zero_env_path + "/Modular_floating_platform", name="modular_floating_platform",
                             translation=self._fp_position)
         
         self._sim_config.apply_articulation_settings("modular_floating_platform", get_prim_at_path(fp.prim_path),
@@ -204,12 +184,6 @@ class FloatingPlatformTask(RLTask):
         if  self._discrete_actions=="MultiDiscrete":
             # convert actions from [0, 1, 2] to [-1, 0, 1] to real force commands
             thrust_cmds = torch.sub(self.actions, 1.) 
-
-        elif self._discrete_actions=="Discrete":
-            self.actions = self.actions.squeeze(-1) if self.actions.ndim==2 else self.actions
-            # print(f'ACTIONS: {self.actions} \n TYPE:{self.actions.dtype}, NDIM: {self.actions.ndim}')
-            # get the allowed actions based on the agent discrete actions selected
-            thrust_cmds = DISCRETE_ACTIONS.index_select(0, self.actions)
         elif self._discrete_actions=="Quantised":
             # clamp to [-1.0, 1.0] the continuos actions
             thrust_cmds = torch.clamp(actions, min=-1.0, max=1.0)
@@ -266,7 +240,7 @@ class FloatingPlatformTask(RLTask):
         if self.action_delay > 0:
             time.sleep(self.action_delay)
         # Apply forces
-        for i in range(4):
+        for i in range(self._num_actions):
             self._platforms.thrusters[i].apply_forces(self.thrusts[:, i], indices=self.all_indices, is_global=False)
 
     def post_reset(self):
