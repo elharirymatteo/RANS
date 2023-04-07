@@ -32,7 +32,7 @@ from omni.isaac.core.articulations import ArticulationView
 from omni.isaac.core.prims import RigidPrimView
 from omniisaacgymenvs.robots.articulations.modular_floating_platform import NUM_THRUSTERS
 
-class FloatingPlatformView(ArticulationView):
+class ModularFloatingPlatformView(ArticulationView):
     def __init__(
         self,
         prim_paths_expr: str,
@@ -45,10 +45,10 @@ class FloatingPlatformView(ArticulationView):
             prim_paths_expr=prim_paths_expr,
             name=name,
         )
-        self.base = RigidPrimView(prim_paths_expr=f"/World/envs/.*/Modular_Floating_platform/core",
+        self.base = RigidPrimView(prim_paths_expr=f"/World/envs/.*/Modular_floating_platform/core",
                                         name="base_view")
 
-        self.thrusters = [RigidPrimView(prim_paths_expr=f"/World/envs/.*/Modular_Floating_platform/thruster_{i}_{0}",
+        self.thrusters = [RigidPrimView(prim_paths_expr=f"/World/envs/.*/Modular_floating_platform/thruster_{i}_{0}",
                                              name=f"thruster_{i}_0_view") for i in range(0, NUM_THRUSTERS//2)] + \
-                         [RigidPrimView(prim_paths_expr=f"/World/envs/.*/Modular_Floating_platform/thruster_{i}_{1}",
+                         [RigidPrimView(prim_paths_expr=f"/World/envs/.*/Modular_floating_platform/thruster_{i}_{1}",
                                              name=f"thruster_{i}_1_view") for i in range(0, NUM_THRUSTERS//2)]
