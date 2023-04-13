@@ -17,7 +17,7 @@ from gym import spaces
 
 EPS = 1e-6   # small constant to avoid divisions by 0 and log(0)
 
-class ModularFloatingPlatformTask(RLTask):
+class ModularFloatingPlatformCrippledTask(RLTask):
     def __init__(
         self,
         name: str,                # name of the Task
@@ -43,7 +43,6 @@ class ModularFloatingPlatformTask(RLTask):
         # subtasks legend: 0 - reach_zero, 1 - reach_target, 2 - reach_target & orientation, 
         #                  3 - reach_target & orientation & velocity
         self.subtask = self._task_cfg["env"]["subtask"]
-        self._num_observations = 18
 
         # define action space
         if self._discrete_actions=="MultiDiscrete":    
@@ -58,6 +57,8 @@ class ModularFloatingPlatformTask(RLTask):
         else:
             self._num_actions = 8
 
+        self._num_observations = 18 + self._num_actions
+
         self._fp_position = torch.tensor([0, 0., 0.5])
         self._ball_position = torch.tensor([0, 0, 1.0])
         self._reset_dist = 5.
@@ -70,6 +71,7 @@ class ModularFloatingPlatformTask(RLTask):
         self.target_positions = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
         self.target_positions[:, 2] = 1
         self.actions = torch.zeros((self._num_envs, self._num_actions), device=self._device, dtype=torch.float32)
+        self.thrusters_state = torch.ones([self._num_envs, self._num_actions], device=self._device, dtype=torch.float32)
 
         self.all_indices = torch.arange(self._num_envs, dtype=torch.int32, device=self._device)
      
@@ -154,6 +156,7 @@ class ModularFloatingPlatformTask(RLTask):
 
         self.obs_buf[..., 12:15] = root_linvels
         self.obs_buf[..., 15:18] = root_angvels
+        self.obs_buf[..., 18:18+self._num_actions] = self.thrusters_state
 
         observations = {
             self._platforms.name: {
@@ -190,7 +193,7 @@ class ModularFloatingPlatformTask(RLTask):
             thrust_cmds = torch.clamp((self.actions+1)/2, min=0.0, max=1.0)
             # write a mapping for the continuos actions to N quantised actions (N=20)
 
-        thrusts = self.thrust_max * thrust_cmds
+        thrusts = self.thrust_max * thrust_cmds * self.thrusters_state
         # thrusts given rotation
         root_quats = self.root_rot
         rot_x = quat_axis(root_quats, 0)
@@ -251,6 +254,9 @@ class ModularFloatingPlatformTask(RLTask):
 
         self.dof_pos[env_ids, :] = torch_rand_float(-0.0, 0.0, (num_resets, self._platforms.num_dof), device=self._device)
         self.dof_vel[env_ids, :] = 0
+
+        idx = torch.randint(0, self._num_actions, [num_resets], device=self._device)
+        self.thrusters_state[env_ids,:] = 1 - torch.nn.functional.one_hot(idx, self._num_actions).float()
 
         # TODO: make sure resets are coherent for all different subtasks
         reset_pos = self._reset_dist if self.subtask == 0 else 0.0
