@@ -12,14 +12,15 @@ env:
   discreteActions: Continuous
   numQuantizedActions: 1
   mass: 5.0
-  thrustForce: 10.0 
+  thrustForce: 1.0 
   clipObservations: 5.0
   clipActions: 1.0
+  controlFrequencyInv: 10
   subtask: 0
   actionDelay: 0.0
 
 sim:
-  dt: 0.01
+  dt: 0.02
   use_gpu_pipeline: ${eq:${...pipeline},"gpu"}
   gravity: [0.0, 0.0, 0.0]
   add_ground_plane: False
@@ -34,8 +35,8 @@ sim:
     worker_thread_count: ${....num_threads}
     solver_type: ${....solver_type}
     use_gpu: ${eq:${....sim_device},"gpu"} # set to False to run on CPU
-    solver_position_iteration_count: 4
-    solver_velocity_iteration_count: 0
+    solver_position_iteration_count: 40
+    solver_velocity_iteration_count: 20
     contact_offset: 0.02
     rest_offset: 0.001
     bounce_threshold_velocity: 0.2
@@ -64,8 +65,8 @@ sim:
     enable_gyroscopic_forces: True
     # also in stage params
     # per-actor
-    solver_position_iteration_count: 6
-    solver_velocity_iteration_count: 0
+    solver_position_iteration_count: 40
+    solver_velocity_iteration_count: 20
     sleep_threshold: 0.005
     stabilization_threshold: 0.001
     # per-body

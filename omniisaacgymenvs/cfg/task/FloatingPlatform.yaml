@@ -15,14 +15,15 @@ env:
   thrustForce: 1.0 
   clipObservations: 5.0
   clipActions: 1.0
+  controlFrequencyInv: 1
   subtask: 0
   actionDelay: 0.0
 
 sim:
-  dt: 0.01
+  dt: 0.1
   use_gpu_pipeline: ${eq:${...pipeline},"gpu"}
   gravity: [0.0, 0.0, 0.0]
-  add_ground_plane: True
+  add_ground_plane: False
   add_distant_light: True
   use_flatcache: True
   enable_scene_query_support: False

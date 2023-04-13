@@ -87,13 +87,16 @@ def createSphere(stage, path, radius, refinement):
     sphere_geom = UsdGeom.Sphere.Define(stage, path)
     sphere_geom.GetRadiusAttr().Set(radius)
     refineShape(stage, path, refinement)
+    setTranslate(sphere_geom, Gf.Vec3d([0, 0, 0]))
+    setOrient(sphere_geom, Gf.Quatd(1, Gf.Vec3d([0, 0, 0])))
+    setScale(sphere_geom, Gf.Vec3d([1, 1, 1]))
     return sphere_geom
 
 class CreatePlatform:
     def __init__(self, path):
         self.platform_path = path
         self.thruster_CoM = Gf.Vec3f([0, 0, 0])
-        self.thruster_mass = 0.0001
+        self.thruster_mass = 0.00001
         self.core_CoM = Gf.Vec3f([0, 0, 0])
         self.core_mass = 5.0
         self.refinement = 2
@@ -106,8 +109,8 @@ class CreatePlatform:
 
     def build(self):    
         platform_path, joints_path = self.createXformArticulationAndJoins()
-        core_path = self.createRigidSphere(platform_path + "/core", self.core_radius, self.core_CoM, self.core_mass/2)
-        dummy_path = self.createRigidSphere(platform_path + "/dummy", self.core_radius/2, self.core_CoM, self.core_mass/2)
+        core_path = self.createRigidSphere(platform_path + "/core", "sphere", self.core_radius, self.core_CoM, self.core_mass)
+        dummy_path = self.createRigidSphere(platform_path + "/dummy", "sphere2", 0.00001, self.core_CoM, 0.00001)
         self.createRevoluteJoint(self.stage, joints_path+"/dummy_link", core_path, dummy_path)
         num_thrusters = 0
         for radius, num_ring_thrusters in zip(self.rings_radius, self.num_thrusters_per_ring):
@@ -115,34 +118,34 @@ class CreatePlatform:
 
     def createXformArticulationAndJoins(self):
         # Creates the Xform of the platform
-        platform_path, platform_prim = createXform(self.stage, self.platform_path)
-        setScale(platform_prim, Gf.Vec3d([1, 1, 1]))
+        self.platform_path, platform_prim = createXform(self.stage, self.platform_path)
         setTranslate(platform_prim, Gf.Vec3d([0, 0, 0]))
         setOrient(platform_prim, Gf.Quatd(1,Gf.Vec3d([0, 0, 0])))
+        setScale(platform_prim, Gf.Vec3d([1, 1, 1]))
         # Creates the Articulation root
-        UsdPhysics.ArticulationRootAPI.Apply(self.stage.GetPrimAtPath(self.platform_path))
+        root = UsdPhysics.ArticulationRootAPI.Apply(self.stage.GetPrimAtPath(self.platform_path))
         # Creates an Xform to store the joints in
-        joints_path, joints_prim = createXform(self.stage, platform_path+'/joints')
-        return platform_path, joints_path
+        joints_path, joints_prim = createXform(self.stage, self.platform_path+'/joints')
+        return self.platform_path, joints_path
 
-    def createRigidSphere(self, path, radius, CoM, mass):
+    def createRigidSphere(self, path, name, radius, CoM, mass):
         # Creates an Xform to store the sphere
         core_path, core_prim = createXform(self.stage, path)
-        setScale(core_prim, Gf.Vec3d([1, 1, 1]))
         setTranslate(core_prim, Gf.Vec3d([0, 0, 0]))
         setOrient(core_prim, Gf.Quatd(1, Gf.Vec3d([0, 0, 0])))
+        setScale(core_prim, Gf.Vec3d([1, 1, 1]))
         # Creates a sphere
-        sphere_path = core_path+"/sphere"
-        createSphere(self.stage, sphere_path, radius, self.refinement)
-        UsdPhysics.RigidBodyAPI.Apply(core_prim)
-        # Locks to the xy plane.
-        core_prim.CreateAttribute("physxRigidBody:lockedPosAxis",  Sdf.ValueTypeNames.Int).Set(4)
+        sphere_path = core_path+"/"+name
+        sphere_geom = createSphere(self.stage, sphere_path, radius, self.refinement)
+        sphere_prim = self.stage.GetPrimAtPath(sphere_geom.GetPath())
+        UsdPhysics.RigidBodyAPI.Apply(sphere_prim)
+        collider = UsdPhysics.CollisionAPI.Apply(sphere_prim)
+        collider.CreateCollisionEnabledAttr(False)
         # Sets the mass and CoM
-        massAPI = UsdPhysics.MassAPI.Apply(core_prim)
-        massAPI.CreateCenterOfMassAttr().Set(CoM)
+        massAPI = UsdPhysics.MassAPI.Apply(sphere_prim)
         massAPI.CreateMassAttr().Set(mass)
-        return core_path
-    
+        return sphere_path
+
     def generateThrusterRing(self, radius, num_ring_thrusters, num_thrusters, parent_path, joints_path, attachement_path):
         # Create a ring of N thrusters around the platform
         for i in range(num_ring_thrusters):
@@ -169,33 +172,41 @@ class CreatePlatform:
         thruster_base_geom = UsdGeom.Cylinder.Define(stage, cylinder_path)
         thruster_base_geom.GetRadiusAttr().Set(radius)
         thruster_base_geom.GetHeightAttr().Set(height)
+        thruster_base_prim = stage.GetPrimAtPath(thruster_base_geom.GetPath())
+        collider = UsdPhysics.CollisionAPI.Apply(thruster_base_prim)
+        collider.CreateCollisionEnabledAttr(False)
         # move it such that it stays flush
-        setScale(thruster_base_geom, Gf.Vec3d([1, 1, 1]))
         setTranslate(thruster_base_geom, Gf.Vec3d([0, 0, height*0.5]))
+        setScale(thruster_base_geom, Gf.Vec3d([1, 1, 1]))
         # add a cone to show the direction of the thrust
         cone_path = path + "/cone"
         thruster_cone_geom = UsdGeom.Cone.Define(stage, cone_path)
         thruster_cone_geom.GetRadiusAttr().Set(radius)
         thruster_cone_geom.GetHeightAttr().Set(height)
+        thruster_cone_prim = stage.GetPrimAtPath(thruster_cone_geom.GetPath())
+        collider = UsdPhysics.CollisionAPI.Apply(thruster_cone_prim)
+        collider.CreateCollisionEnabledAttr(False)
         # move and rotate to match reality
-        setScale(thruster_cone_geom, Gf.Vec3d([1, 1, 1]))
         setTranslate(thruster_cone_geom, Gf.Vec3d([0, 0, height*1.5]))
         setRotateXYZ(thruster_cone_geom, Gf.Vec3d([0, 180, 0]))
+        setScale(thruster_cone_geom, Gf.Vec3d([1, 1, 1]))
         # Refine
         refineShape(stage, cylinder_path, refinement)
         refineShape(stage, cone_path, refinement)
 
     @staticmethod
     def createFixedJoint(stage, path, body_path1, body_path2):
+        # Create fixed joint
         joint = UsdPhysics.FixedJoint.Define(stage, path)
+        # Set body targets
         joint.CreateBody0Rel().SetTargets([body_path1])
         joint.CreateBody1Rel().SetTargets([body_path2])
-        joint.CreateBreakForceAttr().Set(1e20)
-        joint.CreateBreakTorqueAttr().Set(1e20)
+        # Get from the simulation the position/orientation of the bodies
         translate = Gf.Vec3d(stage.GetPrimAtPath(body_path2).GetAttribute('xformOp:translate').Get())
         Q = stage.GetPrimAtPath(body_path2).GetAttribute('xformOp:orient').Get()
         quat0 = Gf.Quatf(Q.GetReal(), Q.GetImaginary()[0], Q.GetImaginary()[1], Q.GetImaginary()[2])
         quat1 = Gf.Quatf(1, 0, 0, 0)
+        # Set the transform between the bodies inside the joint
         joint.CreateLocalPos0Attr().Set(translate)
         joint.CreateLocalPos1Attr().Set(Gf.Vec3d([0, 0, 0]))
         joint.CreateLocalRot0Attr().Set(quat0)
@@ -208,9 +219,6 @@ class CreatePlatform:
         # Set body targets
         joint.CreateBody0Rel().SetTargets([body_path1])
         joint.CreateBody1Rel().SetTargets([body_path2])
-        # Set breaking forces
-        joint.CreateBreakForceAttr().Set(1e20)
-        joint.CreateBreakTorqueAttr().Set(1e20)
         # Get from the simulation the position/orientation of the bodies
         translate = Gf.Vec3d(stage.GetPrimAtPath(body_path2).GetAttribute('xformOp:translate').Get())
         Q = stage.GetPrimAtPath(body_path2).GetAttribute('xformOp:orient').Get()
@@ -222,6 +230,12 @@ class CreatePlatform:
         joint.CreateLocalRot0Attr().Set(quat0)
         joint.GetLocalRot1Attr().Set(quat1)
         joint.CreateAxisAttr(axis)
+        # Add angular drive for example
+        #angularDriveAPI = UsdPhysics.DriveAPI.Apply(stage.GetPrimAtPath(joint.GetPath()), "angular")
+        #angularDriveAPI.CreateTypeAttr("force")
+        #angularDriveAPI.CreateMaxForceAttr(1e20)
+        #angularDriveAPI.CreateDampingAttr(1e10)
+        #angularDriveAPI.CreateStiffnessAttr(1e10)
 
     def createThruster(self, path, joint_path, translate, quat, parent_path):
         # Create Xform
@@ -234,7 +248,6 @@ class CreatePlatform:
         self.createThrusterShape(self.stage, thruster_path, self.thruster_radius, self.thruster_length, self.refinement)
         # Make rigid
         UsdPhysics.RigidBodyAPI.Apply(thruster_prim)
-        thruster_prim.CreateAttribute("physxRigidBody:lockedPosAxis",  Sdf.ValueTypeNames.Int).Set(4)
         # Add mass
         massAPI = UsdPhysics.MassAPI.Apply(thruster_prim)
         massAPI.CreateCenterOfMassAttr().Set(self.thruster_CoM)

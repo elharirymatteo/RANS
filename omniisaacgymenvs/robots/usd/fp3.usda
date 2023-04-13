@@ -1,0 +1,309 @@
+#usda 1.0
+(
+    customLayerData = {
+        dictionary cameraSettings = {
+            dictionary Front = {
+                double3 position = (50000.000000000015, -1.1102230246251565e-11, 0)
+                double radius = 500
+            }
+            dictionary Perspective = {
+                double3 position = (-2.1372417084491686, -8.222859625890834, 7.338832192642708)
+                double3 target = (1.0451668432860983, 3.384355229676734, -1.0164916629638752)
+            }
+            dictionary Right = {
+                double3 position = (0, -50000, -1.1102230246251565e-11)
+                double radius = 500
+            }
+            dictionary Top = {
+                double3 position = (0, 0, 50000)
+                double radius = 11.790161895751954
+            }
+            string boundCamera = "/OmniverseKit_Persp"
+        }
+        dictionary omni_layer = {
+            dictionary muteness = {
+            }
+        }
+        int refinementOverrideImplVersion = 0
+        dictionary renderSettings = {
+            float3 "rtx:debugView:pixelDebug:textColor" = (0, 1e18, 0)
+            float3 "rtx:dynamicDiffuseGI:probeCounts" = (6, 6, 6)
+            float3 "rtx:dynamicDiffuseGI:probeGridOrigin" = (-210, -250, -10)
+            float3 "rtx:dynamicDiffuseGI:volumeSize" = (600, 440, 300)
+            int "rtx:externalFrameCounter" = 18935
+            float3 "rtx:fog:fogColor" = (0.75, 0.75, 0.75)
+            float3 "rtx:lightspeed:material:overrideAlbedo" = (0.5, 0.5, 0.5)
+            float3 "rtx:lightspeed:material:overrideEmissiveColor" = (0.5, 0.5, 0.5)
+            float3 "rtx:post:backgroundZeroAlpha:backgroundDefaultColor" = (0, 0, 0)
+            float3 "rtx:post:colorcorr:contrast" = (1, 1, 1)
+            float3 "rtx:post:colorcorr:gain" = (1, 1, 1)
+            float3 "rtx:post:colorcorr:gamma" = (1, 1, 1)
+            float3 "rtx:post:colorcorr:offset" = (0, 0, 0)
+            float3 "rtx:post:colorcorr:saturation" = (1, 1, 1)
+            float3 "rtx:post:colorgrad:blackpoint" = (0, 0, 0)
+            float3 "rtx:post:colorgrad:contrast" = (1, 1, 1)
+            float3 "rtx:post:colorgrad:gain" = (1, 1, 1)
+            float3 "rtx:post:colorgrad:gamma" = (1, 1, 1)
+            float3 "rtx:post:colorgrad:lift" = (0, 0, 0)
+            float3 "rtx:post:colorgrad:multiply" = (1, 1, 1)
+            float3 "rtx:post:colorgrad:offset" = (0, 0, 0)
+            float3 "rtx:post:colorgrad:whitepoint" = (1, 1, 1)
+            float3 "rtx:post:lensDistortion:lensFocalLengthArray" = (10, 30, 50)
+            float3 "rtx:post:lensFlares:anisoFlareFalloffX" = (450, 475, 500)
+            float3 "rtx:post:lensFlares:anisoFlareFalloffY" = (10, 10, 10)
+            float3 "rtx:post:lensFlares:cutoffPoint" = (2, 2, 2)
+            float3 "rtx:post:lensFlares:haloFlareFalloff" = (10, 10, 10)
+            float3 "rtx:post:lensFlares:haloFlareRadius" = (75, 75, 75)
+            float3 "rtx:post:lensFlares:isotropicFlareFalloff" = (50, 50, 50)
+            float3 "rtx:post:tonemap:whitepoint" = (1, 1, 1)
+            float3 "rtx:raytracing:inscattering:singleScatteringAlbedo" = (0.9, 0.9, 0.9)
+            float3 "rtx:raytracing:inscattering:transmittanceColor" = (0.5, 0.5, 0.5)
+            float3 "rtx:sceneDb:ambientLightColor" = (0.1, 0.1, 0.1)
+        }
+    }
+    defaultPrim = "robot"
+    endTimeCode = 100
+    metersPerUnit = 1
+    startTimeCode = 0
+    timeCodesPerSecond = 24
+    upAxis = "Z"
+)
+
+over "Render" (
+    hide_in_stage_window = true
+)
+{
+}
+
+def Xform "robot" (
+    prepend apiSchemas = ["PhysicsArticulationRootAPI", "PhysxArticulationAPI"]
+)
+{
+    quatd xformOp:orient = (1, 0, 0, 0)
+    double3 xformOp:scale = (1, 1, 1)
+    double3 xformOp:translate = (0, 0, 1)
+    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+    def Xform "base_link"
+    {
+        quatd xformOp:orient = (1, 0, 0, 0)
+        double3 xformOp:scale = (1, 1, 1)
+        double3 xformOp:translate = (0, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+        
+        def Cylinder "Cylinder" (
+            prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsCollisionAPI", "PhysicsMassAPI"]
+        )
+        {
+            double height = 1
+            point3f physics:centerOfMass = (0, 0, 0)
+            bool physics:collisionEnabled = 1
+            float physics:mass = 5.0
+            double radius = 0.5
+            custom bool refinementEnableOverride = 1
+            custom int refinementLevel = 2
+            quatd xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:scale = (1, 1, 1)
+            double3 xformOp:translate = (0, 0, 0.5)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+        }
+        
+        def PhysicsRevoluteJoint "dummy_link" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular"]
+        )
+        {
+            float drive:angular:physics:damping = 1000000000
+            float drive:angular:physics:stiffness = 1000000000
+            uniform token physics:axis = "Z"
+            prepend rel physics:body0 = </robot/base_link/Cylinder>
+            rel physics:body1 = </robot/dummy/Cylinder_01>
+            float physics:breakForce = inf
+            float physics:breakTorque = inf
+            point3f physics:localPos0 = (5.4052316e-7, 8.4559275e-8, -0.49999994)
+            point3f physics:localPos1 = (-2.7522624e-8, 4.4074078e-8, 4.9647673e-7)
+            quatf physics:localRot0 = (-0.0016228149, -5.379003e-7, -8.808494e-8, 0.9999987)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+        }
+        
+        def PhysicsFixedJoint "thruster_joint_1_0"
+        {
+            rel physics:body0 = </robot/base_link/Cylinder>
+            rel physics:body1 = </robot/t1/thruster_1>
+            float physics:breakForce = inf
+            float physics:breakTorque = inf
+            bool physics:jointEnabled = 1
+            point3f physics:localPos0 = (5.377567e-7, 8.895774e-8, -0.50000006)
+            point3f physics:localPos1 = (0.5, -0.49999946, -1.9128515e-15)
+            quatf physics:localRot0 = (-0.0016228149, -5.379003e-7, -8.808494e-8, 0.9999987)
+            quatf physics:localRot1 = (0.70710677, -0.70710677, 0, 0)
+        }
+
+        def PhysicsFixedJoint "thruster_joint_2_0"
+        {
+            rel physics:body0 = </robot/base_link/Cylinder>
+            rel physics:body1 = </robot/t2/thruster_2>
+            float physics:breakForce = inf
+            float physics:breakTorque = inf
+            bool physics:jointEnabled = 1
+            point3f physics:localPos0 = (5.377567e-7, 8.895774e-8, -0.50000006)
+            point3f physics:localPos1 = (-0.5, -0.50000066, -1.912852e-15)
+            quatf physics:localRot0 = (-0.0016228149, -5.379003e-7, -8.808494e-8, 0.9999987)
+            quatf physics:localRot1 = (0.70710677, -0.70710677, 0, 0)
+        }
+
+        def PhysicsFixedJoint "thruster_joint_3_0"
+        {
+            rel physics:body0 = </robot/base_link/Cylinder>
+            rel physics:body1 = </robot/t3/thruster_3>
+            float physics:breakForce = inf
+            float physics:breakTorque = inf
+            point3f physics:localPos0 = (2.9855058e-22, 0.5, 0)
+            point3f physics:localPos1 = (-2.220446e-16, 0, 0)
+            quatf physics:localRot0 = (0.70710677, 0, 0.70710677, 0)
+            quatf physics:localRot1 = (1, -4.153855e-12, 2.5113733e-9, 4.1513737e-12)
+        }
+
+        def PhysicsFixedJoint "thruster_joint_4_0"
+        {
+            rel physics:body0 = </robot/base_link/Cylinder>
+            rel physics:body1 = </robot/t4/thruster_4>
+            float physics:breakForce = inf
+            float physics:breakTorque = inf
+            point3f physics:localPos0 = (0, -0.5, 0)
+            point3f physics:localPos1 = (0, 0, 0)
+            quatf physics:localRot0 = (0.70710677, 0, 0.70710677, 0)
+            quatf physics:localRot1 = (1, -1.5242457e-19, 3.9689317e-18, -4.710198e-19)
+        }
+
+    }
+    
+    def Xform "dummy"
+    {
+        quatd xformOp:orient = (1, 0, 0, 0)
+        double3 xformOp:scale = (1, 1, 1)
+        double3 xformOp:translate = (0, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+	def Cylinder "cylinder" (
+            delete apiSchemas = ["PhysicsCollisionAPI"]
+            prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+        )
+        {
+            double height = 0.0001
+            point3f physics:centerOfMass = (0, 0, 0)
+            float physics:mass = 0.00001
+            double radius = 0.00005
+            custom bool refinementEnableOverride = 1
+            custom int refinementLevel = 2
+            quatd xformOp:orient = (1, 0, 0, 0)
+            double3 xformOp:scale = (1, 1, 1)
+            double3 xformOp:translate = (0, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+        }
+    }
+    
+    def Xform "t1"
+    {
+        quatd xformOp:orient = (1, 0, 0, 0)
+        double3 xformOp:scale = (1, 1, 1)
+        double3 xformOp:translate = (0, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+        def Cylinder "thruster_1" (
+            prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsCollisionAPI", "PhysicsMassAPI"]
+        )
+        {
+            uniform token axis = "Z"
+            double height = 0.3
+            bool physics:collisionEnabled = 0
+            float physics:mass = 0.1
+            bool physics:rigidBodyEnabled = 1
+            double radius = 0.05
+            custom bool refinementEnableOverride = 1
+            custom int refinementLevel = 2
+            quatd xformOp:orient = (0.7071067811865476, 0.7071067811865475, 0, 0)
+            double3 xformOp:scale = (1, 1, 1)
+            double3 xformOp:translate = (-0.5, 0, 0.499999463558197)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+        }
+    }
+
+    def Xform "t2"
+    {
+        quatd xformOp:orient = (1, 0, 0, 0)
+        double3 xformOp:scale = (1, 1, 1)
+        double3 xformOp:translate = (0, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+        def Cylinder "thruster_2" (
+            prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsCollisionAPI", "PhysicsMassAPI"]
+        )
+        {
+            uniform token axis = "Z"
+            double height = 0.3
+            bool physics:collisionEnabled = 0
+            float physics:mass = 0.1
+            bool physics:rigidBodyEnabled = 1
+            double radius = 0.05
+            custom bool refinementEnableOverride = 1
+            custom int refinementLevel = 2
+            quatd xformOp:orient = (0.7071067811865476, 0.7071067811865475, 0, 0)
+            double3 xformOp:scale = (1, 1, 1)
+            double3 xformOp:translate = (0.5, 0, 0.5000006556510925)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+        }
+    }
+
+    def Xform "t3"
+    {
+        quatd xformOp:orient = (1, 0, 0, 0)
+        double3 xformOp:scale = (1, 1, 1)
+        double3 xformOp:translate = (0, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+        def Cylinder "thruster_3" (
+            prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsCollisionAPI", "PhysicsMassAPI"]
+        )
+        {
+            uniform token axis = "Z"
+            double height = 0.3
+            bool physics:collisionEnabled = 0
+            float physics:mass = 0.1
+            bool physics:rigidBodyEnabled = 1
+            double radius = 0.05
+            custom bool refinementEnableOverride = 1
+            custom int refinementLevel = 2
+            quatd xformOp:orient = (0.7071067811865476, 0, -0.7071067811865475, 0)
+            double3 xformOp:scale = (1, 1, 1)
+            double3 xformOp:translate = (0, -0.5, 0.4999999701976776)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+        }
+    }
+
+    def Xform "t4"
+    {
+        quatd xformOp:orient = (1, 0, 0, 0)
+        double3 xformOp:scale = (1, 1, 1)
+        double3 xformOp:translate = (0, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+        def Cylinder "thruster_4" (
+            prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsCollisionAPI", "PhysicsMassAPI"]
+        )
+        {
+            uniform token axis = "Z"
+            double height = 0.3
+            bool physics:collisionEnabled = 0
+            float physics:mass = 0.1
+            bool physics:rigidBodyEnabled = 1
+            double radius = 0.05
+            custom bool refinementEnableOverride = 1
+            custom int refinementLevel = 2
+            quatd xformOp:orient = (0.7071067811865476, 0, -0.7071067811865475, 0)
+            double3 xformOp:scale = (1, 1, 1)
+            double3 xformOp:translate = (0, 0.5, 0.5000001192092896)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+        }
+    }
+}
+
