@@ -340,7 +340,7 @@ class FloatingPlatformTask(RLTask):
         root_angvels = self.root_velocities[:, 3:]
 
         # pos reward
-        target_dist = torch.sqrt(torch.square(self.target_positions - root_positions).sum(-1))
+        target_dist = torch.sqrt(torch.square(self.target_positions[:,:2] - root_positions[:,:2]).sum(-1))
         pos_reward = 1.0 / (1.0 + target_dist)
         self.target_dist = target_dist
         self.root_positions = root_positions

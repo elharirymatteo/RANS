@@ -10,6 +10,7 @@ from omni.isaac.core.prims import RigidPrimView
 from omni.isaac.core.utils.prims import get_prim_at_path
 
 import numpy as np
+import omni
 import time
 import torch
 from gym import spaces
@@ -108,6 +109,8 @@ class ModularFloatingPlatformTask(RLTask):
             print(f'{space_margin} Mass thruster {i+1}: {self._platforms.thrusters[i].get_masses()[0]:.2f} kg')
         print(f'{space_margin} Thrust force: {self.thrust_force} N')
         print("\n##########################################################################")
+        #stage = omni.usd.get_context().get_stage()
+        #stage.Export("test_sim.usd")
         return
 
     def get_floating_platform(self):
@@ -281,9 +284,10 @@ class ModularFloatingPlatformTask(RLTask):
         root_positions = self.root_pos - self._env_pos
         root_quats = self.root_rot 
         root_angvels = self.root_velocities[:, 3:]
-
+        penalty = torch.square(root_angvels[:,-1])*0#(torch.abs(root_angvels[:,-1]) > 1.57) * (torch.abs(root_angvels[:,-1]) - 1.57) * 0
+        #print(penalty[:5])
         # pos reward
-        target_dist = torch.sqrt(torch.square(self.target_positions - root_positions).sum(-1))
+        target_dist = torch.sqrt(torch.square(self.target_positions[:,:2] - root_positions[:,:2]).sum(-1))
         pos_reward = 1.0 / (1.0 + target_dist)
         self.target_dist = target_dist
         self.root_positions = root_positions
@@ -296,11 +300,12 @@ class ModularFloatingPlatformTask(RLTask):
         #print(f'orient_reward: {orient_reward[0]}')
         #print(f'pos_reward: {pos_reward[0]}')
             # combined reward
-        self.rew_buf[:] = pos_reward 
+        self.rew_buf[:] = pos_reward - penalty * 0.01
+        #print(self.rew_buf[:5])
         # log episode reward sums
-        self.episode_sums["rew_pos"] += pos_reward
+        self.episode_sums["rew_pos"] += pos_reward - penalty * 0.01
         # log raw info
-        self.episode_sums["raw_dist"] += target_dist
+        self.episode_sums["raw_dist"] += target_dist * 0.1
 
     def is_done(self) -> None:
         # resets due to misbehavior
