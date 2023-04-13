@@ -160,7 +160,7 @@ class CreatePlatform:
             quat2 = Gf.Quatd(Q2[-1], Gf.Vec3d([Q2[0], Q2[1], Q2[2]]))
             # Create thrusters
             self.createThruster(parent_path + "/thruster_" + str(num_thrusters)+"_0", joints_path+"/thruster_joint_"+str(num_thrusters)+"_0", translate, quat1, attachement_path)
-            #self.createThruster(parent_path + "/thruster_" + str(num_thrusters)+"_1", joints_path+"/thruster_joint_"+str(num_thrusters)+"_1", translate, quat2, attachement_path)
+            self.createThruster(parent_path + "/thruster_" + str(num_thrusters)+"_1", joints_path+"/thruster_joint_"+str(num_thrusters)+"_1", translate, quat2, attachement_path)
             num_thrusters += 1
         return num_thrusters
 
