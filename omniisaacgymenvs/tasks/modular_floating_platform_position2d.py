@@ -82,10 +82,10 @@ class ModularFloatingPlatformTask(RLTask):
         return
 
     def set_up_scene(self, scene) -> None:
-
         self.get_floating_platform()
         self.get_target()
-        RLTask.set_up_scene(self, scene) # pass scene to parent class - this method in RLTask also uses GridCloner to clone the robot and adds a ground plane if desired
+        # pass scene to parent class - this method in RLTask also uses GridCloner to clone the robot and adds a ground plane if desired
+        RLTask.set_up_scene(self, scene) 
 
         root_path = "/World/envs/.*/Modular_floating_platform" 
         self._platforms = ModularFloatingPlatformView(prim_paths_expr=root_path, name="modular_floating_platform_view") 
@@ -97,15 +97,15 @@ class ModularFloatingPlatformTask(RLTask):
         # Add views to scene
         scene.add(self._platforms) # add view to scene for initialization
         scene.add(self._balls)
-        for i in range(len(self._platforms.thrusters)):
-            scene.add(self._platforms.thrusters[i])
+        scene.add(self._platforms.thrusters)
         
         space_margin = " "*25
         print("\n########################  Floating platform set up ####################### \n")
-        print(f'{space_margin} Number of thrusters: {len(self._platforms.thrusters)}')
+        print(f'{space_margin} Number of thrusters: {self._platforms.thrusters.count}')
         print(f'{space_margin} Mass base: {self._platforms.base.get_masses()[0]:.2f} kg')
-        for i in range(len(self._platforms.thrusters)):
-            print(f'{space_margin} Mass thruster {i+1}: {self._platforms.thrusters[i].get_masses()[0]:.2f} kg')
+        masses = self._platforms.thrusters.get_masses()
+        for i in range(self._platforms.thrusters.count):
+            print(f'{space_margin} Mass thruster {i+1}: {masses[i]:.2f} kg')
         print(f'{space_margin} Thrust force: {self.thrust_force} N')
         print("\n##########################################################################")
         return
@@ -187,30 +187,15 @@ class ModularFloatingPlatformTask(RLTask):
             thrust_cmds = torch.clamp((self.actions+1)/2, min=0.0, max=1.0)
             # write a mapping for the continuos actions to N quantised actions (N=20)
 
+        # Applies the thrust multiplier
         thrusts = self.thrust_max * thrust_cmds
-        # thrusts given rotation
-        root_quats = self.root_rot
-        rot_x = quat_axis(root_quats, 0)
-        rot_y = quat_axis(root_quats, 1)
-        rot_z = quat_axis(root_quats, 2)
-        rot_matrix = torch.cat((rot_x, rot_y, rot_z), 1).reshape(-1, 3, 3)
-        rot_matrix = rot_matrix.repeat_interleave(self._num_actions, dim=0)
-        force_x = torch.zeros(self._num_envs, self._num_actions, dtype=torch.float32, device=self._device)
-        force_y = torch.zeros(self._num_envs, self._num_actions, dtype=torch.float32, device=self._device)
-        force_xy = torch.cat((force_x, force_y), 1).reshape(-1, self._num_actions, 2)
-        thrusts = thrusts.reshape(-1, self._num_actions, 1)
-        thrusts = torch.cat((force_xy, thrusts), 2)
-        thrusts = thrusts.reshape(-1, 3)
-        self.thrusts = torch.matmul(rot_matrix, thrusts[:,:,None]).squeeze().reshape(self._num_envs, self.num_actions, 3)
+        self.thrusts[:,:,2] = thrusts
+
         # clear actions for reset envs
         self.thrusts[reset_env_ids] = 0
 
-        # Apply action delay if required
-        if self.action_delay > 0:
-            time.sleep(self.action_delay)
         # Apply forces
-        for i in range(self._num_actions):
-            self._platforms.thrusters[i].apply_forces(self.thrusts[:,i], indices=self.all_indices, is_global=False)
+        self._platforms.thrusters.apply_forces(self.thrusts, is_global=False)
 
     def post_reset(self):
         # implement any logic required for simulation on-start here
