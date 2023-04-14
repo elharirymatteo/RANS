@@ -105,12 +105,9 @@ class ModularFloatingPlatformTask(RLTask):
         print(f'{space_margin} Number of thrusters: {len(self._platforms.thrusters)}')
         print(f'{space_margin} Mass base: {self._platforms.base.get_masses()[0]:.2f} kg')
         for i in range(len(self._platforms.thrusters)):
-            # self._platforms.thrusters[i].set_masses(torch.tensor([50, 5], device=self._device))
             print(f'{space_margin} Mass thruster {i+1}: {self._platforms.thrusters[i].get_masses()[0]:.2f} kg')
         print(f'{space_margin} Thrust force: {self.thrust_force} N')
         print("\n##########################################################################")
-        #stage = omni.usd.get_context().get_stage()
-        #stage.Export("test_sim.usd")
         return
 
     def get_floating_platform(self):
@@ -139,21 +136,21 @@ class ModularFloatingPlatformTask(RLTask):
         self.root_velocities = self._platforms.get_velocities(clone=False)
         root_positions = self.root_pos - self._env_pos
         root_quats = self.root_rot
-
+        # Get rotation matrix from quaternions
         rot_x = quat_axis(root_quats, 0)
         rot_y = quat_axis(root_quats, 1)
         rot_z = quat_axis(root_quats, 2)
-
-        root_linvels = self.root_velocities[:, :3]
-        root_angvels = self.root_velocities[:, 3:]
-
-        self.obs_buf[..., 0:3] = self.target_positions - root_positions
         self.obs_buf[..., 3:6] = rot_x
         self.obs_buf[..., 6:9] = rot_y
         self.obs_buf[..., 9:12] = rot_z
-
+        # Get velocities in the 
+        root_linvels = self.root_velocities[:, :3]
+        root_angvels = self.root_velocities[:, 3:]
         self.obs_buf[..., 12:15] = root_linvels
         self.obs_buf[..., 15:18] = root_angvels
+        # Get distance to the goal
+        self.obs_buf[..., 0:3] = self.target_positions - root_positions
+
 
         observations = {
             self._platforms.name: {
