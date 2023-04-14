@@ -32,6 +32,7 @@ from typing import Optional
 from omni.isaac.core.robots.robot import Robot
 from omni.isaac.core.utils.nucleus import get_assets_root_path
 from omni.isaac.core.utils.stage import add_reference_to_stage
+#from omni.isaac.core.materials import PreviewSurface
 
 import numpy as np
 import torch
@@ -39,7 +40,7 @@ import carb
 
 import omni
 import math
-from pxr import UsdGeom, Sdf, Gf, UsdPhysics
+from pxr import UsdGeom, Sdf, Gf, UsdPhysics, UsdShade
 from scipy.spatial.transform import Rotation as SSTR
 
 NUM_THRUSTERS = 4*2# + 6*2 + 8*2
@@ -92,6 +93,16 @@ def createSphere(stage, path, radius, refinement):
     setScale(sphere_geom, Gf.Vec3d([1, 1, 1]))
     return sphere_geom
 
+def addColor(stage, prim, material_path, color): 
+    material_path = omni.usd.get_stage_next_free_path(stage, material_path+"/visual_material", False)
+    material = UsdShade.Material.Define(stage, material_path)
+    shader = UsdShade.Shader.Define(stage, material_path+"/shader")
+    shader.CreateIdAttr("UsdPreviewSurface")
+    shader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Float3).Set(Gf.Vec3f(color))
+    material.CreateSurfaceOutput().ConnectToSource(shader, "surface")
+    arrow_binder = UsdShade.MaterialBindingAPI.Apply(prim)
+    arrow_binder.Bind(material)
+
 class CreatePlatform:
     def __init__(self, path):
         self.platform_path = path
@@ -110,11 +121,24 @@ class CreatePlatform:
     def build(self):    
         platform_path, joints_path = self.createXformArticulationAndJoins()
         core_path = self.createRigidSphere(platform_path + "/core", "sphere", self.core_radius, self.core_CoM, self.core_mass)
+        self.createArrowXform(core_path+"/sphere")
         dummy_path = self.createRigidSphere(platform_path + "/dummy", "sphere2", 0.00001, self.core_CoM, 0.00001)
         self.createRevoluteJoint(self.stage, joints_path+"/dummy_link", core_path, dummy_path)
         num_thrusters = 0
         for radius, num_ring_thrusters in zip(self.rings_radius, self.num_thrusters_per_ring):
             num_thrusters = self.generateThrusterRing(radius, num_ring_thrusters, num_thrusters, platform_path, joints_path, core_path)
+
+    def createArrowXform(self, path):
+        self.arrow_path, self.arrow_prim = createXform(self.stage, path)
+        self.createArrowShape(self.stage, self.arrow_path, 0.1, 0.5, [self.core_radius, 0, 0], self.refinement)
+        material_path = self.platform_path+"/materials/visual_material"
+        material = UsdShade.Material.Define(self.stage, material_path)
+        shader = UsdShade.Shader.Define(self.stage, material_path+"/shader")
+        shader.CreateIdAttr("UsdPreviewSurface")
+        shader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Float3).Set(Gf.Vec3f([0,0,1.0]))
+        material.CreateSurfaceOutput().ConnectToSource(shader, "surface")
+        arrow_binder = UsdShade.MaterialBindingAPI.Apply(self.arrow_prim)
+        arrow_binder.Bind(material)
 
     def createXformArticulationAndJoins(self):
         # Creates the Xform of the platform
@@ -126,6 +150,7 @@ class CreatePlatform:
         root = UsdPhysics.ArticulationRootAPI.Apply(self.stage.GetPrimAtPath(self.platform_path))
         # Creates an Xform to store the joints in
         joints_path, joints_prim = createXform(self.stage, self.platform_path+'/joints')
+        materials_path, materials_prim = createXform(self.stage, self.platform_path+'/materials')
         return self.platform_path, joints_path
 
     def createRigidSphere(self, path, name, radius, CoM, mass):
@@ -163,6 +188,30 @@ class CreatePlatform:
             self.createThruster(parent_path + "/thruster_" + str(num_thrusters)+"_1", joints_path+"/thruster_joint_"+str(num_thrusters)+"_1", translate, quat2, attachement_path)
             num_thrusters += 1
         return num_thrusters
+
+    @staticmethod
+    def createArrowShape(stage, path, radius, length, offset, refinement):
+        length = length / 2
+        arrow_body_path = path + "/arrow_body"
+        arrow_body_geom = UsdGeom.Cylinder.Define(stage, arrow_body_path)
+        arrow_body_geom.GetRadiusAttr().Set(radius)
+        arrow_body_geom.GetHeightAttr().Set(length)
+        arrow_body_prim = stage.GetPrimAtPath(arrow_body_geom.GetPath())
+        setTranslate(arrow_body_geom, Gf.Vec3d([offset[0] + length*0.5, 0, offset[2]]))
+        setOrient(arrow_body_geom, Gf.Quatd(0.707, Gf.Vec3d(0, 0.707, 0)))
+        setScale(arrow_body_geom, Gf.Vec3d([1, 1, 1]))
+
+        arrow_head_path = path + "/arrow_head"
+        arrow_head_geom = UsdGeom.Cone.Define(stage, arrow_head_path)
+        arrow_head_geom.GetRadiusAttr().Set(radius*1.5)
+        arrow_head_geom.GetHeightAttr().Set(length)
+        arrow_head_prim = stage.GetPrimAtPath(arrow_body_geom.GetPath())
+        setTranslate(arrow_head_geom, Gf.Vec3d([offset[0] + length*1.5, 0, offset[2]]))
+        setOrient(arrow_head_geom, Gf.Quatd(0.707, Gf.Vec3d(0, 0.707, 0)))
+        setScale(arrow_head_geom, Gf.Vec3d([1, 1, 1]))
+
+        refineShape(stage, arrow_body_path, refinement)
+        refineShape(stage, arrow_head_path, refinement)
 
     @staticmethod
     def createThrusterShape(stage, path, radius, height, refinement):
