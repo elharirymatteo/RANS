@@ -40,6 +40,14 @@ class ModularFloatingPlatformTask(RLTask):
         self.thrust_force = self._task_cfg["env"]["thrustForce"]
         self.dt = self._task_cfg["sim"]["dt"]
         self.action_delay = self._task_cfg["env"]["actionDelay"]
+
+        # Rewards parameters
+        self.rew_scales = {}
+        self.rew_scales["position"] = self._task_cfg["env"]["learn"]["PositionXYRewardScale"]
+        self.use_linear_rewards = self._task_cfg["env"]["learn"]["UseLinearRewards"]
+        self.use_square_rewards = self._task_cfg["env"]["learn"]["UseSquareRewards"]
+        self.use_exponential_rewards = self._task_cfg["env"]["learn"]["UseExponentialRewards"]
+
         # subtasks legend: 0 - reach_zero, 1 - reach_target, 2 - reach_target & orientation, 
         #                  3 - reach_target & orientation & velocity
         self.subtask = self._task_cfg["env"]["subtask"]
@@ -77,7 +85,7 @@ class ModularFloatingPlatformTask(RLTask):
         self.extras = {}
 
         torch_zeros = lambda: torch.zeros(self.num_envs, dtype=torch.float, device=self.device, requires_grad=False)
-        self.episode_sums = {"rew_pos": torch_zeros(), "raw_dist": torch_zeros()}
+        self.episode_sums = {"position_reward": torch_zeros(), "position_error": torch_zeros()}
 
         return
 
@@ -161,39 +169,37 @@ class ModularFloatingPlatformTask(RLTask):
 
     def pre_physics_step(self, actions: torch.Tensor) -> None:
         # implement logic to be performed before physics steps
-
+        # If is not playing skip
         if not self._env._world.is_playing():
-            return        
+            return                
+        # Check which environment need to be reset
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
+        # Reset the environments (Robots)
         if len(reset_env_ids) > 0:
             self.reset_idx(reset_env_ids)
-
+        # Reset the targets (Goals)
         set_target_ids = (self.progress_buf % 500 == 0).nonzero(as_tuple=False).squeeze(-1)
         if len(set_target_ids) > 0:
             self.set_targets(set_target_ids)
 
+        # Collect actions
         actions = actions.clone().to(self._device)
         self.actions = actions
-
-        if  self._discrete_actions=="MultiDiscrete":
-            # convert actions from [0, 1, 2] to [-1, 0, 1] to real force commands
-            thrust_cmds = torch.sub(self.actions, 1.) 
-        elif self._discrete_actions=="Quantised":
-            # clamp to [-1.0, 1.0] the continuos actions
-            thrust_cmds = torch.clamp(self.actions, min=0.0, max=1.0)
-            thrust_cmds = quantize_tensor_values(thrust_cmds, self._num_quantized_actions).to(self._device)
-        else:  
-            # clamp to [-1.0, 1.0] the continuos actions
+        # Remap actions to the correct values
+        if self._discrete_actions=="MultiDiscrete":
+            # If actions are multidiscrete [0, 1]
+            thrust_cmds = self.actions.float()
+        elif self._discrete_actions=="Continuous":
+            # Transform continuous actions to [0, 1] discrete actions.
             thrust_cmds = torch.clamp((self.actions+1)/2, min=0.0, max=1.0)
-            # write a mapping for the continuos actions to N quantised actions (N=20)
-
+        else:
+            raise NotImplementedError("")
+        
         # Applies the thrust multiplier
         thrusts = self.thrust_max * thrust_cmds
         self.thrusts[:,:,2] = thrusts
-
         # clear actions for reset envs
         self.thrusts[reset_env_ids] = 0
-
         # Apply forces
         self._platforms.thrusters.apply_forces(self.thrusts, is_global=False)
 
@@ -234,7 +240,6 @@ class ModularFloatingPlatformTask(RLTask):
         self.dof_pos[env_ids, :] = torch_rand_float(-0.0, 0.0, (num_resets, self._platforms.num_dof), device=self._device)
         self.dof_vel[env_ids, :] = 0
 
-        # TODO: make sure resets are coherent for all different subtasks
         reset_pos = self._reset_dist if self.subtask == 0 else 0.0
         root_pos = self.initial_root_pos.clone()
         root_pos[env_ids, 0] += torch_rand_float(-reset_pos, reset_pos, (num_resets, 1), device=self._device).view(-1)
@@ -246,7 +251,6 @@ class ModularFloatingPlatformTask(RLTask):
         # apply resets
         self._platforms.set_joint_positions(self.dof_pos[env_ids], indices=env_ids)
         self._platforms.set_joint_velocities(self.dof_vel[env_ids], indices=env_ids)
-
         self._platforms.set_world_poses(root_pos[env_ids], self.initial_root_rot[env_ids].clone(), indices=env_ids)
         self._platforms.set_velocities(root_velocities[env_ids], indices=env_ids)
 
@@ -264,43 +268,32 @@ class ModularFloatingPlatformTask(RLTask):
 
     def calculate_metrics(self) -> None:
         root_positions = self.root_pos - self._env_pos
-        root_quats = self.root_rot 
-        root_angvels = self.root_velocities[:, 3:]
-        penalty = torch.square(root_angvels[:,-1])*0#(torch.abs(root_angvels[:,-1]) > 1.57) * (torch.abs(root_angvels[:,-1]) - 1.57) * 0
-        #print(penalty[:5])
-        # pos reward
-        target_dist = torch.sqrt(torch.square(self.target_positions[:,:2] - root_positions[:,:2]).sum(-1))
-        pos_reward = 1.0 / (1.0 + target_dist)
-        self.target_dist = target_dist
+        
+        # position error
+        self.target_dist = torch.sqrt(torch.square(self.target_positions[:,:2] - root_positions[:,:2]).sum(-1))
         self.root_positions = root_positions
 
-        # orinetation reward
-        orient_z = torch.cos(root_quats[:, 0]) * torch.sin(root_quats[:, 1]) * torch.cos(root_quats[:, 2]) + torch.sin(root_quats[:, 0]) * torch.cos(root_quats[:, 1]) * torch.sin(root_quats[:, 2])
-        self.orient_z = orient_z
-        orient_reward = torch.where(orient_z > 0.0, torch.ones_like(orient_z), torch.zeros_like(orient_z))
-        self.orient_reward = orient_reward
-        #print(f'orient_reward: {orient_reward[0]}')
-        #print(f'pos_reward: {pos_reward[0]}')
-            # combined reward
-        self.rew_buf[:] = pos_reward - penalty * 0.01
-        #print(self.rew_buf[:5])
+        # Rewards
+        if self.use_linear_rewards:
+            position_reward = 1.0 / (1.0 + self.target_dist) * self.rew_scales["position"]
+        elif self.use_squared_rewards:
+            position_reward = 1.0 / (1.0 + self.target_dist*self.target_dist) * self.rew_scales["position"]
+        elif self.use_exponential_rewards:
+            position_reward = torch.exp(-self.target_dist / 0.25) * self.rew_scales["position"]
+        else:
+            raise ValueError("Unknown reward type.")
+        
+        self.rew_buf[:] = position_reward
         # log episode reward sums
-        self.episode_sums["rew_pos"] += pos_reward - penalty * 0.01
+        self.episode_sums["position_reward"] += position_reward
         # log raw info
-        self.episode_sums["raw_dist"] += target_dist * 0.1
+        self.episode_sums["position_error"] += self.target_dist
 
     def is_done(self) -> None:
         # resets due to misbehavior
         ones = torch.ones_like(self.reset_buf)
         die = torch.zeros_like(self.reset_buf)
-        if self.subtask == 0:
-            die = torch.where(self.target_dist > self._reset_dist * 2, ones, die) # die if going too far from target
-        elif self.subtask == 1:
-            die = torch.where(self.target_dist > self._reset_dist * 4, ones, die)
-        # z >= 0.5 & z <= 5.0 & up > 0
-        # die = torch.where(self.root_positions[..., 2] < 0.5, ones, die)
-        # die = torch.where(self.root_positions[..., 2] > 5.0, ones, die)
-        # die = torch.where(self.orient_z < 0.0, ones, die)
+        die = torch.where(self.target_dist > self._reset_dist * 4, ones, die)
 
         # resets due to episode length
         self.reset_buf[:] = torch.where(self.progress_buf >= self._max_episode_length - 1, ones, die)

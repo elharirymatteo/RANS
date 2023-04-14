@@ -19,6 +19,12 @@ env:
   subtask: 0
   actionDelay: 0.0
 
+  learn:
+    UseLinearRewards: 1
+    UseSquareRewards: 0
+    UseExponentialRewards: 0
+    PositionXYRewardScale: 1.0
+
 sim:
   dt: 0.02
   use_gpu_pipeline: ${eq:${...pipeline},"gpu"}
