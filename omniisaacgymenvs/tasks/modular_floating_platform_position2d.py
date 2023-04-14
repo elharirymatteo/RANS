@@ -34,8 +34,8 @@ class ModularFloatingPlatformTask(RLTask):
         self._env_spacing = self._task_cfg["env"]["envSpacing"]
         self._max_episode_length = self._task_cfg["env"]["maxEpisodeLength"]
         self._discrete_actions = self._task_cfg["env"]["discreteActions"]
-        # _num_quantized_actions has to be N whwere the final action space is N*2 +1
-        self._num_quantized_actions = self._task_cfg["env"]["numQuantizedActions"]
+
+        # Platform parameters
         self.mass = self._task_cfg["env"]["mass"]
         self.thrust_force = self._task_cfg["env"]["thrustForce"]
         self.dt = self._task_cfg["sim"]["dt"]
@@ -48,21 +48,15 @@ class ModularFloatingPlatformTask(RLTask):
         self.use_square_rewards = self._task_cfg["env"]["learn"]["UseSquareRewards"]
         self.use_exponential_rewards = self._task_cfg["env"]["learn"]["UseExponentialRewards"]
 
-        # subtasks legend: 0 - reach_zero, 1 - reach_target, 2 - reach_target & orientation, 
-        #                  3 - reach_target & orientation & velocity
-        self.subtask = self._task_cfg["env"]["subtask"]
         self._num_observations = 18
 
         # define action space
         if self._discrete_actions=="MultiDiscrete":    
             self._num_actions = 8
             # RLGames implementation of MultiDiscrete action space requires a tuple of Discrete spaces
-            self.action_space = spaces.Tuple([spaces.Discrete(2), spaces.Discrete(2), spaces.Discrete(2), spaces.Discrete(2)])
-            #self.action_space = spaces.MultiDiscrete([3, 3, 3, 3])
+            self.action_space = spaces.Tuple([spaces.Discrete(2)]*8)
         elif self._discrete_actions=="Discrete":
             raise NotImplementedError("The Discrete control mode is not supported.")
-        elif self._discrete_actions=="Quantised":
-            self._num_actions = 8
         else:
             self._num_actions = 8
 
@@ -70,7 +64,6 @@ class ModularFloatingPlatformTask(RLTask):
         self._ball_position = torch.tensor([0, 0, 1.0])
         self._reset_dist = 5.
 
-        # call parent class’s __init__
         RLTask.__init__(self, name, env)
 
         self.thrust_max = torch.tensor(self.thrust_force, device=self._device, dtype=torch.float32)
@@ -109,10 +102,10 @@ class ModularFloatingPlatformTask(RLTask):
         
         space_margin = " "*25
         print("\n########################  Floating platform set up ####################### \n")
-        print(f'{space_margin} Number of thrusters: {self._platforms.thrusters.count}')
+        print(f'{space_margin} Number of thrusters: {int(self._platforms.thrusters.count/self._num_envs)}')
         print(f'{space_margin} Mass base: {self._platforms.base.get_masses()[0]:.2f} kg')
         masses = self._platforms.thrusters.get_masses()
-        for i in range(self._platforms.thrusters.count):
+        for i in range(int(self._platforms.thrusters.count/self._num_envs)):
             print(f'{space_margin} Mass thruster {i+1}: {masses[i]:.2f} kg')
         print(f'{space_margin} Thrust force: {self.thrust_force} N')
         print("\n##########################################################################")
@@ -144,6 +137,8 @@ class ModularFloatingPlatformTask(RLTask):
         self.root_velocities = self._platforms.get_velocities(clone=False)
         root_positions = self.root_pos - self._env_pos
         root_quats = self.root_rot
+        # Get distance to the goal
+        self.obs_buf[..., 0:3] = self.target_positions - root_positions
         # Get rotation matrix from quaternions
         rot_x = quat_axis(root_quats, 0)
         rot_y = quat_axis(root_quats, 1)
@@ -151,14 +146,11 @@ class ModularFloatingPlatformTask(RLTask):
         self.obs_buf[..., 3:6] = rot_x
         self.obs_buf[..., 6:9] = rot_y
         self.obs_buf[..., 9:12] = rot_z
-        # Get velocities in the 
+        # Get velocities in the world frame 
         root_linvels = self.root_velocities[:, :3]
         root_angvels = self.root_velocities[:, 3:]
         self.obs_buf[..., 12:15] = root_linvels
         self.obs_buf[..., 15:18] = root_angvels
-        # Get distance to the goal
-        self.obs_buf[..., 0:3] = self.target_positions - root_positions
-
 
         observations = {
             self._platforms.name: {
@@ -221,30 +213,26 @@ class ModularFloatingPlatformTask(RLTask):
     def set_targets(self, env_ids):
         num_sets = len(env_ids)
         envs_long = env_ids.long()
-
-        if self.subtask == 0: # reach_zero
-            # set target position randomly with x, y in (0, 0) and z in (2)
-            self.target_positions[envs_long, 0:2] = torch.zeros((num_sets, 2), device=self._device)
-        elif self.subtask == 1: # reach_target
-            # set target position randomly with x, y in (-reset_dist, reset_dist) and z in (2)
-            self.target_positions[envs_long, 0:2] = torch_rand_float(-self._reset_dist, self._reset_dist, (num_sets, 2), device=self._device) 
+        # Randomizes the position of the ball on the x y axis
+        self.target_positions[envs_long, 0:2] = torch_rand_float(-self._reset_dist, self._reset_dist, (num_sets, 2), device=self._device) 
+        # Shifts the target up so it visually aligns better
         self.target_positions[envs_long, 2] = torch.ones(num_sets, device=self._device) * 2.0
-        
-        # shift the target up so it visually aligns better
+        # Projects to each environment
         ball_pos = self.target_positions[envs_long] + self._env_pos[envs_long]
+        # Apply the new goals (balls)
         self._balls.set_world_poses(ball_pos[:, 0:3], self.initial_ball_rot[envs_long].clone(), indices=env_ids)
 
-    def reset_idx(self, env_ids):
+    def reset_idx(self, env_ids): #TODO randomize orientation, add an initial rotation velocity
         num_resets = len(env_ids)
-
+        # Resets the states of the joints
         self.dof_pos[env_ids, :] = torch_rand_float(-0.0, 0.0, (num_resets, self._platforms.num_dof), device=self._device)
         self.dof_vel[env_ids, :] = 0
-
-        reset_pos = self._reset_dist if self.subtask == 0 else 0.0
+        # Randomizes the starting position of the platform
         root_pos = self.initial_root_pos.clone()
-        root_pos[env_ids, 0] += torch_rand_float(-reset_pos, reset_pos, (num_resets, 1), device=self._device).view(-1)
-        root_pos[env_ids, 1] += torch_rand_float(-reset_pos, reset_pos, (num_resets, 1), device=self._device).view(-1)
+        root_pos[env_ids, 0] += torch_rand_float(-self._reset_dist, self._reset_dist, (num_resets, 1), device=self._device).view(-1)
+        root_pos[env_ids, 1] += torch_rand_float(-self._reset_dist, self._reset_dist, (num_resets, 1), device=self._device).view(-1)
         root_pos[env_ids, 2] += torch_rand_float(-0.0, 0.0, (num_resets, 1), device=self._device).view(-1)
+        # Sets the velocities to 0
         root_velocities = self.root_velocities.clone()
         root_velocities[env_ids] = 0
 
