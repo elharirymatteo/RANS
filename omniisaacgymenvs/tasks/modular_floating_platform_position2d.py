@@ -12,6 +12,7 @@ from omni.isaac.core.utils.prims import get_prim_at_path
 import numpy as np
 import omni
 import time
+import math
 import torch
 from gym import spaces
 
@@ -40,7 +41,9 @@ class ModularFloatingPlatformTask(RLTask):
         self.thrust_force = self._task_cfg["env"]["thrustForce"]
         self.dt = self._task_cfg["sim"]["dt"]
         self.action_delay = self._task_cfg["env"]["actionDelay"]
-
+        # Task parameters
+        self.xy_tolerance = self._task_cfg["env"]["task_parameters"]["XYTolerance"]
+        self.kill_after_n_steps_in_tolerance = self._task_cfg["env"]["task_parameters"]["KillAfterNStepsInTolerance"]
         # Rewards parameters
         self.rew_scales = {}
         self.rew_scales["position"] = self._task_cfg["env"]["learn"]["PositionXYRewardScale"]
@@ -71,7 +74,7 @@ class ModularFloatingPlatformTask(RLTask):
         self.target_positions = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
         self.target_positions[:, 2] = 1
         self.actions = torch.zeros((self._num_envs, self._num_actions), device=self._device, dtype=torch.float32)
-
+        self.goal_reached = torch.zeros((self.num_envs), device=self._device, dtype=torch.int32)
         self.all_indices = torch.arange(self._num_envs, dtype=torch.int32, device=self._device)
      
         # Extra info
@@ -222,8 +225,10 @@ class ModularFloatingPlatformTask(RLTask):
         # Apply the new goals (balls)
         self._balls.set_world_poses(ball_pos[:, 0:3], self.initial_ball_rot[envs_long].clone(), indices=env_ids)
 
-    def reset_idx(self, env_ids): #TODO randomize orientation, add an initial rotation velocity
+    def reset_idx(self, env_ids):
         num_resets = len(env_ids)
+        # Resets the counter of steps for which the goal was reached
+        self.goal_reached[env_ids] = 0
         # Resets the states of the joints
         self.dof_pos[env_ids, :] = torch_rand_float(-0.0, 0.0, (num_resets, self._platforms.num_dof), device=self._device)
         self.dof_vel[env_ids, :] = 0
@@ -232,6 +237,11 @@ class ModularFloatingPlatformTask(RLTask):
         root_pos[env_ids, 0] += torch_rand_float(-self._reset_dist, self._reset_dist, (num_resets, 1), device=self._device).view(-1)
         root_pos[env_ids, 1] += torch_rand_float(-self._reset_dist, self._reset_dist, (num_resets, 1), device=self._device).view(-1)
         root_pos[env_ids, 2] += torch_rand_float(-0.0, 0.0, (num_resets, 1), device=self._device).view(-1)
+        # Randomizes the heading of the platform
+        root_rot = self.initial_root_rot.clone()
+        random_orient = torch.rand(num_resets, device=self._device) * math.pi
+        root_rot[env_ids, 0] = torch.cos(random_orient*0.5)
+        root_rot[env_ids, 3] = torch.sin(random_orient*0.5)
         # Sets the velocities to 0
         root_velocities = self.root_velocities.clone()
         root_velocities[env_ids] = 0
@@ -239,7 +249,7 @@ class ModularFloatingPlatformTask(RLTask):
         # apply resets
         self._platforms.set_joint_positions(self.dof_pos[env_ids], indices=env_ids)
         self._platforms.set_joint_velocities(self.dof_vel[env_ids], indices=env_ids)
-        self._platforms.set_world_poses(root_pos[env_ids], self.initial_root_rot[env_ids].clone(), indices=env_ids)
+        self._platforms.set_world_poses(root_pos[env_ids], root_rot[env_ids], indices=env_ids)
         self._platforms.set_velocities(root_velocities[env_ids], indices=env_ids)
 
         # bookkeeping
@@ -260,6 +270,11 @@ class ModularFloatingPlatformTask(RLTask):
         # position error
         self.target_dist = torch.sqrt(torch.square(self.target_positions[:,:2] - root_positions[:,:2]).sum(-1))
         self.root_positions = root_positions
+
+        # Checks if the goal is reached
+        goal_is_reached = (self.target_dist < self.xy_tolerance).int()
+        self.goal_reached *= goal_is_reached # if not set the value to 0
+        self.goal_reached += goal_is_reached # if it is add 1
 
         # Rewards
         if self.use_linear_rewards:
@@ -282,6 +297,7 @@ class ModularFloatingPlatformTask(RLTask):
         ones = torch.ones_like(self.reset_buf)
         die = torch.zeros_like(self.reset_buf)
         die = torch.where(self.target_dist > self._reset_dist * 4, ones, die)
+        die = torch.where(self.goal_reached > self.kill_after_n_steps_in_tolerance, ones, die)
 
         # resets due to episode length
         self.reset_buf[:] = torch.where(self.progress_buf >= self._max_episode_length - 1, ones, die)
