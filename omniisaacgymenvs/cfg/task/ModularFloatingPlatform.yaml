@@ -18,6 +18,10 @@ env:
   controlFrequencyInv: 10
   actionDelay: 0.0
 
+  task_parameters: 
+    XYTolerance: 0.1
+    KillAfterNStepsInTolerance: 25 # 5seconds
+
   learn:
     UseLinearRewards: 1
     UseSquareRewards: 0
