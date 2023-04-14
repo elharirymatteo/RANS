@@ -41,7 +41,8 @@ def initialize_task(config, env, init_sim=True):
     from omniisaacgymenvs.tasks.shadow_hand import ShadowHandTask
     from omniisaacgymenvs.tasks.crazyflie import CrazyflieTask
     from omniisaacgymenvs.tasks.floating_platform import FloatingPlatformTask
-    from omniisaacgymenvs.tasks.modular_floating_platform import ModularFloatingPlatformTask
+    from omniisaacgymenvs.tasks.modular_floating_platform_position2d import ModularFloatingPlatformTask
+    from omniisaacgymenvs.tasks.modular_floating_platform_pose2d import ModularFloatingPlatformPoseTask
     from omniisaacgymenvs.tasks.modular_floating_platform_crippled import ModularFloatingPlatformCrippledTask
 
     # Mappings from strings to environments
@@ -62,6 +63,7 @@ def initialize_task(config, env, init_sim=True):
         "ShadowHandOpenAI_LSTM": ShadowHandTask,
         "FloatingPlatform": FloatingPlatformTask,
         "ModularFloatingPlatform": ModularFloatingPlatformTask,
+        "ModularFloatingPlatformPose": ModularFloatingPlatformPoseTask,
         "ModularFloatingPlatformCrippled": ModularFloatingPlatformCrippledTask,
     }
 
