@@ -26,10 +26,10 @@ env:
 
   learn:
     UseLinearRewards: 0
-    UseSquareRewards: 0
-    UseExponentialRewards: 1
+    UseSquareRewards: 1
+    UseExponentialRewards: 0
     PositionXYRewardScale: 1.0
-    HeadingRewardScale: 1.0
+    HeadingRewardScale: 0.3
 
 sim:
   dt: 0.02
