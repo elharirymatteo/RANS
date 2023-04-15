@@ -48,10 +48,4 @@ class ModularFloatingPlatformView(ArticulationView):
         self.base = RigidPrimView(prim_paths_expr=f"/World/envs/.*/Modular_floating_platform/core/sphere",
                                         name="base_view")
 
-        #self.thrusters = []
         self.thrusters = RigidPrimView(prim_paths_expr=f"/World/envs/.*/Modular_floating_platform/thruster_[0-3]_[0-1]", name="thrusters")
-        #for i in range(NUM_THRUSTERS//2):
-            #self.thrusters.append(RigidPrimView(prim_paths_expr=f"/World/envs/.*/Modular_floating_platform/thruster_{i}_{0}",
-            #                                    name=f"thruster_{i}_0_view"))
-            #self.thrusters.append(RigidPrimView(prim_paths_expr=f"/World/envs/.*/Modular_floating_platform/thruster_{i}_{1}",
-            #                                    name=f"thruster_{i}_1_view"))
