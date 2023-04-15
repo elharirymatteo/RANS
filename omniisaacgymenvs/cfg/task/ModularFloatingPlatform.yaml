@@ -23,9 +23,9 @@ env:
     KillAfterNStepsInTolerance: 25 # 5seconds
 
   learn:
-    UseLinearRewards: 1
+    UseLinearRewards: 0
     UseSquareRewards: 0
-    UseExponentialRewards: 0
+    UseExponentialRewards: 1
     PositionXYRewardScale: 1.0
 
 sim:

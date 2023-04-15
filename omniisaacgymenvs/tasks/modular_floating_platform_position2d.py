@@ -40,7 +40,6 @@ class ModularFloatingPlatformTask(RLTask):
         self.mass = self._task_cfg["env"]["mass"]
         self.thrust_force = self._task_cfg["env"]["thrustForce"]
         self.dt = self._task_cfg["sim"]["dt"]
-        self.action_delay = self._task_cfg["env"]["actionDelay"]
         # Task parameters
         self.xy_tolerance = self._task_cfg["env"]["task_parameters"]["XYTolerance"]
         self.kill_after_n_steps_in_tolerance = self._task_cfg["env"]["task_parameters"]["KillAfterNStepsInTolerance"]
@@ -82,13 +81,12 @@ class ModularFloatingPlatformTask(RLTask):
 
         torch_zeros = lambda: torch.zeros(self.num_envs, dtype=torch.float, device=self.device, requires_grad=False)
         self.episode_sums = {"position_reward": torch_zeros(), "position_error": torch_zeros()}
-
         return
 
     def set_up_scene(self, scene) -> None:
         self.get_floating_platform()
         self.get_target()
-        # pass scene to parent class - this method in RLTask also uses GridCloner to clone the robot and adds a ground plane if desired
+
         RLTask.set_up_scene(self, scene) 
 
         root_path = "/World/envs/.*/Modular_floating_platform" 
@@ -197,6 +195,7 @@ class ModularFloatingPlatformTask(RLTask):
         self.thrusts[reset_env_ids] = 0
         # Apply forces
         self._platforms.thrusters.apply_forces(self.thrusts, is_global=False)
+        return
 
     def post_reset(self):
         # implement any logic required for simulation on-start here
@@ -279,7 +278,7 @@ class ModularFloatingPlatformTask(RLTask):
         # Rewards
         if self.use_linear_rewards:
             position_reward = 1.0 / (1.0 + self.target_dist) * self.rew_scales["position"]
-        elif self.use_squared_rewards:
+        elif self.use_square_rewards:
             position_reward = 1.0 / (1.0 + self.target_dist*self.target_dist) * self.rew_scales["position"]
         elif self.use_exponential_rewards:
             position_reward = torch.exp(-self.target_dist / 0.25) * self.rew_scales["position"]
