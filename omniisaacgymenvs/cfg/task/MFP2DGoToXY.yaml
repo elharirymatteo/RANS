@@ -1,5 +1,5 @@
 # used to create the object
-name: ModularFloatingPlatform
+name: MFP2DGoToXY
 
 physics_engine: ${..physics_engine}
 
