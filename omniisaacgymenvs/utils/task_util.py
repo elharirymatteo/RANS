@@ -43,6 +43,7 @@ def initialize_task(config, env, init_sim=True):
     from omniisaacgymenvs.tasks.floating_platform import FloatingPlatformTask
     from omniisaacgymenvs.tasks.MFP2D_go_to_xy import MFP2DGoToXYTask
     from omniisaacgymenvs.tasks.MFP2D_track_xy_vel import MFP2DTrackXYVelocityTask
+    from omniisaacgymenvs.tasks.MFP2D_track_xyo_vel import MFP2DTrackXYOVelocityTask
     from omniisaacgymenvs.tasks.MFP2D_go_to_pose import MFP2DGoToPoseTask
     from omniisaacgymenvs.tasks.modular_floating_platform_crippled import ModularFloatingPlatformCrippledTask
 
@@ -66,6 +67,7 @@ def initialize_task(config, env, init_sim=True):
         "MFP2DGoToXY": MFP2DGoToXYTask,
         "MFP2DGoToPose": MFP2DGoToPoseTask,
         "MFP2DTrackXYVelocity": MFP2DTrackXYVelocityTask,
+        "MFP2DTrackXYOVelocity": MFP2DTrackXYOVelocityTask,
         "ModularFloatingPlatformCrippled": ModularFloatingPlatformCrippledTask,
     }
 
