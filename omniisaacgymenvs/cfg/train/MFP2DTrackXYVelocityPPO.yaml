@@ -35,7 +35,7 @@ params:
   load_path: ${...checkpoint} # path to the checkpoint to load
 
   config:
-    name: ${resolve_default:MFP2DGoToXY,${....experiment}}
+    name: ${resolve_default:MFP2DTrackXYVelocity,${....experiment}}
     full_experiment_name: ${.name}
     env_name: rlgpu
     device: ${....rl_device}
