@@ -287,7 +287,7 @@ class MFP2DGoToPoseTask(RLTask):
         orient_z = torch.cos(root_quats[:, 0]) * torch.sin(root_quats[:, 1]) * torch.cos(root_quats[:, 2]) + torch.sin(root_quats[:, 0]) * torch.cos(root_quats[:, 1]) * torch.sin(root_quats[:, 2])
         
         # position error
-        self.target_dist = torch.sqrt(torch.square(self.target_positions[:,:2] - root_positions[:,:2]).sum(-1))
+        self.target_dist = torch.sqrt(torch.square(self.target_positions[:,:2] - root_positions[:,:2]).mean(-1))
         self.root_positions = root_positions
 
         # orientation error
