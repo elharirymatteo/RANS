@@ -43,9 +43,13 @@ class MFP2DTrackXYVelocityTask(RLTask):
         # Task parameters
         self.xy_velocity_tolerance = self._task_cfg["env"]["task_parameters"]["XYVelocityTolerance"]
         self.kill_after_n_steps_in_tolerance = self._task_cfg["env"]["task_parameters"]["KillAfterNStepsInTolerance"]
+        self._min_xy_velocity = self._task_cfg["env"]["task_parameters"]["MinVelocity"]
+        self._max_xy_velocity = self._task_cfg["env"]["task_parameters"]["MaxVelocity"]
+        self._max_distance = self._task_cfg["env"]["task_parameters"]["MaxDistance"]
+        self._reset_error = self._task_cfg["env"]["task_parameters"]["ResetError"]
         # Rewards parameters
         self.rew_scales = {}
-        self.rew_scales["xy_velocity"] = self._task_cfg["env"]["learn"]["VelXYRewardScale"]
+        self.rew_scales["xy_velocity"] = self._task_cfg["env"]["learn"]["XYVelocityRewardScale"]
         self.use_linear_rewards = self._task_cfg["env"]["learn"]["UseLinearRewards"]
         self.use_square_rewards = self._task_cfg["env"]["learn"]["UseSquareRewards"]
         self.use_exponential_rewards = self._task_cfg["env"]["learn"]["UseExponentialRewards"]
@@ -64,7 +68,6 @@ class MFP2DTrackXYVelocityTask(RLTask):
 
         self._fp_position = torch.tensor([0, 0., 0.5])
         self._ball_position = torch.tensor([0, 0, 1.0])
-        self._reset_dist = 5.
 
         RLTask.__init__(self, name, env)
 
@@ -84,7 +87,6 @@ class MFP2DTrackXYVelocityTask(RLTask):
 
     def set_up_scene(self, scene) -> None:
         self.get_floating_platform()
-        self.get_target()
 
         RLTask.set_up_scene(self, scene) 
 
@@ -209,8 +211,8 @@ class MFP2DTrackXYVelocityTask(RLTask):
         self.dof_vel[env_ids, :] = 0
         # Randomizes the starting position of the platform
         root_pos = self.initial_root_pos.clone()
-        root_pos[env_ids, 0] += torch_rand_float(-self._reset_dist, self._reset_dist, (num_resets, 1), device=self._device).view(-1)
-        root_pos[env_ids, 1] += torch_rand_float(-self._reset_dist, self._reset_dist, (num_resets, 1), device=self._device).view(-1)
+        root_pos[env_ids, 0] += torch_rand_float(-0.0, 0.0, (num_resets, 1), device=self._device).view(-1)
+        root_pos[env_ids, 1] += torch_rand_float(-0.0, 0.0, (num_resets, 1), device=self._device).view(-1)
         root_pos[env_ids, 2] += torch_rand_float(-0.0, 0.0, (num_resets, 1), device=self._device).view(-1)
         # Randomizes the heading of the platform
         root_rot = self.initial_root_rot.clone()
@@ -240,7 +242,9 @@ class MFP2DTrackXYVelocityTask(RLTask):
 
     def calculate_metrics(self) -> None:
         # position error
-        self.target_dist = torch.sqrt(torch.square(self.target_velocities[:,:2] - self.root_velocities[:,:2]).sum(-1))
+        self.root_positions = self.root_pos - self._env_pos
+        self.root_dist = torch.sqrt(torch.square(self.root_positions).mean(-1))
+        self.target_dist = torch.sqrt(torch.square(self.target_velocities[:,:2] - self.root_velocities[:,:2]).mean(-1))
 
         # Checks if the goal is reached
         goal_is_reached = (self.target_dist < self.xy_velocity_tolerance).int()
@@ -267,7 +271,8 @@ class MFP2DTrackXYVelocityTask(RLTask):
         # resets due to misbehavior
         ones = torch.ones_like(self.reset_buf)
         die = torch.zeros_like(self.reset_buf)
-        die = torch.where(self.target_dist > self._reset_dist * 4, ones, die)
+        die = torch.where(self.target_dist > self._reset_error, ones, die)
+        die = torch.where(self.root_dist > self._max_distance, ones, die)
         die = torch.where(self.goal_reached > self.kill_after_n_steps_in_tolerance, ones, die)
 
         # resets due to episode length
