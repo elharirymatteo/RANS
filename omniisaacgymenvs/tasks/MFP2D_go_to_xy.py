@@ -18,7 +18,7 @@ from gym import spaces
 
 EPS = 1e-6   # small constant to avoid divisions by 0 and log(0)
 
-class ModularFloatingPlatformTask(RLTask):
+class MFP2DGoToXYTask(RLTask):
     def __init__(
         self,
         name: str,                # name of the Task

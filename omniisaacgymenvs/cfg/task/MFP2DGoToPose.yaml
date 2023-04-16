@@ -1,5 +1,5 @@
 # used to create the object
-name: ModularFloatingPlatformPose
+name: MFP2DGoToPose
 
 physics_engine: ${..physics_engine}
 
