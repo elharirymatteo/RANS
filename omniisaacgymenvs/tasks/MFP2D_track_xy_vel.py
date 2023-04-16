@@ -73,7 +73,6 @@ class MFP2DTrackXYVelocityTask(RLTask):
 
         self.thrust_max = torch.tensor(self.thrust_force, device=self._device, dtype=torch.float32)
         self.target_velocities = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
-        self.target_velocities[:, 2] = 0
         self.actions = torch.zeros((self._num_envs, self._num_actions), device=self._device, dtype=torch.float32)
         self.goal_reached = torch.zeros((self.num_envs), device=self._device, dtype=torch.int32)
         self.all_indices = torch.arange(self._num_envs, dtype=torch.int32, device=self._device)
