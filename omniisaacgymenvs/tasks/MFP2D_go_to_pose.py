@@ -284,7 +284,10 @@ class MFP2DGoToPoseTask(RLTask):
     def calculate_metrics(self) -> None:
         root_positions = self.root_pos - self._env_pos
         root_quats = self.root_rot 
-        orient_z = torch.cos(root_quats[:, 0]) * torch.sin(root_quats[:, 1]) * torch.cos(root_quats[:, 2]) + torch.sin(root_quats[:, 0]) * torch.cos(root_quats[:, 1]) * torch.sin(root_quats[:, 2])
+        # Cast quaternion to Yaw
+        siny_cosp = 2 * (root_quats[:,0] * root_quats[:,3] + root_quats[:,1] * root_quats[:,2])
+        cosy_cosp = 1 - 2 * (root_quats[:,2] * root_quats[:,2] + root_quats[:,3] * root_quats[:,3])
+        orient_z = torch.arctan2(siny_cosp, cosy_cosp)
         
         # position error
         self.target_dist = torch.sqrt(torch.square(self.target_positions[:,:2] - root_positions[:,:2]).mean(-1))
