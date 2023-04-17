@@ -249,7 +249,10 @@ class MFP2DTrackXYVelocityMatchHeadingTask(RLTask):
         self.root_positions = self.root_pos - self._env_pos
         root_quats = self.root_rot 
         self.root_dist = torch.sqrt(torch.square(self.root_positions).mean(-1))
-        orient_z = torch.cos(root_quats[:, 0]) * torch.sin(root_quats[:, 1]) * torch.cos(root_quats[:, 2]) + torch.sin(root_quats[:, 0]) * torch.cos(root_quats[:, 1]) * torch.sin(root_quats[:, 2])
+        # Cast quaternion to Yaw
+        siny_cosp = 2 * (root_quats[:,0] * root_quats[:,3] + root_quats[:,1] * root_quats[:,2])
+        cosy_cosp = 1 - 2 * (root_quats[:,2] * root_quats[:,2] + root_quats[:,3] * root_quats[:,3])
+        orient_z = torch.arctan2(siny_cosp, cosy_cosp)
         # linear velocity error
         self.target_dist = torch.sqrt(torch.square(self.target_velocities[:,:2] - self.root_velocities[:,:2]).mean(-1))
 
