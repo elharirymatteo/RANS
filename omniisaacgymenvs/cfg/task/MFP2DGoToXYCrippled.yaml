@@ -1,5 +1,5 @@
 # used to create the object
-name: MFP2DGoToXY
+name: MFP2DGoToXYCrippled
 
 physics_engine: ${..physics_engine}
 
@@ -19,8 +19,8 @@ env:
   actionDelay: 0.0
 
   task_parameters: 
-    XYTolerance: 0.1
-    KillAfterNStepsInTolerance: 25 # 5seconds
+    XYTolerance: 0.025
+    KillAfterNStepsInTolerance: 50 # 10seconds
 
   learn:
     UseLinearRewards: 0

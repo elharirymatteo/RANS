@@ -20,9 +20,9 @@ env:
   actionDelay: 0.0
 
   task_parameters: 
-    XYTolerance: 0.1
+    XYTolerance: 0.025
     HeadingTolerance: 0.1
-    KillAfterNStepsInTolerance: 25 # 5seconds
+    KillAfterNStepsInTolerance: 50 # 10seconds
 
   learn:
     UseLinearRewards: 0
