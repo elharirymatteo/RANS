@@ -122,7 +122,7 @@ class MFP2DTrackXYVelocityTask(RLTask):
         self.root_pos, self.root_rot = self._platforms.get_world_poses(clone=False)
         self.root_velocities = self._platforms.get_velocities(clone=False)
         root_quats = self.root_rot
-        # Get distance to the goal
+        # Get velocity delta to the goal
         self.obs_buf[..., 0:3] = self.target_velocities - self.root_velocities[..., 0:3]
         # Get rotation matrix from quaternions
         rot_x = quat_axis(root_quats, 0)
