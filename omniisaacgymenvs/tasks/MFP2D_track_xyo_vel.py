@@ -58,7 +58,7 @@ class MFP2DTrackXYOVelocityTask(RLTask):
         self.use_square_rewards = self._task_cfg["env"]["learn"]["UseSquareRewards"]
         self.use_exponential_rewards = self._task_cfg["env"]["learn"]["UseExponentialRewards"]
 
-        self._num_observations = 18
+        self._num_observations = 21
 
         # define action space
         if self._discrete_actions=="MultiDiscrete":    
@@ -77,7 +77,7 @@ class MFP2DTrackXYOVelocityTask(RLTask):
 
         self.thrust_max = torch.tensor(self.thrust_force, device=self._device, dtype=torch.float32)
         self.target_linear_velocities = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
-        self.target_linear_angular = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
+        self.target_angular_velocities = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
         self.actions = torch.zeros((self._num_envs, self._num_actions), device=self._device, dtype=torch.float32)
         self.goal_reached = torch.zeros((self.num_envs), device=self._device, dtype=torch.int32)
         self.all_indices = torch.arange(self._num_envs, dtype=torch.int32, device=self._device)
@@ -127,8 +127,8 @@ class MFP2DTrackXYOVelocityTask(RLTask):
         self.root_pos, self.root_rot = self._platforms.get_world_poses(clone=False)
         self.root_velocities = self._platforms.get_velocities(clone=False)
         root_quats = self.root_rot
-        # Get distance to the goal
-        self.obs_buf[..., 0:3] = self.target_velocities - self.root_velocities[..., 0:3]
+        # Get velocity delta to the goal
+        self.obs_buf[..., 0:3] = self.target_linear_velocities - self.root_velocities[..., 0:3]
         # Get rotation matrix from quaternions
         rot_x = quat_axis(root_quats, 0)
         rot_y = quat_axis(root_quats, 1)
@@ -141,6 +141,8 @@ class MFP2DTrackXYOVelocityTask(RLTask):
         root_angvels = self.root_velocities[:, 3:]
         self.obs_buf[..., 12:15] = root_linvels
         self.obs_buf[..., 15:18] = root_angvels
+        # Get velocity delta to the goal
+        self.obs_buf[..., 18:21] = self.target_angular_velocities - self.root_velocities[..., 3:]
 
         observations = {
             self._platforms.name: {
@@ -204,7 +206,8 @@ class MFP2DTrackXYOVelocityTask(RLTask):
         num_sets = len(env_ids)
         envs_long = env_ids.long()
         # Randomizes the position of the ball on the x y axis
-        self.target_velocities[envs_long, 0:2] = torch_rand_float(-self._min_xy_velocity, self._max_xy_velocity, (num_sets, 2), device=self._device) 
+        self.target_linear_velocities[envs_long, 0:2] = torch_rand_float(-self._min_xy_velocity, self._max_xy_velocity, (num_sets, 2), device=self._device) 
+        self.target_angular_velocities[envs_long, 2] = torch_rand_float(-self._min_omega_velocity, self._max_omega_velocity, (num_sets, 1), device=self._device) 
 
     def reset_idx(self, env_ids):
         num_resets = len(env_ids)
@@ -245,37 +248,47 @@ class MFP2DTrackXYOVelocityTask(RLTask):
             self.episode_sums[key][env_ids] = 0.
 
     def calculate_metrics(self) -> None:
-        # position error
+        # Distance to their origin
         self.root_positions = self.root_pos - self._env_pos
         self.root_dist = torch.sqrt(torch.square(self.root_positions).mean(-1))
-        self.target_dist = torch.sqrt(torch.square(self.target_velocities[:,:2] - self.root_velocities[:,:2]).mean(-1))
+        # linear velocity error
+        self.target_linear_vel_dist = torch.sqrt(torch.square(self.target_linear_velocities[:,:2] - self.root_velocities[:,:2]).mean(-1))
+        # angular velocity error
+        self.target_angular_vel_dist = torch.sqrt(torch.square(self.target_angular_velocities[:,2] - self.root_velocities[:,-1]).mean(-1))
 
         # Checks if the goal is reached
-        goal_is_reached = (self.target_dist < self.xy_velocity_tolerance).int()
+        goal_is_reached = (self.target_linear_vel_dist < self.xy_velocity_tolerance).int()
+        goal_is_reached *= (self.target_angular_vel_dist < self.omega_velocity_tolerance).int()
         self.goal_reached *= goal_is_reached # if not set the value to 0
         self.goal_reached += goal_is_reached # if it is add 1
 
         # Rewards
         if self.use_linear_rewards:
-            position_reward = 1.0 / (1.0 + self.target_dist) * self.rew_scales["xy_velocity"]
+            position_reward = 1.0 / (1.0 + self.target_linear_vel_dist) * self.rew_scales["xy_velocity"]
+            angular_reward = 1.0 / (1.0 + self.target_angular_vel_dist) * self.rew_scales["omega_velocity"]
         elif self.use_square_rewards:
-            position_reward = 1.0 / (1.0 + self.target_dist*self.target_dist) * self.rew_scales["xy_velocity"]
+            position_reward = 1.0 / (1.0 + self.target_linear_vel_dist*self.target_linear_vel_dist) * self.rew_scales["xy_velocity"]
+            angular_reward = 1.0 / (1.0 + self.target_angular_vel_dist*self.target_angular_vel_dist) * self.rew_scales["omega_velocity"]
         elif self.use_exponential_rewards:
-            position_reward = torch.exp(-self.target_dist / 0.25) * self.rew_scales["xy_velocity"]
+            position_reward = torch.exp(-self.target_linear_vel_dist / 0.25) * self.rew_scales["xy_velocity"]
+            angular_reward = torch.exp(-self.target_angular_vel_dist / 0.25) * self.rew_scales["omega_velocity"]
         else:
             raise ValueError("Unknown reward type.")
         
         self.rew_buf[:] = position_reward
         # log episode reward sums
         self.episode_sums["xy_velocity_reward"] += position_reward
+        self.episode_sums["omega_velocity_reward"] += angular_reward
         # log raw info
-        self.episode_sums["xy_velocity_error"] += self.target_dist
+        self.episode_sums["xy_velocity_error"] += self.target_linear_vel_dist
+        self.episode_sums["omega_velocity_error"] += self.target_angular_vel_dist
 
     def is_done(self) -> None:
         # resets due to misbehavior
         ones = torch.ones_like(self.reset_buf)
         die = torch.zeros_like(self.reset_buf)
-        die = torch.where(self.target_dist > self._reset_error, ones, die)
+        die = torch.where(self.target_linear_vel_dist > self._reset_xy_error, ones, die)
+        die = torch.where(self.target_angular_vel_dist > self._reset_omega_error, ones, die)
         die = torch.where(self.root_dist > self._max_distance, ones, die)
         die = torch.where(self.goal_reached > self.kill_after_n_steps_in_tolerance, ones, die)
 

@@ -26,10 +26,10 @@ env:
     MaxDistance: 500
     MinXYVelocity: -3
     MaxXYVelocity: 3
-    MinOmegaVelocity: -12
-    MaxOmegaVelocity: 12
+    MinOmegaVelocity: -3.14157
+    MaxOmegaVelocity: 3.14157
     ResetXYError: 6
-    ResetOmegaError: 24
+    ResetOmegaError: 6.28314
 
   learn:
     UseLinearRewards: 0
