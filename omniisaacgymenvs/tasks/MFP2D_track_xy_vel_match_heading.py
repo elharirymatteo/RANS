@@ -18,7 +18,7 @@ from gym import spaces
 
 EPS = 1e-6   # small constant to avoid divisions by 0 and log(0)
 
-class MFP2DTrackXYVelocityTask(RLTask):
+class MFP2DTrackXYVelocityMatchHeadingTask(RLTask):
     def __init__(
         self,
         name: str,                # name of the Task
@@ -54,7 +54,7 @@ class MFP2DTrackXYVelocityTask(RLTask):
         self.use_square_rewards = self._task_cfg["env"]["learn"]["UseSquareRewards"]
         self.use_exponential_rewards = self._task_cfg["env"]["learn"]["UseExponentialRewards"]
 
-        self._num_observations = 18
+        self._num_observations = 20
 
         # define action space
         if self._discrete_actions=="MultiDiscrete":    
@@ -73,6 +73,7 @@ class MFP2DTrackXYVelocityTask(RLTask):
 
         self.thrust_max = torch.tensor(self.thrust_force, device=self._device, dtype=torch.float32)
         self.target_velocities = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
+        self.target_orient = torch.zeros((self._num_envs, 1), device=self._device, dtype=torch.float32)
         self.actions = torch.zeros((self._num_envs, self._num_actions), device=self._device, dtype=torch.float32)
         self.goal_reached = torch.zeros((self.num_envs), device=self._device, dtype=torch.int32)
         self.all_indices = torch.arange(self._num_envs, dtype=torch.int32, device=self._device)
@@ -136,6 +137,9 @@ class MFP2DTrackXYVelocityTask(RLTask):
         root_angvels = self.root_velocities[:, 3:]
         self.obs_buf[..., 12:15] = root_linvels
         self.obs_buf[..., 15:18] = root_angvels
+        # Get the target heading
+        self.obs_buf[..., 18:19] = torch.cos(self.target_orient)
+        self.obs_buf[..., 19:20] = torch.sin(self.target_orient)
 
         observations = {
             self._platforms.name: {
@@ -200,6 +204,7 @@ class MFP2DTrackXYVelocityTask(RLTask):
         envs_long = env_ids.long()
         # Randomizes the position of the ball on the x y axis
         self.target_velocities[envs_long, 0:2] = torch_rand_float(-self._min_xy_velocity, self._max_xy_velocity, (num_sets, 2), device=self._device) 
+        self.target_orient[envs_long, 0] = torch.rand(num_sets, device=self._device) * math.pi
 
     def reset_idx(self, env_ids):
         num_resets = len(env_ids)
@@ -240,31 +245,44 @@ class MFP2DTrackXYVelocityTask(RLTask):
             self.episode_sums[key][env_ids] = 0.
 
     def calculate_metrics(self) -> None:
-        # position error
+        # Distance to their origin
         self.root_positions = self.root_pos - self._env_pos
+        root_quats = self.root_rot 
         self.root_dist = torch.sqrt(torch.square(self.root_positions).mean(-1))
+        orient_z = torch.cos(root_quats[:, 0]) * torch.sin(root_quats[:, 1]) * torch.cos(root_quats[:, 2]) + torch.sin(root_quats[:, 0]) * torch.cos(root_quats[:, 1]) * torch.sin(root_quats[:, 2])
+        # linear velocity error
         self.target_dist = torch.sqrt(torch.square(self.target_velocities[:,:2] - self.root_velocities[:,:2]).mean(-1))
+
+        # orientation error
+        self.orient_z = orient_z
+        self.orient_dist = torch.abs(torch.arctan2(torch.sin(self.target_orient[:,0] - orient_z), torch.cos(self.target_orient[:,0] - orient_z)))
 
         # Checks if the goal is reached
         goal_is_reached = (self.target_dist < self.xy_velocity_tolerance).int()
+        goal_is_reached *= (self.orient_dist < self.heading_tolerance).int()
         self.goal_reached *= goal_is_reached # if not set the value to 0
         self.goal_reached += goal_is_reached # if it is add 1
 
         # Rewards
         if self.use_linear_rewards:
-            position_reward = 1.0 / (1.0 + self.target_dist) * self.rew_scales["xy_velocity"]
+            velocity_reward = 1.0 / (1.0 + self.target_dist) * self.rew_scales["xy_velocity"]
+            orient_reward = 1.0 / (1.0 + self.orient_dist) * self.rew_scales["heading"]
         elif self.use_square_rewards:
-            position_reward = 1.0 / (1.0 + self.target_dist*self.target_dist) * self.rew_scales["xy_velocity"]
+            velocity_reward = 1.0 / (1.0 + self.target_dist*self.target_dist) * self.rew_scales["xy_velocity"]
+            orient_reward = 1.0 / (1.0 + self.orient_dist*self.orient_dist) * self.rew_scales["heading"]
         elif self.use_exponential_rewards:
-            position_reward = torch.exp(-self.target_dist / 0.25) * self.rew_scales["xy_velocity"]
+            velocity_reward = torch.exp(-self.target_dist / 0.25) * self.rew_scales["xy_velocity"]
+            orient_reward = torch.exp(-self.orient_dist / 0.25) * self.rew_scales["heading"]
         else:
             raise ValueError("Unknown reward type.")
         
-        self.rew_buf[:] = position_reward
+        self.rew_buf[:] = velocity_reward + orient_reward
         # log episode reward sums
-        self.episode_sums["xy_velocity_reward"] += position_reward
+        self.episode_sums["xy_velocity_reward"] += velocity_reward
+        self.episode_sums["heading"] += orient_reward
         # log raw info
         self.episode_sums["xy_velocity_error"] += self.target_dist
+        self.episode_sums["heading"] += self.orient_dist
 
     def is_done(self) -> None:
         # resets due to misbehavior
