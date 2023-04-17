@@ -240,9 +240,10 @@ class MFP2DTrackXYVelocityTask(RLTask):
             self.episode_sums[key][env_ids] = 0.
 
     def calculate_metrics(self) -> None:
-        # position error
+        # Distance to their origin
         self.root_positions = self.root_pos - self._env_pos
         self.root_dist = torch.sqrt(torch.square(self.root_positions).mean(-1))
+        # linear velocity error
         self.target_dist = torch.sqrt(torch.square(self.target_velocities[:,:2] - self.root_velocities[:,:2]).mean(-1))
 
         # Checks if the goal is reached
@@ -252,17 +253,17 @@ class MFP2DTrackXYVelocityTask(RLTask):
 
         # Rewards
         if self.use_linear_rewards:
-            position_reward = 1.0 / (1.0 + self.target_dist) * self.rew_scales["xy_velocity"]
+            velocity_reward = 1.0 / (1.0 + self.target_dist) * self.rew_scales["xy_velocity"]
         elif self.use_square_rewards:
-            position_reward = 1.0 / (1.0 + self.target_dist*self.target_dist) * self.rew_scales["xy_velocity"]
+            velocity_reward = 1.0 / (1.0 + self.target_dist*self.target_dist) * self.rew_scales["xy_velocity"]
         elif self.use_exponential_rewards:
-            position_reward = torch.exp(-self.target_dist / 0.25) * self.rew_scales["xy_velocity"]
+            velocity_reward = torch.exp(-self.target_dist / 0.25) * self.rew_scales["xy_velocity"]
         else:
             raise ValueError("Unknown reward type.")
         
-        self.rew_buf[:] = position_reward
+        self.rew_buf[:] = velocity_reward
         # log episode reward sums
-        self.episode_sums["xy_velocity_reward"] += position_reward
+        self.episode_sums["xy_velocity_reward"] += velocity_reward
         # log raw info
         self.episode_sums["xy_velocity_error"] += self.target_dist
 
