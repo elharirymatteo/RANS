@@ -62,6 +62,9 @@ def setXformOps(prim, translate:Gf.Vec3d = Gf.Vec3d([0,0,0]),
     setOrient(prim, Gf.Quatd(1, Gf.Vec3d([0, 0, 0])))
     setScale(prim, Gf.Vec3d([1, 1, 1]))
 
+def getTransform(prim, parent):
+    return UsdGeom.XformCache(0).ComputeRelativeTransform(prim, parent)[0]
+
 # Utils for API manipulation
 
 def applyMaterial(prim, material):
