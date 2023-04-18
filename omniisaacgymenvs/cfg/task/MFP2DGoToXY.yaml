@@ -27,6 +27,37 @@ env:
     UseSquareRewards: 0
     UseExponentialRewards: 1
     PositionXYRewardScale: 1.0
+    PositionXYRewardExponentialCoefficient: 0.25
+
+  platform:
+    thrust_force: 1.0
+    refinement: 2
+    core:
+      mass: 5.0
+      CoM: [0,0,0]
+      radius: 0.5
+      shape: "sphere"
+    thrusters:
+      thruster_rings:
+        - name: "ring1"
+          num_anchors: 4
+          style: "dual"
+          ring_radius: 0.5
+          ring_offset: 0.75839816339
+          thruster_radius: 0.05
+          thruster_length: 0.1
+          thruster_mass: 0.00001
+          thruster_CoM: [0,0,0]
+        - name: "ring2"
+          num_anchors: 6
+          style: "dual"
+          ring_radius: 0.75
+          ring_offset: 0.75839816339
+          thruster_radius: 0.05
+          thruster_length: 0.1
+          thruster_mass: 0.00001
+          thruster_CoM: [0,0,0]
+      #thruster_grids:
 
 sim:
   dt: 0.02
