@@ -55,6 +55,7 @@ class MFP2DTrackXYOVelocityTask(RLTask):
         # Rewards parameters
         self.rew_scales = {}
         self.rew_scales["xy_velocity"] = self._task_cfg["env"]["learn"]["XYVelocityRewardScale"]
+        self.rew_scales["omega_velocity"] = self._task_cfg["env"]["learn"]["OmegaVelocityRewardScale"]
         self.use_linear_rewards = self._task_cfg["env"]["learn"]["UseLinearRewards"]
         self.use_square_rewards = self._task_cfg["env"]["learn"]["UseSquareRewards"]
         self.use_exponential_rewards = self._task_cfg["env"]["learn"]["UseExponentialRewards"]
@@ -88,7 +89,7 @@ class MFP2DTrackXYOVelocityTask(RLTask):
         self.extras = {}
 
         torch_zeros = lambda: torch.zeros(self.num_envs, dtype=torch.float, device=self.device, requires_grad=False)
-        self.episode_sums = {"xy_velocity_reward": torch_zeros(), "xy_velocity_error": torch_zeros()}
+        self.episode_sums = {"xy_velocity_reward": torch_zeros(), "xy_velocity_error": torch_zeros(), "omega_velocity_reward": torch_zeros(), "omega_velocity_error": torch_zeros() }
         return
 
     def set_up_scene(self, scene) -> None:
@@ -210,7 +211,7 @@ class MFP2DTrackXYOVelocityTask(RLTask):
         envs_long = env_ids.long()
         # Randomizes the position of the ball on the x y axis
         self.target_linear_velocities[envs_long, 0:2] = torch_rand_float(-self._min_xy_velocity, self._max_xy_velocity, (num_sets, 2), device=self._device) 
-        self.target_angular_velocities[envs_long, 2] = torch_rand_float(-self._min_omega_velocity, self._max_omega_velocity, (num_sets, 1), device=self._device) 
+        self.target_angular_velocities[envs_long, 2:3] = torch_rand_float(-self._min_omega_velocity, self._max_omega_velocity, (num_sets, 1), device=self._device) 
 
     def reset_idx(self, env_ids):
         num_resets = len(env_ids)
