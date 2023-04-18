@@ -3,9 +3,9 @@ from omniisaacgymenvs.tasks.base.rl_task import RLTask
 from omniisaacgymenvs.robots.articulations.modular_floating_platform import ModularFloatingPlatform
 from omniisaacgymenvs.robots.articulations.views.modular_floating_platform_view import ModularFloatingPlatformView
 from omniisaacgymenvs.tasks.utils.fp_utils import quantize_tensor_values
+from omniisaacgymenvs.utils.pin import DynamicPin
 
 from omni.isaac.core.utils.torch.rotations import *
-from omni.isaac.core.objects import DynamicSphere
 from omni.isaac.core.prims import RigidPrimView
 from omni.isaac.core.utils.prims import get_prim_at_path
 
@@ -46,6 +46,7 @@ class MFP2DGoToXYTask(RLTask):
         # Rewards parameters
         self.rew_scales = {}
         self.rew_scales["position"] = self._task_cfg["env"]["learn"]["PositionXYRewardScale"]
+        self.rew_scales["position_exp_coeff"] = self._task_cfg["env"]["learn"]["PositionXYRewardExponentialCoefficient"]
         self.use_linear_rewards = self._task_cfg["env"]["learn"]["UseLinearRewards"]
         self.use_square_rewards = self._task_cfg["env"]["learn"]["UseSquareRewards"]
         self.use_exponential_rewards = self._task_cfg["env"]["learn"]["UseExponentialRewards"]
@@ -120,17 +121,20 @@ class MFP2DGoToXYTask(RLTask):
                                                         self._sim_config.parse_actor_config("modular_floating_platform"))
 
     def get_target(self):
-        radius = 0.2
+        ball_radius = 0.2
+        poll_radius = 0.025
+        poll_length = 2
         color = torch.tensor([1, 0, 0])
-        ball = DynamicSphere(
+        ball = DynamicPin(
             prim_path=self.default_zero_env_path + "/ball",
             translation=self._ball_position,
             name="target_0",
-            radius=radius,
+            ball_radius = ball_radius,
+            poll_radius = poll_radius,
+            poll_length = poll_length,
             color=color)
         self._sim_config.apply_articulation_settings("ball", get_prim_at_path(ball.prim_path),
                                                         self._sim_config.parse_actor_config("ball"))
-        ball.set_collision_enabled(False)
 
     def get_observations(self) -> dict:
         # implement logic to retrieve observation states
@@ -281,7 +285,7 @@ class MFP2DGoToXYTask(RLTask):
         elif self.use_square_rewards:
             position_reward = 1.0 / (1.0 + self.target_dist*self.target_dist) * self.rew_scales["position"]
         elif self.use_exponential_rewards:
-            position_reward = torch.exp(-self.target_dist / 0.25) * self.rew_scales["position"]
+            position_reward = torch.exp(-self.target_dist / self.rew_scales["position_exp_coeff"]) * self.rew_scales["position"]
         else:
             raise ValueError("Unknown reward type.")
         

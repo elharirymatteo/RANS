@@ -3,9 +3,9 @@ from omniisaacgymenvs.tasks.base.rl_task import RLTask
 from omniisaacgymenvs.robots.articulations.modular_floating_platform import ModularFloatingPlatform
 from omniisaacgymenvs.robots.articulations.views.modular_floating_platform_view import ModularFloatingPlatformView
 from omniisaacgymenvs.tasks.utils.fp_utils import quantize_tensor_values
+from omniisaacgymenvs.utils.pin import DynamicPin
 
 from omni.isaac.core.utils.torch.rotations import *
-from omni.isaac.core.objects import DynamicSphere
 from omni.isaac.core.prims import RigidPrimView
 from omni.isaac.core.utils.prims import get_prim_at_path
 
@@ -50,8 +50,6 @@ class MFP2DGoToXYCrippledTask(RLTask):
         self.use_square_rewards = self._task_cfg["env"]["learn"]["UseSquareRewards"]
         self.use_exponential_rewards = self._task_cfg["env"]["learn"]["UseExponentialRewards"]
 
-        self._num_observations = 18 + self.num_actions
-
         # define action space
         if self._discrete_actions=="MultiDiscrete":    
             self._num_actions = 8
@@ -61,6 +59,8 @@ class MFP2DGoToXYCrippledTask(RLTask):
             raise NotImplementedError("The Discrete control mode is not supported.")
         else:
             self._num_actions = 8
+
+        self._num_observations = 18 + self.num_actions
 
         self._fp_position = torch.tensor([0, 0., 0.5])
         self._ball_position = torch.tensor([0, 0, 1.0])
@@ -121,17 +121,20 @@ class MFP2DGoToXYCrippledTask(RLTask):
                                                         self._sim_config.parse_actor_config("modular_floating_platform"))
 
     def get_target(self):
-        radius = 0.2
+        ball_radius = 0.2
+        poll_radius = 0.025
+        poll_length = 2
         color = torch.tensor([1, 0, 0])
-        ball = DynamicSphere(
+        ball = DynamicPin(
             prim_path=self.default_zero_env_path + "/ball",
             translation=self._ball_position,
             name="target_0",
-            radius=radius,
+            ball_radius = ball_radius,
+            poll_radius = poll_radius,
+            poll_length = poll_length,
             color=color)
         self._sim_config.apply_articulation_settings("ball", get_prim_at_path(ball.prim_path),
                                                         self._sim_config.parse_actor_config("ball"))
-        ball.set_collision_enabled(False)
 
     def get_observations(self) -> dict:
         # implement logic to retrieve observation states
