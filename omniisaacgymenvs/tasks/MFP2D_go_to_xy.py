@@ -1,6 +1,6 @@
 
 from omniisaacgymenvs.tasks.base.rl_task import RLTask
-from omniisaacgymenvs.robots.articulations.modular_floating_platform import ModularFloatingPlatform
+from omniisaacgymenvs.robots.articulations.MFP2D import ModularFloatingPlatform, compute_num_actions
 from omniisaacgymenvs.robots.articulations.views.modular_floating_platform_view import ModularFloatingPlatformView
 from omniisaacgymenvs.tasks.utils.fp_utils import quantize_tensor_values
 from omniisaacgymenvs.utils.pin import DynamicPin
@@ -31,6 +31,7 @@ class MFP2DGoToXYTask(RLTask):
         self._sim_config = sim_config
         self._cfg = sim_config.config
         self._task_cfg = sim_config.task_config
+        self._platform_cfg = self._task_cfg["env"]["platform"]
         self._num_envs = self._task_cfg["env"]["numEnvs"]
         self._env_spacing = self._task_cfg["env"]["envSpacing"]
         self._max_episode_length = self._task_cfg["env"]["maxEpisodeLength"]
@@ -53,15 +54,18 @@ class MFP2DGoToXYTask(RLTask):
 
         self._num_observations = 18
 
+        self._num_actions = compute_num_actions(self._platform_cfg)
+
         # define action space
         if self._discrete_actions=="MultiDiscrete":    
-            self._num_actions = 8
             # RLGames implementation of MultiDiscrete action space requires a tuple of Discrete spaces
-            self.action_space = spaces.Tuple([spaces.Discrete(2)]*8)
+            self.action_space = spaces.Tuple([spaces.Discrete(2)]*self._num_actions)
+        elif self._discrete_actions=="Continuous":
+            pass
         elif self._discrete_actions=="Discrete":
             raise NotImplementedError("The Discrete control mode is not supported.")
         else:
-            self._num_actions = 8
+            raise NotImplementedError("The requested discrete action type is not supported.")
 
         self._fp_position = torch.tensor([0, 0., 0.5])
         self._ball_position = torch.tensor([0, 0, 1.0])
@@ -115,8 +119,7 @@ class MFP2DGoToXYTask(RLTask):
 
     def get_floating_platform(self):
         fp = ModularFloatingPlatform(prim_path=self.default_zero_env_path + "/Modular_floating_platform", name="modular_floating_platform",
-                            translation=self._fp_position)
-        
+                            translation=self._fp_position, cfg=self._platform_cfg)
         self._sim_config.apply_articulation_settings("modular_floating_platform", get_prim_at_path(fp.prim_path),
                                                         self._sim_config.parse_actor_config("modular_floating_platform"))
 

@@ -1,6 +1,6 @@
 
 from omniisaacgymenvs.tasks.base.rl_task import RLTask
-from omniisaacgymenvs.robots.articulations.modular_floating_platform import ModularFloatingPlatform
+from omniisaacgymenvs.robots.articulations.MFP2D import ModularFloatingPlatform, compute_num_actions
 from omniisaacgymenvs.robots.articulations.views.modular_floating_platform_view import ModularFloatingPlatformView
 from omniisaacgymenvs.tasks.utils.fp_utils import quantize_tensor_values
 from omniisaacgymenvs.utils.arrow import DynamicArrow
@@ -33,6 +33,7 @@ class MFP2DGoToPoseCrippledTask(RLTask):
         self._sim_config = sim_config
         self._cfg = sim_config.config
         self._task_cfg = sim_config.task_config
+        self._platform_cfg = self._task_cfg["env"]["platform"]
         self._num_envs = self._task_cfg["env"]["numEnvs"]
         self._env_spacing = self._task_cfg["env"]["envSpacing"]
         self._max_episode_length = self._task_cfg["env"]["maxEpisodeLength"]
@@ -54,17 +55,18 @@ class MFP2DGoToPoseCrippledTask(RLTask):
         self.use_square_rewards = self._task_cfg["env"]["learn"]["UseSquareRewards"]
         self.use_exponential_rewards = self._task_cfg["env"]["learn"]["UseExponentialRewards"]
 
-        self._num_observations = 20 + self.action_space
         # define action space
-
+        self._num_actions = compute_num_actions(self._platform_cfg)
         if self._discrete_actions=="MultiDiscrete":    
-            self._num_actions = 8
             # RLGames implementation of MultiDiscrete action space requires a tuple of Discrete spaces
-            self.action_space = spaces.Tuple([spaces.Discrete(2)]*8)
+            self.action_space = spaces.Tuple([spaces.Discrete(2)]*self._num_actions)
+        elif self._discrete_actions=="Continuous":
+            pass
         elif self._discrete_actions=="Discrete":
             raise NotImplementedError("The Discrete control mode is not supported.")
         else:
-            self._num_actions = 8
+            raise NotImplementedError("The requested discrete action type is not supported.")
+        self._num_observations = 20 + self._num_actions
 
         self._fp_position = torch.tensor([0, 0., 0.5])
         self._ball_position = torch.tensor([0, 0, 1.0])
@@ -90,7 +92,6 @@ class MFP2DGoToPoseCrippledTask(RLTask):
         return
 
     def set_up_scene(self, scene) -> None:
-
         self.get_floating_platform()
         self.get_target()
         RLTask.set_up_scene(self, scene)
@@ -120,7 +121,7 @@ class MFP2DGoToPoseCrippledTask(RLTask):
 
     def get_floating_platform(self):
         fp = ModularFloatingPlatform(prim_path=self.default_zero_env_path + "/Modular_floating_platform", name="modular_floating_platform",
-                            translation=self._fp_position)
+                            translation=self._fp_position, cfg=self._platform_cfg)
         
         self._sim_config.apply_articulation_settings("modular_floating_platform", get_prim_at_path(fp.prim_path),
                                                         self._sim_config.parse_actor_config("modular_floating_platform"))
