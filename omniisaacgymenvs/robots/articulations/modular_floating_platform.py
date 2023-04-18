@@ -122,6 +122,7 @@ class CreatePlatform:
         platform_path, joints_path = self.createXformArticulationAndJoins()
         core_path = self.createRigidSphere(platform_path + "/core", "sphere", self.core_radius, self.core_CoM, self.core_mass)
         self.createArrowXform(core_path+"/sphere")
+        self.createPositionMarkerXform(core_path+"/sphere2")
         dummy_path = self.createRigidSphere(platform_path + "/dummy", "sphere2", 0.00001, self.core_CoM, 0.00001)
         self.createRevoluteJoint(self.stage, joints_path+"/dummy_link", core_path, dummy_path)
         num_thrusters = 0
@@ -131,7 +132,7 @@ class CreatePlatform:
     def createArrowXform(self, path):
         self.arrow_path, self.arrow_prim = createXform(self.stage, path)
         self.createArrowShape(self.stage, self.arrow_path, 0.1, 0.5, [self.core_radius, 0, 0], self.refinement)
-        material_path = self.platform_path+"/materials/visual_material"
+        material_path = self.platform_path+"/materials/blue_material"
         material = UsdShade.Material.Define(self.stage, material_path)
         shader = UsdShade.Shader.Define(self.stage, material_path+"/shader")
         shader.CreateIdAttr("UsdPreviewSurface")
@@ -139,6 +140,18 @@ class CreatePlatform:
         material.CreateSurfaceOutput().ConnectToSource(shader, "surface")
         arrow_binder = UsdShade.MaterialBindingAPI.Apply(self.arrow_prim)
         arrow_binder.Bind(material)
+
+    def createPositionMarkerXform(self, path):
+        self.marker_path, self.marker_prim = createXform(self.stage, path)
+        self.createSphereShape(self.stage, self.marker_path, 0.05, [0, 0, self.core_radius], self.refinement)
+        material_path = self.platform_path+"/materials/green_material"
+        material = UsdShade.Material.Define(self.stage, material_path)
+        shader = UsdShade.Shader.Define(self.stage, material_path+"/shader")
+        shader.CreateIdAttr("UsdPreviewSurface")
+        shader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Float3).Set(Gf.Vec3f([0,1,0]))
+        material.CreateSurfaceOutput().ConnectToSource(shader, "surface")
+        marker_binder = UsdShade.MaterialBindingAPI.Apply(self.marker_prim)
+        marker_binder.Bind(material)
 
     def createXformArticulationAndJoins(self):
         # Creates the Xform of the platform
@@ -212,6 +225,16 @@ class CreatePlatform:
 
         refineShape(stage, arrow_body_path, refinement)
         refineShape(stage, arrow_head_path, refinement)
+
+    @staticmethod
+    def createSphereShape(stage, path, radius, offset, refinement):
+        sphere_body_path = path + "/marker"
+        sphere_body_geom = UsdGeom.Sphere.Define(stage, sphere_body_path)
+        sphere_body_geom.GetRadiusAttr().Set(radius)
+        setTranslate(sphere_body_geom, Gf.Vec3d([offset[0], offset[1], offset[2]]))
+        setOrient(sphere_body_geom, Gf.Quatd(1.0, Gf.Vec3d(0, 0, 0)))
+        setScale(sphere_body_geom, Gf.Vec3d([1, 1, 1]))
+        refineShape(stage, sphere_body_path, refinement)
 
     @staticmethod
     def createThrusterShape(stage, path, radius, height, refinement):
