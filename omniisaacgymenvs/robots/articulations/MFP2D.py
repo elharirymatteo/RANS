@@ -69,6 +69,7 @@ class CreatePlatform:
         self.stage = omni.usd.get_context().get_stage()
         self.num_thrusters = 0
         self.num_actions = 0
+        self.thruster_paths = []
 
         self.read_cfg(cfg)
 
@@ -159,6 +160,7 @@ class CreatePlatform:
         # Adds the thrusters
         for thruster_ring in self.thruster_rings:
             self.num_thrusters = self.generateThrusterRing(thruster_ring, self.num_thrusters)
+        self.exportThrusterTransforms()
 
 
     def createBasicColors(self):
@@ -225,6 +227,7 @@ class CreatePlatform:
         applyMass(thruster_prim, thruster_mass, thruster_CoM)
         # Create joint
         createFixedJoint(self.stage, joint_path, parent_path, thruster_path)
+        return thruster_path
 
     def generateThrusterRing(self, thruster_ring, num_thrusters):
         # Create a ring of N thrusters around the platform
@@ -235,7 +238,7 @@ class CreatePlatform:
             R1 = SSTR.from_euler('xyz', [math.pi/2, 0, theta])
             Q1 = R1.as_quat()
             quat1 = Gf.Quatd(Q1[-1], Gf.Vec3d([Q1[0], Q1[1], Q1[2]]))
-            self.createThruster(self.platform_path + "/thruster_" + str(num_thrusters)+"_0",
+            p = self.createThruster(self.platform_path + "/thruster_" + str(num_thrusters)+"_0",
                                 self.joints_path+"/thruster_joint_"+str(num_thrusters)+"_0",
                                 translate,
                                 quat1,
@@ -245,11 +248,12 @@ class CreatePlatform:
                                 thruster_ring["thruster_mass"],
                                 Gf.Vec3d(list(thruster_ring["thruster_CoM"])))
             self.num_actions += 1
+            self.thruster_paths.append(p)
             if (thruster_ring["style"] == "dual") or (thruster_ring["style"] == "quad"):
                 R2 = SSTR.from_euler('xyz', [-math.pi/2, 0, theta])
                 Q2 = R2.as_quat()
                 quat2 = Gf.Quatd(Q2[-1], Gf.Vec3d([Q2[0], Q2[1], Q2[2]]))
-                self.createThruster(self.platform_path + "/thruster_" + str(num_thrusters)+"_1",
+                p = self.createThruster(self.platform_path + "/thruster_" + str(num_thrusters)+"_1",
                                     self.joints_path+"/thruster_joint_"+str(num_thrusters)+"_1",
                                     translate,
                                     quat2,
@@ -259,11 +263,12 @@ class CreatePlatform:
                                     thruster_ring["thruster_mass"],
                                     Gf.Vec3d(list(thruster_ring["thruster_CoM"])))
                 self.num_actions += 1
+            self.thruster_paths.append(p)
             if thruster_ring["style"] == "quad":
                 R3 = SSTR.from_euler('xyz', [0, 0, theta])
                 Q3 = R3.as_quat()
                 quat3 = Gf.Quatd(Q3[-1], Gf.Vec3d([Q3[0], Q3[1], Q3[2]]))
-                self.createThruster(self.platform_path + "/thruster_" + str(num_thrusters)+"_2",
+                p = self.createThruster(self.platform_path + "/thruster_" + str(num_thrusters)+"_2",
                                     self.joints_path+"/thruster_joint_"+str(num_thrusters)+"_2",
                                     translate,
                                     quat3,
@@ -272,10 +277,11 @@ class CreatePlatform:
                                     thruster_ring["thruster_length"],
                                     thruster_ring["thruster_mass"],
                                     Gf.Vec3d(list(thruster_ring["thruster_CoM"])))
+                self.thruster_paths.append(p)
                 R4 = SSTR.from_euler('xyz', [math.pi, 0, theta])
                 Q4 = R4.as_quat()
                 quat4 = Gf.Quatd(Q4[-1], Gf.Vec3d([Q4[0], Q4[1], Q4[2]]))
-                self.createThruster(self.platform_path + "/thruster_" + str(num_thrusters)+"_3",
+                p = self.createThruster(self.platform_path + "/thruster_" + str(num_thrusters)+"_3",
                                     self.joints_path+"/thruster_joint_"+str(num_thrusters)+"_3",
                                     translate,
                                     quat4,
@@ -284,11 +290,20 @@ class CreatePlatform:
                                     thruster_ring["thruster_length"],
                                     thruster_ring["thruster_mass"],
                                     Gf.Vec3d(list(thruster_ring["thruster_CoM"])))
-                self.num_actions += 1
-                self.num_actions += 1
+                self.thruster_paths.append(p)
+                self.num_actions += 2
             num_thrusters += 1
             print(self.platform_path + "/thruster_" + str(num_thrusters)+"_0")
         return num_thrusters
+    
+    def exportThrusterTransforms(self):
+        transforms = []
+        core_prim = self.stage.GetPrimAtPath(self.core_path)
+        for path in self.thruster_paths:
+            prim = self.stage.GetPrimAtPath(path)
+            transform = getTransform(prim, core_prim)
+            transforms.append(np.array(transform))
+        return np.array(transforms)
 
 class ModularFloatingPlatform(Robot):
     def __init__(
@@ -318,6 +333,7 @@ class ModularFloatingPlatform(Robot):
         fp = CreatePlatform(prim_path, cfg)
         fp.build()
         self._num_actions = fp.num_actions
+        self._transforms = fp.exportThrusterTransforms()
 
         super().__init__(
             prim_path=prim_path,
