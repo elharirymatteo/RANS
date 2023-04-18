@@ -57,7 +57,6 @@ env:
           thruster_length: 0.1
           thruster_mass: 0.00001
           thruster_CoM: [0,0,0]
-      #thruster_grids:
 
 sim:
   dt: 0.02
