@@ -77,6 +77,7 @@ class MFP2DGoToXYTask(RLTask):
 
         self.target_positions = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
         self.target_positions[:, 2] = 1
+        self.transforms = torch.zeros((self._num_actions, 4, 4), device=self._device, dtype=torch.float32)
         self.actions = torch.zeros((self._num_envs, self._num_actions), device=self._device, dtype=torch.float32)
         self.goal_reached = torch.zeros((self.num_envs), device=self._device, dtype=torch.int32)
         self.all_indices = torch.arange(self._num_envs, dtype=torch.int32, device=self._device)
@@ -120,6 +121,7 @@ class MFP2DGoToXYTask(RLTask):
     def get_floating_platform(self):
         fp = ModularFloatingPlatform(prim_path=self.default_zero_env_path + "/Modular_floating_platform", name="modular_floating_platform",
                             translation=self._fp_position, cfg=self._platform_cfg)
+        self.transforms[...] = torch.from_numpy(fp._transforms)
         self._sim_config.apply_articulation_settings("modular_floating_platform", get_prim_at_path(fp.prim_path),
                                                         self._sim_config.parse_actor_config("modular_floating_platform"))
 
