@@ -233,7 +233,7 @@ class CreatePlatform:
         # Create a ring of N thrusters around the platform
         for i in range(thruster_ring["num_anchors"]):
             # Translate and rotate
-            theta = i * 2*math.pi / thruster_ring["num_anchors"]
+            theta = thruster_ring["ring_offset"] + i * 2*math.pi / thruster_ring["num_anchors"]
             translate = Gf.Vec3d([thruster_ring["ring_radius"] * math.cos(theta), thruster_ring["ring_radius"] * math.sin(theta), 0])
             R1 = SSTR.from_euler('xyz', [math.pi/2, 0, theta])
             Q1 = R1.as_quat()
