@@ -48,6 +48,7 @@ from omniisaacgymenvs.robots.articulations.utils.MFP_utils import *
 
 def compute_num_actions(cfg):
     num_actions = 0
+    validate_thruster_config(cfg)
     if "thruster_rings" in cfg["thrusters"].keys():
         for thruster_ring in cfg["thrusters"]["thruster_rings"]:
             # Create a ring of N thrusters around the platform
@@ -70,6 +71,32 @@ def compute_num_actions(cfg):
                         num_actions += 2
     return num_actions
 
+def validate_thruster_config(cfg):
+    if "thruster_rings" in cfg["thrusters"].keys():
+        for thruster_ring in cfg["thrusters"]["thruster_rings"]:
+            # Could use sets here
+            keys = ["num_anchors", "ring_offset", "ring_radius",
+                    "thruster_radius", "thruster_length", "thruster_mass",
+                    "thruster_CoM", "style"]
+            for key in keys:
+                if key not in thruster_ring.keys():
+                    raise ValueError(key+" is missing from one of your thruster configs.")
+            extra_keys = ["single", "dual", "quad"]
+            if thruster_ring["style"] not in extra_keys:
+                raise ValueError("Unknows thruster style, supported styles are: ``single'', ``dual'', ``quad''.")
+    
+    if "thruster_grids" in cfg["thrusters"].keys():
+        for thruster_grid in cfg["thrusters"]["thruster_grids"]:
+            keys = ["xmin","xmax","num_anchors_on_x",
+                    "ymin","ymax","num_anchors_on_y",
+                    "thruster_radius", "thruster_length", "thruster_mass",
+                    "thruster_CoM", "style"]
+            for key in keys:
+                if key not in thruster_grid.keys():
+                    raise ValueError(key+" is missing from one of your thruster configs.")
+            extra_keys = ["single", "dual", "quad"]
+            if thruster_grid["style"] not in extra_keys:
+                raise ValueError("Unknows thruster style, supported styles are: ``single'', ``dual'', ``quad''.")
 
 class CreatePlatform:
     def __init__(self, path, cfg):
