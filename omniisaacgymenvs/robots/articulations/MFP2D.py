@@ -200,6 +200,8 @@ class CreatePlatform:
             self.num_thrusters = self.generateThrusterRing(thruster_ring, self.num_thrusters)
         for thruster_grid in self.thruster_grids:
             self.num_thrusters = self.generateThrusterGrid(thruster_grid, self.num_thrusters)
+        for thruster in self.thruster_standalones:
+            self.num_thrusters = self.generateThruster(thruster, self.num_thrusters)
         self.exportThrusterTransforms()
 
 
@@ -403,6 +405,27 @@ class CreatePlatform:
                     self.num_actions += 2
                 num_thrusters += 1
                 print(self.platform_path + "/thruster_" + str(num_thrusters)+"_0")
+        return num_thrusters
+    
+    def generateThruster(self, thruster, num_thrusters):
+        translation = Gf.Vec3d([thruster["translation"]["x"],
+                                thruster["translation"]["y"],
+                                thruster["translation"]["z"]])
+        quaternion = Gf.Quatd(thruster["quaternion"]["w"],
+                              Gf.Vec3d([thruster["quaternion"]["x"],
+                                       thruster["quaternion"]["y"],
+                                       thruster["quaternion"]["z"]]))
+        p = self.createThruster(self.platform_path + "/thruster_" + str(num_thrusters)+"_0",
+                                    self.joints_path+"/thruster_joint_"+str(num_thrusters)+"_0",
+                                    translation,
+                                    quaternion,
+                                    self.core_path,
+                                    thruster_grid["thruster_radius"],
+                                    thruster_grid["thruster_length"],
+                                    thruster_grid["thruster_mass"],
+                                    Gf.Vec3d(list(thruster_grid["thruster_CoM"])))
+        self.num_actions += 1
+        self.thruster_paths.append(p)
         return num_thrusters
     
     def exportThrusterTransforms(self):
