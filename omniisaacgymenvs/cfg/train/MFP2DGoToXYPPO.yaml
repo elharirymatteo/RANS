@@ -46,11 +46,11 @@ params:
     normalize_value: True
     num_actors: ${....task.env.numEnvs}
     reward_shaper:
-      scale_value: 0.01
+      scale_value: 0.1
     normalize_advantage: True
     gamma: 0.99
     tau: 0.95
-    learning_rate: 1e-4
+    learning_rate: 1e-3
     lr_schedule: adaptive
     kl_threshold: 0.016
     score_to_win: 20000

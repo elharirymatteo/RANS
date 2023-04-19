@@ -9,7 +9,7 @@ env:
   envSpacing: 12
   maxEpisodeLength: 700
   enableDebugVis: False
-  discreteActions: Continuous
+  discreteActions: MultiDiscrete
   numQuantizedActions: 1
   mass: 5.0
   thrustForce: 1.0 
@@ -38,16 +38,16 @@ env:
       radius: 0.5
       shape: "sphere"
     thrusters:
-      #thruster_rings:
-      #  - name: "ring1"
-      #    num_anchors: 4
-      #    style: "dual"
-      #    ring_radius: 0.5
-      #    ring_offset: 0.75839816339
-      #    thruster_radius: 0.05
-      #    thruster_length: 0.1
-      #    thruster_mass: 0.00001
-      #    thruster_CoM: [0,0,0]
+      thruster_rings:
+        - name: "ring1"
+          num_anchors: 4
+          style: "dual"
+          ring_radius: 0.5
+          ring_offset: 0.75839816339
+          thruster_radius: 0.05
+          thruster_length: 0.1
+          thruster_mass: 0.00001
+          thruster_CoM: [0,0,0]
       #  - name: "ring2"
       #    num_anchors: 6
       #    style: "dual"
@@ -57,19 +57,34 @@ env:
       #    thruster_length: 0.1
       #    thruster_mass: 0.00001
       #    thruster_CoM: [0,0,0]
-      thruster_grids:
-        - name: "grid1"
-          num_anchors_on_x: 3
-          num_anchors_on_y: 3
-          xmin: -0.5  
-          xmax: 0.5  
-          ymin: -0.5  
-          ymax: 0.5  
-          style: "quad"
-          thruster_radius: 0.05
-          thruster_length: 0.1
-          thruster_mass: 0.00001
-          thruster_CoM: [0,0,0]
+      #thruster_grids:
+      #  - name: "grid1"
+      #    num_anchors_on_x: 3
+      #    num_anchors_on_y: 3
+      #    xmin: -0.5  
+      #    xmax: 0.5  
+      #    ymin: -0.5  
+      #    ymax: 0.5  
+      #    style: "quad"
+      #    thruster_radius: 0.05
+      #    thruster_length: 0.1
+      #    thruster_mass: 0.00001
+      #    thruster_CoM: [0,0,0]
+      #thruster_standalones:
+      #  - name: "thruster1"
+      #    translation:
+      #      x: 0
+      #      y: 0
+      #      z: 0
+      #    quaternion:
+      #      x: 0
+      #      y: 0
+      #      z: 0
+      #      w: 1
+      #    thruster_radius: 0.05
+      #    thruster_length: 0.1
+      #    thruster_mass: 0.00001
+      #    thruster_CoM: [0,0,0]
 
 sim:
   dt: 0.02
