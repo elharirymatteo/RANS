@@ -57,6 +57,15 @@ env:
       #    thruster_length: 0.1
       #    thruster_mass: 0.00001
       #    thruster_CoM: [0,0,0]
+      #  - name: "ring2"
+      #    num_anchors: 6
+      #    style: "dual"
+      #    ring_radius: 0.75
+      #    ring_offset: 0.75839816339
+      #    thruster_radius: 0.05
+      #    thruster_length: 0.1
+      #    thruster_mass: 0.00001
+      #    thruster_CoM: [0,0,0]
       #thruster_grids:
       #  - name: "grid1"
       #    num_anchors_on_x: 3
@@ -125,7 +134,7 @@ sim:
     gpu_temp_buffer_capacity: 16777216
     gpu_max_num_partitions: 8
 
-  floating_platform:
+  mfp2d:
     # -1 to use default values
     override_usd_defaults: False
     enable_self_collisions: False
@@ -134,22 +143,6 @@ sim:
     # per-actor
     solver_position_iteration_count: 40
     solver_velocity_iteration_count: 20
-    sleep_threshold: 0.005
-    stabilization_threshold: 0.001
-    # per-body
-    density: -1
-    max_depenetration_velocity: 1000.0
-
-  ball:
-    # -1 to use default values
-    override_usd_defaults: False
-    fixed_base: True
-    enable_self_collisions: False
-    enable_gyroscopic_forces: True
-    # also in stage params
-    # per-actor
-    solver_position_iteration_count: 6
-    solver_velocity_iteration_count: 0
     sleep_threshold: 0.005
     stabilization_threshold: 0.001
     # per-body
