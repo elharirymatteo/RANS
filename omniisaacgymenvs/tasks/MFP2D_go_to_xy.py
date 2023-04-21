@@ -2,11 +2,10 @@
 from omniisaacgymenvs.tasks.base.rl_task import RLTask
 from omniisaacgymenvs.robots.articulations.MFP2D import ModularFloatingPlatform, compute_num_actions
 from omniisaacgymenvs.robots.articulations.views.modular_floating_platform_view import ModularFloatingPlatformView
-from omniisaacgymenvs.tasks.utils.fp_utils import quantize_tensor_values
-from omniisaacgymenvs.utils.pin import DynamicPin
+from omniisaacgymenvs.utils.pin import VisualPin
 
 from omni.isaac.core.utils.torch.rotations import *
-from omni.isaac.core.prims import RigidPrimView
+from omni.isaac.core.prims import XFormPrimView
 from omni.isaac.core.utils.prims import get_prim_at_path
 
 import numpy as np
@@ -97,14 +96,11 @@ class MFP2DGoToXYTask(RLTask):
 
         root_path = "/World/envs/.*/Modular_floating_platform" 
         self._platforms = ModularFloatingPlatformView(prim_paths_expr=root_path, name="modular_floating_platform_view") 
-        self._balls = RigidPrimView(prim_paths_expr="/World/envs/.*/ball")
-        # set fp base masses according to the task config
-        masses = torch.tensor(self.mass, device=self._device, dtype=torch.float).repeat(self.num_envs)
-        self._platforms.base.set_masses(masses)
+        self._pins = XFormPrimView(prim_paths_expr="/World/envs/.*/pin")
 
         # Add views to scene
         scene.add(self._platforms) # add view to scene for initialization
-        scene.add(self._balls)
+        scene.add(self._pins)
         scene.add(self._platforms.thrusters)
         
         space_margin = " "*25
@@ -130,16 +126,14 @@ class MFP2DGoToXYTask(RLTask):
         poll_radius = 0.025
         poll_length = 2
         color = torch.tensor([1, 0, 0])
-        ball = DynamicPin(
-            prim_path=self.default_zero_env_path + "/ball",
+        VisualPin(
+            prim_path=self.default_zero_env_path + "/pin",
             translation=self._ball_position,
             name="target_0",
             ball_radius = ball_radius,
             poll_radius = poll_radius,
             poll_length = poll_length,
             color=color)
-        self._sim_config.apply_articulation_settings("ball", get_prim_at_path(ball.prim_path),
-                                                        self._sim_config.parse_actor_config("ball"))
 
     def get_observations(self) -> dict:
         # implement logic to retrieve observation states
@@ -213,8 +207,10 @@ class MFP2DGoToXYTask(RLTask):
         self.dof_pos = self._platforms.get_joint_positions()
         self.dof_vel = self._platforms.get_joint_velocities()
 
-        self.initial_ball_pos, self.initial_ball_rot = self._balls.get_world_poses(clone=False)
         self.initial_root_pos, self.initial_root_rot = self.root_pos.clone(), self.root_rot.clone()
+        self.initial_pin_pos = self._env_pos
+        self.initial_pin_rot = torch.zeros((self.num_envs, 4), dtype=torch.float32, device=self._device)
+        self.initial_pin_rot[:, 0] = 1
 
         # control parameters
         self.thrusts = torch.zeros((self._num_envs, self._num_actions, 3), dtype=torch.float32, device=self._device)
@@ -230,8 +226,8 @@ class MFP2DGoToXYTask(RLTask):
         self.target_positions[envs_long, 2] = torch.ones(num_sets, device=self._device) * 2.0
         # Projects to each environment
         ball_pos = self.target_positions[envs_long] + self._env_pos[envs_long]
-        # Apply the new goals (balls)
-        self._balls.set_world_poses(ball_pos[:, 0:3], self.initial_ball_rot[envs_long].clone(), indices=env_ids)
+        # Apply the new goals
+        self._pins.set_world_poses(ball_pos[:, 0:3], self.initial_pin_rot[envs_long].clone(), indices=env_ids)
 
     def reset_idx(self, env_ids):
         num_resets = len(env_ids)
@@ -270,7 +266,6 @@ class MFP2DGoToXYTask(RLTask):
             self.extras["episode"][key] = torch.mean(
                 self.episode_sums[key][env_ids]) / self._max_episode_length
             self.episode_sums[key][env_ids] = 0.
-
 
     def calculate_metrics(self) -> None:
         root_positions = self.root_pos - self._env_pos
