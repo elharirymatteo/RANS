@@ -46,6 +46,7 @@ from scipy.spatial.transform import Rotation as SSTR
 
 from omniisaacgymenvs.robots.articulations.utils.MFP_utils import *
 
+
 def compute_num_actions(cfg):
     num_actions = 0
     validate_thruster_config(cfg)
@@ -70,6 +71,7 @@ def compute_num_actions(cfg):
                     if thruster_grid["style"] == "quad":
                         num_actions += 2
     return num_actions
+
 
 def validate_thruster_config(cfg):
     if "thruster_rings" in cfg["thrusters"].keys():
