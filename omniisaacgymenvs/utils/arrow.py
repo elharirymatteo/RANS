@@ -18,35 +18,10 @@ from omni.isaac.core.utils.string import find_unique_string_name
 from pxr import UsdGeom, Gf
 from omni.isaac.core.utils.prims import get_prim_at_path, is_prim_path_valid
 from omni.isaac.core.utils.stage import get_current_stage
+from omniisaacgymenvs.utils.shape_utils import Arrow
 
-def setXformOp(prim, value, property):
-    xform = UsdGeom.Xformable(prim)
-    op = None
-    for xformOp in xform.GetOrderedXformOps():
-        if xformOp.GetOpType() == property:
-            op = xformOp
-    if op:
-        xform_op = op
-    else:
-        xform_op = xform.AddXformOp(property, UsdGeom.XformOp.PrecisionDouble, "")
-    xform_op.Set(value)
 
-def setScale(prim, value):
-    setXformOp(prim, value, UsdGeom.XformOp.TypeScale)
-
-def setTranslate(prim, value):
-    setXformOp(prim, value, UsdGeom.XformOp.TypeTranslate)
-
-def setRotateXYZ(prim, value):
-    setXformOp(prim, value, UsdGeom.XformOp.TypeRotateXYZ)
-    
-def setOrient(prim, value):
-    setXformOp(prim, value, UsdGeom.XformOp.TypeOrient)
-
-def setTransform(prim, value: Gf.Matrix4d):
-    setXformOp(prim, value, UsdGeom.XformOp.TypeTransform)
-
-class VisualArrow(XFormPrim):
+class VisualArrow(XFormPrim, Arrow):
     """_summary_
 
         Args:
@@ -83,18 +58,6 @@ class VisualArrow(XFormPrim):
         head_length: Optional[float] = None,
         visual_material: Optional[VisualMaterial] = None,
     ) -> None:
-        if body_radius is None:
-            body_radius = 0.1
-        if body_length is None:
-            body_length = 0.5
-        if poll_radius is None:
-            poll_radius = 0.02
-        if poll_length is None:
-            poll_length = 2
-        if head_radius is None:
-            head_radius = 0.25
-        if head_length is None:
-            head_length = 0.5
         if visible is None:
             visible = True
         if visual_material is None:
@@ -114,176 +77,16 @@ class VisualArrow(XFormPrim):
             scale=scale,
             visible=visible,
         )
-        body_prim_path = prim_path+"/body"
-        if is_prim_path_valid(body_prim_path):
-            body_prim = get_prim_at_path(body_prim_path)
-            if not body_prim.IsA(UsdGeom.Cylinder):
-                raise Exception("The prim at path {} cannot be parsed as an arrow object".format(body_prim_path))
-            self.body_geom = UsdGeom.Cylinder(body_prim)
-        else:
-            self.body_geom = UsdGeom.Cylinder.Define(get_current_stage(), body_prim_path)
-            body_prim = get_prim_at_path(body_prim_path)
-        poll_prim_path = prim_path+"/poll"
-        if is_prim_path_valid(poll_prim_path):
-            poll_prim = get_prim_at_path(poll_prim_path)
-            if not poll_prim.IsA(UsdGeom.Cylinder):
-                raise Exception("The prim at path {} cannot be parsed as an arrow object".format(poll_prim_path))
-            self.poll_geom = UsdGeom.Cylinder(poll_prim)
-        else:
-            self.poll_geom = UsdGeom.Cylinder.Define(get_current_stage(), poll_prim_path)
-            poll_prim = get_prim_at_path(poll_prim_path)
-        head_prim_path = prim_path+"/head"
-        if is_prim_path_valid(head_prim_path):
-            head_prim = get_prim_at_path(head_prim_path)
-            if not head_prim.IsA(UsdGeom.Cone):
-                raise Exception("The prim at path {} cannot be parsed as an arrow object".format(head_prim_path))
-            self.head_geom = UsdGeom.Cone(head_prim)
-        else:
-            self.head_geom = UsdGeom.Cone.Define(get_current_stage(), head_prim_path)
-            head_prim = get_prim_at_path(head_prim_path)
-        
-        if visual_material is not None:
-            VisualArrow.apply_visual_material(self, visual_material)
-        if body_radius is not None:
-            VisualArrow.set_body_radius(self, body_radius)
-        if body_length is not None:
-            VisualArrow.set_body_length(self, body_length)
-        if poll_radius is not None:
-            VisualArrow.set_poll_radius(self, poll_radius)
-        if poll_length is not None:
-            VisualArrow.set_poll_length(self, poll_length)
-        if head_radius is not None:
-            VisualArrow.set_head_radius(self, head_radius)
-        if head_length is not None:
-            VisualArrow.set_head_length(self, head_length)
-        setTranslate(poll_prim, Gf.Vec3d([0, 0, -poll_length/2]))
-        setOrient(poll_prim, Gf.Quatd(0,Gf.Vec3d([0, 0, 0])))
-        setScale(poll_prim, Gf.Vec3d([1, 1, 1]))
-        setTranslate(body_prim, Gf.Vec3d([body_length/2, 0, 0]))
-        setOrient(body_prim, Gf.Quatd(0.707,Gf.Vec3d([0, 0.707, 0])))
-        setScale(body_prim, Gf.Vec3d([1, 1, 1]))
-        setTranslate(head_prim, Gf.Vec3d([body_length + head_length/2, 0, 0]))
-        setOrient(head_prim, Gf.Quatd(0.707,Gf.Vec3d([0, 0.707, 0])))
-        setScale(head_prim, Gf.Vec3d([1, 1, 1]))
-        radius = VisualArrow.get_body_radius(self)
-        height = VisualArrow.get_body_length(self)
-        self.body_geom.GetExtentAttr().Set(
-            [Gf.Vec3f([-radius, -radius, -height / 2.0]), Gf.Vec3f([radius, radius, height / 2.0])]
-        )
-        radius = VisualArrow.get_poll_radius(self)
-        height = VisualArrow.get_poll_length(self)
-        self.poll_geom.GetExtentAttr().Set(
-            [Gf.Vec3f([-radius, -radius, -height / 2.0]), Gf.Vec3f([radius, radius, height / 2.0])]
-        )
-        radius = VisualArrow.get_head_radius(self)
-        height = VisualArrow.get_head_length(self)
-        self.head_geom.GetExtentAttr().Set(
-            [Gf.Vec3f([-radius, -radius, -height / 2.0]), Gf.Vec3f([radius, radius, height / 2.0])]
-        )
+        VisualArrow.apply_visual_material(self, visual_material)
+        Arrow.__init__(self, prim_path, body_radius, body_length, poll_radius, poll_length, head_radius, head_length)
+        self.setBodyRadius(body_radius)
+        self.setBodyLength(body_length)
+        self.setPollRadius(poll_radius)
+        self.setPollLength(poll_length)
+        self.setHeadRadius(head_radius)
+        self.setHeadLength(head_length)
+        self.updateExtent()
         return
-
-    def set_body_radius(self, radius: float) -> None:
-        """[summary]
-
-        Args:
-            radius (float): [description]
-        """
-        self.body_geom.GetRadiusAttr().Set(radius)
-        return
-
-    def get_body_radius(self) -> float:
-        """[summary]
-
-        Returns:
-            float: [description]
-        """
-        return self.body_geom.GetRadiusAttr().Get()
-    
-    def set_body_length(self, radius: float) -> None:
-        """[summary]
-
-        Args:
-            radius (float): [description]
-        """
-        self.body_geom.GetHeightAttr().Set(radius)
-        return
-
-    def get_body_length(self) -> float:
-        """[summary]
-
-        Returns:
-            float: [description]
-        """
-        return self.body_geom.GetHeightAttr().Get()
-    
-    def set_poll_radius(self, radius: float) -> None:
-        """[summary]
-
-        Args:
-            radius (float): [description]
-        """
-        self.poll_geom.GetRadiusAttr().Set(radius)
-        return
-
-    def get_poll_radius(self) -> float:
-        """[summary]
-
-        Returns:
-            float: [description]
-        """
-        return self.poll_geom.GetRadiusAttr().Get()
-    
-    def set_poll_length(self, radius: float) -> None:
-        """[summary]
-
-        Args:
-            radius (float): [description]
-        """
-        self.poll_geom.GetHeightAttr().Set(radius)
-        return
-
-    def get_poll_length(self) -> float:
-        """[summary]
-
-        Returns:
-            float: [description]
-        """
-        return self.poll_geom.GetHeightAttr().Get()
-    
-    def set_head_radius(self, radius: float) -> None:
-        """[summary]
-
-        Args:
-            radius (float): [description]
-        """
-        self.head_geom.GetRadiusAttr().Set(radius)
-        return
-
-    def get_head_radius(self) -> float:
-        """[summary]
-
-        Returns:
-            float: [description]
-        """
-        return self.head_geom.GetRadiusAttr().Get()
-    
-    def set_head_length(self, radius: float) -> None:
-        """[summary]
-
-        Args:
-            radius (float): [description]
-        """
-        self.head_geom.GetHeightAttr().Set(radius)
-        return
-
-    def get_head_length(self) -> float:
-        """[summary]
-
-        Returns:
-            float: [description]
-        """
-        return self.head_geom.GetHeightAttr().Get()
-
 
 class FixedArrow(VisualArrow):
     """_summary_

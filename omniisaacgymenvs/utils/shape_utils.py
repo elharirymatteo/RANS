@@ -185,18 +185,18 @@ class Arrow:
         setScale(head_prim, Gf.Vec3d([1, 1, 1]))
 
     def updateExtent(self):
-        radius = self.getBodyRadius(self)
-        height = self.getBodyLength(self)
+        radius = self.getBodyRadius()
+        height = self.getBodyLength()
         self.body_geom.GetExtentAttr().Set(
             [Gf.Vec3f([-radius, -radius, -height / 2.0]), Gf.Vec3f([radius, radius, height / 2.0])]
         )
-        radius = self.getPollRadius(self)
-        height = self.getPollLength(self)
+        radius = self.getPollRadius()
+        height = self.getPollLength()
         self.poll_geom.GetExtentAttr().Set(
             [Gf.Vec3f([-radius, -radius, -height / 2.0]), Gf.Vec3f([radius, radius, height / 2.0])]
         )
-        radius = self.getHeadRadius(self)
-        height = self.getHeadLength(self)
+        radius = self.getHeadRadius()
+        height = self.getHeadLength()
         self.head_geom.GetExtentAttr().Set(
             [Gf.Vec3f([-radius, -radius, -height / 2.0]), Gf.Vec3f([radius, radius, height / 2.0])]
         )
