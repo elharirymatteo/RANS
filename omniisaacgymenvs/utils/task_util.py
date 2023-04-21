@@ -78,7 +78,7 @@ def initialize_task(config, env, init_sim=True):
         "MFP2DGoToPoseCrippled": MFP2DGoToPoseCrippledTask,
         "MFP2DTrackXYVelocity": MFP2DTrackXYVelocityTask,
         "MFP2DTrackXYOVelocity": MFP2DTrackXYOVelocityTask,
-        "MFP2DTrackXYMatchHeadingVelocity": MFP2DTrackXYVelocityMatchHeadingTask,
+        "MFP2DTrackXYVelocityMatchHeading": MFP2DTrackXYVelocityMatchHeadingTask,
         "ModularFloatingPlatformCrippled": ModularFloatingPlatformCrippledTask,
     }
 
