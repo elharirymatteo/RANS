@@ -15,38 +15,11 @@ from omni.isaac.core.prims.geometry_prim import GeometryPrim
 from omni.isaac.core.materials import PreviewSurface
 from omni.isaac.core.materials import PhysicsMaterial
 from omni.isaac.core.utils.string import find_unique_string_name
-from pxr import UsdGeom, Gf
 from omni.isaac.core.utils.prims import get_prim_at_path, is_prim_path_valid
-from omni.isaac.core.utils.stage import get_current_stage
+from omniisaacgymenvs.utils.shape_utils import Pin
 
-def setXformOp(prim, value, property):
-    xform = UsdGeom.Xformable(prim)
-    op = None
-    for xformOp in xform.GetOrderedXformOps():
-        if xformOp.GetOpType() == property:
-            op = xformOp
-    if op:
-        xform_op = op
-    else:
-        xform_op = xform.AddXformOp(property, UsdGeom.XformOp.PrecisionDouble, "")
-    xform_op.Set(value)
 
-def setScale(prim, value):
-    setXformOp(prim, value, UsdGeom.XformOp.TypeScale)
-
-def setTranslate(prim, value):
-    setXformOp(prim, value, UsdGeom.XformOp.TypeTranslate)
-
-def setRotateXYZ(prim, value):
-    setXformOp(prim, value, UsdGeom.XformOp.TypeRotateXYZ)
-    
-def setOrient(prim, value):
-    setXformOp(prim, value, UsdGeom.XformOp.TypeOrient)
-
-def setTransform(prim, value: Gf.Matrix4d):
-    setXformOp(prim, value, UsdGeom.XformOp.TypeTransform)
-
-class VisualPin(XFormPrim):
+class VisualPin(XFormPrim, Pin):
     """_summary_
 
         Args:
@@ -68,7 +41,7 @@ class VisualPin(XFormPrim):
     def __init__(
         self,
         prim_path: str,
-        name: str = "visual_arrow",
+        name: str = "visual_pin",
         position: Optional[Sequence[float]] = None,
         translation: Optional[Sequence[float]] = None,
         orientation: Optional[Sequence[float]] = None,
@@ -80,12 +53,6 @@ class VisualPin(XFormPrim):
         poll_length: Optional[float] = None,
         visual_material: Optional[VisualMaterial] = None,
     ) -> None:
-        if ball_radius is None:
-            ball_radius = 0.1
-        if poll_radius is None:
-            poll_radius = 0.02
-        if poll_length is None:
-            poll_length = 2
         if visible is None:
             visible = True
         if visual_material is None:
@@ -105,102 +72,12 @@ class VisualPin(XFormPrim):
             scale=scale,
             visible=visible,
         )
-        ball_prim_path = prim_path+"/ball"
-        if is_prim_path_valid(ball_prim_path):
-            ball_prim = get_prim_at_path(ball_prim_path)
-            if not ball_prim.IsA(UsdGeom.Sphere):
-                raise Exception("The prim at path {} cannot be parsed as an arrow object".format(ball_prim_path))
-            self.ball_geom = UsdGeom.Sphere(ball_prim)
-        else:
-            self.ball_geom = UsdGeom.Sphere.Define(get_current_stage(), ball_prim_path)
-            ball_prim = get_prim_at_path(ball_prim_path)
-
-        poll_prim_path = prim_path+"/poll"
-        if is_prim_path_valid(poll_prim_path):
-            poll_prim = get_prim_at_path(poll_prim_path)
-            if not poll_prim.IsA(UsdGeom.Cylinder):
-                raise Exception("The prim at path {} cannot be parsed as an arrow object".format(poll_prim_path))
-            self.poll_geom = UsdGeom.Cylinder(poll_prim)
-        else:
-            self.poll_geom = UsdGeom.Cylinder.Define(get_current_stage(), poll_prim_path)
-            poll_prim = get_prim_at_path(poll_prim_path)
-        
-        if visual_material is not None:
-            VisualPin.apply_visual_material(self, visual_material)
-        if ball_radius is not None:
-            VisualPin.set_ball_radius(self, ball_radius)
-        if poll_radius is not None:
-            VisualPin.set_poll_radius(self, poll_radius)
-        if poll_length is not None:
-            VisualPin.set_poll_length(self, poll_length)
-        setTranslate(poll_prim, Gf.Vec3d([0, 0, -poll_length/2]))
-        setOrient(poll_prim, Gf.Quatd(0,Gf.Vec3d([0, 0, 0])))
-        setScale(poll_prim, Gf.Vec3d([1, 1, 1]))
-        setTranslate(ball_prim, Gf.Vec3d([0, 0, 0]))
-        setOrient(ball_prim, Gf.Quatd(1,Gf.Vec3d([0, 0, 0])))
-        setScale(ball_prim, Gf.Vec3d([1, 1, 1]))
-        radius = VisualPin.get_ball_radius(self)
-        self.ball_geom.GetExtentAttr().Set(
-            [Gf.Vec3f([-radius, -radius, -radius]), Gf.Vec3f([radius, radius, radius])]
-        )
-        radius = VisualPin.get_poll_radius(self)
-        height = VisualPin.get_poll_length(self)
-        self.poll_geom.GetExtentAttr().Set(
-            [Gf.Vec3f([-radius, -radius, -height / 2.0]), Gf.Vec3f([radius, radius, height / 2.0])]
-        )
+        Pin.__init__(self, prim_path, ball_radius, poll_radius, poll_length) 
+        VisualPin.apply_visual_material(self, visual_material)
+        self.setBallRadius(ball_radius)
+        self.setPollRadius(poll_radius)
+        self.setPollLength(poll_length)
         return
-
-    def set_ball_radius(self, radius: float) -> None:
-        """[summary]
-
-        Args:
-            radius (float): [description]
-        """
-        self.ball_geom.GetRadiusAttr().Set(radius)
-        return
-
-    def get_ball_radius(self) -> float:
-        """[summary]
-
-        Returns:
-            float: [description]
-        """
-        return self.ball_geom.GetRadiusAttr().Get()
-    
-    def set_poll_radius(self, radius: float) -> None:
-        """[summary]
-
-        Args:
-            radius (float): [description]
-        """
-        self.poll_geom.GetRadiusAttr().Set(radius)
-        return
-
-    def get_poll_radius(self) -> float:
-        """[summary]
-
-        Returns:
-            float: [description]
-        """
-        return self.poll_geom.GetRadiusAttr().Get()
-    
-    def set_poll_length(self, radius: float) -> None:
-        """[summary]
-
-        Args:
-            radius (float): [description]
-        """
-        self.poll_geom.GetHeightAttr().Set(radius)
-        return
-
-    def get_poll_length(self) -> float:
-        """[summary]
-
-        Returns:
-            float: [description]
-        """
-        return self.poll_geom.GetHeightAttr().Get()
-
 
 class FixedPin(VisualPin):
     """_summary_
