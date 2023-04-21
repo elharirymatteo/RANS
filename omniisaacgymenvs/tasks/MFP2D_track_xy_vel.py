@@ -2,11 +2,8 @@
 from omniisaacgymenvs.tasks.base.rl_task import RLTask
 from omniisaacgymenvs.robots.articulations.MFP2D import ModularFloatingPlatform, compute_num_actions
 from omniisaacgymenvs.robots.articulations.views.modular_floating_platform_view import ModularFloatingPlatformView
-from omniisaacgymenvs.tasks.utils.fp_utils import quantize_tensor_values
 
 from omni.isaac.core.utils.torch.rotations import *
-from omni.isaac.core.objects import DynamicSphere
-from omni.isaac.core.prims import RigidPrimView
 from omni.isaac.core.utils.prims import get_prim_at_path
 
 import numpy as np
@@ -93,9 +90,6 @@ class MFP2DTrackXYVelocityTask(RLTask):
 
         root_path = "/World/envs/.*/Modular_floating_platform" 
         self._platforms = ModularFloatingPlatformView(prim_paths_expr=root_path, name="modular_floating_platform_view") 
-        # set fp base masses according to the task config
-        masses = torch.tensor(self.mass, device=self._device, dtype=torch.float).repeat(self.num_envs)
-        self._platforms.base.set_masses(masses)
 
         # Add views to scene
         scene.add(self._platforms) # add view to scene for initialization
