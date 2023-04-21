@@ -3,11 +3,10 @@ from omniisaacgymenvs.tasks.base.rl_task import RLTask
 from omniisaacgymenvs.robots.articulations.MFP2D import ModularFloatingPlatform, compute_num_actions
 from omniisaacgymenvs.robots.articulations.views.modular_floating_platform_view import ModularFloatingPlatformView
 from omniisaacgymenvs.tasks.utils.fp_utils import quantize_tensor_values
-from omniisaacgymenvs.utils.arrow import DynamicArrow
+from omniisaacgymenvs.utils.arrow import VisualArrow
 
 from omni.isaac.core.utils.torch.rotations import *
-from omni.isaac.core.objects import DynamicSphere
-from omni.isaac.core.prims import RigidPrimView
+from omni.isaac.core.prims import XFormPrimView
 from omni.isaac.core.utils.prims import get_prim_at_path
 
 import math
@@ -98,14 +97,11 @@ class MFP2DGoToPoseTask(RLTask):
 
         root_path = "/World/envs/.*/Modular_floating_platform" 
         self._platforms = ModularFloatingPlatformView(prim_paths_expr=root_path, name="modular_floating_platform_view") 
-        self._balls = RigidPrimView(prim_paths_expr="/World/envs/.*/arrow")
-        # set fp base masses according to the task config
-        masses = torch.tensor(self.mass, device=self._device, dtype=torch.float).repeat(self.num_envs)
-        self._platforms.base.set_masses(masses)
+        self._arrows = XFormPrimView(prim_paths_expr="/World/envs/.*/arrow")
 
         # Add views to scene
         scene.add(self._platforms) # add view to scene for initialization
-        scene.add(self._balls)
+        scene.add(self._arrows)
         scene.add(self._platforms.thrusters)
         
         space_margin = " "*25
@@ -135,7 +131,7 @@ class MFP2DGoToPoseTask(RLTask):
         head_radius = 0.2
         head_length = 0.5
         color = torch.tensor([1, 0, 0])
-        ball = DynamicArrow(
+        arrow = VisualArrow(
             prim_path=self.default_zero_env_path + "/arrow",
             translation=self._ball_position,
             name="target_0",
@@ -146,8 +142,6 @@ class MFP2DGoToPoseTask(RLTask):
             head_radius=head_radius,
             head_length=head_length,
             color=color)
-        self._sim_config.apply_articulation_settings("arrow", get_prim_at_path(ball.prim_path),
-                                                        self._sim_config.parse_actor_config("arrow"))
 
     def get_observations(self) -> dict:
         # implement logic to retrieve observation states
@@ -222,8 +216,10 @@ class MFP2DGoToPoseTask(RLTask):
         self.dof_pos = self._platforms.get_joint_positions()
         self.dof_vel = self._platforms.get_joint_velocities()
 
-        self.initial_ball_pos, self.initial_ball_rot = self._balls.get_world_poses(clone=False)
         self.initial_root_pos, self.initial_root_rot = self.root_pos.clone(), self.root_rot.clone()
+        self.initial_arrow_pos = self._env_pos
+        self.initial_arrow_rot = torch.zeros((self.num_envs, 4), dtype=torch.float32, device=self._device)
+        self.initial_arrow_rot[:, 0] = 1
 
         # control parameters
         self.thrusts = torch.zeros((self._num_envs, self._num_actions, 3), dtype=torch.float32, device=self._device)
@@ -238,13 +234,13 @@ class MFP2DGoToPoseTask(RLTask):
         # Shifts the target up so it visually aligns better
         self.target_positions[envs_long, 2] = torch.ones(num_sets, device=self._device) * 2.0
         # Projects to each environment
-        ball_pos = self.target_positions[envs_long] + self._env_pos[envs_long]
+        arrow_pos = self.target_positions[envs_long] + self._env_pos[envs_long]
         # Randomizes the heading of the target
         self.target_orient[envs_long, 0] = torch.rand(num_sets, device=self._device) * math.pi
-        self.initial_ball_rot[envs_long, 0:1] = torch.cos(self.target_orient[envs_long]*0.5)
-        self.initial_ball_rot[envs_long, 3:4] = torch.sin(self.target_orient[envs_long]*0.5)
+        self.initial_arrow_rot[envs_long, 0:1] = torch.cos(self.target_orient[envs_long]*0.5)
+        self.initial_arrow_rot[envs_long, 3:4] = torch.sin(self.target_orient[envs_long]*0.5)
         # Apply the new goals (arrows)
-        self._balls.set_world_poses(ball_pos[:, 0:3], self.initial_ball_rot[envs_long].clone(), indices=env_ids)
+        self._arrows.set_world_poses(arrow_pos[:, 0:3], self.initial_arrow_rot[envs_long].clone(), indices=env_ids)
 
     def reset_idx(self, env_ids):
         num_resets = len(env_ids)
