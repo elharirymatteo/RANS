@@ -24,12 +24,12 @@ env:
     OmegaVelocityTolerance: 0.05
     KillAfterNStepsInTolerance: 50 # 10 seconds
     MaxDistance: 500
-    MinXYVelocity: -3
-    MaxXYVelocity: 3
-    MinOmegaVelocity: -3.14157
-    MaxOmegaVelocity: 3.14157
-    ResetXYError: 6
-    ResetOmegaError: 6.28314
+    MinXYVelocity: -0.5
+    MaxXYVelocity: 0.5
+    MinOmegaVelocity: -0.5
+    MaxOmegaVelocity: 0.5
+    ResetXYError: 2
+    ResetOmegaError: 2
 
   learn:
     UseLinearRewards: 0
@@ -75,21 +75,6 @@ sim:
     solver_type: ${....solver_type}
     use_gpu: ${eq:${....sim_device},"gpu"} # set to False to run on CPU
     solver_position_iteration_count: 4
-  ball:
-    # -1 to use default values
-    override_usd_defaults: False
-    fixed_base: True
-    enable_self_collisions: False
-    enable_gyroscopic_forces: True
-    # also in stage params
-    # per-actor
-    solver_position_iteration_count: 6
-    solver_velocity_iteration_count: 0
-    sleep_threshold: 0.005
-    stabilization_threshold: 0.001
-    # per-body
-    density: -1
-    max_depenetration_velocity: 1000.00
     solver_velocity_iteration_count: 20
     contact_offset: 0.02
     rest_offset: 0.001

@@ -24,9 +24,9 @@ env:
     HeadingTolerance: 0.1
     KillAfterNStepsInTolerance: 50 # 10 seconds
     MaxDistance: 500
-    MinVelocity: -3
-    MaxVelocity: 3
-    ResetError: 6
+    MinVelocity: -0.5
+    MaxVelocity: 0.5
+    ResetError: 2
 
   learn:
     UseLinearRewards: 0
