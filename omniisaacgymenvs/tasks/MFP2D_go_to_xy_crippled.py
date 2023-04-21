@@ -228,9 +228,9 @@ class MFP2DGoToXYCrippledTask(RLTask):
         # Shifts the target up so it visually aligns better
         self.target_positions[envs_long, 2] = torch.ones(num_sets, device=self._device) * 2.0
         # Projects to each environment
-        ball_pos = self.target_positions[envs_long] + self._env_pos[envs_long]
+        pin_pos = self.target_positions[envs_long] + self._env_pos[envs_long]
         # Apply the new goals (balls)
-        self._pins.set_world_poses(ball_pos[:, 0:3], self.initial_pin_rot[envs_long].clone(), indices=env_ids)
+        self._pins.set_world_poses(pin_pos[:, 0:3], self.initial_pin_rot[envs_long].clone(), indices=env_ids)
 
     def reset_idx(self, env_ids):
         num_resets = len(env_ids)
