@@ -97,9 +97,6 @@ class MFP2DGoToXYCrippledTask(RLTask):
         root_path = "/World/envs/.*/Modular_floating_platform" 
         self._platforms = ModularFloatingPlatformView(prim_paths_expr=root_path, name="modular_floating_platform_view") 
         self._pins = XFormPrimView(prim_paths_expr="/World/envs/.*/pin")
-        # set fp base masses according to the task config
-        masses = torch.tensor(self.mass, device=self._device, dtype=torch.float).repeat(self.num_envs)
-        self._platforms.base.set_masses(masses)
 
         # Add views to scene
         scene.add(self._platforms) # add view to scene for initialization
