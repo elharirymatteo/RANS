@@ -2,11 +2,8 @@
 from omniisaacgymenvs.tasks.base.rl_task import RLTask
 from omniisaacgymenvs.robots.articulations.MFP2D import ModularFloatingPlatform, compute_num_actions
 from omniisaacgymenvs.robots.articulations.views.modular_floating_platform_view import ModularFloatingPlatformView
-from omniisaacgymenvs.tasks.utils.fp_utils import quantize_tensor_values
 
 from omni.isaac.core.utils.torch.rotations import *
-from omni.isaac.core.objects import DynamicSphere
-from omni.isaac.core.prims import RigidPrimView
 from omni.isaac.core.utils.prims import get_prim_at_path
 
 import numpy as np
@@ -43,6 +40,7 @@ class MFP2DTrackXYVelocityMatchHeadingTask(RLTask):
         self.dt = self._task_cfg["sim"]["dt"]
         # Task parameters
         self.xy_velocity_tolerance = self._task_cfg["env"]["task_parameters"]["XYVelocityTolerance"]
+        self.heading_tolerance = self._task_cfg["env"]["task_parameters"]["HeadingTolerance"]
         self.kill_after_n_steps_in_tolerance = self._task_cfg["env"]["task_parameters"]["KillAfterNStepsInTolerance"]
         self._min_xy_velocity = self._task_cfg["env"]["task_parameters"]["MinVelocity"]
         self._max_xy_velocity = self._task_cfg["env"]["task_parameters"]["MaxVelocity"]
@@ -51,6 +49,7 @@ class MFP2DTrackXYVelocityMatchHeadingTask(RLTask):
         # Rewards parameters
         self.rew_scales = {}
         self.rew_scales["xy_velocity"] = self._task_cfg["env"]["learn"]["XYVelocityRewardScale"]
+        self.rew_scales["heading"] = self._task_cfg["env"]["learn"]["HeadingRewardScale"]
         self.use_linear_rewards = self._task_cfg["env"]["learn"]["UseLinearRewards"]
         self.use_square_rewards = self._task_cfg["env"]["learn"]["UseSquareRewards"]
         self.use_exponential_rewards = self._task_cfg["env"]["learn"]["UseExponentialRewards"]
@@ -84,7 +83,7 @@ class MFP2DTrackXYVelocityMatchHeadingTask(RLTask):
         self.extras = {}
 
         torch_zeros = lambda: torch.zeros(self.num_envs, dtype=torch.float, device=self.device, requires_grad=False)
-        self.episode_sums = {"xy_velocity_reward": torch_zeros(), "xy_velocity_error": torch_zeros()}
+        self.episode_sums = {"xy_velocity_reward": torch_zeros(), "xy_velocity_error": torch_zeros(),"heading_reward":torch_zeros(), "heading_error": torch_zeros()}
         return
 
     def set_up_scene(self, scene) -> None:
@@ -285,10 +284,10 @@ class MFP2DTrackXYVelocityMatchHeadingTask(RLTask):
         self.rew_buf[:] = velocity_reward + orient_reward
         # log episode reward sums
         self.episode_sums["xy_velocity_reward"] += velocity_reward
-        self.episode_sums["heading"] += orient_reward
+        self.episode_sums["heading_reward"] += orient_reward
         # log raw info
         self.episode_sums["xy_velocity_error"] += self.target_dist
-        self.episode_sums["heading"] += self.orient_dist
+        self.episode_sums["heading_error"] += self.orient_dist
 
     def is_done(self) -> None:
         # resets due to misbehavior
