@@ -58,7 +58,7 @@ class FloatingPlatform(Robot):
             assets_root_path = get_assets_root_path()
             if assets_root_path is None:
                 carb.log_error("Could not find Isaac Sim assets folder")
-            self._usd_path = "/home/antoine/Documents/Orbitals/Omniverse/omniisaacgymenvs/robots/usd/fp3.usd"
+            self._usd_path = "/home/matteo/Projects/OmniIsaacGymEnvs/omniisaacgymenvs/robots/usd/fp3.usd"
 
         add_reference_to_stage(self._usd_path, prim_path)
         scale = torch.tensor([1, 1, 1])

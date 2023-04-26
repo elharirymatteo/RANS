@@ -25,8 +25,8 @@ params['config']['features']['observer'] = DefaultAlgoObserver()
 #params['params']['seed'] = 42
 
 name = config['train']['params']['algo']['name']
-mode_builder = ModelBuilder()
-model = mode_builder.load(params)
+model_builder = ModelBuilder()
+model = model_builder.load(params)
 
 build_config = {
     'actions_num' : 8,

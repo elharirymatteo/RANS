@@ -192,7 +192,7 @@ class CreatePlatform:
             dummy_path = self.createRigidSphere(self.platform_path + "/dummy", "dummy_body", 0.00001, self.core_CoM, 0.00001)
         elif self.core_shape == "cylinder":
             self.core_path = self.createRigidCylinder(self.platform_path + "/core", "cylinder", self.core_radius, self.core_height, self.core_CoM, self.core_mass)
-            dummy_path = self.createRigidCylinder(self.platform_path + "/dummy", "dummy_body", 0.00001, self.core_CoM, 0.00001)
+            dummy_path = self.createRigidCylinder(self.platform_path + "/dummy", "dummy_body", 0.00001, 0.00001, self.core_CoM, 0.00001)
         self.createArrowXform(self.core_path+"/arrow")
         self.createPositionMarkerXform(self.core_path+"/marker")
         # Adds a dummy body with a joint & drive so that Isaac stays chill.

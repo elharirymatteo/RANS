@@ -5,15 +5,6 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: DQN Floating platform debug",
-            "type": "python",
-            "request": "launch",
-            "program": "omniisaacgymenvs/skrl/dqn_floating_platform.py",
-            "console": "integratedTerminal",
-            "args": [],
-            "justMyCode": false
-        },
-        {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
@@ -22,8 +13,8 @@
             "env": {
                 "RESOURCE_NAME": "IsaacSim"
             },
-            "python": "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.0/kit/python/bin/python3",
-            "envFile": "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.0/.vscode/.standalone_examples.env",
+            "python": "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.1/kit/python/bin/python3",
+            "envFile": "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.1/.vscode/.standalone_examples.env",
             "preLaunchTask": "setup_python_env"
         },
         {
@@ -35,18 +26,14 @@
         },
         {
             "name": "(Linux) isaac-sim",
-            "type": "node",
+            "type": "cppdbg",
             "request": "launch",
-            "program": "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.0/kit/kit",
-            "args": [
-                "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.0/apps/omni.isaac.sim.kit",
-                "--ext-folder",
-                "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.0/exts",
-                "--ext-folder",
-                "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.0/apps"
-            ],
+            "program": "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.1/kit/kit",
+            "args": ["/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.1/apps/omni.isaac.sim.kit",
+                "--ext-folder", "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.1/exts",
+                "--ext-folder", "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.1/apps"],
             "stopAtEntry": false,
-            "cwd": "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.0",
+            "cwd": "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.1",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
