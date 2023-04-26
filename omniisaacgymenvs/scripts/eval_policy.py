@@ -37,15 +37,15 @@ def parse_hydra_configs(cfg: DictConfig):
     with open(config_path) as f:
         model_cfg = yaml.load(f, Loader=yaml.SafeLoader)
     params = model_cfg['train']['params']
-    params['config']['features'] = {}
-    params['config']['features']['observer'] = DefaultAlgoObserver()
+    # params['config']['features'] = {}
+    # params['config']['features']['observer'] = DefaultAlgoObserver()
     print(f'Len action space: {len(env.action_space)}')
     model_builder = ModelBuilder()
     model = model_builder.load(params)
     # print(env.action_space, env.observation_space, env.num_envs)
     build_config = {
-        'actions_num' : np.array(len(env.action_space)),
-        'input_shape' : (len(env.observation_space.sample()), env.num_envs),
+        'actions_num' : (len(env.action_space), env.num_envs),
+        'input_shape' : (18, env.num_envs),
         'num_seqs' : 1,
         'value_size': 1,
         'normalize_value' : False,
@@ -58,15 +58,17 @@ def parse_hydra_configs(cfg: DictConfig):
     n_steps = 100
 
     for _ in range(n_episodes):
-        obs = env.reset()
+        obs_dict = env.reset()
+        obs = obs_dict['obs'].to('cpu')
+        print(f'obs: {obs}')
         input_dict = {
             'is_train': False,
             'prev_actions': None, 
             'obs' : obs,
             'rnn_states' : None
         }
-        res = model(obs)
-        print(f'res: {res}')
+        res_dict = model(input_dict)
+        print(f'res: {res_dict}')
         # for i in range(n_steps):
         #     actions = torch.tensor(np.array([env.action_space.sample() for _ in range(env.num_envs)]), device=task.rl_device)
         #     print(f'actions: {actions}')
@@ -91,25 +93,3 @@ def parse_hydra_configs(cfg: DictConfig):
 
 if __name__ == '__main__':
     parse_hydra_configs()
-
-# Define evaluation criteria
-def evaluate_agent(agent, n_episodes):
-    env = rl_games.TicTacToeEnv()
-    wins = 0
-    for i in range(n_episodes):
-        obs = env.reset()
-        done = False
-        while not done:
-            action = agent.act(obs)
-            obs, reward, done, info = env.step(action)
-        if info['winner'] == 1:
-            wins += 1
-    win_rate = wins / n_episodes
-    return win_rate
-
-# # Load trained agent
-# agent = rl_games.load_agent('path/to/agent')
-
-# # Evaluate agent
-# win_rate = evaluate_agent(agent, 100)
-# print(f"Win rate: {win_rate}")
