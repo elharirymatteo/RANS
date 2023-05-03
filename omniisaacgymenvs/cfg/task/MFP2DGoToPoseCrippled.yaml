@@ -2,6 +2,7 @@
 name: MFP2DGoToPoseCrippled
 
 physics_engine: ${..physics_engine}
+experiment: MFP2DGoToPose_8Engine_RandomDeadEngine1
 
 # if given, will override the device setting in gym. 
 env:

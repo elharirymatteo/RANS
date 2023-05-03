@@ -2,6 +2,7 @@
 name: MFP2DGoToXYCrippled
 
 physics_engine: ${..physics_engine}
+experiment: MFP2DGoToXY_8Engine_RandomDeadEngine1
 
 # if given, will override the device setting in gym. 
 env:

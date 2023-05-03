@@ -2,6 +2,7 @@
 name: MFP2DGoToXYDict
 
 physics_engine: ${..physics_engine}
+experiment: MFP2DGoToXY_8Engine_Dict_Input
 
 # if given, will override the device setting in gym. 
 env:

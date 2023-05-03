@@ -2,6 +2,7 @@
 name: MFP2DGoToXY
 
 physics_engine: ${..physics_engine}
+experiment: MFP2DGoToXY_8Engine
 
 # if given, will override the device setting in gym. 
 env:
