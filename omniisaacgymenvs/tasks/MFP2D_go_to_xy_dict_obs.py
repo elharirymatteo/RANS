@@ -292,7 +292,7 @@ class MFP2DGoToXYDictTask(RLTask):
         root_positions = self.root_pos - self._env_pos
         
         # position error
-        self.target_dist = torch.sqrt(torch.square(self.target_positions[:,:2] - root_positions[:,:2]).mean(-1))
+        self.target_dist = torch.sqrt(torch.square(self.target_positions[:,:2] - root_positions[:,:2]).sum(-1))
         self.root_positions = root_positions
 
         # Checks if the goal is reached

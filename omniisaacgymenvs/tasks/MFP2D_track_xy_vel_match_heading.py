@@ -256,7 +256,7 @@ class MFP2DTrackXYVelocityMatchHeadingTask(RLTask):
         cosy_cosp = 1 - 2 * (root_quats[:,2] * root_quats[:,2] + root_quats[:,3] * root_quats[:,3])
         orient_z = torch.arctan2(siny_cosp, cosy_cosp)
         # linear velocity error
-        self.target_dist = torch.sqrt(torch.square(self.target_velocities[:,:2] - self.root_velocities[:,:2]).mean(-1))
+        self.target_dist = torch.sqrt(torch.square(self.target_velocities[:,:2] - self.root_velocities[:,:2]).sum(-1))
 
         # orientation error
         self.orient_z = orient_z

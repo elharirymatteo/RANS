@@ -253,9 +253,9 @@ class MFP2DTrackXYOVelocityTask(RLTask):
         self.root_positions = self.root_pos - self._env_pos
         self.root_dist = torch.sqrt(torch.square(self.root_positions).mean(-1))
         # linear velocity error
-        self.target_linear_vel_dist = torch.sqrt(torch.square(self.target_linear_velocities[:,:2] - self.root_velocities[:,:2]).mean(-1))
+        self.target_linear_vel_dist = torch.sqrt(torch.square(self.target_linear_velocities[:,:2] - self.root_velocities[:,:2]).sum(-1))
         # angular velocity error
-        self.target_angular_vel_dist = torch.sqrt(torch.square(self.target_angular_velocities[:,2] - self.root_velocities[:,-1]).mean(-1))
+        self.target_angular_vel_dist = torch.sqrt(torch.square(self.target_angular_velocities[:,2] - self.root_velocities[:,-1]).sum(-1))
 
         # Checks if the goal is reached
         goal_is_reached = (self.target_linear_vel_dist < self.xy_velocity_tolerance).int()

@@ -289,7 +289,7 @@ class MFP2DGoToPoseTask(RLTask):
         orient_z = torch.arctan2(siny_cosp, cosy_cosp)
         
         # position error
-        self.target_dist = torch.sqrt(torch.square(self.target_positions[:,:2] - root_positions[:,:2]).mean(-1))
+        self.target_dist = torch.sqrt(torch.square(self.target_positions[:,:2] - root_positions[:,:2]).sum(-1))
         self.root_positions = root_positions
 
         # orientation error
