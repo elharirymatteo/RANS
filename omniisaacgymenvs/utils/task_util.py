@@ -47,7 +47,7 @@ def initialize_task(config, env, init_sim=True):
     from omniisaacgymenvs.tasks.floating_platform import FloatingPlatformTask
     from omniisaacgymenvs.tasks.MFP2D_go_to_xy import MFP2DGoToXYTask
     from omniisaacgymenvs.tasks.MFP2D_go_to_xy_dict_obs import MFP2DGoToXYDictTask
-    from omniisaacgymenvs.tasks.MFP2D_go_to_xy_dict_obs_random_thruster import MFP2DGoToXYDictRTTask
+    from omniisaacgymenvs.tasks.MFP2D_go_to_xy_dict_RP import MFP2DGoToXYDictRPTask
     from omniisaacgymenvs.tasks.MFP2D_go_to_xy_crippled import MFP2DGoToXYCrippledTask
     from omniisaacgymenvs.tasks.MFP2D_go_to_pose import MFP2DGoToPoseTask
     from omniisaacgymenvs.tasks.MFP2D_go_to_pose_crippled import MFP2DGoToPoseCrippledTask
@@ -76,7 +76,7 @@ def initialize_task(config, env, init_sim=True):
         "FloatingPlatform": FloatingPlatformTask,
         "MFP2DGoToXY": MFP2DGoToXYTask,
         "MFP2DGoToXYDict": MFP2DGoToXYDictTask,
-        "MFP2DGoToXYDictRT": MFP2DGoToXYDictRTTask,
+        "MFP2DGoToXYDictRT": MFP2DGoToXYDictRPTask,
         "MFP2DGoToXYCrippled": MFP2DGoToXYCrippledTask,
         "MFP2DGoToPose": MFP2DGoToPoseTask,
         "MFP2DGoToPoseCrippled": MFP2DGoToPoseCrippledTask,
