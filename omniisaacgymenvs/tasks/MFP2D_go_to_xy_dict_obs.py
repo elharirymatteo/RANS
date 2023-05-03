@@ -83,6 +83,7 @@ class MFP2DGoToXYDictTask(RLTask):
         self.actions = torch.zeros((self._num_envs, self._num_actions), device=self._device, dtype=torch.float32)
         self.goal_reached = torch.zeros((self.num_envs), device=self._device, dtype=torch.int32)
         self.all_indices = torch.arange(self._num_envs, dtype=torch.int32, device=self._device)
+        self.actions_mask = torch.zeros((self._num_envs, self._max_actions), dype=torch.bool)
      
         # Extra info
         self.extras = {}
@@ -174,6 +175,7 @@ class MFP2DGoToXYDictTask(RLTask):
 
         # Get thruster transforms
         self.obs_buf["transforms"] = self.transforms.repeat(self.num_envs, 1, 1)
+        self.obs_buf["masks"] = self.actions_mask
 
         observations = {
             self._platforms.name: {
