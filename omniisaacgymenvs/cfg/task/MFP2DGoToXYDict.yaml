@@ -19,8 +19,12 @@ env:
   actionDelay: 0.0
 
   task_parameters: 
-    XYTolerance: 0.025
+    XYTolerance: 0.01
     KillAfterNStepsInTolerance: 50 # 10seconds
+    MaxRandomGoalPosition: 0
+    MaxResetDist: 4.0
+    MinResetDist: 0.5
+    KillDist: 5.0
 
   learn:
     UseLinearRewards: 0
