@@ -43,6 +43,10 @@ class MFP2DGoToXYDictTask(RLTask):
         # Task parameters
         self.xy_tolerance = self._task_cfg["env"]["task_parameters"]["XYTolerance"]
         self.kill_after_n_steps_in_tolerance = self._task_cfg["env"]["task_parameters"]["KillAfterNStepsInTolerance"]
+        self._max_random_goal_position = self._task_cfg["env"]["task_parameters"]["MaxRandomGoalPosition"]
+        self._max_reset_dist           = self._task_cfg["env"]["task_parameters"]["MaxResetDist"]
+        self._min_reset_dist           = self._task_cfg["env"]["task_parameters"]["MinResetDist"]
+        self._kill_dist                = self._task_cfg["env"]["task_parameters"]["KillDist"]
         # Rewards parameters
         self.rew_scales = {}
         self.rew_scales["position"] = self._task_cfg["env"]["learn"]["PositionXYRewardScale"]
@@ -71,7 +75,6 @@ class MFP2DGoToXYDictTask(RLTask):
 
         self._fp_position = torch.tensor([0, 0., 0.5])
         self._ball_position = torch.tensor([0, 0, 1.0])
-        self._reset_dist = 5.
 
         RLTask.__init__(self, name, env)
 
@@ -242,7 +245,7 @@ class MFP2DGoToXYDictTask(RLTask):
         num_sets = len(env_ids)
         envs_long = env_ids.long()
         # Randomizes the position of the ball on the x y axis
-        self.target_positions[envs_long, 0:2] = torch_rand_float(-self._reset_dist, self._reset_dist, (num_sets, 2), device=self._device) 
+        self.target_positions[envs_long, 0:2] = torch_rand_float(-self._max_random_goal_position, self._max_random_goal_position, (num_sets, 2), device=self._device)
         # Shifts the target up so it visually aligns better
         self.target_positions[envs_long, 2] = torch.ones(num_sets, device=self._device) * 2.0
         # Projects to each environment
@@ -259,9 +262,11 @@ class MFP2DGoToXYDictTask(RLTask):
         self.dof_vel[env_ids, :] = 0
         # Randomizes the starting position of the platform
         root_pos = self.initial_root_pos.clone()
-        root_pos[env_ids, 0] += torch_rand_float(-self._reset_dist, self._reset_dist, (num_resets, 1), device=self._device).view(-1)
-        root_pos[env_ids, 1] += torch_rand_float(-self._reset_dist, self._reset_dist, (num_resets, 1), device=self._device).view(-1)
-        root_pos[env_ids, 2] += torch_rand_float(-0.0, 0.0, (num_resets, 1), device=self._device).view(-1)
+        r = self._min_reset_dist + torch.rand((num_resets,), device=self._device) * (self._max_reset_dist - self._max_reset_dist)
+        theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
+        root_pos[env_ids, 0] += (r)*torch.cos(theta) + self.target_positions[env_ids, 0]
+        root_pos[env_ids, 1] += (r)*torch.sin(theta) + self.target_positions[env_ids, 1]
+        root_pos[env_ids, 2] += 0
         # Randomizes the heading of the platform
         root_rot = self.initial_root_rot.clone()
         random_orient = torch.rand(num_resets, device=self._device) * math.pi
@@ -320,7 +325,7 @@ class MFP2DGoToXYDictTask(RLTask):
         # resets due to misbehavior
         ones = torch.ones_like(self.reset_buf)
         die = torch.zeros_like(self.reset_buf)
-        die = torch.where(self.target_dist > self._reset_dist * 4, ones, die)
+        die = torch.where(self.target_dist > self._kill_dist, ones, die)
         die = torch.where(self.goal_reached > self.kill_after_n_steps_in_tolerance, ones, die)
 
         # resets due to episode length
