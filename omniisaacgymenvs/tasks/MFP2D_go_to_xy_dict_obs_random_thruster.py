@@ -140,9 +140,8 @@ class MFP2DGoToXYDictRTTask(RLTask):
     def get_floating_platform(self):
         fp = ModularFloatingPlatform(prim_path=self.default_zero_env_path + "/Modular_floating_platform", name="modular_floating_platform",
                             translation=self._fp_position, cfg=self._platform_cfg)
-        #self.transforms[:-1] = torch.from_numpy(fp._transforms).reshape([-1,4*4])
-        self.transforms[...] = torch.arange(9).view(-1,1).expand(9,16)
-        #self.transforms[-1] = torch.zeros([16])
+        self.transforms[:-1] = torch.from_numpy(fp._transforms).reshape([-1,4*4])
+        self.transforms[-1] = torch.zeros([16])
         self._sim_config.apply_articulation_settings("modular_floating_platform", get_prim_at_path(fp.prim_path),
                                                         self._sim_config.parse_actor_config("modular_floating_platform"))
 
