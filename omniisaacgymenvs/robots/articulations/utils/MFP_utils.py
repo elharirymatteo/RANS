@@ -1,31 +1,6 @@
-import dataclasses
-
 import omni
 
 from pxr import Gf, UsdPhysics, UsdGeom, UsdShade, Sdf
-
-
-# Thruster definition
-
-@dataclasses.dataclass
-class thruster_anchor:
-    orient: Gf.Quatd(1, Gf.Vec3d(0, 0, 0))
-    translation: Gf.Vec3d(0, 0, 0)
-    thruster_style: str = "single"
-
-@dataclasses.dataclass
-class thruster_ring:
-    num_anchors: int = 4
-    radius: float = 0.5
-    center: tuple = (0, 0)
-    thruster_style: str = "dual"
-
-@dataclasses.dataclass
-class thruster_grid:
-    num_anchors_per_row: int = 5
-    num_anchors_per_column: int = 5
-    center: tuple = (0, 0)
-    thruster_style: str = "quad"
 
 # Utils for Xform manipulation
 def setXformOp(prim, value, property):
@@ -58,9 +33,9 @@ def setTransform(prim, value: Gf.Matrix4d):
 def setXformOps(prim, translate:Gf.Vec3d = Gf.Vec3d([0,0,0]),
                       orient: Gf.Quatd = Gf.Quatd(1, Gf.Vec3d([0,0,0])),
                       scale: Gf.Vec3d = Gf.Vec3d([1,1,1])):
-    setTranslate(prim, Gf.Vec3d([0, 0, 0]))
-    setOrient(prim, Gf.Quatd(1, Gf.Vec3d([0, 0, 0])))
-    setScale(prim, Gf.Vec3d([1, 1, 1]))
+    setTranslate(prim, translate)
+    setOrient(prim, orient)
+    setScale(prim, scale)
 
 def getTransform(prim, parent):
     return UsdGeom.XformCache(0).ComputeRelativeTransform(prim, parent)[0]
