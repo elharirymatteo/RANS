@@ -188,10 +188,10 @@ class CreatePlatform:
         self.createBasicColors()
         # Creates the main body element and adds the position & heading markers.
         if self.core_shape == "sphere":
-            self.core_path = self.createRigidSphere(self.platform_path + "/core", "sphere", self.core_radius, self.core_CoM, self.core_mass)
+            self.core_path = self.createRigidSphere(self.platform_path + "/core", "body", self.core_radius, self.core_CoM, self.core_mass)
             dummy_path = self.createRigidSphere(self.platform_path + "/dummy", "dummy_body", 0.00001, self.core_CoM, 0.00001)
         elif self.core_shape == "cylinder":
-            self.core_path = self.createRigidCylinder(self.platform_path + "/core", "cylinder", self.core_radius, self.core_height, self.core_CoM, self.core_mass)
+            self.core_path = self.createRigidCylinder(self.platform_path + "/core", "body", self.core_radius, self.core_height, self.core_CoM, self.core_mass)
             dummy_path = self.createRigidCylinder(self.platform_path + "/dummy", "dummy_body", 0.00001, 0.00001, self.core_CoM, 0.00001)
         self.createArrowXform(self.core_path+"/arrow")
         self.createPositionMarkerXform(self.core_path+"/marker")

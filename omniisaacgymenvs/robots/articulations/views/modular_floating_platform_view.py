@@ -44,7 +44,7 @@ class ModularFloatingPlatformView(ArticulationView):
             prim_paths_expr=prim_paths_expr,
             name=name,
         )
-        self.base = RigidPrimView(prim_paths_expr=f"/World/envs/.*/Modular_floating_platform/core/cylinder",
+        self.base = RigidPrimView(prim_paths_expr=f"/World/envs/.*/Modular_floating_platform/core/body",
                                         name="base_view")
 
         self.thrusters = RigidPrimView(prim_paths_expr=f"/World/envs/.*/Modular_floating_platform/thruster_*_*", name="thrusters")
