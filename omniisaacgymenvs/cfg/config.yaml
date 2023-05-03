@@ -2,7 +2,7 @@
 # Task name - used to pick the class to load
 task_name: ${task.name}
 # experiment name. defaults to name of training config
-experiment: ''
+experiment: ${resolve_default:${task.name},${task.experiment}}
 
 # if set to positive integer, overrides the default number of environments
 num_envs: ''
