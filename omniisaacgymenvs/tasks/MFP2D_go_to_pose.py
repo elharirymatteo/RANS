@@ -254,7 +254,7 @@ class MFP2DGoToPoseTask(RLTask):
         self.dof_vel[env_ids, :] = 0
         # Randomizes the starting position of the platform
         root_pos = self.initial_root_pos.clone()
-        r = self._min_reset_dist + torch.rand((num_resets,), device=self._device) * (self._max_reset_dist - self._max_reset_dist)
+        r = self._min_reset_dist + torch.rand((num_resets,), device=self._device) * (self._max_reset_dist - self._min_reset_dist)
         theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
         root_pos[env_ids, 0] += (r)*torch.cos(theta) + self.target_positions[env_ids, 0]
         root_pos[env_ids, 1] += (r)*torch.sin(theta) + self.target_positions[env_ids, 1]
