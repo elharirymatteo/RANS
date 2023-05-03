@@ -26,8 +26,8 @@ env:
 
   learn:
     UseLinearRewards: 0
-    UseSquareRewards: 1
-    UseExponentialRewards: 0
+    UseSquareRewards: 0
+    UseExponentialRewards: 1
     PositionXYRewardScale: 1.0
     PositionXYRewardExponentialCoefficient: 0.25
 
