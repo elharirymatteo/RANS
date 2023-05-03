@@ -39,9 +39,23 @@ from datetime import datetime
 class VecEnvRLGames(VecEnvBase):
 
     def _process_data(self):
-        self._obs = torch.clamp(self._obs, -self._task.clip_obs, self._task.clip_obs).to(self._task.rl_device).clone()
+        #print(type(self._obs))
+        if type(self._obs) is dict:
+            #print(type(self._task.clip_obs))
+            if type(self._task.clip_obs) is dict:
+                #print(self._task.clip_obs)
+                for k,v in self._obs.items():
+                    if k in self._task.clip_obs.keys():
+                        self._obs[k] = v.float() / 255.0
+                        self._obs[k] = torch.clamp(v, -self._task.clip_obs[k], self._task.clip_obs[k]).to(self._task.rl_device).clone()
+                    else:
+                        self._obs[k] = v
+        else:
+            self._obs = torch.clamp(self._obs, -self._task.clip_obs, self._task.clip_obs).to(self._task.rl_device).clone()
+
         self._rew = self._rew.to(self._task.rl_device).clone()
-        self._states = torch.clamp(self._states, -self._task.clip_obs, self._task.clip_obs).to(self._task.rl_device).clone()
+        #print(self._states)
+        #self._states = torch.clamp(self._states, -self._task.clip_obs, self._task.clip_obs).to(self._task.rl_device).clone()
         self._resets = self._resets.to(self._task.rl_device).clone()
         self._extras = self._extras.copy()
 
