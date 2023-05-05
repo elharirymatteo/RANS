@@ -266,9 +266,21 @@ class MFP2DGoToXYDictSRTask(RLTask):
 
     def randomize_thruster_state(self, env_ids, num_envs):
         # Collects as many thrusters as their are actions
-        weights = torch.ones(self._max_actions, device=self._device).expand(num_envs, -1)
-        selected_thrusters = torch.multinomial(weights, num_samples=self._num_actions, replacement=False)
-        if self._num_actions == self._max_actions:
+        num_per_sub_region = self._max_actions // 8 # 4 regions, and separate pair / odd numbers.
+        weights = torch.ones(num_per_sub_region, device=self._device).expand(num_envs, -1)
+        st11 = torch.multinomial(weights, num_samples=1, replacement=False)*2
+        st12 = st11 + 1
+        st21 = st11 + num_per_sub_region
+        st22 = st11 + 1 + num_per_sub_region
+        st31 = st11 + num_per_sub_region*2
+        st32 = st11 + 1 + num_per_sub_region*2
+        st41 = st11 + num_per_sub_region*3
+        st42 = st11 + 1 + num_per_sub_region*3
+        selected_thrusters = torch.cat([st11,st12,st21,st22,st31,st32,st41,st42],dim=1)
+        selected_thrusters = selected_thrusters[:,torch.randperm(selected_thrusters.size()[1])]
+        #weights = torch.ones(self._max_actions, device=self._device).expand(num_envs, -1)
+        #selected_thrusters = torch.multinomial(weights, num_samples=self._num_actions, replacement=False)
+        if self._min_actions == self._num_actions:
             self.sorted_thruster_indices[env_ids] = selected_thrusters
         else:
             # Generates ones and zeros in uneven proportions across the batch
@@ -352,7 +364,6 @@ class MFP2DGoToXYDictSRTask(RLTask):
         # position error
         self.target_dist = torch.sqrt(torch.square(self.target_positions[:,:2] - root_positions[:,:2]).sum(-1))
         self.root_positions = root_positions
-
         # Checks if the goal is reached
         goal_is_reached = (self.target_dist < self.xy_tolerance).int()
         self.goal_reached *= goal_is_reached # if not set the value to 0
@@ -367,7 +378,7 @@ class MFP2DGoToXYDictSRTask(RLTask):
             position_reward = torch.exp(-self.target_dist / self.rew_scales["position_exp_coeff"]) * self.rew_scales["position"]
         else:
             raise ValueError("Unknown reward type.")
-        
+        print(self.target_dist[0], root_positions[0], position_reward[0])
         self.rew_buf[:] = position_reward
         # log episode reward sums
         self.episode_sums["position_reward"] += position_reward
