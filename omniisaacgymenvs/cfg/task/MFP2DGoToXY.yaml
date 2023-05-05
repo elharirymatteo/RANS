@@ -48,7 +48,7 @@ env:
           num_anchors: 4
           style: "dual"
           ring_radius: 0.5
-          ring_offset: 0.75839816339
+          ring_offset: 0.78539816339
           thruster_radius: 0.05
           thruster_length: 0.1
           thruster_mass: 0.00001
