@@ -1,7 +1,7 @@
 
 from omniisaacgymenvs.tasks.base.rl_task import RLTask
-from omniisaacgymenvs.robots.articulations.MFP2D import ModularFloatingPlatform, compute_num_actions
-from omniisaacgymenvs.robots.articulations.views.modular_floating_platform_view import ModularFloatingPlatformView
+from omniisaacgymenvs.robots.articulations.MFP2Dv2 import ModularFloatingPlatform, compute_num_actions
+from omniisaacgymenvs.robots.articulations.views.modular_floating_platform_v2_view import ModularFloatingPlatformView
 from omniisaacgymenvs.utils.pin import VisualPin
 
 from omni.isaac.core.utils.torch.rotations import *
@@ -17,7 +17,7 @@ from gym import spaces
 
 EPS = 1e-6   # small constant to avoid divisions by 0 and log(0)
 
-class MFP2DGoToXYDictSRTask(RLTask):
+class MFP2DGoToXYVirtualTask(RLTask):
     def __init__(
         self,
         name: str,                # name of the Task
@@ -47,9 +47,6 @@ class MFP2DGoToXYDictSRTask(RLTask):
         self._max_reset_dist           = self._task_cfg["env"]["task_parameters"]["MaxResetDist"]
         self._min_reset_dist           = self._task_cfg["env"]["task_parameters"]["MinResetDist"]
         self._kill_dist                = self._task_cfg["env"]["task_parameters"]["KillDist"]
-        self._num_actions              = self._task_cfg["env"]["task_parameters"]["MaxActions"]
-        self._min_actions              = self._task_cfg["env"]["task_parameters"]["MinActions"]
-
         # Rewards parameters
         self.rew_scales = {}
         self.rew_scales["position"] = self._task_cfg["env"]["learn"]["PositionXYRewardScale"]
@@ -58,13 +55,10 @@ class MFP2DGoToXYDictSRTask(RLTask):
         self.use_square_rewards = self._task_cfg["env"]["learn"]["UseSquareRewards"]
         self.use_exponential_rewards = self._task_cfg["env"]["learn"]["UseExponentialRewards"]
 
-        self._num_observations = 18
-        self._max_actions = compute_num_actions(self._platform_cfg)
+        self._num_observations = 24
 
-        self.observation_space = spaces.Dict({"state":spaces.Box(np.ones(self.num_observations) * -np.Inf, np.ones(self.num_observations) * np.Inf),
-                                              "transforms":spaces.Box(low=-1, high=1, shape=(self._num_actions, 4*4)),
-                                              "masks":spaces.Box(low=0, high=1, shape=(self.num_actions,))})
-        
+        self._num_actions = compute_num_actions(self._platform_cfg)
+
         # define action space
         if self._discrete_actions=="MultiDiscrete":    
             # RLGames implementation of MultiDiscrete action space requires a tuple of Discrete spaces
@@ -85,13 +79,10 @@ class MFP2DGoToXYDictSRTask(RLTask):
 
         self.target_positions = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
         self.target_positions[:, 2] = 1
-        self.transforms = torch.zeros((self._max_actions+1, 16), device=self._device, dtype=torch.float32)
-        self.current_transforms = torch.zeros((self._num_envs, self._num_actions, 16), device=self._device, dtype=torch.float32)
+        self.transforms = torch.zeros((self._num_actions, 4, 4), device=self._device, dtype=torch.float32)
+        self.transforms2D = torch.zeros((self._num_actions, 3, 3), device=self._device, dtype=torch.float32)
         self.actions = torch.zeros((self._num_envs, self._num_actions), device=self._device, dtype=torch.float32)
-        self.thrusters_state = torch.ones([self._num_envs, self._max_actions], device=self._device, dtype=torch.long)
-        self.action_masks = torch.ones([self._num_envs, self._num_actions], device=self._device, dtype=torch.long)
-        self.sorted_thruster_indices = torch.zeros((self._num_envs, self._num_actions), device=self._device, dtype=torch.long)
-        self.goal_reached = torch.zeros((self._num_envs), device=self._device, dtype=torch.int32)
+        self.goal_reached = torch.zeros((self.num_envs), device=self._device, dtype=torch.int32)
         self.all_indices = torch.arange(self._num_envs, dtype=torch.int32, device=self._device)
      
         # Extra info
@@ -100,20 +91,6 @@ class MFP2DGoToXYDictSRTask(RLTask):
         torch_zeros = lambda: torch.zeros(self.num_envs, dtype=torch.float, device=self.device, requires_grad=False)
         self.episode_sums = {"position_reward": torch_zeros(), "position_error": torch_zeros()}
         return
-    
-    def cleanup(self) -> None:
-        """ Prepares torch buffers for RL data collection."""
-
-        # prepare tensors
-        self.obs_buf = {'state':torch.zeros((self._num_envs, self.num_observations), device=self._device, dtype=torch.float),
-                        'transforms':torch.zeros((self._num_envs, self._num_actions, 16), device=self._device, dtype=torch.float),
-                        'masks':torch.zeros((self._num_envs, self._num_actions), device=self._device, dtype=torch.float)}
-                        #'thruster_state':torch.zeros((self._num_envs, self.num_actions), device=self._device, dtype=torch.int)}
-        self.states_buf = torch.zeros((self._num_envs, self.num_states), device=self._device, dtype=torch.float)
-        self.rew_buf = torch.zeros(self._num_envs, device=self._device, dtype=torch.float)
-        self.reset_buf = torch.ones(self._num_envs, device=self._device, dtype=torch.long)
-        self.progress_buf = torch.zeros(self._num_envs, device=self._device, dtype=torch.long)
-        self.extras = {}
 
     def set_up_scene(self, scene) -> None:
         self.get_floating_platform()
@@ -144,8 +121,8 @@ class MFP2DGoToXYDictSRTask(RLTask):
     def get_floating_platform(self):
         fp = ModularFloatingPlatform(prim_path=self.default_zero_env_path + "/Modular_floating_platform", name="modular_floating_platform",
                             translation=self._fp_position, cfg=self._platform_cfg)
-        self.transforms[:-1] = torch.from_numpy(fp._transforms).reshape([-1,4*4])
-        self.transforms[-1] = torch.zeros([16])
+        #self.transforms[...] = torch.from_numpy(fp._transforms)
+        self.transforms2D[...] = torch.from_numpy(fp._transforms2D)
         self._sim_config.apply_articulation_settings("modular_floating_platform", get_prim_at_path(fp.prim_path),
                                                         self._sim_config.parse_actor_config("modular_floating_platform"))
 
@@ -170,25 +147,21 @@ class MFP2DGoToXYDictSRTask(RLTask):
         root_positions = self.root_pos - self._env_pos
         root_quats = self.root_rot
         # Get distance to the goal
-        self.obs_buf["state"][..., 0:3] = self.target_positions - root_positions
+        self.obs_buf[..., 0:3] = self.target_positions - root_positions
+        self.obs_buf[..., 3:6] = (self.target_positions - root_positions) * 10
+        self.obs_buf[..., 6:9] = (self.target_positions - root_positions) *100
         # Get rotation matrix from quaternions
         rot_x = quat_axis(root_quats, 0)
         rot_y = quat_axis(root_quats, 1)
         rot_z = quat_axis(root_quats, 2)
-        self.obs_buf["state"][..., 3:6] = rot_x
-        self.obs_buf["state"][..., 6:9] = rot_y
-        self.obs_buf["state"][..., 9:12] = rot_z
+        self.obs_buf[..., 9:12] = rot_x
+        self.obs_buf[..., 12:15] = rot_y
+        self.obs_buf[..., 15:18] = rot_z
         # Get velocities in the world frame 
         root_linvels = self.root_velocities[:, :3]
         root_angvels = self.root_velocities[:, 3:]
-        self.obs_buf["state"][..., 12:15] = root_linvels
-        self.obs_buf["state"][..., 15:18] = root_angvels
-
-        # Get thruster transforms
-        self.obs_buf["transforms"] = self.current_transforms
-        #print(self.current_transforms)
-        #print(self.current_transforms[0])
-        self.obs_buf["masks"] = self.action_masks
+        self.obs_buf[..., 18:21] = root_linvels
+        self.obs_buf[..., 21:24] = root_angvels
 
         observations = {
             self._platforms.name: {
@@ -227,13 +200,27 @@ class MFP2DGoToXYDictSRTask(RLTask):
         
         # Applies the thrust multiplier
         thrusts = self.thrust_max * thrust_cmds
-        thrusts = self.map_actions_to_thrusters(thrusts)
-        self.thrusts[:,:,2] = thrusts
         # clear actions for reset envs
-        self.thrusts[reset_env_ids] = 0
+        thrusts[reset_env_ids] = 0
         # Apply forces
-        self._platforms.thrusters.apply_forces(self.thrusts, is_global=False)
-        return
+        T = self.transforms2D.expand(self._num_envs, self._num_actions, 3, 3)
+        I = torch.arange(self._num_envs*self._num_actions)
+
+        R = T[:, :, :2,:2]
+        O = T[:, :, 2,:2]
+        z = torch.zeros((O.shape[0],self._num_actions,1), device = self._device)
+        O = torch.cat([O,z], dim=-1)
+        R = R.reshape(-1,2,2)
+        O = O.reshape(-1,3)
+        
+        A = thrusts.reshape(-1,1)
+        y = torch.zeros_like(thrusts.reshape(-1,1))
+        A = torch.cat([A,y],dim=-1)
+        A = torch.matmul(R, A.view(self._num_envs*self._num_actions,2,1))
+        z = torch.zeros_like(thrusts.reshape(-1,1))
+        A = torch.cat([A[:,:,0],z],dim=-1)
+
+        self._platforms.thrusters.apply_forces_and_torques_at_pos(forces=A, positions=O, indices=I, is_global=False)
 
     def post_reset(self):
         # implement any logic required for simulation on-start here
@@ -248,7 +235,7 @@ class MFP2DGoToXYDictSRTask(RLTask):
         self.initial_pin_rot[:, 0] = 1
 
         # control parameters
-        self.thrusts = torch.zeros((self._num_envs, self._max_actions, 3), dtype=torch.float32, device=self._device)
+        self.thrusts = torch.zeros((self._num_envs, self._num_actions, 3), dtype=torch.float32, device=self._device)
         
         self.set_targets(self.all_indices)
 
@@ -264,78 +251,25 @@ class MFP2DGoToXYDictSRTask(RLTask):
         # Apply the new goals
         self._pins.set_world_poses(pin_pos[:, 0:3], self.initial_pin_rot[envs_long].clone(), indices=env_ids)
 
-    def randomize_thruster_state(self, env_ids, num_envs):
-        # Collects as many thrusters as their are actions
-        num_per_sub_region = self._max_actions // 8 # 4 regions, and separate pair / odd numbers.
-        weights = torch.ones(num_per_sub_region, device=self._device).expand(num_envs, -1)
-        st11 = torch.multinomial(weights, num_samples=1, replacement=False)*2
-        st12 = st11 + 1
-        st21 = st11 + num_per_sub_region
-        st22 = st11 + 1 + num_per_sub_region
-        st31 = st11 + num_per_sub_region*2
-        st32 = st11 + 1 + num_per_sub_region*2
-        st41 = st11 + num_per_sub_region*3
-        st42 = st11 + 1 + num_per_sub_region*3
-        selected_thrusters = torch.cat([st11,st12,st21,st22,st31,st32,st41,st42],dim=1)
-        selected_thrusters = selected_thrusters[:,torch.randperm(selected_thrusters.size()[1])]
-        #weights = torch.ones(self._max_actions, device=self._device).expand(num_envs, -1)
-        #selected_thrusters = torch.multinomial(weights, num_samples=self._num_actions, replacement=False)
-        if self._min_actions == self._num_actions:
-            self.sorted_thruster_indices[env_ids] = selected_thrusters
-        else:
-            # Generates ones and zeros in uneven proportions across the batch
-            max_kills = self._num_actions - self._min_actions
-            weights = torch.ones((num_envs, 2), device=self._device)#.expand(num_envs, -1).clone()
-            alpha = torch.rand((num_envs), device=self._device)
-            weights[:,0] = alpha.clone()
-            weights[:,1] = 1 - alpha.clone()
-            idx2 = torch.multinomial(weights, num_samples=max_kills, replacement=True)
-            # Selects L indices to set to N+1
-            weights = torch.ones(self._num_actions, device=self._device).expand(num_envs, -1)
-            idx3 = torch.multinomial(weights, num_samples=max_kills, replacement=False)
-            # Creates a mask from both:
-            idx4 = idx2*idx3 + (1 - idx2)*self._max_actions
-            mask = torch.sum(torch.nn.functional.one_hot(idx4, self._max_actions+1),dim=1)
-            # Removes the duplicates
-            mask = mask[:,:self._num_actions]
-            # Apply mask and add N+1
-            final_idx = selected_thrusters * (1 - mask) + mask*(self._max_actions)
-            # Sort such that the non-functional thrusters are at the end of the configuration
-            _, sorted_idx = mask.sort(1)
-            self.sorted_thruster_indices[env_ids] = torch.gather(final_idx, 1, sorted_idx)#.to(self._device)
-
-    def map_actions_to_thrusters(self, actions):
-        #print(actions.shape)
-        return torch.zeros((self._num_envs, self._max_actions+1),device=self._device).scatter(1, self.sorted_thruster_indices, actions)[:,:self._max_actions]
-
-    def update_transforms(self):
-        # mem-free transforms
-        idxs = self.sorted_thruster_indices.view(-1,self.num_actions,1).expand(-1,-1,16)
-        trfs = self.transforms.view(1,-1, 16).expand(self.num_envs, -1, -1)
-        self.current_transforms = torch.gather(trfs, 1, idxs)
-        self.action_masks = self.sorted_thruster_indices == self._max_actions
-
     def reset_idx(self, env_ids):
         num_resets = len(env_ids)
         # Resets the counter of steps for which the goal was reached
         self.goal_reached[env_ids] = 0
-        self.randomize_thruster_state(env_ids, num_resets)
-        self.update_transforms()
-        # Randomizes the starting position of the platform within a disk around the target
+        # Resets the states of the joints
+        self.dof_pos[env_ids, :] = torch_rand_float(-0.0, 0.0, (num_resets, self._platforms.num_dof), device=self._device)
+        self.dof_vel[env_ids, :] = 0
+        # Randomizes the starting position of the platform
         root_pos = self.initial_root_pos.clone()
         r = self._min_reset_dist + torch.rand((num_resets,), device=self._device) * (self._max_reset_dist - self._min_reset_dist)
         theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
         root_pos[env_ids, 0] += (r)*torch.cos(theta) + self.target_positions[env_ids, 0]
         root_pos[env_ids, 1] += (r)*torch.sin(theta) + self.target_positions[env_ids, 1]
         root_pos[env_ids, 2] += 0
-        # Resets the states of the joints
-        self.dof_pos[env_ids, :] = torch_rand_float(-0.0, 0.0, (num_resets, self._platforms.num_dof), device=self._device)
-        self.dof_vel[env_ids, :] = 0
         # Randomizes the heading of the platform
         root_rot = self.initial_root_rot.clone()
-        random_orient = torch.rand(num_resets, device=self._device) * math.pi
-        root_rot[env_ids, 0] = torch.cos(random_orient*0.5)
-        root_rot[env_ids, 3] = torch.sin(random_orient*0.5)
+        #random_orient = torch.rand(num_resets, device=self._device) * math.pi
+        #root_rot[env_ids, 0] = torch.cos(random_orient*0.5)
+        #root_rot[env_ids, 3] = torch.sin(random_orient*0.5)
         # Sets the velocities to 0
         root_velocities = self.root_velocities.clone()
         root_velocities[env_ids] = 0
@@ -358,12 +292,12 @@ class MFP2DGoToXYDictSRTask(RLTask):
             self.episode_sums[key][env_ids] = 0.
 
     def calculate_metrics(self) -> None:
-
         root_positions = self.root_pos - self._env_pos
         
         # position error
         self.target_dist = torch.sqrt(torch.square(self.target_positions[:,:2] - root_positions[:,:2]).sum(-1))
         self.root_positions = root_positions
+
         # Checks if the goal is reached
         goal_is_reached = (self.target_dist < self.xy_tolerance).int()
         self.goal_reached *= goal_is_reached # if not set the value to 0
@@ -378,7 +312,10 @@ class MFP2DGoToXYDictSRTask(RLTask):
             position_reward = torch.exp(-self.target_dist / self.rew_scales["position_exp_coeff"]) * self.rew_scales["position"]
         else:
             raise ValueError("Unknown reward type.")
-        print(self.target_dist[0], root_positions[0], position_reward[0])
+        #print("0", position_reward[0], self.target_dist[0])
+        #print("1", position_reward[1], self.target_dist[1])
+        #print("2", position_reward[2], self.target_dist[2])
+        #print("mean", position_reward.mean(), self.target_dist.mean())
         self.rew_buf[:] = position_reward
         # log episode reward sums
         self.episode_sums["position_reward"] += position_reward

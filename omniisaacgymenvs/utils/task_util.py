@@ -46,8 +46,11 @@ def initialize_task(config, env, init_sim=True):
     from omniisaacgymenvs.tasks.crazyflie import CrazyflieTask
     from omniisaacgymenvs.tasks.floating_platform import FloatingPlatformTask
     from omniisaacgymenvs.tasks.MFP2D_go_to_xy import MFP2DGoToXYTask
+    from omniisaacgymenvs.tasks.MFP2D_go_to_xy_v2 import MFP2DGoToXYVirtualTask
     from omniisaacgymenvs.tasks.MFP2D_go_to_xy_dict_obs import MFP2DGoToXYDictTask
     from omniisaacgymenvs.tasks.MFP2D_go_to_xy_dict_RP import MFP2DGoToXYDictRPTask
+    from omniisaacgymenvs.tasks.MFP2D_go_to_xy_dict_SR import MFP2DGoToXYDictSRTask
+    from omniisaacgymenvs.tasks.MFP2D_go_to_xy_dict_SR_v2 import MFP2DGoToXYVirtualDictSRTask
     from omniisaacgymenvs.tasks.MFP2D_go_to_xy_crippled import MFP2DGoToXYCrippledTask
     from omniisaacgymenvs.tasks.MFP2D_go_to_pose import MFP2DGoToPoseTask
     from omniisaacgymenvs.tasks.MFP2D_go_to_pose_crippled import MFP2DGoToPoseCrippledTask
@@ -74,8 +77,11 @@ def initialize_task(config, env, init_sim=True):
         "ShadowHandOpenAI_LSTM": ShadowHandTask,
         "FloatingPlatform": FloatingPlatformTask,
         "MFP2DGoToXY": MFP2DGoToXYTask,
+        "MFP2DGoToXYVirtual": MFP2DGoToXYVirtualTask,
         "MFP2DGoToXYDict": MFP2DGoToXYDictTask,
         "MFP2DGoToXYDictRT": MFP2DGoToXYDictRPTask,
+        "MFP2DGoToXYDictSR": MFP2DGoToXYDictSRTask,
+        "MFP2DGoToXYVirtualDictSR": MFP2DGoToXYVirtualDictSRTask,
         "MFP2DGoToXYCrippled": MFP2DGoToXYCrippledTask,
         "MFP2DGoToPose": MFP2DGoToPoseTask,
         "MFP2DGoToPoseCrippled": MFP2DGoToPoseCrippledTask,

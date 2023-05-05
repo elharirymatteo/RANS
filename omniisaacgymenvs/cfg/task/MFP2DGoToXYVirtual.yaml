@@ -1,5 +1,5 @@
 # used to create the object
-name: MFP2DGoToXY
+name: MFP2DGoToXYVirtual
 
 physics_engine: ${..physics_engine}
 experiment: MFP2DGoToXY_8Engine
@@ -42,6 +42,7 @@ env:
       CoM: [0,0,0]
       radius: 0.5
       shape: "sphere"
+    num_virtual_thrusters: 8
     thrusters:
       thruster_rings:
         - name: "ring1"

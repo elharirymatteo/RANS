@@ -1,8 +1,8 @@
 # used to create the object
-name: MFP2DGoToXY
+name: MFP2DGoToXYVirtualDictSR
 
 physics_engine: ${..physics_engine}
-experiment: MFP2DGoToXY_8Engine
+experiment: MFP2DGoToXY_8OutOf72RandomEngine_RandomDeadEngine0
 
 # if given, will override the device setting in gym. 
 env:
@@ -14,7 +14,7 @@ env:
   numQuantizedActions: 1
   mass: 5.0
   thrustForce: 1.0 
-  clipObservations: 5.0
+  clipObservations: {state: 5.0}
   clipActions: 1.0
   controlFrequencyInv: 10
   actionDelay: 0.0
@@ -22,6 +22,8 @@ env:
   task_parameters: 
     XYTolerance: 0.01
     KillAfterNStepsInTolerance: 50 # 10seconds
+    MaxActions: 8
+    MinActions: 8
     MaxRandomGoalPosition: 0
     MaxResetDist: 4.0
     MinResetDist: 0.5
@@ -35,6 +37,7 @@ env:
     PositionXYRewardExponentialCoefficient: 0.25
 
   platform:
+    num_virtual_thrusters: 8
     thrust_force: 1.0
     refinement: 2
     core:
@@ -45,60 +48,14 @@ env:
     thrusters:
       thruster_rings:
         - name: "ring1"
-          num_anchors: 4
+          num_anchors: 36
           style: "dual"
           ring_radius: 0.5
-          ring_offset: 0.78539816339
+          ring_offset: 0.75839816339
           thruster_radius: 0.05
           thruster_length: 0.1
           thruster_mass: 0.00001
           thruster_CoM: [0,0,0]
-      #  - name: "ring2"
-      #    num_anchors: 6
-      #    style: "dual"
-      #    ring_radius: 0.75
-      #    ring_offset: 0.75839816339
-      #    thruster_radius: 0.05
-      #    thruster_length: 0.1
-      #    thruster_mass: 0.00001
-      #    thruster_CoM: [0,0,0]
-      #  - name: "ring2"
-      #    num_anchors: 6
-      #    style: "dual"
-      #    ring_radius: 0.75
-      #    ring_offset: 0.75839816339
-      #    thruster_radius: 0.05
-      #    thruster_length: 0.1
-      #    thruster_mass: 0.00001
-      #    thruster_CoM: [0,0,0]
-      #thruster_grids:
-      #  - name: "grid1"
-      #    num_anchors_on_x: 3
-      #    num_anchors_on_y: 3
-      #    xmin: -0.5  
-      #    xmax: 0.5  
-      #    ymin: -0.5  
-      #    ymax: 0.5  
-      #    style: "quad"
-      #    thruster_radius: 0.05
-      #    thruster_length: 0.1
-      #    thruster_mass: 0.00001
-      #    thruster_CoM: [0,0,0]
-      #thruster_standalones:
-      #  - name: "thruster1"
-      #    translation:
-      #      x: 0
-      #      y: 0
-      #      z: 0
-      #    quaternion:
-      #      x: 0
-      #      y: 0
-      #      z: 0
-      #      w: 1
-      #    thruster_radius: 0.05
-      #    thruster_length: 0.1
-      #    thruster_mass: 0.00001
-      #    thruster_CoM: [0,0,0]
 
 sim:
   dt: 0.02
