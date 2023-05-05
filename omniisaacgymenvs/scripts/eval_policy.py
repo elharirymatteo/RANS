@@ -2,94 +2,78 @@ import numpy as np
 import torch
 import hydra
 from omegaconf import DictConfig
-import rl_games
+import os
 from omniisaacgymenvs.utils.hydra_cfg.hydra_utils import *
 from omniisaacgymenvs.utils.hydra_cfg.reformat import omegaconf_to_dict, print_dict
-from rl_games.algos_torch.model_builder import ModelBuilder
-from rl_games.common.algo_observer import DefaultAlgoObserver
+from rl_games.algos_torch.players import PpoPlayerDiscrete
+from omniisaacgymenvs.utils.rlgames.rlgames_utils import RLGPUAlgoObserver, RLGPUEnv
 
-import yaml
+from rlgames_train import RLGTrainer
+from rl_games.torch_runner import Runner
 from omniisaacgymenvs.utils.task_util import initialize_task
 from omniisaacgymenvs.envs.vec_env_rlgames import VecEnvRLGames
+from omniisaacgymenvs.utils.config_utils.path_utils import retrieve_checkpoint_path
+
+def eval_single_agent(cfg_dict, cfg, env):
+
+    player = PpoPlayerDiscrete(cfg_dict['train']['params'])
+    player.restore(cfg.checkpoint)
+    # _____Run Evaluation_____
+    num_episodes = 1 
+    obs = env.reset()
+
+    for _ in range(num_episodes):
+        done = False
+        while not done:
+            actions = player.get_action(obs['obs'], is_deterministic=True)
+            #env._task.pre_physics_step(actions)
+            obs, rews, dones, _ =  env.step(actions)
+            done = dones[0]
+            print(f'Step {env.sim_frame_count} -- obs: {obs}, rews: {rews}, dones: {dones}')
+
+
+def eval_multi_agents(cfg_dict, cfg, env):
+    
+    runner = Runner(RLGPUAlgoObserver())
+    runner.load(rlg_config_dict)
+    runner.reset()
+
+    runner.run({
+        'train': False,
+        'play': True,
+        'checkpoint': cfg.checkpoint,
+        'sigma': None
+    })
+
 
 @hydra.main(config_name="config", config_path="../cfg")
 def parse_hydra_configs(cfg: DictConfig):
-
+    
+    cfg.checkpoint = "./runs/MFP2DGoToPose/nn/MFP2DGoToPose.pth"
+    cfg.num_envs = 1
     cfg_dict = omegaconf_to_dict(cfg)
-    #print_dict(cfg_dict)
+    print_dict(cfg_dict)
+
+    # _____Create environment_____
+
     headless = cfg.headless
     enable_viewport = "enable_cameras" in cfg.task.sim and cfg.task.sim.enable_cameras
 
-    # Specify the testing environment config here
-    cfg.task.env.envSpacing = 25
-
-
-    # Load the environment & initialize the task
     env = VecEnvRLGames(headless=headless, sim_device=cfg.device_id, enable_livestream=cfg.enable_livestream, enable_viewport=enable_viewport)
     from omni.isaac.core.utils.torch.maths import set_seed
     cfg.seed = set_seed(cfg.seed, torch_deterministic=cfg.torch_deterministic)
     cfg_dict['seed'] = cfg.seed
+        
     task = initialize_task(cfg_dict, env)
+    
+    rlg_config_dict = omegaconf_to_dict(cfg.train)
+    rlg_trainer = RLGTrainer(cfg, cfg_dict)
+    rlg_trainer.launch_rlg_hydra(env)
+    # _____Create players (model)_____
+    
+    eval_single_agent(cfg_dict, cfg, env)
 
-    # Load the model
-    #model_path = "./runs/FloatingPlatform/nn/FloatingPlatform.pth"
-    config_path = "./runs/FloatingPlatform/config.yaml"
-    with open(config_path) as f:
-        model_cfg = yaml.load(f, Loader=yaml.SafeLoader)
-    params = model_cfg['train']['params']
-    # params['config']['features'] = {}
-    # params['config']['features']['observer'] = DefaultAlgoObserver()
-    print(f'Len action space: {len(env.action_space)}')
-    model_builder = ModelBuilder()
-    model = model_builder.load(params)
-    # print(env.action_space, env.observation_space, env.num_envs)
-    build_config = {
-        'actions_num' : (len(env.action_space), env.num_envs),
-        'input_shape' : (18, env.num_envs),
-        'num_seqs' : 1,
-        'value_size': 1,
-        'normalize_value' : False,
-        'normalize_input': False,
-    }
-    model = model.build(build_config)
-    print(model)
-
-    n_episodes = 2
-    n_steps = 100
-
-    for _ in range(n_episodes):
-        obs_dict = env.reset()
-        obs = obs_dict['obs'].to('cpu')
-        print(f'obs: {obs}')
-        input_dict = {
-            'is_train': False,
-            'prev_actions': None, 
-            'obs' : obs,
-            'rnn_states' : None
-        }
-        res_dict = model(input_dict)
-        print(f'res: {res_dict}')
-        # for i in range(n_steps):
-        #     actions = torch.tensor(np.array([env.action_space.sample() for _ in range(env.num_envs)]), device=task.rl_device)
-        #     print(f'actions: {actions}')
-        #     obs, reward, done, info = env.step(actions)
-        #     print(f' step: {i} : {obs, reward, done, info}')
-
-    env._simulation_app.close()
-
-    # while env._simulation_app.is_running():
-    #     if env._world.is_playing():
-    #         if env._world.current_time_step_index == 0:
-    #             env._world.reset(soft=True)
-    #         actions = torch.tensor(np.array([env.action_space.sample() for _ in range(env.num_envs)]), device=task.rl_device)
-    #         env._task.pre_physics_step(actions)
-    #         env._world.step(render=render)
-    #         env.sim_frame_count += 1
-    #         env._task.post_physics_step()
-    #     else:
-    #         env._world.step(render=render)
-
-    # env._simulation_app.close()
+    env.close()
 
 if __name__ == '__main__':
     parse_hydra_configs()
