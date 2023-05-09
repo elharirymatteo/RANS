@@ -21,7 +21,7 @@ params:
           val: 0
         fixed_sigma: True
     transformer:
-      input_sequence_length: 8
+      input_sequence_length: 10
       pos_embedding: learnt
       num_head: 2
       num_layer: 2
