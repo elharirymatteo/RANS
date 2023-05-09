@@ -21,15 +21,17 @@ params:
           val: 0
         fixed_sigma: True
     transformer:
-      input_sequence_length: 8
+      input_sequence_length: 10
       pos_embedding: learnt
       num_head: 2
-      num_layer: 5
+      num_layer: 2
       dim_feedforward: 1024
-      transform_embed_dim: 128
-      state_embed_dim: [128, 128]
+      transforms_mlp_dim: [128, 128]
+      state_mlp_dim: [128, 128]
+      fuse_mlp_dim: [128, 128]
+      d_model: 128
       dropout: 0.0
-      decoder_mlp_dim: [128, 128]
+      decoder_mlp_dim: [256, 256]
       embed_init: 0.1
       decoder_init: 0.01
 
@@ -62,6 +64,10 @@ params:
     tau: 0.95
     learning_rate: 1e-4
     lr_schedule: adaptive
+    min_lr: 0
+    base_lr: 3e-4
+    warmup_steps: 10
+    warmup_factor: 0.1
     kl_threshold: 0.016
     score_to_win: 20000
     max_epochs: ${resolve_default:1000,${....max_iterations}}

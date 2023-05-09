@@ -1,8 +1,8 @@
 # used to create the object
-name: MFP2DGoToXYVirtualDictSR
+name: MFP2DGoToXYVirtualDictSRPlusPlus
 
 physics_engine: ${..physics_engine}
-experiment: MFP2DGoToXY_8OutOf72RandomEngine_RandomDeadEngine0
+experiment: MFP2DGoToXY_RandomOffset_RandomPerm_4Morphologies_RandomThrust
 
 # if given, will override the device setting in gym. 
 env:
@@ -22,8 +22,8 @@ env:
   task_parameters: 
     XYTolerance: 0.01
     KillAfterNStepsInTolerance: 50 # 10seconds
-    MaxActions: 8
-    MinActions: 8
+    MaxActions: 10
+    MinActions: 10
     MaxRandomGoalPosition: 0
     MaxResetDist: 2.5
     MinResetDist: 0.25
@@ -37,8 +37,9 @@ env:
     PositionXYRewardExponentialCoefficient: 0.25
 
   platform:
-    num_virtual_thrusters: 8
-    thrust_force: 1.0
+    num_virtual_thrusters: 10
+    max_thrust_force: 1.0
+    min_thrust_force: 0.5
     refinement: 2
     core:
       mass: 5.0
@@ -48,7 +49,7 @@ env:
     thrusters:
       thruster_rings:
         - name: "ring1"
-          num_anchors: 4
+          num_anchors: 5
           style: "dual"
           ring_radius: 0.5
           ring_offset: 0.75839816339

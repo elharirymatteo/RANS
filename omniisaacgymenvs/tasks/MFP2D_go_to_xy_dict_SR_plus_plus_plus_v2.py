@@ -17,7 +17,7 @@ from gym import spaces
 
 EPS = 1e-6   # small constant to avoid divisions by 0 and log(0)
 
-class MFP2DGoToXYVirtualDictSRTask(RLTask):
+class MFP2DGoToXYVirtualDictSRPlusPlusPlusTask(RLTask):
     def __init__(
         self,
         name: str,                # name of the Task
@@ -38,8 +38,11 @@ class MFP2DGoToXYVirtualDictSRTask(RLTask):
 
         # Platform parameters
         self.mass = self._task_cfg["env"]["mass"]
-        self.thrust_force = self._task_cfg["env"]["thrustForce"]
         self.dt = self._task_cfg["sim"]["dt"]
+        self.max_thrust = self._platform_cfg["max_thrust_force"]
+        self.min_thrust = self._platform_cfg["min_thrust_force"]
+        self.rand_theta = self._platform_cfg["rand_theta"]
+        self.rand_radius = self._platform_cfg["rand_radius"]
         # Task parameters
         self.xy_tolerance = self._task_cfg["env"]["task_parameters"]["XYTolerance"]
         self.kill_after_n_steps_in_tolerance = self._task_cfg["env"]["task_parameters"]["KillAfterNStepsInTolerance"]
@@ -59,7 +62,7 @@ class MFP2DGoToXYVirtualDictSRTask(RLTask):
         self.use_exponential_rewards = self._task_cfg["env"]["learn"]["UseExponentialRewards"]
 
         self._num_observations = 18
-        self._max_actions = compute_num_actions(self._platform_cfg)
+        self._max_actions = 10#compute_num_actions(self._platform_cfg)
 
         self.observation_space = spaces.Dict({"state":spaces.Box(np.ones(self.num_observations) * -np.Inf, np.ones(self.num_observations) * np.Inf),
                                               "transforms":spaces.Box(low=-1, high=1, shape=(self._num_actions, 5)),
@@ -81,14 +84,13 @@ class MFP2DGoToXYVirtualDictSRTask(RLTask):
 
         RLTask.__init__(self, name, env)
 
-        self.thrust_max = torch.tensor(self.thrust_force, device=self._device, dtype=torch.float32)
-
         self.target_positions = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
         self.target_positions[:, 2] = 1
         self.current_transforms = torch.zeros((self._num_envs, self._num_actions, 5), device=self._device, dtype=torch.float32)
         self.transforms2D = torch.zeros((self._num_envs, self._num_actions, 3, 3), device=self._device, dtype=torch.float32)
         self.actions = torch.zeros((self._num_envs, self._num_actions), device=self._device, dtype=torch.float32)
         self.thrusters_state = torch.ones([self._num_envs, self._max_actions], device=self._device, dtype=torch.long)
+        self.thrusters_force = torch.ones([self._num_envs, self._max_actions], device=self._device, dtype=torch.long)
         self.action_masks = torch.ones([self._num_envs, self._num_actions], device=self._device, dtype=torch.long)
         self.sorted_thruster_indices = torch.zeros((self._num_envs, self._num_actions), device=self._device, dtype=torch.long)
         self.goal_reached = torch.zeros((self._num_envs), device=self._device, dtype=torch.int32)
@@ -212,7 +214,7 @@ class MFP2DGoToXYVirtualDictSRTask(RLTask):
 
         # Collect actions
         actions = actions.clone().to(self._device)
-        self.actions = actions
+        self.actions = actions * (1 - self.action_masks)
         # Remap actions to the correct values
         if self._discrete_actions=="MultiDiscrete":
             # If actions are multidiscrete [0, 1]
@@ -224,7 +226,7 @@ class MFP2DGoToXYVirtualDictSRTask(RLTask):
             raise NotImplementedError("")
         
         # Applies the thrust multiplier
-        thrusts = self.thrust_max * thrust_cmds
+        thrusts = self.thrusters_force * thrust_cmds
         # clear actions for reset envs
         thrusts[reset_env_ids] = 0
         T = self.transforms2D.expand(self._num_envs, self._num_actions, 3, 3)
@@ -278,33 +280,64 @@ class MFP2DGoToXYVirtualDictSRTask(RLTask):
         self._pins.set_world_poses(pin_pos[:, 0:3], self.initial_pin_rot[envs_long].clone(), indices=env_ids)
 
     def randomize_thruster_state(self, env_ids, num_envs):
-        random_offset = torch.rand(num_envs, device=self._device).view(-1,1).expand(num_envs, 8) * math.pi * 2
+        random_offset = torch.rand(self._num_envs, device=self._device).view(-1,1).expand(self._num_envs, 10) * math.pi * 2
+        thrust_offset1 = torch.arange(5, device=self._device).repeat_interleave(2).expand(self._num_envs//4, 10)/2 * math.pi * 2
+        thrust_offset2 = torch.arange(5, device=self._device).repeat_interleave(2).expand(self._num_envs//4, 10)/3 * math.pi * 2
+        thrust_offset3 = torch.arange(5, device=self._device).repeat_interleave(2).expand(self._num_envs//4, 10)/4 * math.pi * 2
+        thrust_offset4 = torch.arange(5, device=self._device).repeat_interleave(2).expand(self._num_envs//4, 10)/5 * math.pi * 2
+        thrust_offset = torch.cat([thrust_offset1, thrust_offset2, thrust_offset3, thrust_offset4], 0)
+        
+        thrust_90 = (torch.arange(2, device=self._device).repeat(5).expand(self._num_envs,10) * 2 - 1) * math.pi / 2 
+        mask1 = torch.ones((self._num_envs//4, 10), device=self._device)
+        mask2 = torch.ones((self._num_envs//4, 10), device=self._device)
+        mask3 = torch.ones((self._num_envs//4, 10), device=self._device)
+        mask4 = torch.ones((self._num_envs//4, 10), device=self._device)
+        mask1[:,4:] = 0
+        mask2[:,6:] = 0
+        mask3[:,8:] = 0
+        mask = torch.cat([mask1, mask2, mask3, mask4], 0)
 
-        thrust_offset = torch.arange(4, device=self._device).repeat_interleave(2).expand(num_envs, 8)/4 * math.pi * 2
-        thrust_90 = (torch.arange(2, device=self._device).repeat(4).expand(num_envs,8) * 2 - 1) * math.pi / 2 
-        theta = random_offset + thrust_offset + thrust_90
-        theta2 = random_offset + thrust_offset
-        self.transforms2D[env_ids,:,0,0] = torch.cos(theta)
-        self.transforms2D[env_ids,:,0,1] = torch.sin(-theta)
-        self.transforms2D[env_ids,:,1,0] = torch.sin(theta)
-        self.transforms2D[env_ids,:,1,1] = torch.cos(theta)
-        self.transforms2D[env_ids,:,2,0] = torch.cos(theta2) * 0.5
-        self.transforms2D[env_ids,:,2,1] = torch.sin(theta2) * 0.5
-        self.transforms2D[env_ids,:,2,2] = 1
+        rand_theta = torch.rand(self._num_envs, self._num_actions) * self.rand_theta * 2 - self.rand_theta
+        rand_radius = torch.rand(self._num_envs, self._num_actions) * self.rand_radius * 2 - self.rand_radius
 
-        self.action_masks[...] = 0
-        self.current_transforms[env_ids, :, 0] = torch.cos(theta)
-        self.current_transforms[env_ids, :, 1] = torch.sin(-theta)
-        self.current_transforms[env_ids, :, 2] = torch.cos(theta2) * 0.5
-        self.current_transforms[env_ids, :, 3] = torch.sin(theta2) * 0.5
-        self.current_transforms[env_ids, :, 4] = 1
+        theta = random_offset + thrust_offset + thrust_90 + rand_theta
+        theta2 = random_offset + thrust_offset + rand_theta
+
+        transforms2D = torch.zeros_like(self.transforms2D)
+        current_transforms = torch.zeros_like(self.current_transforms)
+        action_masks = torch.zeros_like(self.action_masks)
+        thrusters_force = torch.zeros_like(self.thrusters_force)
+
+        thrusters_force = torch.rand((self._num_envs, self._num_actions)) * (self.max_thrust - self.min_thrust) + self.min_thrust
+
+        transforms2D[:,:,0,0] = torch.cos(theta) * mask
+        transforms2D[:,:,0,1] = torch.sin(-theta) * mask
+        transforms2D[:,:,1,0] = torch.sin(theta) * mask
+        transforms2D[:,:,1,1] = torch.cos(theta) * mask
+        transforms2D[:,:,2,0] = torch.cos(theta2) * rand_radius * mask
+        transforms2D[:,:,2,1] = torch.sin(theta2) * rand_radius * mask
+        transforms2D[:,:,2,2] = 1 * mask
+
+        action_masks[...] = 1 - mask
+        current_transforms[:, :, 0] = torch.cos(theta) * mask
+        current_transforms[:, :, 1] = torch.sin(-theta) * mask
+        current_transforms[:, :, 2] = torch.cos(theta2) * 0.5 * mask
+        current_transforms[:, :, 3] = torch.sin(theta2) * 0.5 * mask
+        current_transforms[:, :, 4] = thrusters_force * mask
 
         # Shuffle
-        weights = torch.ones(self._max_actions, device=self._device).expand(num_envs, -1)
+        weights = torch.ones(self._max_actions, device=self._device).expand(self._num_envs, -1)
         selected_thrusters = torch.multinomial(weights, num_samples=self._num_actions, replacement=False)
 
-        self.transforms2D[env_ids] = torch.gather(self.transforms2D[env_ids], 1, selected_thrusters.view(num_envs,self._num_actions, 1,1).expand(num_envs,8,3,3))
-        self.current_transforms[env_ids] = torch.gather(self.current_transforms[env_ids], 1, selected_thrusters.view(num_envs,self._num_actions, 1).expand(num_envs,8,5))
+        transforms2D = torch.gather(transforms2D, 1, selected_thrusters.view(self._num_envs,self._num_actions, 1,1).expand(self._num_envs,10,3,3))
+        current_transforms = torch.gather(current_transforms, 1, selected_thrusters.view(self._num_envs,self._num_actions, 1).expand(self._num_envs,10,5))
+        thrusters_force = torch.gather(thrusters_force, 1, selected_thrusters)
+        action_masks = torch.gather(action_masks, 1, selected_thrusters)
+
+        self.action_masks[env_ids] = action_masks[env_ids]
+        self.current_transforms[env_ids] = current_transforms[env_ids]
+        self.transforms2D[env_ids] = transforms2D[env_ids]
+        self.thrusters_force[env_ids] = thrusters_force[env_ids]
 
         #if self._min_actions == self._num_actions:
         #    self.sorted_thruster_indices[env_ids] = selected_thrusters

@@ -179,7 +179,8 @@ class CreatePlatform:
             self.thruster_standalones = []
             self.thruster_rings = [{"name": "ring1"}]
             self.thruster_grids = []
-        if "num_thrusters" in cfg.keys():
+
+        if "num_virtual_thrusters" in cfg.keys():
             self.num_virtual_thrusters = cfg["num_virtual_thrusters"]
         else:
             self.num_virtual_thrusters = -1

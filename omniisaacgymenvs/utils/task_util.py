@@ -51,6 +51,8 @@ def initialize_task(config, env, init_sim=True):
     from omniisaacgymenvs.tasks.MFP2D_go_to_xy_dict_RP import MFP2DGoToXYDictRPTask
     from omniisaacgymenvs.tasks.MFP2D_go_to_xy_dict_SR import MFP2DGoToXYDictSRTask
     from omniisaacgymenvs.tasks.MFP2D_go_to_xy_dict_SR_v2 import MFP2DGoToXYVirtualDictSRTask
+    from omniisaacgymenvs.tasks.MFP2D_go_to_xy_dict_SR_plus_v2 import MFP2DGoToXYVirtualDictSRPlusTask
+    from omniisaacgymenvs.tasks.MFP2D_go_to_xy_dict_SR_plus_plus_v2 import MFP2DGoToXYVirtualDictSRPlusPlusTask
     from omniisaacgymenvs.tasks.MFP2D_go_to_xy_crippled import MFP2DGoToXYCrippledTask
     from omniisaacgymenvs.tasks.MFP2D_go_to_pose import MFP2DGoToPoseTask
     from omniisaacgymenvs.tasks.MFP2D_go_to_pose_crippled import MFP2DGoToPoseCrippledTask
@@ -82,6 +84,8 @@ def initialize_task(config, env, init_sim=True):
         "MFP2DGoToXYDictRT": MFP2DGoToXYDictRPTask,
         "MFP2DGoToXYDictSR": MFP2DGoToXYDictSRTask,
         "MFP2DGoToXYVirtualDictSR": MFP2DGoToXYVirtualDictSRTask,
+        "MFP2DGoToXYVirtualDictSRPlus": MFP2DGoToXYVirtualDictSRPlusTask,
+        "MFP2DGoToXYVirtualDictSRPlusPlus": MFP2DGoToXYVirtualDictSRPlusPlusTask,
         "MFP2DGoToXYCrippled": MFP2DGoToXYCrippledTask,
         "MFP2DGoToPose": MFP2DGoToPoseTask,
         "MFP2DGoToPoseCrippled": MFP2DGoToPoseCrippledTask,
