@@ -59,6 +59,7 @@ def initialize_task(config, env, init_sim=True):
     from omniisaacgymenvs.tasks.MFP2D_track_xy_vel import MFP2DTrackXYVelocityTask
     from omniisaacgymenvs.tasks.MFP2D_track_xyo_vel import MFP2DTrackXYOVelocityTask
     from omniisaacgymenvs.tasks.MFP2D_track_xy_vel_match_heading import MFP2DTrackXYVelocityMatchHeadingTask
+    from omniisaacgymenvs.tasks.MFP2D_Virtual import MFP2DVirtual
 
     # Mappings from strings to environments
     task_map = {
@@ -92,6 +93,7 @@ def initialize_task(config, env, init_sim=True):
         "MFP2DTrackXYVelocity": MFP2DTrackXYVelocityTask,
         "MFP2DTrackXYOVelocity": MFP2DTrackXYOVelocityTask,
         "MFP2DTrackXYVelocityMatchHeading": MFP2DTrackXYVelocityMatchHeadingTask,
+        "MFP2DVirtual":MFP2DVirtual,
     }
 
     cfg = sim_config.config
