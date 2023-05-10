@@ -19,15 +19,17 @@ env:
   clipActions: 1.0
 
   task_parameters: 
-    x_y_tolerance: 0.01
-    kill_after_n_steps_in_tolerance: 50 # 10seconds
-    max_spawn_dist: 4.0
-    min_spawn_dist: 0.5
-    kill_dist: 5.0
+    - name: GoToXY
+      x_y_tolerance: 0.01
+      kill_after_n_steps_in_tolerance: 50 # 10seconds
+      max_spawn_dist: 4.0
+      min_spawn_dist: 0.5
+      kill_dist: 5.0
 
   reward_parameters:
-    reward_mode: exponential
-    exponential_reward_coeff: 0.25
+    - name: GoToXY
+      reward_mode: exponential
+      exponential_reward_coeff: 0.25
 
   platform:
     max_thrusters: 8

@@ -18,21 +18,23 @@ env:
   clipObservations: {state: 5.0}
   clipActions: 1.0
 
-  task_parameters: 
-    x_y_tolerance: 0.01
-    heading_tolerance: 0.025
-    kill_after_n_steps_in_tolerance: 50 # 10seconds
-    max_spawn_dist: 2.5
-    min_spawn_dist: 0.25
-    kill_dist: 3.0
+  task_parameters:
+    - name: GoToPose
+      x_y_tolerance: 0.01
+      heading_tolerance: 0.025
+      kill_after_n_steps_in_tolerance: 50 # 10seconds
+      max_spawn_dist: 4.0
+      min_spawn_dist: 0.5
+      kill_dist: 5.0
 
   reward_parameters:
-    position_reward_mode: exponential
-    heading_reward_mode: exponential
-    position_exponential_reward_coeff: 0.25
-    heading_exponential_reward_coeff: 0.25
-    position_scale: 1.0
-    heading_scale: 1.0
+    - name: GoToPose
+      position_reward_mode: exponential
+      heading_reward_mode: exponential
+      position_exponential_reward_coeff: 0.25
+      heading_exponential_reward_coeff: 0.25
+      position_scale: 1.0
+      heading_scale: 1.0
 
   platform:
     max_thrusters: 8
