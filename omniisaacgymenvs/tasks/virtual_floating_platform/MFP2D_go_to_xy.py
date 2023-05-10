@@ -41,7 +41,7 @@ class GoToXYTask(Core):
         # Rewards
         self.position_reward = self._reward_parameters.compute_reward(current_state, actions, self.position_dist)
     
-        return self.position_reward, self.position_dist
+        return self.position_reward
     
     def update_kills(self):
         die = torch.zeros_like(self._goal_reached, dtype=torch.long)

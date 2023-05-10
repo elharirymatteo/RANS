@@ -34,12 +34,12 @@ class GoToPoseTask(Core):
         # position distance
         self._position_error = self._target_positions - current_state["position"]
         # heading distance
-        heading = torch.arctan2(current_state["heading"][:,1], current_state["heading"][:, 0])
+        heading = torch.arctan2(current_state["orientation"][:,1], current_state["orientation"][:, 0])
         self._heading_error = torch.arctan2(torch.sin(self._target_headings - heading), torch.cos(self._target_headings - heading))
         # Encode task data
         self._task_data[:,:2] = self._position_error
-        self._task_data[:, 3] = torch.cos(self._heading_error)
-        self._task_data[:, 4] = torch.sin(self._heading_error)
+        self._task_data[:, 2] = torch.cos(self._heading_error)
+        self._task_data[:, 3] = torch.sin(self._heading_error)
         return self.update_observation_tensor(current_state)
 
     def compute_reward(self, current_state, actions):
@@ -57,7 +57,7 @@ class GoToPoseTask(Core):
         # rewards
         self.position_reward, self.heading_reward = self._reward_parameters.compute_reward(current_state, actions, self.position_dist, self.heading_dist)
 
-        return self.position_reward + self.heading_reward, self.position_error + self._heading_error
+        return self.position_reward + self.heading_reward
     
     def update_kills(self):
         die = torch.zeros_like(self._goal_reached, dtype=torch.long)

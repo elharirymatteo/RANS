@@ -308,7 +308,7 @@ class MFP2DVirtual(RLTask):
             self.episode_sums[key][env_ids] = 0.
 
     def calculate_metrics(self) -> None:
-        position_reward, target_dist = self.task.compute_reward(self.current_state, self.actions)
+        position_reward = self.task.compute_reward(self.current_state, self.actions)
         #print(target_dist[0], position_reward[0])
         self.rew_buf[:] = position_reward
         self.episode_sums = self.task.update_statistics(self.episode_sums)
