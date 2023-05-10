@@ -3,8 +3,8 @@ from omniisaacgymenvs.robots.articulations.MFP2D_virtual_thrusters import Modula
 from omniisaacgymenvs.robots.articulations.views.mfp2d_virtual_thrusters_view import ModularFloatingPlatformView
 from omniisaacgymenvs.utils.pin import VisualPin
 
-from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_go_to_xy import GoToXYTask
-from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_go_to_pose import GoToPoseTask
+from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_thruster_generator import VirtualPlatform
+from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_factory import task_factory
 
 from omni.isaac.core.utils.torch.rotations import *
 from omni.isaac.core.prims import XFormPrimView
@@ -47,11 +47,15 @@ class MFP2DVirtual(RLTask):
         self._min_actions              = self._task_cfg["env"]["platform"]["min_thrusters"]
         self.thrust_max              = self._task_cfg["env"]["platform"]["max_thrust_force"]
         self._num_actions              = self._max_actions
-
+        task_cfg = list(self._task_cfg["env"]["task_parameters"])[0]
+        reward_cfg = list(self._task_cfg["env"]["reward_parameters"])[0]
+        print(task_cfg)
+        print(reward_cfg)
         self._num_observations = 1
         RLTask.__init__(self, name, env)
-        self.task = GoToXYTask(self._task_cfg["env"]["task_parameters"], self._task_cfg["env"]["reward_parameters"], self._num_envs, self._device)
-        self._num_observations = self.task._num_observations
+        self.task = task_factory.get(task_cfg, reward_cfg, self._num_envs, self._device)
+        self.virtual_platform = VirtualPlatform(self._num_envs, self._max_actions, self._device)
+        self._num_observations = 10#self.task._num_observations
 
         self.observation_space = spaces.Dict({"state":spaces.Box(np.ones(self._num_observations) * -np.Inf, np.ones(self._num_observations) * np.Inf),
                                               "transforms":spaces.Box(low=-1, high=1, shape=(self._max_actions, 5)),
@@ -71,9 +75,6 @@ class MFP2DVirtual(RLTask):
         self._fp_position = torch.tensor([0, 0., 0.5])
         self._ball_position = torch.tensor([0, 0, 1.0])
 
-        self.current_transforms = torch.zeros((self._num_envs, self._max_actions, 5), device=self._device, dtype=torch.float32)
-        self.transforms2D = torch.zeros((self._num_envs, self._max_actions, 3, 3), device=self._device, dtype=torch.float32)
-        self.action_masks = torch.ones([self._num_envs, self._max_actions], device=self._device, dtype=torch.long)
         self.actions = torch.zeros((self._num_envs, self._max_actions), device=self._device, dtype=torch.float32)
         self.heading = torch.zeros((self._num_envs, 2), device=self._device, dtype=torch.float32)
 
@@ -136,28 +137,72 @@ class MFP2DVirtual(RLTask):
             color=color)
 
     def update_state(self) -> None:
-        root_pos, root_quats = self._platforms.get_world_poses(clone=False)
-        root_velocities = self._platforms.get_velocities(clone=False)
+        root_pos, root_quats = self._platforms.get_world_poses(clone=True)
+        root_velocities = self._platforms.get_velocities(clone=True)
         root_positions = root_pos - self._env_pos
         # Cast quaternion to Yaw
+        #print("==== debugging obs ====")
+        #print("quat", root_quats[0])
+        #rot_x = quat_axis(root_quats, 0)
+        #rot_y = quat_axis(root_quats, 1)
+        #rot_z = quat_axis(root_quats, 2)
+        #print("rot_x", rot_x[0])
+        #print("rot_y", rot_y[0])
+        #print("rot_z", rot_z[0])
         siny_cosp = 2 * (root_quats[:,0] * root_quats[:,3] + root_quats[:,1] * root_quats[:,2])
         cosy_cosp = 1 - 2 * (root_quats[:,2] * root_quats[:,2] + root_quats[:,3] * root_quats[:,3])
         orient_z = torch.arctan2(siny_cosp, cosy_cosp)
+        #print("heading", orient_z[0])
         self.heading[:,0] = torch.cos(orient_z)
         self.heading[:,1] = torch.sin(orient_z)
+        #print("heading cos sin", self.heading[0])
+        # Dump to state
         self.current_state = {"position":root_positions[:,:2], "orientation": self.heading, "linear_velocity": root_velocities[:,:2], "angular_velocity":root_velocities[:,-1]}
 
     def get_observations(self) -> dict:
         # implement logic to retrieve observation states
         self.update_state()
         # Get the state
-        self.obs_buf["state"] = self.task.get_state_observations(self.current_state)
-        # Get thruster transforms
-        self.obs_buf["transforms"] = self.current_transforms
-        # Get the action masks
-        self.obs_buf["masks"] = self.action_masks
+        tmp = self.task.get_state_observations(self.current_state)
+        #tmp2 = torch.zeros((self._num_envs, self._num_observations), dtype=torch.float32, device=self._device)
+        #self.obs_buf["state"] = self.task.get_state_observations(self.current_state)
 
-        print(self.obs_buf["state"][0])
+        #print("obs1", tmp[0])
+        #print("obs2", tmp[1])
+        #print("obs3", tmp[2])
+
+        #self.root_pos, self.root_rot = self._platforms.get_world_poses(clone=False)
+        #self.root_velocities = self._platforms.get_velocities(clone=False)
+        #root_positions = self.root_pos - self._env_pos
+        #root_quats = self.root_rot
+        ## Get distance to the goal
+        #tmp2[..., 6:8] = self.task._target_positions - root_positions[:, :2]
+        ##self.obs_buf["state"][..., 2] = 0
+        ## Get rotation matrix from quaternions
+        #rot_x = quat_axis(root_quats, 0)
+        #rot_y = quat_axis(root_quats, 1)
+        #rot_z = quat_axis(root_quats, 2)
+        #tmp2[..., 0:2] = rot_x[:,:2]
+        ##self.obs_buf["state"][..., 6:9] = 0
+        ##self.obs_buf["state"][..., 9:12] = 0
+        ## Get velocities in the world frame 
+        #root_linvels = self.root_velocities[:, :3]
+        #root_angvels = self.root_velocities[:, 3:]
+        #tmp2[..., 2:4] = root_linvels[:,:2]
+        #tmp2[..., 4] = root_angvels[:,-1]
+        #tmp2[..., 5] = 0
+        #tmp2[..., 8:10] =0 
+        ##self.obs_buf["state"][..., 15:17] = 0
+        ##print("obs1", self.obs_buf["state"][0])
+        ##print("obs2", self.obs_buf["state"][1])
+        ##print("obs3", self.obs_buf["state"][2])
+        #print(torch.sum(torch.abs(tmp - tmp2),0))
+        #print(tmp.dtype, tmp2.dtype)
+        self.obs_buf["state"] = tmp
+        # Get thruster transforms
+        self.obs_buf["transforms"] = self.virtual_platform.current_transforms
+        # Get the action masks
+        self.obs_buf["masks"] = self.virtual_platform.action_masks
 
         observations = {
             self._platforms.name: {
@@ -198,25 +243,11 @@ class MFP2DVirtual(RLTask):
         thrusts = self.thrust_max * thrust_cmds
         # clear actions for reset envs
         thrusts[reset_env_ids] = 0
-        T = self.transforms2D.expand(self._num_envs, self._max_actions, 3, 3)
-        I = torch.arange(self._num_envs*self._max_actions)
 
-        R = T[:, :, :2,:2]
-        O = T[:, :, 2,:2]
-        z = torch.zeros((O.shape[0],self._max_actions,1), device = self._device)
-        O = torch.cat([O,z], dim=-1)
-        R = R.reshape(-1,2,2)
-        O = O.reshape(-1,3)
-        
-        A = thrusts.reshape(-1,1)
-        y = torch.zeros_like(thrusts.reshape(-1,1))
-        A = torch.cat([A,y],dim=-1)
-        A = torch.matmul(R, A.view(self._num_envs*self._max_actions,2,1))
-        z = torch.zeros_like(thrusts.reshape(-1,1))
-        A = torch.cat([A[:,:,0],z],dim=-1)
+        positions, forces = self.virtual_platform.project_forces(thrusts)
 
         # Apply forces
-        self._platforms.thrusters.apply_forces_and_torques_at_pos(forces=A, positions=O, indices=I, is_global=False)
+        self._platforms.thrusters.apply_forces_and_torques_at_pos(forces=forces, positions=positions, is_global=False)
         return
 
     def post_reset(self):
@@ -245,36 +276,11 @@ class MFP2DVirtual(RLTask):
         # Apply the new goals
         self._pins.set_world_poses(target_positions[env_long], target_orientation[env_long], indices=env_long)
 
-    def randomize_thruster_state(self, env_ids, num_envs):
-        random_offset = torch.ones((num_envs), device=self._device).view(-1,1).expand(num_envs, 8) * math.pi / 4
-        thrust_offset = torch.arange(4, device=self._device).repeat_interleave(2).expand(num_envs, 8)/4 * math.pi * 2
-        thrust_90 = (torch.arange(2, device=self._device).repeat(4).expand(num_envs,8) * 2 - 1) * math.pi / 2 
-        mask = torch.ones((num_envs, 8), device=self._device)
-
-        theta = random_offset + thrust_offset + thrust_90
-        theta2 = random_offset + thrust_offset
-
-        self.transforms2D[env_ids,:,0,0] = torch.cos(theta) * mask
-        self.transforms2D[env_ids,:,0,1] = torch.sin(-theta) * mask
-        self.transforms2D[env_ids,:,1,0] = torch.sin(theta) * mask
-        self.transforms2D[env_ids,:,1,1] = torch.cos(theta) * mask
-        self.transforms2D[env_ids,:,2,0] = torch.cos(theta2) * 0.5 * mask
-        self.transforms2D[env_ids,:,2,1] = torch.sin(theta2) * 0.5 * mask
-        self.transforms2D[env_ids,:,2,2] = 1 * mask
-
-        self.action_masks[env_ids, :] = 1 - mask.long()
-
-        self.current_transforms[env_ids, :, 0] = torch.cos(theta) * mask
-        self.current_transforms[env_ids, :, 1] = torch.sin(-theta) * mask
-        self.current_transforms[env_ids, :, 2] = torch.cos(theta2) * 0.5 * mask
-        self.current_transforms[env_ids, :, 3] = torch.sin(theta2) * 0.5 * mask
-        self.current_transforms[env_ids, :, 4] = 1 * mask
-
     def reset_idx(self, env_ids):
         num_resets = len(env_ids)
         # Resets the counter of steps for which the goal was reached
         self.task.reset(env_ids)
-        self.randomize_thruster_state(env_ids, num_resets)
+        self.virtual_platform.randomize_thruster_state(env_ids, num_resets)
         # Randomizes the starting position of the platform within a disk around the target
         root_pos, root_rot = self.task.get_spawns(env_ids, self.initial_root_pos.clone(), self.initial_root_rot.clone())
         # Resets the states of the joints
@@ -303,7 +309,7 @@ class MFP2DVirtual(RLTask):
 
     def calculate_metrics(self) -> None:
         position_reward, target_dist = self.task.compute_reward(self.current_state, self.actions)
-        print(target_dist[0], position_reward[0])
+        #print(target_dist[0], position_reward[0])
         self.rew_buf[:] = position_reward
         self.episode_sums = self.task.update_statistics(self.episode_sums)
 
