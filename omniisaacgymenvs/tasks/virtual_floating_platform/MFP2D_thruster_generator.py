@@ -117,9 +117,28 @@ class VirtualPlatform:
             mask = torch.cat([mask1, mask2, mask3, mask4], 0)
         else:
             # Generates N, two by two thruster
-            thrust_offset = torch.arange(self.thruster_cfg.num_anchors, device=self._device).repeat_interleave(2).expand(num_envs, self._max_thrusters)/self.thruster_cfg.num_anchors * math.pi * 2
+            thrust_offset = torch.arange(self.thruster_cfg.num_anchors, device=self._device).repeat_interleave(2).expand(self._num_envs, self._max_thrusters)/self.thruster_cfg.num_anchors * math.pi * 2
             # Generates a mask indicating if the thrusters are usable or not. Used by the transformer to mask the sequence.
             mask = torch.ones((self._num_envs, self._max_thrusters), device=self._device)
+
+        # Kill thrusters:
+        if self.rand_cfg.kill_thrusters:
+            # Generates 0 and 1 to decide how many thrusters will be killed
+            weights = torch.ones((num_envs, 2), device=self._device)
+            idx2 = torch.multinomial(weights, num_samples=self.rand_cfg.max_thruster_kill, replacement=True)
+            # Selects L indices to set to N+1
+            weights = torch.ones(self._num_actions, device=self._device).expand(num_envs, -1)
+            idx3 = torch.multinomial(weights, num_samples=self.rand_cfg.max_thruster_kill, replacement=False)
+            # Creates a mask from both:
+            idx4 = idx2*idx3 + (1 - idx2)*self._max_thrusters
+            kill_mask = torch.sum(torch.nn.functional.one_hot(idx4, self._max_thrusters+1),dim=1)
+            # Removes the duplicates
+            kill_mask = kill_mask[:,:self._num_actions]
+
+            if self.thruster_cfg.use_four_configurations:
+                mask[self._num_envs//4:] = mask[self._num_envs//4:] * kill_mask[self._num_envs//4:]
+            else:
+                mask = mask * kill_mask
 
         # Thruster angle
         theta = random_offset + thrust_offset + thrust_90
