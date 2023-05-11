@@ -1,38 +1,6 @@
-# Copyright (c) 2018-2022, NVIDIA Corporation
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#
-# 1. Redistributions of source code must retain the above copyright notice, this
-#    list of conditions and the following disclaimer.
-#
-# 2. Redistributions in binary form must reproduce the above copyright notice,
-#    this list of conditions and the following disclaimer in the documentation
-#    and/or other materials provided with the distribution.
-#
-# 3. Neither the name of the copyright holder nor the names of its
-#    contributors may be used to endorse or promote products derived from
-#    this software without specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-
 from typing import Optional
 
 from omni.isaac.core.robots.robot import Robot
-from omni.isaac.core.utils.nucleus import get_assets_root_path
-from omni.isaac.core.utils.stage import add_reference_to_stage
-#from omni.isaac.core.materials import PreviewSurface
 
 import numpy as np
 import torch
@@ -42,9 +10,11 @@ import dataclasses
 import omni
 import math
 from pxr import Gf
-from scipy.spatial.transform import Rotation as SSTR
 
 from omniisaacgymenvs.robots.articulations.utils.MFP_utils import *
+from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_thruster_generator import compute_actions
+from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_core import parse_data_dict
+from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_thruster_generator import ConfigurationParameters
 
 class CreatePlatform:
     def __init__(self, path, cfg):
@@ -57,11 +27,6 @@ class CreatePlatform:
         self.read_cfg(cfg)
 
     def read_cfg(self, cfg):
-        if "refinement" in cfg.keys():
-            self.refinement = cfg["refinement"]
-        else:
-            self.refinement = 2
-
         if "core" in cfg.keys():
             if "shape" in cfg["core"].keys():
                 self.core_shape = cfg["core"]["shape"]
@@ -92,15 +57,19 @@ class CreatePlatform:
                 self.core_mass = cfg["core"]["mass"]
             else:
                 self.core_mass = 5.0
+            if "refinement" in cfg.keys():
+                self.refinement = cfg["refinement"]
+            else:
+                self.refinement = 2
         else:
                 self.core_shape = "sphere"
                 self.core_radius = 0.5
                 self.core_CoM = Gf.Vec3d([0,0,0])
                 self.core_mass = 5.0
+                self.refinement = 2
 
-
-        if "max_thrusters" in cfg.keys():
-            self.num_virtual_thrusters = cfg["max_thrusters"]
+        thruster_cfg = parse_data_dict(ConfigurationParameters(), cfg["configuration"])
+        self.num_virtual_thrusters = compute_actions(thruster_cfg)
 
     def build(self):
         # Creates articulation root and the Xforms to store materials/joints.

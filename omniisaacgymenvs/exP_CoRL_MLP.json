@@ -1,0 +1,192 @@
+{
+  "experiment111": {
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
+      "train": "MFP2D_PPOmulti_dict_MLP",
+      "experiment": "standard_fp_GoToXY_5kg_MLP_r0",
+      "headless": "True",
+      "num_envs": "4096",
+      "seed": 42,
+      "max_iterations": "2000"
+  },
+  "experiment112": {
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
+      "train": "MFP2D_PPOmulti_dict_MLP",
+      "experiment": "standard_fp_GoToXY_5kg_MLP_r1",
+      "headless": "True",
+      "num_envs": "4096",
+      "seed": 43,
+      "max_iterations": "2000"
+  },
+  "experiment113": {
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
+      "train": "MFP2D_PPOmulti_dict_MLP",
+      "experiment": "standard_fp_GoToXY_5kg_MLP_r2",
+      "headless": "True",
+      "num_envs": "4096",
+      "seed": 44,
+      "max_iterations": "2000"
+  },
+  "experiment114": {
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
+      "train": "MFP2D_PPOmulti_dict_MLP",
+      "experiment": "standard_fp_GoToXY_5kg_MLP_r3",
+      "headless": "True",
+      "num_envs": "4096",
+      "seed": 45,
+      "max_iterations": "2000"
+  },
+  "experiment115": {
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
+      "train": "MFP2D_PPOmulti_dict_MLP",
+      "experiment": "standard_fp_GoToXY_5kg_MLP_r4",
+      "headless": "True",
+      "num_envs": "4096",
+      "seed": 46,
+      "max_iterations": "2000"
+  },
+  "experiment121": {
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
+      "train": "MFP2D_PPOmulti_dict_MLP",
+      "experiment": "standard_fp_GoToXY_3kg_MLP_r0",
+      "task.env.platform.core.mass": "3.0",
+      "headless": "True",
+      "num_envs": "4096",
+      "seed": 42,
+      "max_iterations": "2000"
+  },
+  "experiment122": {
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
+      "train": "MFP2D_PPOmulti_dict_MLP",
+      "experiment": "standard_fp_GoToXY_3kg_MLP_r1",
+      "task.env.platform.core.mass": "3.0",
+      "headless": "True",
+      "num_envs": "4096",
+      "seed": 43,
+      "max_iterations": "2000"
+  },
+  "experiment123": {
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
+      "train": "MFP2D_PPOmulti_dict_MLP",
+      "experiment": "standard_fp_GoToXY_3kg_MLP_r2",
+      "task.env.platform.core.mass": "3.0",
+      "headless": "True",
+      "num_envs": "4096",
+      "seed": 44,
+      "max_iterations": "2000"
+  },
+  "experiment124": {
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
+      "train": "MFP2D_PPOmulti_dict_MLP",
+      "experiment": "standard_fp_GoToXY_3kg_MLP_r3",
+      "task.env.platform.core.mass": "3.0",
+      "headless": "True",
+      "num_envs": "4096",
+      "seed": 45,
+      "max_iterations": "2000"
+  },
+  "experiment125": {
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
+      "train": "MFP2D_PPOmulti_dict_MLP",
+      "experiment": "standard_fp_GoToXY_3kg_MLP_r4",
+      "task.env.platform.core.mass": "3.0",
+      "headless": "True",
+      "num_envs": "4096",
+      "seed": 46,
+      "max_iterations": "2000"
+  },
+  "experiment131": {
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
+      "train": "MFP2D_PPOmulti_dict_MLP",
+      "experiment": "standard_fp_GoToPose_5kg_MLP_r0",
+      "headless": "True",
+      "num_envs": "4096",
+      "seed": 42,
+      "max_iterations": "2000"
+  },
+  "experiment132": {
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
+      "train": "MFP2D_PPOmulti_dict_MLP",
+      "experiment": "standard_fp_GoToPose_5kg_MLP_r1",
+      "headless": "True",
+      "num_envs": "4096",
+      "seed": 43,
+      "max_iterations": "2000"
+  },
+  "experiment133": {
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
+      "train": "MFP2D_PPOmulti_dict_MLP",
+      "experiment": "standard_fp_GoToPose_5kg_MLP_r2",
+      "headless": "True",
+      "num_envs": "4096",
+      "seed": 44,
+      "max_iterations": "2000"
+  },
+  "experiment134": {
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
+      "train": "MFP2D_PPOmulti_dict_MLP",
+      "experiment": "standard_fp_GoToPose_5kg_MLP_r3",
+      "headless": "True",
+      "num_envs": "4096",
+      "seed": 45,
+      "max_iterations": "2000"
+  },
+  "experiment135": {
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
+      "train": "MFP2D_PPOmulti_dict_MLP",
+      "experiment": "standard_fp_GoToPose_5kg_MLP_r4",
+      "headless": "True",
+      "num_envs": "4096",
+      "seed": 46,
+      "max_iterations": "2000"
+  },
+  "experiment141": {
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
+      "train": "MFP2D_PPOmulti_dict_MLP",
+      "experiment": "standard_fp_GoToPose_3kg_MLP_r0",
+      "task.env.platform.core.mass": "3.0",
+      "headless": "True",
+      "num_envs": "4096",
+      "seed": 42,
+      "max_iterations": "2000"
+  },
+  "experiment142": {
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
+      "train": "MFP2D_PPOmulti_dict_MLP",
+      "experiment": "standard_fp_GoToPose_3kg_MLP_r1",
+      "task.env.platform.core.mass": "3.0",
+      "headless": "True",
+      "num_envs": "4096",
+      "seed": 43,
+      "max_iterations": "2000"
+  },
+  "experiment143": {
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
+      "train": "MFP2D_PPOmulti_dict_MLP",
+      "experiment": "standard_fp_GoToPose_3kg_MLP_r2",
+      "task.env.platform.core.mass": "3.0",
+      "headless": "True",
+      "num_envs": "4096",
+      "seed": 44,
+      "max_iterations": "2000"
+  },
+  "experiment144": {
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
+      "train": "MFP2D_PPOmulti_dict_MLP",
+      "experiment": "standard_fp_GoToPose_3kg_MLP_r3",
+      "task.env.platform.core.mass": "3.0",
+      "headless": "True",
+      "num_envs": "4096",
+      "seed": 45,
+      "max_iterations": "2000"
+  },
+  "experiment145": {
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
+      "train": "MFP2D_PPOmulti_dict_MLP",
+      "experiment": "standard_fp_GoToPose_3kg_MLP_r4",
+      "task.env.platform.core.mass": "3.0",
+      "headless": "True",
+      "num_envs": "4096",
+      "seed": 46,
+      "max_iterations": "2000"
+  }
+}

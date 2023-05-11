@@ -1,16 +1,69 @@
+from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_core import parse_data_dict
+from dataclasses import dataclass
 import torch
 import math
 
+@dataclass
+class ConfigurationParameters:
+    use_four_configurations: bool = False
+    num_anchors: int = 4
+    offset: float = math.pi/4
+    thrust_force: float = 1.0
+    visualize: bool = False
+    save_path: str = "thruster_configuration.png"
+
+    def __post_init__(self):
+        assert self.num_anchors > 1, "num_anchors must be larger or equal to 2."
+
+@dataclass
+class PlatformParameters:
+    mass: float = 5.0
+    radius: float = 0.25
+    refinement: int = 2
+    CoM: tuple = (0,0,0)
+    shape: str = "sphere"
+
+@dataclass
+class PlatformRandomization:
+    random_permutation: bool = False
+    random_offset: bool = False
+    randomize_thruster_position: bool = False
+    random_radius: float = 0.125
+    random_theta: float = 0.125
+    randomize_thrust_force: bool = False
+    min_thrust_force: float = 0.5
+    max_thrust_force: float = 1.0
+    kill_thrusters: bool = False
+    max_thruster_kill: int = 1
+
+def compute_actions(cfg_param: ConfigurationParameters):
+    if cfg_param.use_four_configurations:
+        return 10
+    else:
+        return cfg_param.num_anchors * 2
+
+
 class VirtualPlatform:
-    def __init__(self, num_envs, max_thrusters, device):
+    def __init__(self, num_envs, platform_cfg, device):
         self._num_envs = num_envs
         self._device = device
-        self._max_thrusters = max_thrusters
 
-        self.transforms2D = torch.zeros((num_envs, max_thrusters, 3, 3), device=self._device, dtype=torch.float32)
-        self.current_transforms = torch.zeros((num_envs, max_thrusters, 5), device=self._device, dtype=torch.float32)
-        self.action_masks = torch.zeros((num_envs, max_thrusters), device=self._device, dtype=torch.long)        
+        self.core_cfg = parse_data_dict(PlatformParameters(), platform_cfg["core"])
+        self.rand_cfg = parse_data_dict(PlatformRandomization(), platform_cfg["randomization"])
+        self.thruster_cfg = parse_data_dict(ConfigurationParameters(), platform_cfg["configuration"])
+
+        self._max_thrusters = compute_actions(self.thruster_cfg)
+
+        self.transforms2D = torch.zeros((num_envs, self._max_thrusters, 3, 3), device=self._device, dtype=torch.float32)
+        self.current_transforms = torch.zeros((num_envs, self._max_thrusters, 5), device=self._device, dtype=torch.float32)
+        self.action_masks = torch.zeros((num_envs, self._max_thrusters), device=self._device, dtype=torch.long)
+        self.thrust_force = torch.zeros((num_envs, self._max_thrusters), device=self._device, dtype=torch.float32)
+
         self.create_unit_vector()
+
+        if self.thruster_cfg.visualize:
+            self.generate_base_platforms(self._num_envs, torch.arange(self._num_envs))
+            self.visualize(self.thruster_cfg.save_path)
 
     def create_unit_vector(self):
         tmp_x = torch.ones((self._num_envs, self._max_thrusters, 1), device=self._device, dtype=torch.float32)
@@ -18,6 +71,8 @@ class VirtualPlatform:
         self.unit_vector = torch.cat([tmp_x, tmp_y], dim=-1)
 
     def project_forces(self, forces):
+        # Applies force scaling, applies action masking
+        rand_forces = forces * self.thrust_force * (1 - self.action_masks)
         # Split transforms into translation and rotation
         R = self.transforms2D[:,:,:2,:2].reshape(-1,2,2)
         T = self.transforms2D[:,:,2,:2].reshape(-1,2)
@@ -26,7 +81,7 @@ class VirtualPlatform:
         # Generate positions
         positions = torch.cat([T,zero], dim=-1)
         # Project forces
-        force_vector = self.unit_vector * forces.view(-1,self._max_thrusters,1)
+        force_vector = self.unit_vector * rand_forces.view(-1,self._max_thrusters,1)
         rotated_forces = torch.matmul(R.reshape(-1,2,2), force_vector.view(-1,2,1))
         projected_forces = torch.cat([rotated_forces[:,:,0], zero],dim=-1)
 
@@ -36,44 +91,126 @@ class VirtualPlatform:
         self.generate_base_platforms(num_resets, env_ids)
 
     def generate_base_platforms(self, num_envs, env_ids):
-        random_offset = torch.ones((num_envs), device=self._device).view(-1,1).expand(num_envs, 8) * math.pi / 4
-        thrust_offset = torch.arange(4, device=self._device).repeat_interleave(2).expand(num_envs, 8)/4 * math.pi * 2
-        thrust_90 = (torch.arange(2, device=self._device).repeat(4).expand(num_envs,8) * 2 - 1) * math.pi / 2 
-        mask = torch.ones((num_envs, 8), device=self._device)
+        # Generates a fixed offset between the heading and the first generated thruster
+        random_offset = torch.ones((self._num_envs), device=self._device).view(-1,1).expand(self._num_envs, self._max_thrusters) * math.pi / self.thruster_cfg.num_anchors
+        # Adds a random offset to each simulated platform between the heading and the first generated thruster
+        if self.rand_cfg.random_offset:
+            random_offset += torch.rand((self._num_envs), device=self._device).view(-1,1).expand(self._num_envs, self._max_thrusters) * math.pi * 2
+        # Generates a 180 degrees offset between two consecutive thruster (+/- 90 degrees).
+        thrust_90 = (torch.arange(2, device=self._device).repeat(self._max_thrusters//2).expand(self._num_envs, self._max_thrusters) * 2 - 1) * math.pi / 2 
+        # If four configurations, it generates platforms with 4, 6, 8, and 10 thrusters.
+        if self.thruster_cfg.use_four_configurations:
+            # Generates N, two by two thruster
+            thrust_offset1 = torch.arange(5, device=self._device).repeat_interleave(2).expand(self._num_envs//4, self._max_thrusters)/2 * math.pi * 2
+            thrust_offset2 = torch.arange(5, device=self._device).repeat_interleave(2).expand(self._num_envs//4, self._max_thrusters)/3 * math.pi * 2
+            thrust_offset3 = torch.arange(5, device=self._device).repeat_interleave(2).expand(self._num_envs//4, self._max_thrusters)/4 * math.pi * 2
+            thrust_offset4 = torch.arange(5, device=self._device).repeat_interleave(2).expand(self._num_envs//4, self._max_thrusters)/5 * math.pi * 2
+            thrust_offset = torch.cat([thrust_offset1, thrust_offset2, thrust_offset3, thrust_offset4], 0)
+            # Generates a mask indicating if the thrusters are usable or not. Used by the transformer to mask the sequence.
+            mask1 = torch.ones((self._num_envs//4, self._max_thrusters), device=self._device)
+            mask2 = torch.ones((self._num_envs//4, self._max_thrusters), device=self._device)
+            mask3 = torch.ones((self._num_envs//4, self._max_thrusters), device=self._device)
+            mask4 = torch.ones((self._num_envs//4, self._max_thrusters), device=self._device)
+            mask1[:,4:] = 0
+            mask2[:,6:] = 0
+            mask3[:,8:] = 0
+            mask = torch.cat([mask1, mask2, mask3, mask4], 0)
+        else:
+            # Generates N, two by two thruster
+            thrust_offset = torch.arange(self.thruster_cfg.num_anchors, device=self._device).repeat_interleave(2).expand(num_envs, self._max_thrusters)/self.thruster_cfg.num_anchors * math.pi * 2
+            # Generates a mask indicating if the thrusters are usable or not. Used by the transformer to mask the sequence.
+            mask = torch.ones((self._num_envs, self._max_thrusters), device=self._device)
 
+        # Thruster angle
         theta = random_offset + thrust_offset + thrust_90
+        # Thruster angular position with regards to the center of mass.
         theta2 = random_offset + thrust_offset
 
-        self.transforms2D[env_ids,:,0,0] = torch.cos(theta) * mask
-        self.transforms2D[env_ids,:,0,1] = torch.sin(-theta) * mask
-        self.transforms2D[env_ids,:,1,0] = torch.sin(theta) * mask
-        self.transforms2D[env_ids,:,1,1] = torch.cos(theta) * mask
-        self.transforms2D[env_ids,:,2,0] = torch.cos(theta2) * 0.5 * mask
-        self.transforms2D[env_ids,:,2,1] = torch.sin(theta2) * 0.5 * mask
-        self.transforms2D[env_ids,:,2,2] = 1 * mask
+        # Generates the transforms and masks
+        transforms2D = torch.zeros_like(self.transforms2D) # Used to project the forces
+        action_masks = torch.zeros_like(self.action_masks) # Used to mask actions
+        current_transforms = torch.zeros_like(self.current_transforms) # Used to feed to the transformer
 
-        self.action_masks[env_ids, :] = 1 - mask.long()
+        # Generates random 
+        if self.rand_cfg.max_thrust_force:
+            thrust_force = torch.rand((self._num_envs, self._max_thrusters), device=self._device) * (self.rand_cfg.max_thrust_force - self.rand_cfg.min_thrust_force) + self.rand_cfg.min_thrust_force
+        else:
+            thrust_force = torch.ones((self._num_envs, self._max_thrusters), device=self._device) 
 
-        self.current_transforms[env_ids, :, 0] = torch.cos(theta) * mask
-        self.current_transforms[env_ids, :, 1] = torch.sin(-theta) * mask
-        self.current_transforms[env_ids, :, 2] = torch.cos(theta2) * 0.5 * mask
-        self.current_transforms[env_ids, :, 3] = torch.sin(theta2) * 0.5 * mask
-        self.current_transforms[env_ids, :, 4] = 1 * mask
+        # Fills the values
+        transforms2D[:,:,0,0] = torch.cos(theta) * mask
+        transforms2D[:,:,0,1] = torch.sin(-theta) * mask
+        transforms2D[:,:,1,0] = torch.sin(theta) * mask
+        transforms2D[:,:,1,1] = torch.cos(theta) * mask
+        transforms2D[:,:,2,0] = torch.cos(theta2) * self.core_cfg.radius * mask
+        transforms2D[:,:,2,1] = torch.sin(theta2) * self.core_cfg.radius * mask
+        transforms2D[:,:,2,2] = 1 * mask
 
-    def visualize(self, env_ids, show=False, save=False, save_path=None):
-        pass
-        #from matplotlib import pyplot as plt
-        #R = self.transforms2D[env_ids, :, :2,:2]
-        #O = self.transforms2D[env_ids, :,  2,:2]
+        action_masks[:, :] = 1 - mask.long()
 
-        #torch.ones()
-        #x = torch.ones([num_envs, 8, 1])
-        #y = torch.zeros([num_envs, 8, 1])
-        #xy = torch.cat([x,y],dim=-1)
+        current_transforms[:, :, 0] = torch.cos(theta) * mask
+        current_transforms[:, :, 1] = torch.sin(-theta) * mask
+        current_transforms[:, :, 2] = torch.cos(theta2) * 0.5 * mask
+        current_transforms[:, :, 3] = torch.sin(theta2) * 0.5 * mask
+        current_transforms[:, :, 4] = thrust_force * mask
 
-        #uv = torch.matmul(R.reshape(-1,2,2),xy.view(num_envs*8,2,1))
-        #plt.quiver(Op[0,:,0], Op[0,:,1], uvp[:,0,0], uvp[:,1,0], scale=2, scale_units='xy', angles='xy')
-        #plt.xlim([-1,1])
-        #plt.ylim([-1,1])
-        #plt.show()
+        # Applies random permutations to the thrusters while keeping the non-used thrusters at the end of the sequence.
+        if self.rand_cfg.random_permutation:
+            weights = torch.ones(self._max_thrusters, device=self._device).expand(self._num_envs, -1)
+            selected_thrusters = torch.multinomial(weights, num_samples=self._max_thrusters, replacement=False)
+            mask = torch.gather(1 - mask, 1, selected_thrusters)
+            _, sorted_idx = mask.sort(1)
+            selected_thrusters = torch.gather(selected_thrusters, 1, sorted_idx)
+
+            transforms2D = torch.gather(transforms2D, 1, selected_thrusters.view(self._num_envs,self._max_thrusters, 1,1).expand(self._num_envs,self._max_thrusters,3,3))
+            current_transforms = torch.gather(current_transforms, 1, selected_thrusters.view(self._num_envs,self._max_thrusters, 1).expand(self._num_envs,self._max_thrusters,5))
+            action_masks = torch.gather(action_masks, 1, selected_thrusters)
+            thrust_force = torch.gather(thrust_force, 1, selected_thrusters)
+
+        # Updates the proper indices 
+        self.thrust_force[env_ids] = thrust_force[env_ids]
+        self.action_masks[env_ids] = action_masks[env_ids]
+        self.current_transforms[env_ids] = current_transforms[env_ids]
+        self.transforms2D[env_ids] = transforms2D[env_ids]
+
+
+    def visualize(self, save_path=None):
+        from matplotlib import pyplot as plt
+        from matplotlib import cm
+        import numpy as np
+
+        # Creates a list of color
+        cmap = cm.get_cmap('hsv')
+        colors = []
+        for i in range(self._max_thrusters):
+            colors.append(cmap(i / self._max_thrusters))
+
+        # Split into 1/4th of the envs, so that we can visualize all the configs in use_four_configuration mode.
+        env_ids = [0, 1, 2, 3,
+                   self._num_envs//4, self._num_envs//4+1, self._num_envs//4+2, self._num_envs//4+3,
+                   2*self._num_envs//4, 2*self._num_envs//4+1, 2*self._num_envs//4+2, 2*self._num_envs//4+3,
+                   3*self._num_envs//4, 3*self._num_envs//4+1, 3*self._num_envs//4+2, 3*self._num_envs//4+3]
+        
+        # Generates a thrust on all the thrusters
+        forces = torch.ones((self._num_envs, self._max_thrusters), device=self._device, dtype=torch.float32)
+        # Project
+        p, f = self.project_forces(forces)
+        # Reshape and get only the 2D values for plot.
+        p = p.reshape(self._num_envs, self._max_thrusters, 3)[:,:,:2]
+        f = f.reshape(self._num_envs, self._max_thrusters, 3)[:,:,:2]
+        p = np.array(p.cpu())
+        f = np.array(f.cpu())
+
+        # Plot        
+        fig, axs = plt.subplots(4, 4)
+        fig.set_size_inches(20,20)
+        for i in range(4):
+            for j in range(4):
+                idx = env_ids[i*4 + j]
+                axs[i,j].quiver(p[idx,:,0], p[idx,:,1], f[idx,:,0], f[idx,:,1], color = colors, scale=4, scale_units='xy', angles='xy')
+                axs[i,j].set_xlim([-0.75, 0.75])
+                axs[i,j].set_ylim([-0.75, 0.75])
+        fig.tight_layout()
+        fig.savefig(save_path, dpi=300)
+        plt.close()
 

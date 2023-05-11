@@ -32,33 +32,32 @@ env:
       exponential_reward_coeff: 0.25
 
   platform:
-    max_thrusters: 8
-    min_thrusters: 8
-    min_thrust_force: 0.5
-    max_thrust_force: 1.0
-    rand_theta: 0.314
-    rand_radius: 0.25
-    random_permutation: 1
-    random_offset: 1
-    use_four_configurations: 1
+    randomization:
+      random_permutation: False
+      random_offset: False
+      randomize_thruster_position: False
+      random_radius: 0.125
+      random_theta: 0.125
+      randomize_thrust_force: False
+      min_thrust_force: 0.5
+      max_thrust_force: 1.0
+      kill_thrusters: False
+      max_thruster_kill: 1
 
-    refinement: 2
     core:
       mass: 5.0
       CoM: [0,0,0]
-      radius: 0.5
+      radius: 0.25
       shape: "sphere"
-    thrusters:
-      thruster_rings:
-        - name: "ring1"
-          num_anchors: 5
-          style: "dual"
-          ring_radius: 0.5
-          ring_offset: 0.75839816339
-          thruster_radius: 0.05
-          thruster_length: 0.1
-          thruster_mass: 0.00001
-          thruster_CoM: [0,0,0]
+      refinement: 2
+
+    configuration:
+      use_four_configurations: False
+      num_anchors: 4
+      offset: 0.75839816339
+      thrust_force: 1.0
+      visualize: True
+      save_path: "config.png"
 
 sim:
   dt: 0.02
