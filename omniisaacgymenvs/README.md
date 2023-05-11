@@ -6,7 +6,12 @@ This file aims at giving a coarse overview of how our code works.
 
 In the latest revision of the tasks, I created them all such that they share the same observation space:
 The observation space is structured like so:
+```python
+N: number of thrusters
 
+obs = {'state': 10, 'transforms': Nx5, 'masks': N}
+```
+The values stored inside the `state` are generated as follows:
 ```python
 # heading: The heading of the platform in the global frame
 # linear_velocity_x: The linear velocity along the x axis in the global frame
@@ -27,6 +32,12 @@ The observation space is structured like so:
 
 [cos(heading), sin(heading), linear_velocity_x, linear_velocity_y, angular_velocity_z, task_flag, task_data_1, task_data_2, task_data_3, task_data_4]
 ```
+The values stored inside the `transforms` are generated as follows:
+```python
+[[cos(thruster_angle), sin(thruster_angle), dx, dy, thrust_force], ...]
+```
+If some transforms are not used, if the thruster is killed for instance, then the values inside this array are all null.
+The sequence of transform is also organized such that the transforms that are disabled, or used as padding are sent at the end of the sequence.
 
 Hence since all task share the same observation space, they can all use the same meta-task. A task that will handle most of the simulation stuff code.
 This task is called `MFP2D_Virtual.py`. 
@@ -147,9 +158,9 @@ In `randomization` you can tune how the configuration will be perturbed:
 # Neural-networks: 
 For the new tasks we have three types of networks:
  - `MLP`: A simple MLP network. It uses the `state` as an input.
- - `MLP_thruster`: A simple MLP network. It uses the `state`, and the `action_mask` as an input. Unlike the regular transformer, it can observe the state of the thrusters.
- - `Transformer`: A transformer network. It uses the `transforms`, the `state`, and the `action_mask` as an input.
- - `Metamorph`: A transformer network. It uses the `transforms`, the `state`, and the `action_mask` as an input.
+ - `MLP_thruster`: A simple MLP network. It uses the `state`, and the `masks` as an input. Unlike the regular transformer, it can observe the state of the thrusters.
+ - `Transformer`: A transformer network. It uses the `transforms`, the `state`, and the `masks` as an input.
+ - `Metamorph`: A transformer network. It uses the `transforms`, the `state`, and the `masks` as an input.
 
 Examples of each of these networks can be seen here:
  - `cfg/train/MFP2D_PPOmulti_dict_MLP`
