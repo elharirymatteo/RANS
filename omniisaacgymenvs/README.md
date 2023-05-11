@@ -4,7 +4,7 @@ This file aims at giving a coarse overview of how our code works.
 
 ## How to start the tasks and tune them:
 
-In the latest revision of the tasks, I created them all such that they share the same observation space:
+In the latest revision of the tasks, I created them all such that they share the same observation space:\
 The observation space is structured like so:
 ```python
 N: number of thrusters
@@ -32,12 +32,15 @@ The values stored inside the `state` are generated as follows:
 
 [cos(heading), sin(heading), linear_velocity_x, linear_velocity_y, angular_velocity_z, task_flag, task_data_1, task_data_2, task_data_3, task_data_4]
 ```
+
 The values stored inside the `transforms` are generated as follows:
 ```python
 [[cos(thruster_angle), sin(thruster_angle), dx, dy, thrust_force], ...]
 ```
 If some transforms are not used, if the thruster is killed for instance, then the values inside this array are all null.
 The sequence of transform is also organized such that the transforms that are disabled, or used as padding are sent at the end of the sequence.
+
+The values stored inside the `masks` are 0 and 1 indicating if the thrusters are dead or not. 0 the thruster is enabled. 1 the thruster is disabled.
 
 Hence since all task share the same observation space, they can all use the same meta-task. A task that will handle most of the simulation stuff code.
 This task is called `MFP2D_Virtual.py`. 
