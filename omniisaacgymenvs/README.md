@@ -42,7 +42,7 @@ The sequence of transform is also organized such that the transforms that are di
 
 The values stored inside the `masks` are 0 and 1 indicating if the thrusters are dead or not. 0 the thruster is enabled. 1 the thruster is disabled.
 
-Hence since all task share the same observation space, they can all use the same meta-task. A task that will handle most of the simulation stuff code.
+Here, since all task share the same observation space, they can all use the same meta-task. A task that will handle most of the simulation stuff code.
 This task is called `MFP2D_Virtual.py`. 
 
 To start the correct task, it uses the parameters given inside the configuration.
