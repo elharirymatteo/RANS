@@ -28,7 +28,8 @@ class PlatformRandomization:
     random_permutation: bool = False
     random_offset: bool = False
     randomize_thruster_position: bool = False
-    random_radius: float = 0.125
+    min_random_radius: float = 0.125
+    max_random_radius: float = 0.25
     random_theta: float = 0.125
     randomize_thrust_force: bool = False
     min_thrust_force: float = 0.5
@@ -64,6 +65,7 @@ class VirtualPlatform:
         if self.thruster_cfg.visualize:
             self.generate_base_platforms(self._num_envs, torch.arange(self._num_envs))
             self.visualize(self.thruster_cfg.save_path)
+            exit(0)
 
     def create_unit_vector(self):
         tmp_x = torch.ones((self._num_envs, self._max_thrusters, 1), device=self._device, dtype=torch.float32)
@@ -142,37 +144,43 @@ class VirtualPlatform:
             else:
                 mask = mask * kill_mask
 
-        # Thruster angle
-        theta = random_offset + thrust_offset + thrust_90
-        # Thruster angular position with regards to the center of mass.
-        theta2 = random_offset + thrust_offset
 
         # Generates the transforms and masks
         transforms2D = torch.zeros_like(self.transforms2D) # Used to project the forces
         action_masks = torch.zeros_like(self.action_masks) # Used to mask actions
         current_transforms = torch.zeros_like(self.current_transforms) # Used to feed to the transformer
 
-        # Generates random 
-        if self.rand_cfg.max_thrust_force:
+        if self.rand_cfg.randomize_thrust_force:
             thrust_force = torch.rand((self._num_envs, self._max_thrusters), device=self._device) * (self.rand_cfg.max_thrust_force - self.rand_cfg.min_thrust_force) + self.rand_cfg.min_thrust_force
         else:
             thrust_force = torch.ones((self._num_envs, self._max_thrusters), device=self._device) 
+
+        # Thruster angular position with regards to the center of mass.
+        theta2 = random_offset + thrust_offset
+        # Generates random thruster positions if requested
+        if self.rand_cfg.randomize_thruster_position:
+            radius = self.core_cfg.radius * (1 + torch.rand((self._num_envs,self._max_thrusters), device=self._device)*(self.rand_cfg.max_random_radius + self.rand_cfg.min_random_radius) - self.rand_cfg.min_random_radius)
+            theta2 += torch.rand((self._num_envs, self._max_thrusters), device=self._device)*(self.rand_cfg.random_theta*2) - self.rand_cfg.random_theta
+        else:
+            radius = self.core_cfg.radius
+        # Thruster angle
+        theta = theta2 + thrust_90
 
         # Fills the values
         transforms2D[:,:,0,0] = torch.cos(theta) * mask
         transforms2D[:,:,0,1] = torch.sin(-theta) * mask
         transforms2D[:,:,1,0] = torch.sin(theta) * mask
         transforms2D[:,:,1,1] = torch.cos(theta) * mask
-        transforms2D[:,:,2,0] = torch.cos(theta2) * self.core_cfg.radius * mask
-        transforms2D[:,:,2,1] = torch.sin(theta2) * self.core_cfg.radius * mask
+        transforms2D[:,:,2,0] = torch.cos(theta2) * radius * mask
+        transforms2D[:,:,2,1] = torch.sin(theta2) * radius * mask
         transforms2D[:,:,2,2] = 1 * mask
 
         action_masks[:, :] = 1 - mask.long()
 
         current_transforms[:, :, 0] = torch.cos(theta) * mask
         current_transforms[:, :, 1] = torch.sin(-theta) * mask
-        current_transforms[:, :, 2] = torch.cos(theta2) * 0.5 * mask
-        current_transforms[:, :, 3] = torch.sin(theta2) * 0.5 * mask
+        current_transforms[:, :, 2] = torch.cos(theta2) * radius * mask
+        current_transforms[:, :, 3] = torch.sin(theta2) * radius * mask
         current_transforms[:, :, 4] = thrust_force * mask
 
         # Applies random permutations to the thrusters while keeping the non-used thrusters at the end of the sequence.
