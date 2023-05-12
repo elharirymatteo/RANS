@@ -54,3 +54,22 @@ class GoToPoseReward:
         else:
             raise ValueError("Unknown reward type.")
         return position_reward, heading_reward
+    
+@dataclass
+class TrackXYVelocityReward:
+    reward_mode: str = "linear"
+    exponential_reward_coeff: float = 0.25
+
+    def __post_init__(self):
+        assert self.reward_mode.lower() in ["linear", "square", "exponential"], "Linear, Square and Exponential are the only currently supported mode."
+
+    def compute_reward(self, current_state, actions, velocity_error):
+        if self.reward_mode.lower() == "linear":
+            velocity_reward = 1.0 / (1.0 + velocity_error)
+        elif self.reward_mode.lower() == "square":
+            velocity_reward = 1.0 / (1.0 + velocity_error*velocity_error)
+        elif self.reward_mode.lower() == "exponential":
+            velocity_reward = torch.exp(-velocity_error / self.exponential_reward_coeff)
+        else:
+            raise ValueError("Unknown reward type.")
+        return velocity_reward

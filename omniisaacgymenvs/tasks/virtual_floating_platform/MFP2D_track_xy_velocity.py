@@ -9,7 +9,7 @@ class TrackXYVelocityTask(Core):
     def __init__(self, task_param, reward_param, num_envs, device):
         super(TrackXYVelocityTask, self).__init__(num_envs, device)
         self._task_parameters = parse_data_dict(TrackXYVelocityParameters(), task_param)
-        self._reward_parameters = parse_data_dict(TrackXYVelocityXYReward(), reward_param)
+        self._reward_parameters = parse_data_dict(TrackXYVelocityReward(), reward_param)
 
         self._goal_reached = torch.zeros((self._num_envs), device=self._device, dtype=torch.int32)
         self._target_velocities = torch.zeros((self._num_envs, 2), device=self._device, dtype=torch.float32)
@@ -36,7 +36,7 @@ class TrackXYVelocityTask(Core):
         self.velocity_dist = torch.sqrt(torch.square(self._velocity_error).sum(-1))
 
         # Checks if the goal is reached
-        goal_is_reached = (self.velocity_dist < self._task_parameters.vel_tolerance).int()
+        goal_is_reached = (self.velocity_dist < self._task_parameters.lin_vel_tolerance).int()
         self._goal_reached *= goal_is_reached # if not set the value to 0
         self._goal_reached += goal_is_reached # if it is add 1
 
@@ -62,7 +62,7 @@ class TrackXYVelocityTask(Core):
 
     def get_goals(self, env_ids, targets_position, targets_orientation):
         num_goals = len(env_ids)
-        self._target_velocities[env_ids] = torch.rand((num_goals, 2), device=self._device)*self._task_parameters.goal_random_position*2 - self._task_parameters.goal_random_position
+        self._target_velocities[env_ids] = torch.rand((num_goals, 2), device=self._device)*self._task_parameters.goal_random_velocity*2 - self._task_parameters.goal_random_velocity
         return targets_position, targets_orientation
     
     def get_spawns(self, env_ids, initial_position, initial_orientation, step=0):

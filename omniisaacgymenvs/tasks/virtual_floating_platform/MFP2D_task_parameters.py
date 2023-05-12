@@ -54,3 +54,10 @@ class GoToPoseParameters:
             self.spawn_curriculum_mode = 0
             self.spawn_curriculum_warmup = 0
             self.spawn_curriculum_end = 0
+
+@dataclass
+class TrackXYVelocityParameters:
+    lin_vel_tolerance: float = 0.01
+    kill_after_n_steps_in_tolerance: int = 50
+    goal_random_velocity: float = 0.75
+    kill_dist: float = 500.0
