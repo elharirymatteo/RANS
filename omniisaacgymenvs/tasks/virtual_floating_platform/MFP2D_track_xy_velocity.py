@@ -32,7 +32,7 @@ class TrackXYVelocityTask(Core):
 
     def compute_reward(self, current_state, actions):
         # position error
-        self.position_dist = torch.sqrt(torch.square(self._velocity_error).sum(-1))
+        self.position_dist = torch.sqrt(torch.square(self._position_error).sum(-1))
         self.velocity_dist = torch.sqrt(torch.square(self._velocity_error).sum(-1))
 
         # Checks if the goal is reached
