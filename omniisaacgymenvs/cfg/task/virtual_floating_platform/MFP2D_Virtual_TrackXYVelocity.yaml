@@ -2,7 +2,7 @@
 name: MFP2DVirtual
 
 physics_engine: ${..physics_engine}
-experiment: MFP2D_Virtual_GoToXY
+experiment: MFP2D_Virtual_TrackXYVelocity
 
 # if given, will override the device setting in gym. 
 env:
