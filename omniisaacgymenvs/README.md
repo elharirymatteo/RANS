@@ -170,3 +170,30 @@ Examples of each of these networks can be seen here:
  - `cfg/train/MFP2D_PPOmulti_dict_MLP_thruster`
  - `cfg/train/MFP2D_PPOmulti_dict_Transformer`
  - `cfg/train/MFP2D_PPOmulti_dict_Metamorph`
+
+
+# Typical commands to run a training:
+
+Go to XY with regular MLP:
+`~/.local/share/ov/pkg/isaac_sim-2022.2.1/python.sh scripts/rlgames_train.py task=virtual_floating_platform/MFP2D_Virtual_GoToXY num_envs=4096 headless=True max_iterations=1000 task.sim.dt=0.02 train=MFP2D_PPOmulti_dict_MLP`
+
+Go to pose with regular MLP:
+`~/.local/share/ov/pkg/isaac_sim-2022.2.1/python.sh scripts/rlgames_train.py task=virtual_floating_platform/MFP2D_Virtual_GoToPose num_envs=4096 headless=True max_iterations=1000 task.sim.dt=0.02 train=MFP2D_PPOmulti_dict_MLP`
+
+Linear velocity tracking with regular MLP:
+`~/.local/share/ov/pkg/isaac_sim-2022.2.1/python.sh scripts/rlgames_train.py task=virtual_floating_platform/MFP2D_Virtual_TrackXYVelocity num_envs=4096 headless=True max_iterations=1000 task.sim.dt=0.02 train=MFP2D_PPOmulti_dict_MLP`
+
+Linear and angular velocity tracking with regular MLP:
+`~/.local/share/ov/pkg/isaac_sim-2022.2.1/python.sh scripts/rlgames_train.py task=virtual_floating_platform/MFP2D_Virtual_TrackXYOVelocity num_envs=4096 headless=True max_iterations=1000 task.sim.dt=0.02 train=MFP2D_PPOmulti_dict_MLP`
+
+Go to XY with thruster state aware MLP:
+`~/.local/share/ov/pkg/isaac_sim-2022.2.1/python.sh scripts/rlgames_train.py task=virtual_floating_platform/MFP2D_Virtual_GoToXY num_envs=4096 headless=True max_iterations=1000 task.sim.dt=0.02 train=MFP2D_PPOmulti_dict_MLP_thruster`
+
+Go to pose with thruster state aware MLP:
+`~/.local/share/ov/pkg/isaac_sim-2022.2.1/python.sh scripts/rlgames_train.py task=virtual_floating_platform/MFP2D_Virtual_GoToPose num_envs=4096 headless=True max_iterations=1000 task.sim.dt=0.02 train=MFP2D_PPOmulti_dict_MLP_thruster`
+
+Linear velocity tracking with thruster state aware MLP:
+`~/.local/share/ov/pkg/isaac_sim-2022.2.1/python.sh scripts/rlgames_train.py task=virtual_floating_platform/MFP2D_Virtual_TrackXYVelocity num_envs=4096 headless=True max_iterations=1000 task.sim.dt=0.02 train=MFP2D_PPOmulti_dict_MLP_thruster`
+
+Linear and angular velocity tracking with thruster state aware MLP:
+`~/.local/share/ov/pkg/isaac_sim-2022.2.1/python.sh scripts/rlgames_train.py task=virtual_floating_platform/MFP2D_Virtual_TrackXYOVelocity num_envs=4096 headless=True max_iterations=1000 task.sim.dt=0.02 train=MFP2D_PPOmulti_dict_MLP_thruster`
