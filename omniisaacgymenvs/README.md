@@ -154,7 +154,7 @@ In `randomization` you can tune how the configuration will be perturbed:
  - `ramdomize_thruster_position`: randomizes the position of the thrusters
  - `random_radius`: percentage of displacement relative to the reference distance between the thruster and the center of the platform.
  - `random_theta`: percentage of displacement relative to the reference theta position of the thruster.
- - `kill_thrusters`: kill random thrusters.
+ - `kill_thrusters`: kill random thrusters. /!\ When using the transformer, enable `random_permutation` as well. /!\
  - `max_thruster_kill`: how many thrusters can be killed at most.
 
 
