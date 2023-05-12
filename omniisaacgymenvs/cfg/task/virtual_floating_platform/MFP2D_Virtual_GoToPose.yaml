@@ -41,13 +41,14 @@ env:
       random_permutation: False
       random_offset: False
       randomize_thruster_position: False
-      random_radius: 0.125
-      random_theta: 0.125
+      min_random_radius: 0.125
+      max_random_radius: 0.5
+      random_theta: 0.39269908169872414 #2pi/16
       randomize_thrust_force: False
       min_thrust_force: 0.5
       max_thrust_force: 1.0
       kill_thrusters: False
-      max_thruster_kill: 1
+      max_thruster_kill: 2
 
     core:
       mass: 5.0
