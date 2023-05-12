@@ -42,7 +42,7 @@ env:
       randomize_thrust_force: False
       min_thrust_force: 0.5
       max_thrust_force: 1.0
-      kill_thrusters: True
+      kill_thrusters: False
       max_thruster_kill: 2
 
     core:
