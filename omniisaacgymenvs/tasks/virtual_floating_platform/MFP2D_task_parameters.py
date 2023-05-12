@@ -61,3 +61,12 @@ class TrackXYVelocityParameters:
     kill_after_n_steps_in_tolerance: int = 50
     goal_random_velocity: float = 0.75
     kill_dist: float = 500.0
+
+@dataclass
+class TrackXYOVelocityParameters:
+    lin_vel_tolerance: float = 0.01
+    ang_vel_tolerance: float = 0.025
+    kill_after_n_steps_in_tolerance: int = 50
+    goal_random_linear_velocity: float = 0.75
+    goal_random_angular_velocity: float = 1
+    kill_dist: float = 500.0

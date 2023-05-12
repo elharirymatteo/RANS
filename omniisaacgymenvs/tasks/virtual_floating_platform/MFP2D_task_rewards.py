@@ -73,3 +73,36 @@ class TrackXYVelocityReward:
         else:
             raise ValueError("Unknown reward type.")
         return velocity_reward
+
+@dataclass
+class TrackXYOVelocityReward:
+    linear_reward_mode: str = "linear"
+    angular_reward_mode: str = "linear"
+    linear_exponential_reward_coeff: float = 0.25
+    angular_exponential_reward_coeff: float = 0.25
+    linear_scale: float = 1.0
+    angular_scale: float = 1.0
+
+    def __post_init__(self):
+        assert self.linear_reward_mode.lower() in ["linear", "square", "exponential"], "Linear, Square and Exponential are the only currently supported mode."
+        assert self.angular_reward_mode.lower() in ["linear", "square", "exponential"], "Linear, Square and Exponential are the only currently supported mode."
+    
+    def compute_reward(self, current_state, actions, linear_velocity_error, angular_velocity_error):
+        if self.linear_reward_mode.lower() == "linear":
+            linear_reward = 1.0 / (1.0 + linear_velocity_error) * self.linear_scale
+        elif self.linear_reward_mode.lower() == "square":
+            linear_reward = 1.0 / (1.0 + linear_velocity_error) * self.linear_scale
+        elif self.linear_reward_mode.lower() == "exponential":
+            linear_reward = torch.exp( - linear_velocity_error / 0.25) * self.linear_scale
+        else:
+            raise ValueError("Unknown reward type.")
+
+        if self.angular_reward_mode.lower() == "linear":
+            angular_reward = 1.0 / (1.0 + angular_velocity_error)  * self.angular_scale
+        elif self.angular_reward_mode.lower() == "square":
+            angular_reward = 1.0 / (1.0 + angular_velocity_error)  * self.angular_scale
+        elif self.angular_reward_mode.lower() == "exponential":
+            angular_reward = torch.exp( - angular_velocity_error / 0.25) * self.angular_scale
+        else:
+            raise ValueError("Unknown reward type.")
+        return linear_reward, angular_reward

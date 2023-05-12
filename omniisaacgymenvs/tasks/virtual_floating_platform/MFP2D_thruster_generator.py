@@ -65,7 +65,6 @@ class VirtualPlatform:
         if self.thruster_cfg.visualize:
             self.generate_base_platforms(self._num_envs, torch.arange(self._num_envs))
             self.visualize(self.thruster_cfg.save_path)
-            exit(0)
 
     def create_unit_vector(self):
         tmp_x = torch.ones((self._num_envs, self._max_thrusters, 1), device=self._device, dtype=torch.float32)
