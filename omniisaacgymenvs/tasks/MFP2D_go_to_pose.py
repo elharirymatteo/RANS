@@ -281,8 +281,9 @@ class MFP2DGoToPoseTask(RLTask):
         # fill extras
         self.extras["episode"] = {}
         for key in self.episode_sums.keys():
-            self.extras["episode"][key] = torch.mean(
-                self.episode_sums[key][env_ids]) / self._max_episode_length
+            self.extras["episode"][key] = self.episode_sums[key]
+            # self.extras["episode"][key] = torch.mean(
+            #     self.episode_sums[key][env_ids]) / self._max_episode_length
             self.episode_sums[key][env_ids] = 0.
 
     def calculate_metrics(self) -> None:

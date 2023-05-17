@@ -16,9 +16,6 @@
         "asciidoc"
     ],
 
-    // This enables python language server. Seems to work slightly better than jedi:
-    "python.jediEnabled": false,
-
     // Those paths are automatically filled by build system, see `repo.toml` for configuration:
     "python.analysis.extraPaths": [
         "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.1/exts/omni.isaac.app.selector",
@@ -592,9 +589,10 @@
         "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.1/kit/extscore/usdrt.scenegraph",
         "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.1/kit/kernel/py",
         "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.1/kit/plugins/bindings-python",
+        "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.1/kit/python/lib/python3.7/site-packages/rl_games",
+        "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.1/exts/omni.isaac.ros_bridge/noetic/lib/python3.7/site-packages"
 ],
 
-    "python.languageServer": "Pylance",
     "python.defaultInterpreterPath": "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.1/kit/python/bin/python3",
     // python.pythonPath is deprecated
     // "python.pythonPath": "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.1/kit/python/bin/python3",

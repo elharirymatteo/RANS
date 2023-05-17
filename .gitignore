@@ -4,3 +4,6 @@ runs
 omniisaacgymenvs.egg-info/
 checkpoints
 omniisaacgymenvs/wandb
+evaluations
+*.png
+
