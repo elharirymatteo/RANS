@@ -66,12 +66,16 @@ class MyNode:
         import rospy
         from std_msgs.msg import ByteMultiArray
         from std_msgs.msg import String
+        import tf2_ros
+        self.tfBuffer = tf2_ros.Buffer()
+        self.listener = tf2_ros.TransformListener(self.tfBuffer)
         self.r = rospy.Rate(0.2)
         self.sub = rospy.Subscriber("observation_topic", String, self.callback)
         self.pub = rospy.Publisher("action_topic", ByteMultiArray, queue_size=10)
         self.player = player
     def callback(self, msg):
         print(msg.data)
+        trans = tfBuffer.lookup_transform(turtle_name, 'turtle1', rospy.Time())
         obs = torch.rand(1, 20, device='cuda')
         #obs = torch.tensor(msg.data)
         action = self.player.get_action(obs, is_deterministic=True)
