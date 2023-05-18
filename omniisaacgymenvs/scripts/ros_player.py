@@ -75,7 +75,7 @@ class MyNode:
         self.player = player
     def callback(self, msg):
         print(msg.data)
-        trans = tfBuffer.lookup_transform(turtle_name, 'turtle1', rospy.Time())
+        trans = self.tfBuffer.lookup_transform(turtle_name, 'turtle1', rospy.Time())
         obs = torch.rand(1, 20, device='cuda')
         #obs = torch.tensor(msg.data)
         action = self.player.get_action(obs, is_deterministic=True)
