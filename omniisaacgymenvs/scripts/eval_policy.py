@@ -75,10 +75,10 @@ def eval_multi_agents(cfg):
     env = agent.env
     obs = env.reset()
 
-    ep_data = {'act': [], 'obs': [], 'rews': [], 'info': []}
+    ep_data = {'act': [], 'obs': [], 'rews': [], 'info': [], 'all_dist': []}
     total_reward = 0
     num_steps = 0
-    total_num_steps = 300
+    total_num_steps = 230
     for _ in range(total_num_steps):
         actions = agent.get_action(obs['obs'], is_deterministic=True)
         obs, reward, done, info = env.step(actions)
@@ -88,14 +88,18 @@ def eval_multi_agents(cfg):
         ep_data['obs'].append(obs['obs']['state'][0].cpu().numpy())
         ep_data['rews'].append(reward[0].cpu().numpy())
         #ep_data['info'].append(info)
-
+        x_pos = obs['obs']['state'][:,6].cpu().numpy()
+        y_pos = obs['obs']['state'][:,7].cpu().numpy()
+        ep_data['all_dist'].append(np.linalg.norm(np.array([x_pos, y_pos]), axis=0))
         total_reward += reward[0]
         num_steps += 1
         is_done = done.any()
     ep_data['obs'] = np.array(ep_data['obs'])
     ep_data['act'] = np.array(ep_data['act'])
     ep_data['rews'] = np.array(ep_data['rews'])
-    print(f'\n Episode: rew_sum={total_reward}, tot_steps={num_steps} \n')
+    ep_data['all_dist'] = np.array(ep_data['all_dist'])
+
+    print(f'\n Episode: rew_sum={total_reward:.2f}, tot_steps={num_steps} \n')
     #print(f'Episode data: {ep_data} \n')
     plot_episode_data_virtual(ep_data, evaluation_dir)
 
@@ -124,10 +128,10 @@ def parse_hydra_configs(cfg: DictConfig):
 
     # set congig params for evaluation
     cfg.task.env.maxEpisodeLength = 300
-    # TODO: check how to change the following parameters for evaluation (now only possible from inside task class)
-    # cfg.task.env.task_parameters['max_spawn_dist'] = 5.0
-    # cfg.task.env.task_parameters['min_spawn_dist'] = 4.0   
-    # cfg.task.env.task_parameters['kill_dist'] = 8.0
+
+    cfg.task.env.task_parameters[0]['max_spawn_dist'] = 5.0
+    cfg.task.env.task_parameters[0]['min_spawn_dist'] = 4.5  
+    cfg.task.env.task_parameters[0]['kill_dist'] = 8.0
     # TODO: check error with visualizer of thrusters....
     #cfg.task.env.platform.configuration.visualize = False
     cfg_dict = omegaconf_to_dict(cfg)

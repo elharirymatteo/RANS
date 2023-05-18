@@ -9,6 +9,7 @@ def plot_episode_data_virtual(ep_data, save_dir):
     reward_history = ep_data['rews']
     info_history = ep_data['info']
     state_history = ep_data['obs']
+    all_distances = ep_data['all_dist']
     tgrid = np.linspace(0, len(control_history), len(control_history))
     fig_count = 0
 
@@ -40,19 +41,37 @@ def plot_episode_data_virtual(ep_data, save_dir):
     plt.grid()
     plt.savefig(save_dir + '_ang_vel')
     # °°°°°°°°°°°°°°°°°°°°°°°° plot heading cos, sin °°°°°°°°°°°°°°°°°°°°°°°°°
-    positions = state_history[:, :2]
+    headings = state_history[:, :2]
     # plot position (x, y coordinates)
     fig_count += 1
     plt.figure(fig_count)
     plt.clf()
-    plt.plot(tgrid, positions[:, 0], 'r-')
-    plt.plot(tgrid, positions[:, 1], 'g-')
+    plt.plot(tgrid, headings[:, 0], 'r-') # cos
+    plt.plot(tgrid, headings[:, 1], 'g-') # sin
     plt.xlabel('Time steps')
     plt.ylabel('Heading')
     plt.legend(['cos(${\\theta}$)', 'sin(${\\theta}$)'], loc='lower right')
     plt.title('Heading state history')
     plt.grid()
     plt.savefig(save_dir + '_heading')
+
+
+    # °°°°°°°°°°°°°°°°°°°°°°°° plot absolute heading angle °°°°°°°°°°°°°°°°°°°°°°°°°
+    headings = state_history[:, :2]
+    angles = np.arctan2(headings[:, 0], headings[:, 1])
+    angles = np.where(angles < 0, angles + np.pi, angles)
+    # plot position (x, y coordinates)
+    fig_count += 1
+    plt.figure(fig_count)
+    plt.clf()
+    plt.plot(tgrid, angles, 'c-')
+    plt.xlabel('Time steps')
+    plt.ylabel('Angle [rad]')
+    plt.legend(['${\\theta}$'], loc='lower right')
+    plt.title('Angle state history')
+    plt.grid()
+    plt.savefig(save_dir + '_angle')
+# Compute the angle using numpy.arctan2
 
     # °°°°°°°°°°°°°°°°°°°°°°°° plot actions in time °°°°°°°°°°°°°°°°°°°°°°°°°
     fig_count += 1
@@ -114,9 +133,35 @@ def plot_episode_data_virtual(ep_data, save_dir):
     plt.xlabel('Time steps')
     plt.ylabel('Position [m]')
     plt.legend(['x position', 'y position'], loc='lower right')
-    plt.title('Heading state history')
+    plt.title('Planar position')
     plt.grid()
     plt.savefig(save_dir + '_pos_error')
+
+    # °°°°°°°°°°°°°°°°°°°°°°°° plot distance to target over time °°°°°°°°°°°°°°°°°°°°°°°°°
+    pos_error = state_history[:, 6:8]
+    # plot position (x, y coordinates)
+    fig_count += 1
+    plt.figure(fig_count)
+    plt.clf()
+    plt.plot(tgrid, np.linalg.norm(np.array([pos_error[:, 0], pos_error[:, 1]]), axis=0), 'c')
+    plt.xlabel('Time steps')
+    plt.ylabel('Distance [m]')
+    plt.legend(['x position', 'y position'], loc='lower right')
+    plt.title('Distance to target')
+    plt.grid()
+    plt.savefig(save_dir + '_dist_to_target')
+
+    # °°°°°°°°°°°°°°°°°°°°°°°° plot meand and std distance °°°°°°°°°°°°°°°°°°°°°°°°°
+    fig, ax = plt.subplots()
+    ax.plot(tgrid, all_distances.mean(axis=1), alpha=0.5, color='blue', label='mean_dist', linewidth = 4.0)
+    ax.fill_between(tgrid, all_distances.mean(axis=1) - all_distances.std(axis=1), all_distances.mean(axis=1) + all_distances.std(axis=1), color='blue', alpha=0.4)
+    ax.fill_between(tgrid, all_distances.mean(axis=1) - 2*all_distances.std(axis=1), all_distances.mean(axis=1) + 2*all_distances.std(axis=1), color='blue', alpha=0.2)
+    plt.xlabel('Time steps')
+    plt.ylabel('Distance [m]')
+    plt.legend(['mean', '1-std', '2-std'], loc='best')
+    plt.title(f'Mean distance over {all_distances.shape[1]} episodes')
+    plt.grid()
+    plt.savefig(save_dir + '_mean_dist')
 
 
 def plot_episode_data_old(ep_data, save_dir):
