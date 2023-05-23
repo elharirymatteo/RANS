@@ -28,7 +28,7 @@ from collections import deque
 #from my_msgs.msg import Action # replace with your action message type
     
     
-def get_observation_from_realsense(msg, lin_vel, ang_vel):
+def get_observation_from_realsense(obs_type, task_flag, msg, lin_vel, ang_vel):
     """
     Convert a ROS message to an observation.
     """
@@ -45,12 +45,10 @@ def get_observation_from_realsense(msg, lin_vel, ang_vel):
     #     Isaac Sim Core (QW, QX, QY, QZ)
     #   vrpn_client_node (QX, QY, QZ, QW)
     ##################################################
+  
    # swapping w with z while creating quaternion array from Quaternion object
-
     q = [quat.w, quat.x, quat.y, quat.z]
     # rot_x =  quat_axis(q, 0) #np.random.rand(3)
-    # rot_y =  quat_axis(q, 1)
-    # rot_z =  quat_axis(q, 2)
     rot_mat = quaternion_to_rotation_matrix(q)
     lin_vel = [0., 0., 0.]
     ang_vel = [0., 0., 0.]
@@ -59,14 +57,22 @@ def get_observation_from_realsense(msg, lin_vel, ang_vel):
     cosy_cosp = 1 - 2 * (q[2] * q[2] + q[3] * q[3])
     # orient_z = torch.arctan2(siny_cosp, cosy_cosp)
 
-    obs = torch.tensor(np.array([dist_x, dist_y, dist_z, 
-                        rot_mat[0][0], rot_mat[0][1], rot_mat[0][2], 
-                        rot_mat[1][0], rot_mat[1][1], rot_mat[1][2], 
-                        rot_mat[2][0], rot_mat[2][1], rot_mat[2][2], 
-                        lin_vel[0],lin_vel[1],lin_vel[2],
-                        ang_vel[0],ang_vel[1],ang_vel[2], 
-                        cosy_cosp, siny_cosp]), dtype=torch.float32, device='cuda')
-    return obs
+    if obs_type == np.ndarray: 
+        obs = torch.tensor(np.array([dist_x, dist_y, dist_z, 
+                            rot_mat[0][0], rot_mat[0][1], rot_mat[0][2], 
+                            rot_mat[1][0], rot_mat[1][1], rot_mat[1][2], 
+                            rot_mat[2][0], rot_mat[2][1], rot_mat[2][2], 
+                            lin_vel[0],lin_vel[1],lin_vel[2],
+                            ang_vel[0],ang_vel[1],ang_vel[2], 
+                            cosy_cosp, siny_cosp]), dtype=torch.float32, device='cuda')
+    else:
+        # TODO: Add task data based on task_flag, currently only for task 1
+        task_data = [pos_dist[0], pos_dist[1], 0, 0]
+        obs = dict({'state':torch.tensor([cosy_cosp, siny_cosp, lin_vel[0], lin_vel[1], ang_vel[2], 
+                                                   task_flag, task_data[0], task_data[1], task_data[2], task_data[3]], device='cuda'),
+               'transforms': torch.zeros(5*8, device='cuda'), 'masks': torch.zeros(8, device='cuda')})
+        
+    return obs 
 
 
 def enable_ros_extension(env_var: str = "ROS_DISTRO"):
@@ -104,7 +110,7 @@ def enable_ros_extension(env_var: str = "ROS_DISTRO"):
         extension_manager.set_extension_enabled_immediate(ros_extension["id"], True)
 
 class MyNode:
-    def __init__(self, player):
+    def __init__(self, player, task_flag):
         import rospy
         from std_msgs.msg import ByteMultiArray
         from geometry_msgs.msg import PoseStamped
@@ -114,6 +120,7 @@ class MyNode:
         self.pose_buffer = deque(maxlen=self.buffer_size)
         self.time_buffer = deque(maxlen=self.buffer_size)
         self.act_every = 0 # act every 5 steps
+        self.task_flag = task_flag
 
         # Initialize Subscriber and Publisher
         self.sub = rospy.Subscriber("/vrpn_client_node/FPA/pose", PoseStamped, self.callback)
@@ -124,6 +131,8 @@ class MyNode:
         self.end_experiment_at_step = 20
         self.rate = rospy.Rate(5) # 1hz
 
+        self.obs_type = type(self.player.observation_space.sample())
+        print(f'self.obs_type: {self.obs_type}')
         print("Node initialized")
 
     def callback(self, msg):
@@ -139,9 +148,9 @@ class MyNode:
             lin_vel, ang_vel = self.derive_velocities()
             self.act_every = 0
 
-            obs = get_observation_from_realsense(msg, lin_vel, ang_vel)
+            obs = get_observation_from_realsense(self.obs_type, self.task_flag, msg, lin_vel, ang_vel)
             #obs = torch.rand(1, 20, device='cuda')
-        
+            print(obs)
             action = self.player.get_action(obs, is_deterministic=True)
             action = action.cpu().tolist()        
             # add lifting action
@@ -149,10 +158,10 @@ class MyNode:
             action.insert(0, lifting_active)
             self.my_msg.data = action
 
-            print(f'count: {self.count}')
-            print(obs, action)
             self.pub.publish(self.my_msg)
             self.count += 1
+            print(f'count: {self.count}')
+            print(obs, action)
 
         self.rate.sleep()
 
@@ -184,7 +193,9 @@ class MyNode:
 @hydra.main(config_name="config", config_path="../cfg")
 def parse_hydra_configs(cfg: DictConfig):
     
-    cfg.checkpoint = "./runs/MFP2DGoToPose/nn/MFP2DGoToPose.pth"
+    #cfg.checkpoint = "./runs/MFP2DGoToPose/nn/MFP2DGoToPose.pth"
+    #cfg.checkpoint = "./runs/MFP2DGoToPose/nn/MFP2DGoToPose.pth"
+    
     # set congig params for evaluation
     cfg.task.env.maxEpisodeLength = 300
     cfg_dict = omegaconf_to_dict(cfg)
@@ -198,18 +209,29 @@ def parse_hydra_configs(cfg: DictConfig):
     cfg.seed = set_seed(cfg.seed, torch_deterministic=cfg.torch_deterministic)
     cfg_dict['seed'] = cfg.seed
     task = initialize_task(cfg_dict, env)
+    # task flag, and integer between 0 and 4.
+    #   - 0: GoToXY - 1: GoToPose - 2: TrackXYVelocity - 3: TrackXYOVelocity - 4: TrackXYVelocityMatchHeading
+    task_flag = 0 # default to GoToXY
+    if "GoToPose" in cfg.checkpoint:
+        task_flag = 1
+    elif "TrackXYVelocity" in cfg.checkpoint:
+        task_flag = 2
+    elif "TrackXYOVelocity" in cfg.checkpoint:
+        task_flag = 3
+    elif "TrackXYVelocityMatchHeading" in cfg.checkpoint:
+        task_flag = 4
+
     rlg_trainer = RLGTrainer(cfg, cfg_dict)
     rlg_trainer.launch_rlg_hydra(env)
     # _____Create players (model)_____
     player = PpoPlayerDiscrete(cfg_dict['train']['params'])
     player.restore(cfg.checkpoint)
-    
     enable_ros_extension()
     import rospy
     
     # _____Create ROS node_____
     rospy.init_node('my_node')
-    node = MyNode(player)
+    node = MyNode(player, task_flag)
     
     rospy.spin()
 
