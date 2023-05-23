@@ -3,13 +3,54 @@ from matplotlib.ticker import AutoMinorLocator
 import numpy as np
 
 
-def plot_episode_data_virtual(ep_data, save_dir):
+def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
+    """
+    Plot episode data for a single agent
+    :param ep_data: dictionary containing episode data
+    :param save_dir: directory where to save the plots
+    :param all_agents: if True, plot average results over all agents, if False only the first agent is plotted
+    :return:
+    """
+    # TODO: place all the different plots in a separate function, to be called from here based on the episode (best, worst, first etc.)
+    if all_agents:
+        control_history = ep_data['act']
+        reward_history = ep_data['rews']
+        info_history = ep_data['info']
+        state_history = ep_data['obs']
+        all_distances = ep_data['all_dist']
+        
+        # plot average results over all agents
+        best_agent = np.argmax(reward_history.sum(axis=0))
+        worst_agent = np.argmin(reward_history.sum(axis=0))
+        print('Best agent: ', best_agent, ' - Worst agent: ', worst_agent)
+        
+
+            # °°°°°°°°°°°°°°°°°°°°°°°° plot meand and std distance °°°°°°°°°°°°°°°°°°°°°°°°°
+        tgrid = np.linspace(0, len(control_history), len(control_history))
+        fig_count = 0
+        fig, ax = plt.subplots()
+        ax.plot(tgrid, all_distances.mean(axis=1), alpha=0.5, color='blue', label='mean_dist', linewidth = 2.0)
+        ax.fill_between(tgrid, all_distances.mean(axis=1) - all_distances.std(axis=1), all_distances.mean(axis=1) 
+                        + all_distances.std(axis=1), color='blue', alpha=0.4)
+        ax.fill_between(tgrid, all_distances.mean(axis=1) - 2*all_distances.std(axis=1), all_distances.mean(axis=1) 
+                        + 2*all_distances.std(axis=1), color='blue', alpha=0.2)
+        ax.plot(tgrid, all_distances[:, best_agent], alpha=0.5, color='green', label='best', linewidth = 2.0)
+        ax.plot(tgrid, all_distances[:, worst_agent], alpha=0.5, color='red', label='worst', linewidth = 2.0)
+        plt.xlabel('Time steps')
+        plt.ylabel('Distance [m]')
+        plt.legend(['mean', '1-std', '2-std', 'best', 'worst'], loc='best')
+        plt.title(f'Mean, best and worst distances over {all_distances.shape[1]} episodes')
+        plt.grid()
+        plt.savefig(save_dir + '_mean_best_worst_dist')
+
+        return
 
     control_history = ep_data['act']
     reward_history = ep_data['rews']
     info_history = ep_data['info']
     state_history = ep_data['obs']
     all_distances = ep_data['all_dist']
+
     tgrid = np.linspace(0, len(control_history), len(control_history))
     fig_count = 0
 

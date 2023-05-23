@@ -71,6 +71,7 @@ def eval_multi_agents(cfg):
     agent = runner.create_player()
     agent.restore(cfg.checkpoint)
 
+    store_all_agents = True # store all agents generated data, if false only the first agent is stored
     is_done = False
     env = agent.env
     obs = env.reset()
@@ -78,15 +79,21 @@ def eval_multi_agents(cfg):
     ep_data = {'act': [], 'obs': [], 'rews': [], 'info': [], 'all_dist': []}
     total_reward = 0
     num_steps = 0
-    total_num_steps = 230
+    
+    total_num_steps = 300
     for _ in range(total_num_steps):
         actions = agent.get_action(obs['obs'], is_deterministic=True)
         obs, reward, done, info = env.step(actions)
         
         #print(f'Step {num_steps}: obs={obs["obs"]}, rews={reward}, dones={done}, info={info} \n')
-        ep_data['act'].append(actions[0].cpu().numpy())
-        ep_data['obs'].append(obs['obs']['state'][0].cpu().numpy())
-        ep_data['rews'].append(reward[0].cpu().numpy())
+        if store_all_agents:
+            ep_data['act'].append(actions.cpu().numpy())
+            ep_data['obs'].append(obs['obs']['state'].cpu().numpy())
+            ep_data['rews'].append(reward.cpu().numpy())  
+        else:
+            ep_data['act'].append(actions[0].cpu().numpy())
+            ep_data['obs'].append(obs['obs']['state'][0].cpu().numpy())
+            ep_data['rews'].append(reward[0].cpu().numpy())
         #ep_data['info'].append(info)
         x_pos = obs['obs']['state'][:,6].cpu().numpy()
         y_pos = obs['obs']['state'][:,7].cpu().numpy()
@@ -101,7 +108,7 @@ def eval_multi_agents(cfg):
 
     print(f'\n Episode: rew_sum={total_reward:.2f}, tot_steps={num_steps} \n')
     #print(f'Episode data: {ep_data} \n')
-    plot_episode_data_virtual(ep_data, evaluation_dir)
+    plot_episode_data_virtual(ep_data, evaluation_dir, store_all_agents)
 
 
 def activate_wandb(cfg, cfg_dict, task):

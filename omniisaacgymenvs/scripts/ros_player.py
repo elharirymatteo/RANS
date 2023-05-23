@@ -116,7 +116,7 @@ class MyNode:
         from geometry_msgs.msg import PoseStamped
         self.rospy = rospy
         # Initialize variables
-        self.buffer_size = 5  # Number of samples for differentiation
+        self.buffer_size = 20  # Number of samples for differentiation
         self.pose_buffer = deque(maxlen=self.buffer_size)
         self.time_buffer = deque(maxlen=self.buffer_size)
         self.act_every = 0 # act every 5 steps
@@ -128,11 +128,10 @@ class MyNode:
         self.player = player
         self.my_msg = ByteMultiArray()
         self.count = 0
-        self.end_experiment_at_step = 20
+        self.end_experiment_at_step = 10
         self.rate = rospy.Rate(5) # 1hz
 
         self.obs_type = type(self.player.observation_space.sample())
-        print(f'self.obs_type: {self.obs_type}')
         print("Node initialized")
 
     def callback(self, msg):
@@ -150,7 +149,6 @@ class MyNode:
 
             obs = get_observation_from_realsense(self.obs_type, self.task_flag, msg, lin_vel, ang_vel)
             #obs = torch.rand(1, 20, device='cuda')
-            print(obs)
             action = self.player.get_action(obs, is_deterministic=True)
             action = action.cpu().tolist()        
             # add lifting action
@@ -161,14 +159,14 @@ class MyNode:
             self.pub.publish(self.my_msg)
             self.count += 1
             print(f'count: {self.count}')
-            print(obs, action)
+            print(obs['state'], action)
 
         self.rate.sleep()
 
         if self.count == self.end_experiment_at_step:
             self.my_msg.data = [0,0,0,0,0,0,0,0,0]
             self.pub.publish(self.my_msg)
-
+            print(f'final action: {self.my_msg.data}')
             self.rospy.signal_shutdown("Done")
             print("Shutting down node")
                 
