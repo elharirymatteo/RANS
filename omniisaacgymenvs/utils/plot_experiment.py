@@ -1,7 +1,8 @@
+from math import e
 import matplotlib.pyplot as plt
 from matplotlib.ticker import AutoMinorLocator
 import numpy as np
-
+import os
 
 def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
     """
@@ -12,18 +13,26 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
     :return:
     """
     # TODO: place all the different plots in a separate function, to be called from here based on the episode (best, worst, first etc.)
+    reward_history = ep_data['rews']
+    
+    # plot average results over all agents
+    best_agent = np.argmax(reward_history.sum(axis=0))
+    worst_agent = np.argmin(reward_history.sum(axis=0))
+    print('Best agent: ', best_agent, '| Worst agent: ', worst_agent)
+    
+    control_history = ep_data['act']
+    reward_history = ep_data['rews']
+    info_history = ep_data['info']
+    state_history = ep_data['obs']
+
+    # plot best and worst episodes data
+    plot_one_episode({k:np.array([v[best_agent] for v in vals]) for k,vals in ep_data.items()}, save_dir+"best_ep/")
+    plot_one_episode({k:np.array([v[worst_agent] for v in vals]) for k,vals in ep_data.items()}, save_dir+"worst_ep/")
+
+
     if all_agents:
-        control_history = ep_data['act']
-        reward_history = ep_data['rews']
-        info_history = ep_data['info']
-        state_history = ep_data['obs']
+        
         all_distances = ep_data['all_dist']
-        
-        # plot average results over all agents
-        best_agent = np.argmax(reward_history.sum(axis=0))
-        worst_agent = np.argmin(reward_history.sum(axis=0))
-        print('Best agent: ', best_agent, ' - Worst agent: ', worst_agent)
-        
 
             # °°°°°°°°°°°°°°°°°°°°°°°° plot meand and std distance °°°°°°°°°°°°°°°°°°°°°°°°°
         tgrid = np.linspace(0, len(control_history), len(control_history))
@@ -38,12 +47,41 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
         ax.plot(tgrid, all_distances[:, worst_agent], alpha=0.5, color='red', label='worst', linewidth = 2.0)
         plt.xlabel('Time steps')
         plt.ylabel('Distance [m]')
-        plt.legend(['mean', '1-std', '2-std', 'best', 'worst'], loc='best')
+        plt.legend(['mean',  'best', 'worst', '1-std', '2-std'], loc='best')
         plt.title(f'Mean, best and worst distances over {all_distances.shape[1]} episodes')
         plt.grid()
         plt.savefig(save_dir + '_mean_best_worst_dist')
 
+                    # °°°°°°°°°°°°°°°°°°°°°°°° plot meand and std reward °°°°°°°°°°°°°°°°°°°°°°°°°
+        fig_count += 1
+        fig, ax = plt.subplots()
+        ax.plot(tgrid, reward_history.mean(axis=1), alpha=0.5, color='blue', label='mean_dist', linewidth = 2.0)
+        ax.fill_between(tgrid, reward_history.mean(axis=1) - reward_history.std(axis=1), reward_history.mean(axis=1) 
+                        + reward_history.std(axis=1), color='blue', alpha=0.4)
+        ax.fill_between(tgrid, reward_history.mean(axis=1) - 2*reward_history.std(axis=1), reward_history.mean(axis=1) 
+                        + 2*reward_history.std(axis=1), color='blue', alpha=0.2)
+        ax.plot(tgrid, reward_history[:, best_agent], alpha=0.5, color='green', label='best', linewidth = 2.0)
+        ax.plot(tgrid, reward_history[:, worst_agent], alpha=0.5, color='red', label='worst', linewidth = 2.0)
+        plt.xlabel('Time steps')
+        plt.ylabel('Reward')
+        plt.legend(['mean', 'best', 'worst', '1-std', '2-std'], loc='best')
+        plt.title(f'Mean, best and worst reward over {all_distances.shape[1]} episodes')
+        plt.grid()
+        plt.savefig(save_dir + '_mean_best_worst_reward')
+
         return
+
+
+
+def plot_one_episode(ep_data, save_dir):
+    """
+    Plot episode data for a single agent
+    :param ep_data: dictionary containing episode data
+    :param save_dir: directory where to save the plots
+    :param all_agents: if True, plot average results over all agents, if False only the first agent is plotted
+    :return:
+    """
+    os.makedirs(save_dir, exist_ok=True)
 
     control_history = ep_data['act']
     reward_history = ep_data['rews']
@@ -64,7 +102,7 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
     plt.plot(tgrid, lin_vels[:, 1], 'g-')
     plt.xlabel('Time steps')
     plt.ylabel('Velocity [m/s]')
-    plt.legend(['x', 'y'], loc='lower right')
+    plt.legend(['x', 'y'], loc='best')
     plt.title('Velocity state history')
     plt.grid()
     plt.savefig(save_dir + '_lin_vel')
@@ -77,7 +115,7 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
     plt.plot(tgrid, ang_vel_z, 'b-')
     plt.xlabel('Time steps')
     plt.ylabel('Angular speed [rad/s]')
-    plt.legend(['z'], loc='lower right')
+    plt.legend(['z'], loc='best')
     plt.title('Angular speed state history')
     plt.grid()
     plt.savefig(save_dir + '_ang_vel')
@@ -91,7 +129,7 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
     plt.plot(tgrid, headings[:, 1], 'g-') # sin
     plt.xlabel('Time steps')
     plt.ylabel('Heading')
-    plt.legend(['cos(${\\theta}$)', 'sin(${\\theta}$)'], loc='lower right')
+    plt.legend(['cos(${\\theta}$)', 'sin(${\\theta}$)'], loc='best')
     plt.title('Heading state history')
     plt.grid()
     plt.savefig(save_dir + '_heading')
@@ -108,7 +146,7 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
     plt.plot(tgrid, angles, 'c-')
     plt.xlabel('Time steps')
     plt.ylabel('Angle [rad]')
-    plt.legend(['${\\theta}$'], loc='lower right')
+    plt.legend(['${\\theta}$'], loc='best')
     plt.title('Angle state history')
     plt.grid()
     plt.savefig(save_dir + '_angle')
@@ -125,7 +163,7 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
         plt.step(tgrid, control_history[:, k], col)
     plt.xlabel('Time steps')
     plt.ylabel('Control [N]')
-    plt.legend([f'u{k}' for k in range(control_history.shape[1])], loc='lower right')
+    plt.legend([f'u{k}' for k in range(control_history.shape[1])], loc='best')
     plt.title('Thrust control')
     plt.grid()
     plt.savefig(save_dir + '_actions')
@@ -157,7 +195,7 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
     plt.plot(tgrid, reward_history, 'b-')
     plt.xlabel('Time steps')
     plt.ylabel('Reward')
-    plt.legend(['reward'], loc='lower right')
+    plt.legend(['reward'], loc='best')
     plt.title('Reward history')
     plt.grid()
     # plt.show()
@@ -173,7 +211,7 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
     plt.plot(tgrid, pos_error[:, 1], 'g-')
     plt.xlabel('Time steps')
     plt.ylabel('Position [m]')
-    plt.legend(['x position', 'y position'], loc='lower right')
+    plt.legend(['x position', 'y position'], loc='best')
     plt.title('Planar position')
     plt.grid()
     plt.savefig(save_dir + '_pos_error')
@@ -187,22 +225,10 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
     plt.plot(tgrid, np.linalg.norm(np.array([pos_error[:, 0], pos_error[:, 1]]), axis=0), 'c')
     plt.xlabel('Time steps')
     plt.ylabel('Distance [m]')
-    plt.legend(['x position', 'y position'], loc='lower right')
+    plt.legend(['abs dist'], loc='best')
     plt.title('Distance to target')
     plt.grid()
     plt.savefig(save_dir + '_dist_to_target')
-
-    # °°°°°°°°°°°°°°°°°°°°°°°° plot meand and std distance °°°°°°°°°°°°°°°°°°°°°°°°°
-    fig, ax = plt.subplots()
-    ax.plot(tgrid, all_distances.mean(axis=1), alpha=0.5, color='blue', label='mean_dist', linewidth = 4.0)
-    ax.fill_between(tgrid, all_distances.mean(axis=1) - all_distances.std(axis=1), all_distances.mean(axis=1) + all_distances.std(axis=1), color='blue', alpha=0.4)
-    ax.fill_between(tgrid, all_distances.mean(axis=1) - 2*all_distances.std(axis=1), all_distances.mean(axis=1) + 2*all_distances.std(axis=1), color='blue', alpha=0.2)
-    plt.xlabel('Time steps')
-    plt.ylabel('Distance [m]')
-    plt.legend(['mean', '1-std', '2-std'], loc='best')
-    plt.title(f'Mean distance over {all_distances.shape[1]} episodes')
-    plt.grid()
-    plt.savefig(save_dir + '_mean_dist')
 
 
 def plot_episode_data_old(ep_data, save_dir):
@@ -225,7 +251,7 @@ def plot_episode_data_old(ep_data, save_dir):
     plt.plot(tgrid, lin_vels[:, 2], 'b-')
     plt.xlabel('Time steps')
     plt.ylabel('Velocity [m/s]')
-    plt.legend(['x', 'y'], loc='lower right')
+    plt.legend(['x', 'y'], loc='best')
     plt.title('Velocity state history')
     plt.grid()
     plt.savefig(save_dir + '_lin_vel')
@@ -240,7 +266,7 @@ def plot_episode_data_old(ep_data, save_dir):
     plt.plot(tgrid, ang_vels[:, 2], 'b-')
     plt.xlabel('Time steps')
     plt.ylabel('Angular speed [rad/s]')
-    plt.legend(['z'], loc='lower right')
+    plt.legend(['z'], loc='best')
     plt.title('Angular speed state history')
     plt.grid()
     plt.savefig(save_dir + '_ang_vel')
@@ -254,7 +280,7 @@ def plot_episode_data_old(ep_data, save_dir):
     plt.plot(tgrid, positions[:, 1], 'g-')
     plt.xlabel('Time steps')
     plt.ylabel('Position [m]')
-    plt.legend(['x', 'y'], loc='lower right')
+    plt.legend(['x', 'y'], loc='best')
     plt.title('Position state history')
     plt.grid()
     plt.savefig(save_dir + '_pos')
@@ -270,7 +296,7 @@ def plot_episode_data_old(ep_data, save_dir):
         plt.step(tgrid, control_history[:, k], col)
     plt.xlabel('Time steps')
     plt.ylabel('Control [N]')
-    plt.legend([f'u{k}' for k in range(control_history.shape[1])], loc='lower right')
+    plt.legend([f'u{k}' for k in range(control_history.shape[1])], loc='best')
     plt.title('Thrust control')
     plt.grid()
     plt.savefig(save_dir + '_actions')
@@ -302,7 +328,7 @@ def plot_episode_data_old(ep_data, save_dir):
     plt.plot(tgrid, reward_history, 'b-')
     plt.xlabel('Time steps')
     plt.ylabel('Reward')
-    plt.legend(['reward'], loc='lower right')
+    plt.legend(['reward'], loc='best')
     plt.title('Reward history')
     plt.grid()
     # plt.show()
