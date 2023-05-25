@@ -1,40 +1,27 @@
 {
-  "experiment12": {
-    "experiment": "standard_fp_GoToPose_5kg_MLP",
-    "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
-    "train": "MFP2D_PPOmulti_dict_MLP",
-    "headless": "True",
-    "task.sim.dt": "0.02",
-    "num_envs": "4096",
-    "max_iterations": "2000",
-    "wandb_activate": "True",
-    "wandb_entity": "matteohariry",
-    "wandb_project": "MFP2D_Virtual"
-  },
-  "experiment21": {
-    "experiment": "standard_fp_GoToXY_3kg_MLP",
+  "experiment11": {
+    "experiment": "virtual_go_to_xy",
     "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
     "train": "MFP2D_PPOmulti_dict_MLP",
     "headless": "True",
     "task.sim.dt": "0.02",
-    "task.env.platform.core.mass": "3.0",
     "num_envs": "4096",
     "max_iterations": "2000",
     "wandb_activate": "True",
     "wandb_entity": "matteohariry",
-    "wandb_project": "MFP2D_Virtual"
-},
-  "experiment22": {
-    "experiment": "standard_fp_GoToPose_3kg_MLP",
-    "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
-    "train": "MFP2D_PPOmulti_dict_MLP",
-    "headless": "True",
-    "task.sim.dt": "0.02",
-    "task.env.platform.core.mass": "3.0",
-    "num_envs": "4096",
-    "max_iterations": "2000",
-    "wandb_activate": "True",
-    "wandb_entity": "matteohariry",
-    "wandb_project": "MFP2D_Virtual"
-  }
+    "wandb_project": "MFP2D_Virtual_2"
+    },
+
+    "experiment12": {
+      "experiment": "virtual_GoToPose",
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
+      "train": "MFP2D_PPOmulti_dict_MLP",
+      "headless": "True",
+      "task.sim.dt": "0.02",
+      "num_envs": "4096",
+      "max_iterations": "2000",
+      "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
+      "wandb_project": "MFP2D_Virtual_2"
+    }
 }

@@ -34,8 +34,8 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
         
         all_distances = ep_data['all_dist']
 
-            # °°°°°°°°°°°°°°°°°°°°°°°° plot meand and std distance °°°°°°°°°°°°°°°°°°°°°°°°°
-        tgrid = np.linspace(0, len(control_history), len(control_history))
+        # °°°°°°°°°°°°°°°°°°°°°°°° plot meand and std distance °°°°°°°°°°°°°°°°°°°°°°°°°
+        tgrid = np.linspace(0, len(all_distances), len(control_history))
         fig_count = 0
         fig, ax = plt.subplots()
         ax.plot(tgrid, all_distances.mean(axis=1), alpha=0.5, color='blue', label='mean_dist', linewidth = 2.0)
@@ -52,7 +52,7 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
         plt.grid()
         plt.savefig(save_dir + '_mean_best_worst_dist')
 
-                    # °°°°°°°°°°°°°°°°°°°°°°°° plot meand and std reward °°°°°°°°°°°°°°°°°°°°°°°°°
+        # °°°°°°°°°°°°°°°°°°°°°°°° plot meand and std reward °°°°°°°°°°°°°°°°°°°°°°°°°
         fig_count += 1
         fig, ax = plt.subplots()
         ax.plot(tgrid, reward_history.mean(axis=1), alpha=0.5, color='blue', label='mean_dist', linewidth = 2.0)
@@ -68,6 +68,28 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
         plt.title(f'Mean, best and worst reward over {all_distances.shape[1]} episodes')
         plt.grid()
         plt.savefig(save_dir + '_mean_best_worst_reward')
+        
+        # °°°°°°°°°°°°°°°°°°°°°°°° plot mean actions histogram °°°°°°°°°°°°°°°°°°°°°°°°°
+        fig_count += 1
+        plt.figure(fig_count)
+        plt.clf()
+        control_history = np.array(control_history)
+        n_bins = len(control_history[0][0])  
+        minor_locator = AutoMinorLocator(1)
+        plt.gca().xaxis.set_minor_locator(minor_locator)
+
+        data = np.array([np.sum(control_history[:, i, :], axis=0) for i in range(control_history.shape[1])])
+        n, bins, patches = plt.hist(np.mean(data, axis=1, dtype=int), bins=n_bins, edgecolor='white')
+        print(n, bins)
+        xticks = [(bins[idx+1] + value)/2 for idx, value in enumerate(bins[:-1])]
+        ticklabels = [f'T{i+1}' for i in range(n_bins)]
+        plt.xticks(xticks, ticklabels)
+        for idx, value in enumerate(n):
+            if value > 0:
+                plt.text(xticks[idx], value, int(value), ha='center')
+        plt.title(f'Mean number of thrusts in {control_history.shape[1]} episodes')
+        
+        plt.savefig(save_dir + '_mean_actions_hist')
 
         return
 
@@ -174,7 +196,7 @@ def plot_one_episode(ep_data, save_dir):
     plt.clf()
     control_history = np.array(control_history)
     n_bins = len(control_history[0])  
-    minor_locator = AutoMinorLocator(2)
+    minor_locator = AutoMinorLocator(1)
     plt.gca().xaxis.set_minor_locator(minor_locator) 
     n, bins, patches = plt.hist(np.sum(control_history, axis=1), bins=len(control_history[0]), edgecolor='white')
 
@@ -188,6 +210,7 @@ def plot_one_episode(ep_data, save_dir):
     plt.title('Number of thrusts in episode')
     
     plt.savefig(save_dir + '_actions_hist')
+
     # °°°°°°°°°°°°°°°°°°°°°°°° plot rewards °°°°°°°°°°°°°°°°°°°°°°°°°
     fig_count += 1
     plt.figure(fig_count)
@@ -310,7 +333,7 @@ def plot_episode_data_old(ep_data, save_dir):
     minor_locator = AutoMinorLocator(2)
     plt.gca().xaxis.set_minor_locator(minor_locator) 
     n, bins, patches = plt.hist(np.sum(control_history, axis=1), bins=len(control_history[0]), edgecolor='white')
-
+    print(n, bins)
     xticks = [(bins[idx+1] + value)/2 for idx, value in enumerate(bins[:-1])]
     ticklabels = [f'T{i+1}' for i in range(n_bins)]
     plt.xticks(xticks, ticklabels)

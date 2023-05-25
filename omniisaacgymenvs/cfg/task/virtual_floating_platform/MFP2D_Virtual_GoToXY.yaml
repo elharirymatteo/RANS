@@ -15,7 +15,7 @@ env:
 
   controlFrequencyInv: 10
 
-  clipObservations: {state: 5.0}
+  clipObservations: {state: 8.0}
   clipActions: 1.0
 
   task_parameters: 
