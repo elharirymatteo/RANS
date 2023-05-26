@@ -1,6 +1,6 @@
 {
   "experiment11": {
-    "experiment": "virtual_go_to_xy",
+    "experiment": "virtual_GoToXY_Penalty",
     "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
     "train": "MFP2D_PPOmulti_dict_MLP",
     "headless": "True",
@@ -9,11 +9,11 @@
     "max_iterations": "2000",
     "wandb_activate": "True",
     "wandb_entity": "matteohariry",
-    "wandb_project": "MFP2D_Virtual_2"
+    "wandb_project": "MFP2D_Virtual_Penalty"
     },
 
     "experiment12": {
-      "experiment": "virtual_GoToPose",
+      "experiment": "virtual_GoToPose_Penalty",
       "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
       "train": "MFP2D_PPOmulti_dict_MLP",
       "headless": "True",
@@ -22,6 +22,6 @@
       "max_iterations": "2000",
       "wandb_activate": "True",
       "wandb_entity": "matteohariry",
-      "wandb_project": "MFP2D_Virtual_2"
+      "wandb_project": "MFP2D_Virtual_Penalty"
     }
 }

@@ -40,7 +40,10 @@ class GoToXYTask(Core):
 
         # Rewards
         self.position_reward = self._reward_parameters.compute_reward(current_state, actions, self.position_dist)
-    
+
+        # adding energy penalty
+        self.position_reward -= self._task_parameters.energy_penalty * torch.sum(actions)//actions.shape[0]
+
         return self.position_reward
     
     def update_kills(self):

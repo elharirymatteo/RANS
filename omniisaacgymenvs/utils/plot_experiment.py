@@ -80,7 +80,6 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
 
         data = np.array([np.sum(control_history[:, i, :], axis=0) for i in range(control_history.shape[1])])
         n, bins, patches = plt.hist(np.mean(data, axis=1, dtype=int), bins=n_bins, edgecolor='white')
-        print(n, bins)
         xticks = [(bins[idx+1] + value)/2 for idx, value in enumerate(bins[:-1])]
         ticklabels = [f'T{i+1}' for i in range(n_bins)]
         plt.xticks(xticks, ticklabels)
