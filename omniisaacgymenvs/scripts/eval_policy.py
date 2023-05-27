@@ -59,7 +59,9 @@ def eval_single_agent(cfg_dict, cfg, env):
 def eval_multi_agents(cfg):
 
     base_dir = "./evaluations/"
-    evaluation_dir = base_dir + cfg.task.experiment + "/"
+    experiment_name = cfg.checkpoint.split("/")[1]
+    print(f'Experiment name: {experiment_name}')
+    evaluation_dir = base_dir + experiment_name + "/"
     os.makedirs(evaluation_dir, exist_ok=True)
 
     rlg_config_dict = omegaconf_to_dict(cfg.train)
@@ -80,7 +82,7 @@ def eval_multi_agents(cfg):
     total_reward = 0
     num_steps = 0
     
-    total_num_steps = 500
+    total_num_steps = 800
     for _ in range(total_num_steps):
         actions = agent.get_action(obs['obs'], is_deterministic=True)
         obs, reward, done, info = env.step(actions)
@@ -135,7 +137,7 @@ def parse_hydra_configs(cfg: DictConfig):
         return
 
     # set congig params for evaluation
-    cfg.task.env.maxEpisodeLength = 502
+    cfg.task.env.maxEpisodeLength = 802
     cfg.task.env.clipObservations['state'] = 20.0
     cfg.task.env.task_parameters[0]['max_spawn_dist'] = 5.0
     cfg.task.env.task_parameters[0]['min_spawn_dist'] = 4.5  

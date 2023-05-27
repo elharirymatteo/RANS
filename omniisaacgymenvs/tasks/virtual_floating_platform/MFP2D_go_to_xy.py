@@ -40,9 +40,13 @@ class GoToXYTask(Core):
 
         # Rewards
         self.position_reward = self._reward_parameters.compute_reward(current_state, actions, self.position_dist)
+        #print(f'self.position_reward: {self.position_reward}')
 
         # adding energy penalty
-        self.position_reward -= self._task_parameters.energy_penalty * torch.sum(actions)//actions.shape[0]
+        self.position_reward -= self._task_parameters.energy_penalty *  actions.sum(-1)
+
+        # adding velocity penalty
+        self.position_reward -= self._task_parameters.velocity_penalty *  current_state['linear_velocity'].sum(-1)
 
         return self.position_reward
     
