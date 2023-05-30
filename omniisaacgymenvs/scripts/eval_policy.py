@@ -111,6 +111,8 @@ def eval_multi_agents(cfg):
     print(f'\n Episode: rew_sum={total_reward:.2f}, tot_steps={num_steps} \n')
     #print(f'Episode data: {ep_data} \n')
     print(f'Episode data obs shape: {ep_data["obs"].shape} \n')
+
+    #if not cfg.headless:
     plot_episode_data_virtual(ep_data, evaluation_dir, store_all_agents)
 
 

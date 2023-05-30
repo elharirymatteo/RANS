@@ -224,10 +224,11 @@ def parse_hydra_configs(cfg: DictConfig):
     # _____Create players (model)_____
     player = PpoPlayerDiscrete(cfg_dict['train']['params'])
     player.restore(cfg.checkpoint)
+    
+    # _____Create ROS node_____
     enable_ros_extension()
     import rospy
     
-    # _____Create ROS node_____
     rospy.init_node('my_node')
     node = MyNode(player, task_flag)
     
