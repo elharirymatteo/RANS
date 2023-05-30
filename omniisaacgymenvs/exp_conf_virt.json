@@ -1,6 +1,6 @@
 {
   "experiment11": {
-    "experiment": "virtual_GoToXY_velPenalty",
+    "experiment": "virtual_GoToXY_actPenalty",
     "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
     "train": "MFP2D_PPOmulti_dict_MLP",
     "headless": "True",
@@ -13,7 +13,7 @@
     },
 
     "experiment12": {
-      "experiment": "virtual_GoToPose_velPenalty",
+      "experiment": "virtual_GoToPose",
       "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
       "train": "MFP2D_PPOmulti_dict_MLP",
       "headless": "True",
