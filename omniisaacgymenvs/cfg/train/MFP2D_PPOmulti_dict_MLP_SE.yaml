@@ -14,7 +14,7 @@ params:
       units: [128, 128]
       activation: tanh
       d2rl: False
-      use_state_pe: True
+      use_state_encoding: True
       pe_nfreq: 6
       pe_log: False
       
