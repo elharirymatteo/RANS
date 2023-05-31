@@ -1,6 +1,6 @@
 {
   "experiment111": {
-      "task": "virtual_floating_platform/Nominal_MFP2D_Virtual_GoToXY",
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
       "train": "MFP2D_PPOmulti_dict_MLP",
       "experiment": "nominal_fp_GoToXY_5kg_MLP_r0",
       "headless": "True",
@@ -12,7 +12,7 @@
       "wandb_project": "Nominal_MFP2D_Virtual"
   },
   "experiment112": {
-      "task": "virtual_floating_platform/Nominal_MFP2D_Virtual_GoToXY",
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
       "train": "MFP2D_PPOmulti_dict_MLP",
       "experiment": "nominal_fp_GoToXY_5kg_MLP_r1",
       "headless": "True",
@@ -24,7 +24,7 @@
       "wandb_project": "Nominal_MFP2D_Virtual"
   },
   "experiment113": {
-      "task": "virtual_floating_platform/Nominal_MFP2D_Virtual_GoToXY",
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
       "train": "MFP2D_PPOmulti_dict_MLP",
       "experiment": "nominal_fp_GoToXY_5kg_MLP_r2",
       "headless": "True",
@@ -36,7 +36,7 @@
       "wandb_project": "Nominal_MFP2D_Virtual"
   },
   "experiment114": {
-      "task": "virtual_floating_platform/Nominal_MFP2D_Virtual_GoToXY",
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
       "train": "MFP2D_PPOmulti_dict_MLP",
       "experiment": "nominal_fp_GoToXY_5kg_MLP_r3",
       "headless": "True",
@@ -48,7 +48,7 @@
       "wandb_project": "Nominal_MFP2D_Virtual"
   },
   "experiment115": {
-      "task": "virtual_floating_platform/Nominal_MFP2D_Virtual_GoToXY",
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
       "train": "MFP2D_PPOmulti_dict_MLP",
       "experiment": "nominal_fp_GoToXY_5kg_MLP_r4",
       "headless": "True",
@@ -60,7 +60,7 @@
       "wandb_project": "Nominal_MFP2D_Virtual"
   },
   "experiment131": {
-      "task": "virtual_floating_platform/Nominal_MFP2D_Virtual_GoToPose",
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
       "train": "MFP2D_PPOmulti_dict_MLP",
       "experiment": "nominal_fp_GoToPose_5kg_MLP_r0",
       "headless": "True",
@@ -72,7 +72,7 @@
       "wandb_project": "Nominal_MFP2D_Virtual"
   },
   "experiment132": {
-      "task": "virtual_floating_platform/Nominal_MFP2D_Virtual_GoToPose",
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
       "train": "MFP2D_PPOmulti_dict_MLP",
       "experiment": "nominal_fp_GoToPose_5kg_MLP_r1",
       "headless": "True",
@@ -84,7 +84,7 @@
       "wandb_project": "Nominal_MFP2D_Virtual"
   },
   "experiment133": {
-      "task": "virtual_floating_platform/Nominal_MFP2D_Virtual_GoToPose",
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
       "train": "MFP2D_PPOmulti_dict_MLP",
       "experiment": "nominal_fp_GoToPose_5kg_MLP_r2",
       "headless": "True",
@@ -96,7 +96,7 @@
       "wandb_project": "Nominal_MFP2D_Virtual"
   },
   "experiment134": {
-      "task": "virtual_floating_platform/Nominal_MFP2D_Virtual_GoToPose",
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
       "train": "MFP2D_PPOmulti_dict_MLP",
       "experiment": "nominal_fp_GoToPose_5kg_MLP_r3",
       "headless": "True",
@@ -108,7 +108,7 @@
       "wandb_project": "Nominal_MFP2D_Virtual"
   },
   "experiment135": {
-      "task": "virtual_floating_platform/Nominal_MFP2D_Virtual_GoToPose",
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
       "train": "MFP2D_PPOmulti_dict_MLP",
       "experiment": "nominal_fp_GoToPose_5kg_MLP_r4",
       "headless": "True",
