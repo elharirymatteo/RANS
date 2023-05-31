@@ -2,7 +2,7 @@ import json
 import subprocess
 
 # Load the configuration file
-with open('./exp_conf_virt.json', 'r') as f:
+with open('./exp_corl_mlp.json', 'r') as f:
     experiments = json.load(f)
 
 # Loop through each experiment and execute it
