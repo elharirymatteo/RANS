@@ -50,8 +50,7 @@ def get_observation_from_realsense(obs_type, task_flag, msg, lin_vel, ang_vel):
     q = [quat.w, quat.x, quat.y, quat.z]
     # rot_x =  quat_axis(q, 0) #np.random.rand(3)
     rot_mat = quaternion_to_rotation_matrix(q)
-    lin_vel = [0., 0., 0.]
-    ang_vel = [0., 0., 0.]
+
     # Cast quaternion to Yaw    
     siny_cosp = 2 * (q[0] * q[3] + q[1] * q[2])
     cosy_cosp = 1 - 2 * (q[2] * q[2] + q[3] * q[3])
@@ -69,8 +68,8 @@ def get_observation_from_realsense(obs_type, task_flag, msg, lin_vel, ang_vel):
         # TODO: Add task data based on task_flag, currently only for task 1
         task_data = [pos_dist[0], pos_dist[1], 0, 0]
         obs = dict({'state':torch.tensor([cosy_cosp, siny_cosp, lin_vel[0], lin_vel[1], ang_vel[2], 
-                                                   task_flag, task_data[0], task_data[1], task_data[2], task_data[3]], device='cuda'),
-               'transforms': torch.zeros(5*8, device='cuda'), 'masks': torch.zeros(8, device='cuda')})
+                                                   task_flag, task_data[0], task_data[1], task_data[2], task_data[3]], dtype=torch.float32, device='cuda'),
+               'transforms': torch.zeros(5*8, device='cuda'), 'masks': torch.zeros(8, dtype=torch.float32, device='cuda')})
         
     return obs 
 
@@ -123,12 +122,12 @@ class MyNode:
         self.task_flag = task_flag
 
         # Initialize Subscriber and Publisher
-        self.sub = rospy.Subscriber("/vrpn_client_node/FPA/pose", PoseStamped, self.callback)
-        self.pub = rospy.Publisher("/spacer_floating_platform_a/valves/input", ByteMultiArray, queue_size=10)
+        self.sub = rospy.Subscriber("/vrpn_client_node/FP_exp_RL/pose", PoseStamped, self.callback)
+        self.pub = rospy.Publisher("/spacer_floating_platform_a/valves/input", ByteMultiArray, queue_size=1)
         self.player = player
         self.my_msg = ByteMultiArray()
         self.count = 0
-        self.end_experiment_at_step = 10
+        self.end_experiment_at_step = 50
         self.rate = rospy.Rate(5) # 1hz
 
         self.obs_type = type(self.player.observation_space.sample())
@@ -142,6 +141,7 @@ class MyNode:
         self.pose_buffer.append(msg)
         self.time_buffer.append(current_time)
         self.act_every += 1
+
         # Calculate velocities if buffer is filled
         if len(self.pose_buffer) == self.buffer_size and self.act_every == self.buffer_size:
             lin_vel, ang_vel = self.derive_velocities()
@@ -154,14 +154,17 @@ class MyNode:
             # add lifting action
             lifting_active = 1
             action.insert(0, lifting_active)
-            self.my_msg.data = action
+            #self.my_msg.data = action
+            self.my_msg.data = [1,0,0,0,0,0,0,0,0]
 
             self.pub.publish(self.my_msg)
             self.count += 1
-            print(f'count: {self.count}')
-            print(obs['state'], action)
+            #print(f'count: {self.count}')
+            #print(obs['state'], action)
+            print(self.my_msg.data)
+            #print(obs['state'][0,2].item(), obs['state'][0,3].item())
 
-        self.rate.sleep()
+        #self.rate.sleep()
 
         if self.count == self.end_experiment_at_step:
             self.my_msg.data = [0,0,0,0,0,0,0,0,0]
@@ -172,7 +175,6 @@ class MyNode:
                 
     def derive_velocities(self):
         dt = (self.time_buffer[-1] - self.time_buffer[0]).to_sec() # Time difference between first and last pose
-
         # Calculate linear velocities
         linear_positions = np.array([[pose.pose.position.x, pose.pose.position.y, pose.pose.position.z] for pose in self.pose_buffer])
         linear_velocities = np.diff(linear_positions, axis=0) / dt

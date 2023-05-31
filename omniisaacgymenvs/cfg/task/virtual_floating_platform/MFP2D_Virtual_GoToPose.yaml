@@ -21,11 +21,11 @@ env:
   task_parameters:
     - name: GoToPose
       x_y_tolerance: 0.01
-      heading_tolerance: 0.025
+      x_y_tolerance: 0.01
       kill_after_n_steps_in_tolerance: 50 # 10seconds
-      max_spawn_dist: 4.0
-      min_spawn_dist: 0.5
-      kill_dist: 5.0
+      max_spawn_dist: 6.0
+      min_spawn_dist: 2.0
+      kill_dist: 8.0
 
   reward_parameters:
     - name: GoToPose

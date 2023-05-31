@@ -13,7 +13,7 @@ env:
   action_mode: MultiDiscrete
   numQuantizedActions: 1
 
-  controlFrequencyInv: 10
+  controlFrequencyInv: 1
 
   clipObservations: {state: 8.0}
   clipActions: 1.0
@@ -22,9 +22,9 @@ env:
     - name: GoToXY
       x_y_tolerance: 0.01
       kill_after_n_steps_in_tolerance: 50 # 10seconds
-      max_spawn_dist: 4.0
-      min_spawn_dist: 0.5
-      kill_dist: 5.0
+      max_spawn_dist: 6.0
+      min_spawn_dist: 2.0
+      kill_dist: 8.0
 
   reward_parameters:
     - name: GoToXY
@@ -46,9 +46,9 @@ env:
       max_thruster_kill: 2
 
     core:
-      mass: 5.0
+      mass: 10.92
       CoM: [0,0,0]
-      radius: 0.25
+      radius: 0.31
       shape: "sphere"
       refinement: 2
 
@@ -61,7 +61,7 @@ env:
       save_path: "config.png"
 
 sim:
-  dt: 0.02
+  dt: 0.2
   use_gpu_pipeline: ${eq:${...pipeline},"gpu"}
   gravity: [0.0, 0.0, 0.0]
   add_ground_plane: False

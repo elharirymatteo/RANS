@@ -5,7 +5,7 @@ EPS = 1e-6   # small constant to avoid divisions by 0 and log(0)
 @dataclass
 class GoToXYParameters:
     x_y_tolerance: float = 0.01
-    kill_after_n_steps_in_tolerance: int = 100
+    kill_after_n_steps_in_tolerance: int = 50
     goal_random_position: float = 0.0
     max_spawn_dist: float = 6.0
     min_spawn_dist: float = 3.0
@@ -34,7 +34,7 @@ class GoToXYParameters:
 class GoToPoseParameters:
     x_y_tolerance: float = 0.01
     heading_tolerance: float = 0.025
-    kill_after_n_steps_in_tolerance: int = 100
+    kill_after_n_steps_in_tolerance: int = 50
     goal_random_position: float = 0.0
     max_spawn_dist: float = 6.0
     min_spawn_dist: float = 3.0
