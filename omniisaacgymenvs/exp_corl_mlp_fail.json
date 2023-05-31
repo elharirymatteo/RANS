@@ -2,7 +2,7 @@
   "experiment111": {
       "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
       "train": "MFP2D_PPOmulti_dict_MLP",
-      "experiment": "kill_1_fp_GoToXY_5kg_MLP_r0",
+      "experiment": "kill_1_fp_GoToXY_10kg_MLP_r0",
       "headless": "True",
       "num_envs": "4096",
       "seed": 42,
@@ -11,12 +11,12 @@
       "task.env.platform.randomization.max_thruster_kill": 1,
       "wandb_activate": "True",
       "wandb_entity": "matteohariry",
-      "wandb_project": "Kill_1_MFP2D_Virtual"
+      "wandb_project": "Kill_1_MFP2D_Virtual_10kg"
   },
   "experiment112": {
       "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
       "train": "MFP2D_PPOmulti_dict_MLP",
-      "experiment": "kill_1_fp_GoToXY_5kg_MLP_r1",
+      "experiment": "kill_1_fp_GoToXY_10kg_MLP_r1",
       "headless": "True",
       "num_envs": "4096",
       "seed": 43,
@@ -25,12 +25,12 @@
       "task.env.platform.randomization.max_thruster_kill": 1,
       "wandb_activate": "True",
       "wandb_entity": "matteohariry",
-      "wandb_project": "Kill_1_MFP2D_Virtual"
+      "wandb_project": "Kill_1_MFP2D_Virtual_10kg"
   },
   "experiment113": {
       "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
       "train": "MFP2D_PPOmulti_dict_MLP",
-      "experiment": "kill_1_fp_GoToXY_5kg_MLP_r2",
+      "experiment": "kill_1_fp_GoToXY_10kg_MLP_r2",
       "headless": "True",
       "num_envs": "4096",
       "seed": 44,
@@ -39,12 +39,12 @@
       "task.env.platform.randomization.max_thruster_kill": 1,
       "wandb_activate": "True",
       "wandb_entity": "matteohariry",
-      "wandb_project": "Kill_1_MFP2D_Virtual"
+      "wandb_project": "Kill_1_MFP2D_Virtual_10kg"
   },
   "experiment114": {
       "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
       "train": "MFP2D_PPOmulti_dict_MLP",
-      "experiment": "kill_1_fp_GoToXY_5kg_MLP_r3",
+      "experiment": "kill_1_fp_GoToXY_10kg_MLP_r3",
       "headless": "True",
       "num_envs": "4096",
       "seed": 45,
@@ -53,12 +53,12 @@
       "task.env.platform.randomization.max_thruster_kill": 1,
       "wandb_activate": "True",
       "wandb_entity": "matteohariry",
-      "wandb_project": "Kill_1_MFP2D_Virtual"
+      "wandb_project": "Kill_1_MFP2D_Virtual_10kg"
   },
   "experiment115": {
       "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
       "train": "MFP2D_PPOmulti_dict_MLP",
-      "experiment": "kill_1_fp_GoToXY_5kg_MLP_r4",
+      "experiment": "kill_1_fp_GoToXY_10kg_MLP_r4",
       "headless": "True",
       "num_envs": "4096",
       "seed": 46,
@@ -67,12 +67,12 @@
       "task.env.platform.randomization.max_thruster_kill": 1,
       "wandb_activate": "True",
       "wandb_entity": "matteohariry",
-      "wandb_project": "Kill_1_MFP2D_Virtual"
+      "wandb_project": "Kill_1_MFP2D_Virtual_10kg"
   },
   "experiment131": {
       "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
       "train": "MFP2D_PPOmulti_dict_MLP",
-      "experiment": "kill_1_fp_GoToPose_5kg_MLP_r0",
+      "experiment": "kill_1_fp_GoToPose_10kg_MLP_r0",
       "headless": "True",
       "num_envs": "4096",
       "seed": 42,
@@ -81,12 +81,12 @@
       "task.env.platform.randomization.max_thruster_kill": 1,
       "wandb_activate": "True",
       "wandb_entity": "matteohariry",
-      "wandb_project": "Kill_1_MFP2D_Virtual"
+      "wandb_project": "Kill_1_MFP2D_Virtual_10kg"
   },
   "experiment132": {
       "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
       "train": "MFP2D_PPOmulti_dict_MLP",
-      "experiment": "kill_1_fp_GoToPose_5kg_MLP_r1",
+      "experiment": "kill_1_fp_GoToPose_10kg_MLP_r1",
       "headless": "True",
       "num_envs": "4096",
       "seed": 43,
@@ -95,12 +95,12 @@
       "task.env.platform.randomization.max_thruster_kill": 1,
       "wandb_activate": "True",
       "wandb_entity": "matteohariry",
-      "wandb_project": "Kill_1_MFP2D_Virtual"
+      "wandb_project": "Kill_1_MFP2D_Virtual_10kg"
   },
   "experiment133": {
       "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
       "train": "MFP2D_PPOmulti_dict_MLP",
-      "experiment": "kill_1_fp_GoToPose_5kg_MLP_r2",
+      "experiment": "kill_1_fp_GoToPose_10kg_MLP_r2",
       "headless": "True",
       "num_envs": "4096",
       "seed": 44,
@@ -109,12 +109,12 @@
       "task.env.platform.randomization.max_thruster_kill": 1,
       "wandb_activate": "True",
       "wandb_entity": "matteohariry",
-      "wandb_project": "Kill_1_MFP2D_Virtual"
+      "wandb_project": "Kill_1_MFP2D_Virtual_10kg"
   },
   "experiment134": {
       "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
       "train": "MFP2D_PPOmulti_dict_MLP",
-      "experiment": "kill_1_fp_GoToPose_5kg_MLP_r3",
+      "experiment": "kill_1_fp_GoToPose_10kg_MLP_r3",
       "headless": "True",
       "num_envs": "4096",
       "seed": 45,
@@ -123,12 +123,12 @@
       "task.env.platform.randomization.max_thruster_kill": 1,
       "wandb_activate": "True",
       "wandb_entity": "matteohariry",
-      "wandb_project": "Kill_1_MFP2D_Virtual"
+      "wandb_project": "Kill_1_MFP2D_Virtual_10kg"
   },
   "experiment135": {
       "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
       "train": "MFP2D_PPOmulti_dict_MLP",
-      "experiment": "kill_1_fp_GoToPose_5kg_MLP_r4",
+      "experiment": "kill_1_fp_GoToPose_10kg_MLP_r4",
       "headless": "True",
       "num_envs": "4096",
       "seed": 46,
@@ -137,6 +137,6 @@
       "task.env.platform.randomization.max_thruster_kill": 1,
       "wandb_activate": "True",
       "wandb_entity": "matteohariry",
-      "wandb_project": "Kill_1_MFP2D_Virtual"
+      "wandb_project": "Kill_1_MFP2D_Virtual_10kg"
   }
 }
