@@ -26,13 +26,14 @@ from collections import deque
 #from rclpy.node import Node
 #from my_msgs.msg import Observation # replace with your observation message type
 #from my_msgs.msg import Action # replace with your action message type
-    
+
+#import rospy
     
 def get_observation_from_realsense(obs_type, task_flag, msg, lin_vel, ang_vel):
     """
     Convert a ROS message to an observation.
     """
-    target_pos = [0., 0., 0.]
+    target_pos = [2.5, -1.5, 0.]
     x_pos = msg.pose.position.x
     y_pos = msg.pose.position.y
     z_pos = msg.pose.position.z
@@ -114,24 +115,54 @@ class MyNode:
         from std_msgs.msg import ByteMultiArray
         from geometry_msgs.msg import PoseStamped
         self.rospy = rospy
+
         # Initialize variables
         self.buffer_size = 20  # Number of samples for differentiation
         self.pose_buffer = deque(maxlen=self.buffer_size)
         self.time_buffer = deque(maxlen=self.buffer_size)
         self.act_every = 0 # act every 5 steps
         self.task_flag = task_flag
+        #self.map = [7,0,5,6,3,4,1,2]
+        #self.map = [5,6,7,0,1,2,3,4]
+        #self.map = [6,5,0,7,2,1,4,3]
+        #self.map = [2,5,4,7,6,1,0,3]
+        #self.map = [5,2,7,4,1,6,3,0]
+        self.map = [3,4,5,6,7,0,1,2]
+        #self.map = [4,3,6,5,0,7,2,1]
+
+
+
 
         # Initialize Subscriber and Publisher
         self.sub = rospy.Subscriber("/vrpn_client_node/FP_exp_RL/pose", PoseStamped, self.callback)
         self.pub = rospy.Publisher("/spacer_floating_platform_a/valves/input", ByteMultiArray, queue_size=1)
+
         self.player = player
+
         self.my_msg = ByteMultiArray()
         self.count = 0
-        self.end_experiment_at_step = 50
-        self.rate = rospy.Rate(5) # 1hz
+        #self.end_experiment_at_step = 300
+
+        self.end_experiment_at_step = rospy.get_param("end_experiment_at_step", 300)
+        self.play_rate = rospy.get_param("play_rate", 5.0)
+
+        self.rate = rospy.Rate(self.play_rate) # 1hz
+
+        self.obs = torch.zeros((1,10), dtype=torch.float32, device='cuda')
+        self.ready = False
 
         self.obs_type = type(self.player.observation_space.sample())
+
+        rospy.on_shutdown(self.shutdown)
         print("Node initialized")
+
+
+    def shutdown(self):
+        self.my_msg.data = [1,0,0,0,0,0,0,0,0]
+        self.pub.publish(self.my_msg)
+
+    def remap_actions(self, actions):
+        return [actions[i] for i in self.map]
 
     def callback(self, msg):
 
@@ -143,35 +174,59 @@ class MyNode:
         self.act_every += 1
 
         # Calculate velocities if buffer is filled
-        if len(self.pose_buffer) == self.buffer_size and self.act_every == self.buffer_size:
+        if (len(self.pose_buffer) == self.buffer_size) and (self.act_every == self.buffer_size):
             lin_vel, ang_vel = self.derive_velocities()
             self.act_every = 0
 
-            obs = get_observation_from_realsense(self.obs_type, self.task_flag, msg, lin_vel, ang_vel)
+            self.obs = get_observation_from_realsense(self.obs_type, self.task_flag, msg, lin_vel, ang_vel)
+            self.ready = True
+            #print(self.obs['state'])
             #obs = torch.rand(1, 20, device='cuda')
-            action = self.player.get_action(obs, is_deterministic=True)
-            action = action.cpu().tolist()        
+            #action = self.player.get_action(obs, is_deterministic=True)
+            #action = action.cpu().tolist()        
             # add lifting action
-            lifting_active = 1
-            action.insert(0, lifting_active)
+            #lifting_active = 1
+            #action.insert(0, lifting_active)
             #self.my_msg.data = action
-            self.my_msg.data = [1,0,0,0,0,0,0,0,0]
+            #self.my_msg.data = [1,0,0,0,0,0,0,0,0]
 
-            self.pub.publish(self.my_msg)
-            self.count += 1
+            #self.pub.publish(self.my_msg)
+            #self.count += 1
             #print(f'count: {self.count}')
             #print(obs['state'], action)
-            print(self.my_msg.data)
+            #print(self.my_msg.data)
             #print(obs['state'][0,2].item(), obs['state'][0,3].item())
 
         #self.rate.sleep()
+        #if self.count == self.end_experiment_at_step:
+            #self.my_msg.data = [0,0,0,0,0,0,0,0,0]
+            #self.pub.publish(self.my_msg)
+            #print(f'final action: {self.my_msg.data}')
+            #self.rospy.signal_shutdown("Done")
+            #print("Shutting down node")
 
-        if self.count == self.end_experiment_at_step:
-            self.my_msg.data = [0,0,0,0,0,0,0,0,0]
-            self.pub.publish(self.my_msg)
-            print(f'final action: {self.my_msg.data}')
-            self.rospy.signal_shutdown("Done")
-            print("Shutting down node")
+    def run(self):
+        while (not self.rospy.is_shutdown()) and (self.count < self.end_experiment_at_step):
+            #print(f'Im in')
+            if self.ready:
+                action = self.player.get_action(self.obs, is_deterministic=True)
+                action = action.cpu().tolist()
+                #bits = "{0:009b}".format(self.count)
+                #action = [int(bits[0]),int(bits[1]),int(bits[2]),int(bits[3]),int(bits[4]),int(bits[5]),int(bits[6]),int(bits[7]),int(bits[8])]
+                action = self.remap_actions(action)
+                lifting_active = 1
+                action.insert(0, lifting_active)
+                self.my_msg.data = action
+                self.pub.publish(self.my_msg)
+                self.count += 1
+                print(f'count: {self.count}')
+                print(self.my_msg.data)
+                print(self.obs)
+                self.ready = False
+            self.rate.sleep()
+
+        self.my_msg.data = [0,0,0,0,0,0,0,0,0]
+        self.pub.publish(self.my_msg)
                 
     def derive_velocities(self):
         dt = (self.time_buffer[-1] - self.time_buffer[0]).to_sec() # Time difference between first and last pose
@@ -233,8 +288,8 @@ def parse_hydra_configs(cfg: DictConfig):
     
     rospy.init_node('my_node')
     node = MyNode(player, task_flag)
-    
-    rospy.spin()
+    node.run()
+    #rospy.spin()
 
     env.close()
 
