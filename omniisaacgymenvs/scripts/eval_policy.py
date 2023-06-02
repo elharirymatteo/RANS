@@ -145,7 +145,7 @@ def parse_hydra_configs(cfg: DictConfig):
     cfg.task.env.task_parameters[0]['min_spawn_dist'] = 4.5  
     cfg.task.env.task_parameters[0]['kill_dist'] = 6.0
     cfg.task.env.task_parameters[0]['kill_after_n_steps_in_tolerance'] = 400
-    # TODO: check error with visualizer of thrusters....
+    # TODO: check error with visualizer of thrusters....  ANTOINE
     #cfg.task.env.platform.configuration.visualize = False
     cfg_dict = omegaconf_to_dict(cfg)
     print_dict(cfg_dict)
@@ -157,7 +157,6 @@ def parse_hydra_configs(cfg: DictConfig):
 
     env = VecEnvRLGames(headless=headless, sim_device=cfg.device_id, enable_livestream=cfg.enable_livestream, enable_viewport=enable_viewport)
 
-    #env.task._task_parameters.max_spawn_dist = 5.0
     
     from omni.isaac.core.utils.torch.maths import set_seed
     cfg.seed = set_seed(cfg.seed, torch_deterministic=cfg.torch_deterministic)
