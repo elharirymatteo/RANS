@@ -18,6 +18,7 @@ from matplotlib.ticker import AutoMinorLocator
 from torch._C import fork
 
 from utils.plot_experiment import plot_episode_data_virtual
+from utils.eval_metrics import success_rate_from_distances
 import wandb
 
 import os
@@ -82,7 +83,7 @@ def eval_multi_agents(cfg):
     total_reward = 0
     num_steps = 0
     
-    total_num_steps = 800
+    total_num_steps = 400
     for _ in range(total_num_steps):
         actions = agent.get_action(obs['obs'], is_deterministic=True)
         obs, reward, done, info = env.step(actions)
@@ -113,7 +114,8 @@ def eval_multi_agents(cfg):
     print(f'Episode data obs shape: {ep_data["obs"].shape} \n')
 
     #if not cfg.headless:
-    plot_episode_data_virtual(ep_data, evaluation_dir, store_all_agents)
+    #plot_episode_data_virtual(ep_data, evaluation_dir, store_all_agents)
+    success_rate = success_rate_from_distances(ep_data['all_dist'])
 
 
 def activate_wandb(cfg, cfg_dict, task):
@@ -139,7 +141,7 @@ def parse_hydra_configs(cfg: DictConfig):
         return
 
     # set congig params for evaluation
-    cfg.task.env.maxEpisodeLength = 802
+    cfg.task.env.maxEpisodeLength = 402
     cfg.task.env.clipObservations['state'] = 20.0
     cfg.task.env.task_parameters[0]['max_spawn_dist'] = 5.0
     cfg.task.env.task_parameters[0]['min_spawn_dist'] = 4.5  
