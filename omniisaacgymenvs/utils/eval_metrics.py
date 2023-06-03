@@ -24,7 +24,8 @@ def success_rate_from_distances(distances, threshold=0.02):
     print(first_less_than_thr_idxs)
     print(first_less_than_thr2_idxs)
 
-    less_than_margin_df = distances_df.lt(threshold * 4)
+    margin = threshold * 7.5
+    less_than_margin_df = distances_df.lt(margin)
     # Check if values are all True after the specific index for each column
     all_true_after_index = pd.DataFrame(index=less_than_margin_df.columns)
     all_true_after_index['all_true'] = less_than_margin_df.apply(lambda column: column.loc[first_less_than_thr_idxs[column.name]:].all(), axis=0)
@@ -35,7 +36,7 @@ def success_rate_from_distances(distances, threshold=0.02):
     success_rate_thr2 = (first_less_than_thr2_idxs > -1).mean() * 100
     print(f'Success rate with threshold {threshold}: {success_rate_thr}')
     print(f'Success rate with threshold {threshold_2}: {success_rate_thr2}')
-    print(f'Success rate and stay with margin {threshold * 4}: {success_and_stay_rate[True] * 100}')
+    print(f'Success rate and stay with margin {margin}: {success_and_stay_rate[True] * 100}')
     print(success_and_stay_rate)
 
     return 0
