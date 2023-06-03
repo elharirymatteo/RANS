@@ -39,4 +39,17 @@ def success_rate_from_distances(distances, threshold=0.02):
     print(f'Success rate and stay with margin {margin}: {success_and_stay_rate[True] * 100}')
     print(success_and_stay_rate)
 
+    success_rate_df = pd.DataFrame({'success_rate_thr': [success_rate_thr], 'success_rate_thr2': [success_rate_thr2], 
+                                    'success_and_stay_rate': [success_and_stay_rate[True] * 100]})
+    get_success_rate_table(success_rate_df)
+    
     return 0
+
+def get_success_rate_table(success_rate_df):
+
+    print(success_rate_df.to_latex(index=False,
+                                   formatters={"name": str.upper},
+                                   float_format="{:.1f}".format,
+                                   bold_rows=True,
+                                   caption="Success rate for each experiment.",
+                                   label="tab:success_rate",)) 
