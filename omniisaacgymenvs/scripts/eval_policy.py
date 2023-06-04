@@ -114,7 +114,7 @@ def eval_multi_agents(cfg):
     print(f'Episode data obs shape: {ep_data["obs"].shape} \n')
 
     #if not cfg.headless:
-    #plot_episode_data_virtual(ep_data, evaluation_dir, store_all_agents)
+    plot_episode_data_virtual(ep_data, evaluation_dir, store_all_agents)
     success_rate = success_rate_from_distances(ep_data['all_dist'])
 
 

@@ -53,3 +53,4 @@ def get_success_rate_table(success_rate_df):
                                    bold_rows=True,
                                    caption="Success rate for each experiment.",
                                    label="tab:success_rate",)) 
+    
