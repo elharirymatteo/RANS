@@ -252,6 +252,23 @@ def plot_one_episode(ep_data, save_dir):
     plt.grid()
     plt.savefig(save_dir + '_dist_to_target')
 
+    # °°°°°°°°°°°°°°°°°°°°°°°° plot log-distance to target over time °°°°°°°°°°°°°°°°°°°°°°°°°
+    pos_error = state_history[:, 6:8]
+    # plot position (x, y coordinates)
+    fig_count += 1
+    plt.figure(fig_count)
+    plt.clf()
+    plt.yscale('log')
+    plt.plot(tgrid, np.linalg.norm(np.array([pos_error[:, 0], pos_error[:, 1]]), axis=0), 'c')
+    plt.xlabel('Time steps')
+    plt.ylabel('Distance [m]')
+    plt.legend(['abs dist'], loc='best')
+    plt.title('Log distance to target')
+    plt.grid()
+    plt.savefig(save_dir + '_log_dist_to_target')
+
+###################################################################################################################
+###################################################################################################################
 
 def plot_episode_data_old(ep_data, save_dir):
 
