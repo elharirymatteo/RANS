@@ -238,6 +238,19 @@ def plot_one_episode(ep_data, save_dir):
     plt.grid()
     plt.savefig(save_dir + '_pos_error')
 
+        # °°°°°°°°°°°°°°°°°°°°°°°° plot x, y position in plane °°°°°°°°°°°°°°°°°°°°°°°°°
+    pos_error = state_history[:, 6:8]
+    # plot position (x, y coordinates)
+    fig_count += 1
+    plt.figure(fig_count)
+    plt.clf()
+    plt.plot(pos_error[:, 0], pos_error[:, 1])
+    plt.xlabel('X [m]')
+    plt.ylabel('Y [m]')
+    plt.title('Planar position')
+    plt.grid()
+    plt.savefig(save_dir + '_pos_xy_plane')
+
     # °°°°°°°°°°°°°°°°°°°°°°°° plot distance to target over time °°°°°°°°°°°°°°°°°°°°°°°°°
     pos_error = state_history[:, 6:8]
     # plot position (x, y coordinates)
@@ -259,12 +272,12 @@ def plot_one_episode(ep_data, save_dir):
     plt.figure(fig_count)
     plt.clf()
     plt.yscale('log')
-    plt.plot(tgrid, np.linalg.norm(np.array([pos_error[:, 0], pos_error[:, 1]]), axis=0), 'c')
+    plt.plot(tgrid, np.linalg.norm(np.array([pos_error[:, 0], pos_error[:, 1]]), axis=0), 'm')
     plt.xlabel('Time steps')
-    plt.ylabel('Distance [m]')
-    plt.legend(['abs dist'], loc='best')
+    plt.ylabel('Log distance [m]')
+    plt.legend(['x-y dist'], loc='best')
     plt.title('Log distance to target')
-    plt.grid()
+    plt.grid(True)
     plt.savefig(save_dir + '_log_dist_to_target')
 
 ###################################################################################################################
