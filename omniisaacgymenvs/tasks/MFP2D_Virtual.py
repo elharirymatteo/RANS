@@ -41,6 +41,15 @@ class MFP2DVirtual(RLTask):
 
         self._device = self._cfg["sim_device"]
 
+        # Uneven floor generation
+        self.use_uneven_floor = True
+        self.min_freq = 0.25
+        self.max_freq = 3
+        self.min_offset = -6
+        self.max_offset = 6
+        self.max_floor_force = 0.0
+        self.max_floor_force = math.sqrt(self.max_floor_force**2 / 2)
+
         # Platform parameters
         self.dt = self._task_cfg["sim"]["dt"]
 
@@ -76,6 +85,12 @@ class MFP2DVirtual(RLTask):
         self.actions = torch.zeros((self._num_envs, self._max_actions), device=self._device, dtype=torch.float32)
         self.heading = torch.zeros((self._num_envs, 2), device=self._device, dtype=torch.float32)
 
+        self.floor_x_freq = torch.zeros((self._num_envs), device=self._device, dtype=torch.float32)
+        self.floor_y_freq = torch.zeros((self._num_envs), device=self._device, dtype=torch.float32)
+        self.floor_x_offset = torch.zeros((self._num_envs), device=self._device, dtype=torch.float32)
+        self.floor_y_offset = torch.zeros((self._num_envs), device=self._device, dtype=torch.float32)
+        self.floor_forces = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
+
         self.all_indices = torch.arange(self._num_envs, dtype=torch.int32, device=self._device)
      
         # Extra info
@@ -110,6 +125,7 @@ class MFP2DVirtual(RLTask):
 
         # Add views to scene
         scene.add(self._platforms)
+        scene.add(self._platforms.base)
         scene.add(self._pins)
         scene.add(self._platforms.thrusters)
         return
@@ -163,6 +179,16 @@ class MFP2DVirtual(RLTask):
             }
         }
         return observations
+    
+    def generate_floor(self, env_ids, num_resets) -> None:
+        self.floor_x_freq[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self.max_freq - self.min_freq) + self.min_freq
+        self.floor_y_freq[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self.max_freq - self.min_freq) + self.min_freq
+        self.floor_x_offset[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self.max_offset - self.min_offset) + self.min_offset
+        self.floor_y_offset[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self.max_offset - self.min_offset) + self.min_offset
+
+    def get_floor_forces(self): 
+        self.floor_forces[:,0] = torch.sin(self.root_pos[:,0] * self.floor_x_freq + self.floor_x_offset) * self.max_floor_force
+        self.floor_forces[:,1] = torch.sin(self.root_pos[:,1] * self.floor_y_freq + self.floor_y_offset) * self.max_floor_force
 
     def pre_physics_step(self, actions: torch.Tensor) -> None:
         # implement logic to be performed before physics steps
@@ -201,6 +227,11 @@ class MFP2DVirtual(RLTask):
 
         # Apply forces
         self._platforms.thrusters.apply_forces_and_torques_at_pos(forces=forces, positions=positions, is_global=False)
+        if self.use_uneven_floor:
+            self.root_pos, self.root_rot = self._platforms.get_world_poses()
+            self.get_floor_forces()
+            self._platforms.base.apply_forces_and_torques_at_pos(self.floor_forces, positions=self.root_pos, is_global=True)
+
         return
 
     def post_reset(self):
@@ -234,6 +265,7 @@ class MFP2DVirtual(RLTask):
         # Resets the counter of steps for which the goal was reached
         self.task.reset(env_ids)
         self.virtual_platform.randomize_thruster_state(env_ids, num_resets)
+        self.generate_floor(env_ids, num_resets)
         # Randomizes the starting position of the platform within a disk around the target
         root_pos, root_rot = self.task.get_spawns(env_ids, self.initial_root_pos.clone(), self.initial_root_rot.clone())
         # Resets the states of the joints
