@@ -223,8 +223,8 @@ class MFP2DVirtual(RLTask):
         # clear actions for reset envs
         thrusts[reset_env_ids] = 0
 
-        positions, forces = self.virtual_platform.project_forces(thrusts)
-
+        factor = torch.sum(actions,-1)
+        positions, forces = self.virtual_platform.project_forces(thrusts * factor)
         # Apply forces
         self._platforms.thrusters.apply_forces_and_torques_at_pos(forces=forces, positions=positions, is_global=False)
 
