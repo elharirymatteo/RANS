@@ -42,7 +42,7 @@ class MFP2DVirtual(RLTask):
         self._device = self._cfg["sim_device"]
 
         # Split the maximum amount of thrust across all thrusters.
-        self.split_thrust = self._cfg['env']['split_thrust']
+        self.split_thrust = self._cfg['split_thrust']
 
         # Uneven floor generation
         self.use_uneven_floor = self._task_cfg['use_uneven_floor']
