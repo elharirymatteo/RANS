@@ -224,7 +224,7 @@ class MFP2DVirtual(RLTask):
         thrusts[reset_env_ids] = 0
 
         factor = torch.sum(actions,-1)
-        positions, forces = self.virtual_platform.project_forces(thrusts * factor)
+        positions, forces = self.virtual_platform.project_forces(torch.mul(thrusts,factor.view(self._num_envs,1)))
         # Apply forces
         self._platforms.thrusters.apply_forces_and_torques_at_pos(forces=forces, positions=positions, is_global=False)
 
