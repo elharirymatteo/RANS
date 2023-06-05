@@ -151,12 +151,12 @@ class MFP2DVirtual(RLTask):
             color=color)
 
     def update_state(self) -> None:
-        root_pos, root_quats = self._platforms.get_world_poses(clone=True)
+        self.root_pos, self.root_quats = self._platforms.get_world_poses(clone=True)
         root_velocities = self._platforms.get_velocities(clone=True)
-        root_positions = root_pos - self._env_pos
+        root_positions = self.root_pos - self._env_pos
         # Cast quaternion to Yaw
-        siny_cosp = 2 * (root_quats[:,0] * root_quats[:,3] + root_quats[:,1] * root_quats[:,2])
-        cosy_cosp = 1 - 2 * (root_quats[:,2] * root_quats[:,2] + root_quats[:,3] * root_quats[:,3])
+        siny_cosp = 2 * (self.root_quats[:,0] * self.root_quats[:,3] + self.root_quats[:,1] * self.root_quats[:,2])
+        cosy_cosp = 1 - 2 * (self.root_quats[:,2] * self.root_quats[:,2] + self.root_quats[:,3] * self.root_quats[:,3])
         orient_z = torch.arctan2(siny_cosp, cosy_cosp)
         self.heading[:,0] = torch.cos(orient_z)
         self.heading[:,1] = torch.sin(orient_z)
@@ -227,10 +227,10 @@ class MFP2DVirtual(RLTask):
 
         # Apply forces
         self._platforms.thrusters.apply_forces_and_torques_at_pos(forces=forces, positions=positions, is_global=False)
+
         if self.use_uneven_floor:
-            self.root_pos, self.root_rot = self._platforms.get_world_poses()
             self.get_floor_forces()
-            self._platforms.base.apply_forces_and_torques_at_pos(self.floor_forces, positions=self.root_pos, is_global=True)
+            self._platforms.base.apply_forces_and_torques_at_pos(forces=self.floor_forces, positions=self.root_pos, is_global=True)
 
         return
 
