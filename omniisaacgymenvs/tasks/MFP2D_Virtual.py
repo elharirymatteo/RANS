@@ -45,29 +45,29 @@ class MFP2DVirtual(RLTask):
         self.split_thrust = self._cfg['env']['split_thrust']
 
         # Uneven floor generation
-        self.use_uneven_floor = self._task_cfg['env']['use_uneven_floor']
-        self.min_freq = self._task_cfg['env']['min_freq']
-        self.max_freq = self._task_cfg['env']['max_freq']
-        self.min_offset = self._task_cfg['env']['min_offset']
-        self.max_offset = self._task_cfg['env']['max_offset']
-        self.max_floor_force =self._task_cfg['env']['max_floor_force'] 
+        self.use_uneven_floor = self._task_cfg['use_uneven_floor']
+        self.min_freq = self._task_cfg['min_freq']
+        self.max_freq = self._task_cfg['max_freq']
+        self.min_offset = self._task_cfg['min_offset']
+        self.max_offset = self._task_cfg['max_offset']
+        self.max_floor_force =self._task_cfg['max_floor_force'] 
         self.max_floor_force = math.sqrt(self.max_floor_force**2 / 2)
 
         # Add noisy observations
-        self.add_noise_on_pos = self._task_cfg['env']['add_noise_on_pos']
-        self.position_noise_min = self._task_cfg['env']['position_noise_min']
-        self.position_noise_max = self._task_cfg['env']['position_noise_max']
-        self.add_noise_on_vel = self._task_cfg['env']['add_noise_on_vel']
-        self.velocity_noise_min = self._task_cfg['env']['velocity_noise_min']
-        self.velocity_noise_max = self._task_cfg['env']['velocity_noise_max']
-        self.add_noise_on_heading = self._task_cfg['env']['add_noise_on_heading']
-        self.heading_noise_min = self._task_cfg['env']['heading_noise_min']
-        self.heading_noise_max = self._task_cfg['env']['heading_noise_max']
+        self.add_noise_on_pos = self._task_cfg['add_noise_on_pos']
+        self.position_noise_min = self._task_cfg['position_noise_min']
+        self.position_noise_max = self._task_cfg['position_noise_max']
+        self.add_noise_on_vel = self._task_cfg['add_noise_on_vel']
+        self.velocity_noise_min = self._task_cfg['velocity_noise_min']
+        self.velocity_noise_max = self._task_cfg['velocity_noise_max']
+        self.add_noise_on_heading = self._task_cfg['add_noise_on_heading']
+        self.heading_noise_min = self._task_cfg['heading_noise_min']
+        self.heading_noise_max = self._task_cfg['heading_noise_max']
 
         # Add noisy actions
-        #self.add_noise_on_act = self._task_cfg['env']['add_noise_on_act']
-        #self.min_action_noise = self._task_cfg['env']['min_action_noise']
-        #self.max_action_noise = self._task_cfg['env']['max_action_noise']
+        self.add_noise_on_act = self._task_cfg['env']['add_noise_on_act']
+        self.min_action_noise = self._task_cfg['env']['min_action_noise']
+        self.max_action_noise = self._task_cfg['env']['max_action_noise']
 
         # Platform parameters
         self.dt = self._task_cfg["sim"]["dt"]
