@@ -41,14 +41,33 @@ class MFP2DVirtual(RLTask):
 
         self._device = self._cfg["sim_device"]
 
+        # Split the maximum amount of thrust across all thrusters.
+        self.split_thrust = self._cfg['env']['split_thrust']
+
         # Uneven floor generation
-        self.use_uneven_floor = True
-        self.min_freq = 0.25
-        self.max_freq = 3
-        self.min_offset = -6
-        self.max_offset = 6
-        self.max_floor_force = 0.0
+        self.use_uneven_floor = self._cfg['env']['use_uneven_floor']
+        self.min_freq = self._cfg['env']['min_freq']
+        self.max_freq = self._cfg['env']['max_freq']
+        self.min_offset = self._cfg['env']['min_offset']
+        self.max_offset = self._cfg['env']['max_offset']
+        self.max_floor_force =self._cfg['env']['max_floor_force'] 
         self.max_floor_force = math.sqrt(self.max_floor_force**2 / 2)
+
+        # Add noisy observations
+        self.add_noise_on_pos = self._cfg['env']['add_noise_on_pos']
+        self.position_noise_min = self._cfg['env']['position_noise_min']
+        self.position_noise_max = self._cfg['env']['position_noise_max']
+        self.add_noise_on_vel = self._cfg['env']['add_noise_on_vel']
+        self.velocity_noise_min = self._cfg['env']['velocity_noise_min']
+        self.velocity_noise_max = self._cfg['env']['velocity_noise_max']
+        self.add_noise_on_heading = self._cfg['env']['add_noise_on_heading']
+        self.heading_noise_min = self._cfg['env']['heading_noise_min']
+        self.heading_noise_max = self._cfg['env']['heading_noise_max']
+
+        # Add noisy actions
+        self.add_noise_on_act = self._cfg['env']['add_noise_on_act']
+        self.min_action_noise = self._cfg['env']['min_action_noise']
+        self.max_action_noise = self._cfg['env']['max_action_noise']
 
         # Platform parameters
         self.dt = self._task_cfg["sim"]["dt"]
@@ -223,8 +242,11 @@ class MFP2DVirtual(RLTask):
         # clear actions for reset envs
         thrusts[reset_env_ids] = 0
 
-        factor = torch.sum(actions,-1)
-        positions, forces = self.virtual_platform.project_forces(torch.mul(thrusts,factor.view(self._num_envs,1)))
+        # If split thrust, egally share the maximum amount of thrust across thrusters.
+        if self.split_thrust:
+            factor = torch.sum(actions,-1)
+            positions, forces = self.virtual_platform.project_forces(torch.divide(thrusts,factor.view(self._num_envs,1)))
+
         # Apply forces
         self._platforms.thrusters.apply_forces_and_torques_at_pos(forces=forces, positions=positions, is_global=False)
 
