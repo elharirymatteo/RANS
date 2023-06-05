@@ -50,7 +50,7 @@ class MFP2DVirtual(RLTask):
         self.max_freq = self._task_cfg['env']['max_freq']
         self.min_offset = self._task_cfg['env']['min_offset']
         self.max_offset = self._task_cfg['env']['max_offset']
-        self.max_floor_force =self._task_cfg['env']['max_floor_force'] 
+        self.max_floor_force = self._task_cfg['env']['max_floor_force'] 
         self.max_floor_force = math.sqrt(self.max_floor_force**2 / 2)
 
         # Add noisy observations
