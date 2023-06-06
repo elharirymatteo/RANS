@@ -31,19 +31,19 @@ env:
 
   # Add noisy observations
   add_noise_on_pos: False 
-  position_noise_min: -0.02 
-  position_noise_max:  0.02
+  position_noise_min: -0.01 
+  position_noise_max:  0.01
   add_noise_on_vel: False
-  velocity_noise_min: -0.02
-  velocity_noise_max:  0.02
+  velocity_noise_min: -0.01
+  velocity_noise_max:  0.01
   add_noise_on_heading: False
-  heading_noise_min: -0.05
-  heading_noise_max:  0.05
+  heading_noise_min: -0.025
+  heading_noise_max:  0.025
 
   # Add noisy actions
   add_noise_on_act: False
-  min_action_noise: -0.025
-  max_action_noise:  0.025
+  min_action_noise: -0.05
+  max_action_noise:  0.05
 
   task_parameters: 
     - name: GoToXY
