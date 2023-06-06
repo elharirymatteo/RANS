@@ -23,10 +23,10 @@ env:
 
   # Uneven floor generation
   use_uneven_floor: False
-  min_freq: 0.25
-  max_freq: 3
-  min_offset: -6
-  max_offset: 6
+  floor_min_freq: 0.25
+  floor_max_freq: 3
+  floor_min_offset: -6
+  floor_max_offset: 6
   max_floor_force: 0.5
 
   # Add noisy observations
