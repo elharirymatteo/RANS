@@ -54,20 +54,20 @@ class MFP2DVirtual(RLTask):
         self.max_floor_force = math.sqrt(self.max_floor_force**2 / 2)
 
         # Add noisy observations
-        #self.add_noise_on_pos = self._task_cfg['env']['add_noise_on_pos']
-        #self.position_noise_min = self._task_cfg['env']['position_noise_min']
-        #self.position_noise_max = self._task_cfg['env']['position_noise_max']
-        #self.add_noise_on_vel = self._task_cfg['env']['add_noise_on_vel']
-        #self.velocity_noise_min = self._task_cfg['env']['velocity_noise_min']
-        #self.velocity_noise_max = self._task_cfg['env']['velocity_noise_max']
-        #self.add_noise_on_heading = self._task_cfg['env']['add_noise_on_heading']
-        #self.heading_noise_min = self._task_cfg['env']['heading_noise_min']
-        #self.heading_noise_max = self._task_cfg['env']['heading_noise_max']
+        self.add_noise_on_pos = self._task_cfg['env']['add_noise_on_pos']
+        self.position_noise_min = self._task_cfg['env']['position_noise_min']
+        self.position_noise_max = self._task_cfg['env']['position_noise_max']
+        self.add_noise_on_vel = self._task_cfg['env']['add_noise_on_vel']
+        self.velocity_noise_min = self._task_cfg['env']['velocity_noise_min']
+        self.velocity_noise_max = self._task_cfg['env']['velocity_noise_max']
+        self.add_noise_on_heading = self._task_cfg['env']['add_noise_on_heading']
+        self.heading_noise_min = self._task_cfg['env']['heading_noise_min']
+        self.heading_noise_max = self._task_cfg['env']['heading_noise_max']
 
         # Add noisy actions
-        #self.add_noise_on_act = self._task_cfg['env']['add_noise_on_act']
-        #self.min_action_noise = self._task_cfg['env']['min_action_noise']
-        #self.max_action_noise = self._task_cfg['env']['max_action_noise']
+        self.add_noise_on_act = self._task_cfg['env']['add_noise_on_act']
+        self.min_action_noise = self._task_cfg['env']['min_action_noise']
+        self.max_action_noise = self._task_cfg['env']['max_action_noise']
 
         # Platform parameters
         self.dt = self._task_cfg["sim"]["dt"]
@@ -177,6 +177,13 @@ class MFP2DVirtual(RLTask):
         siny_cosp = 2 * (self.root_quats[:,0] * self.root_quats[:,3] + self.root_quats[:,1] * self.root_quats[:,2])
         cosy_cosp = 1 - 2 * (self.root_quats[:,2] * self.root_quats[:,2] + self.root_quats[:,3] * self.root_quats[:,3])
         orient_z = torch.arctan2(siny_cosp, cosy_cosp)
+        # Add noise on obs
+        if self.add_noise_on_heading:
+            orient_z += torch.rand(orient_z.shape, dtype=torch.float32, device=self._device) * (self.heading_noise_max - self.heading_noise_min) + self.heading_noise_min
+        if self.add_noise_on_pos:
+            root_positions += torch.rand(root_positions.shape, dtype=torch.float32, device=self._device) * (self.position_noise_max - self.position_noise_min) + self.position_noise_min
+        if self.add_noise_on_vel:
+            root_velocities += torch.rand(root_velocities.shape, dtype=torch.float32, device=self._device) * (self.velocity_noise_max - self.velocity_noise_min) + self.velocity_noise_min
         self.heading[:,0] = torch.cos(orient_z)
         self.heading[:,1] = torch.sin(orient_z)
         # Dump to state
@@ -239,6 +246,8 @@ class MFP2DVirtual(RLTask):
         
         # Applies the thrust multiplier
         thrusts = self.virtual_platform.thruster_cfg.thrust_force * thrust_cmds
+        if self.add_noise_on_act:
+            thrusts += torch.rand(thrusts.shape, dtype=torch.float32, device=self._device) * (self.max_action_noise - self.min_action_noise) + self.min_action_noise
         # clear actions for reset envs
         thrusts[reset_env_ids] = 0
 
