@@ -46,17 +46,31 @@ env:
   max_action_noise:  0.05
 
   task_parameters: 
-    - name: GoToXY
-      x_y_tolerance: 0.01
-      kill_after_n_steps_in_tolerance: 50 # 10seconds
-      max_spawn_dist: 6.0
-      min_spawn_dist: 0.5
-      kill_dist: 8.0
+    name: GoToXY
+    x_y_tolerance: 0.01
+    kill_after_n_steps_in_tolerance: 50 # 10seconds
+    max_spawn_dist: 6.0
+    min_spawn_dist: 0.5
+    kill_dist: 8.0
 
   reward_parameters:
-    - name: GoToXY
-      reward_mode: exponential
-      exponential_reward_coeff: 0.25
+    name: GoToXY
+    reward_mode: exponential
+    exponential_reward_coeff: 0.25
+
+  penalties_parameters:
+    penalize_energy: False
+    penalize_energy_fn: "lambda x: -torch.abs(x)*0.05"
+    penalize_energy_c1: 0.01
+    penalize_energy_c2: 0.00
+    penalize_linear_velocities: False
+    penalize_linear_velocities_fn: "lambda x: -torch.norm(x, dim=-1)*0.025"
+    penalize_linear_velocities_c1: 0.01
+    penalize_linear_velocities_c2: 0.00
+    penalize_angular_velocities: False
+    penalize_angular_velocities_fn: "lambda x: -torch.abs(x)*0.1"
+    penalize_angular_velocities_c1: 0.01
+    penalize_angular_velocities_c2: 0.00
 
   platform:
     randomization:

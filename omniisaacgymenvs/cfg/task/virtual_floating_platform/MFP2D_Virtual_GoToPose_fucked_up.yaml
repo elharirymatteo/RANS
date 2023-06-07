@@ -19,21 +19,21 @@ env:
   clipActions: 1.0
 
   task_parameters:
-    - name: GoToPose
-      x_y_tolerance: 0.01
-      kill_after_n_steps_in_tolerance: 50 # 10seconds
-      max_spawn_dist: 6.0
-      min_spawn_dist: 0.5
-      kill_dist: 8.0
+    name: GoToPose
+    x_y_tolerance: 0.01
+    kill_after_n_steps_in_tolerance: 50 # 10seconds
+    max_spawn_dist: 6.0
+    min_spawn_dist: 0.5
+    kill_dist: 8.0
 
   reward_parameters:
-    - name: GoToPose
-      position_reward_mode: exponential
-      heading_reward_mode: exponential
-      position_exponential_reward_coeff: 0.25
-      heading_exponential_reward_coeff: 0.25
-      position_scale: 1.0
-      heading_scale: 1.0
+    name: GoToPose
+    position_reward_mode: exponential
+    heading_reward_mode: exponential
+    position_exponential_reward_coeff: 0.25
+    heading_exponential_reward_coeff: 0.25
+    position_scale: 1.0
+    heading_scale: 1.0
 
   platform:
     randomization:

@@ -19,16 +19,30 @@ env:
   clipActions: 1.0
 
   task_parameters: 
-    - name: TrackXYVelocity
-      lin_vel_tolerance: 0.01
-      kill_after_n_steps_in_tolerance: 50 # 10seconds
-      kill_dist: 500.0
-      goal_random_velocity: 0.75
+    name: TrackXYVelocity
+    lin_vel_tolerance: 0.01
+    kill_after_n_steps_in_tolerance: 50 # 10seconds
+    kill_dist: 500.0
+    goal_random_velocity: 0.75
 
   reward_parameters:
-    - name: TrackXYVelocity
-      reward_mode: exponential
-      exponential_reward_coeff: 0.25
+    name: TrackXYVelocity
+    reward_mode: exponential
+    exponential_reward_coeff: 0.25
+
+  penalties_parameters:
+    penalize_energy: False
+    penalize_energy_fn: "lambda x: x*c1 + c2"
+    penalize_energy_c1: 0.01
+    penalize_energy_c2: 0.00
+    penalize_linear_velocity: False
+    penalize_linear_velocity_fn: "lambda x: x*c1 + c2"
+    penalize_linear_velocity_c1: 0.01
+    penalize_linear_velocity_c2: 0.00
+    penalize_angular_velocity: False
+    penalize_angular_velocity_fn: "lambda x: x*c1 + c2"
+    penalize_angular_velocity_c1: 0.01
+    penalize_angular_velocity_c2: 0.00
 
   platform:
     randomization:
