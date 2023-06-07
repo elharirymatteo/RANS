@@ -106,3 +106,62 @@ class TrackXYOVelocityReward:
         else:
             raise ValueError("Unknown reward type.")
         return linear_reward, angular_reward
+    
+@dataclass
+class Penalties:
+    penalize_linear_velocities: bool = False
+    penalize_linear_velocities_fn: str = "lambda x : -torch.norm(x, dim=-1)*c1 + c2"
+    penalize_linear_velocities_c1: float = 0.01
+    penalize_linear_velocities_c2: float = 0.0
+    penalize_angular_velocities: bool = False
+    penalize_angular_velocities_fn: str = "lambda x : -torch.abs(x)*c1 + c2"
+    penalize_angular_velocities_c1: float = 0.01
+    penalize_angular_velocities_c2: float = 0.0
+    penalize_energy: bool = False
+    penalize_energy_fn: str = "lambda x : -torch.abs(x)*c1 + c2"
+    penalize_energy_c1: float = 0.01
+    penalize_energy_c2: float = 0.0
+
+    def __post_init__(self):
+        self.penalize_linear_velocities_fn = eval(self.penalize_linear_velocities_fn)
+        self.penalize_angular_velocities_fn = eval(self.penalize_angular_velocities_fn)
+        self.penalize_energy_fn = eval(self.penalize_energy_fn)
+    
+    def compute_penalty(self, state, actions):
+        if self.penalize_linear_velocities:
+            self.linear_vel_penalty = self.penalize_linear_velocities_fn(state["linear_velocity"])
+        else:
+            self.linear_vel_penalty = torch.zeros([actions.shape[0]], dtype=torch.float32, device=actions.device)
+
+        if self.penalize_angular_velocities:
+            self.angular_vel_penalty = self.penalize_angular_velocities_fn(state["angular_velocity"])
+        else:
+            self.angular_vel_penalty = torch.zeros([actions.shape[0]], dtype=torch.float32, device=actions.device)
+
+        if self.penalize_energy:
+            self.energy_penalty = self.penalize_energy_fn(torch.sum(actions,-1))
+        else:
+            self.energy_penalty = torch.zeros([actions.shape[0]], dtype=torch.float32, device=actions.device)
+
+        return self.linear_vel_penalty + self.angular_vel_penalty + self.energy_penalty
+
+    def get_stats_name(self):
+        names = []
+        if self.penalize_linear_velocities:
+            names.append("linear_vel_penalty")
+        if self.penalize_angular_velocities:
+            names.append("angular_vel_penalty")
+        if self.penalize_energy:
+            names.append("energy_penalty")
+        return names
+    
+    def update_statistics(self, stats):
+        if self.penalize_linear_velocities:
+            stats["linear_vel_penalty"] += self.linear_vel_penalty
+        if self.penalize_angular_velocities:
+            stats["angular_vel_penalty"] += self.angular_vel_penalty
+        if self.penalize_energy:
+            stats["energy_penalty"] += self.energy_penalty
+        return stats
+        
+        

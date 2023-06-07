@@ -5,6 +5,8 @@ from omniisaacgymenvs.utils.pin import VisualPin
 
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_thruster_generator import VirtualPlatform
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_factory import task_factory
+from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_core import parse_data_dict
+from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_rewards import Penalties
 
 from omni.isaac.core.utils.torch.rotations import *
 from omni.isaac.core.prims import XFormPrimView
@@ -73,10 +75,13 @@ class MFP2DVirtual(RLTask):
         self.dt = self._task_cfg["sim"]["dt"]
 
         # Task parameters
-        task_cfg = list(self._task_cfg["env"]["task_parameters"])[0]
-        reward_cfg = list(self._task_cfg["env"]["reward_parameters"])[0]
+        task_cfg = self._task_cfg["env"]["task_parameters"]
+        reward_cfg = self._task_cfg["env"]["reward_parameters"]
+        penalty_cfg = self._task_cfg["env"]["penalties_parameters"]
+
 
         self.task = task_factory.get(task_cfg, reward_cfg, self._num_envs, self._device)
+        self._penalties = parse_data_dict(Penalties(), penalty_cfg)
         self.virtual_platform = VirtualPlatform(self._num_envs, self._platform_cfg, self._device)
         self._num_observations = self.task._num_observations
         self._max_actions = self.virtual_platform._max_thrusters
@@ -116,7 +121,17 @@ class MFP2DVirtual(RLTask):
         self.extras = {}
 
         self.episode_sums = self.task.create_stats({})
+        self.add_stats(self._penalties.get_stats_name())
         return
+    
+    def add_stats(self, names):
+        for name in names:
+            torch_zeros = lambda: torch.zeros(self._num_envs, dtype=torch.float, device=self._device, requires_grad=False)
+
+            if not name in self.episode_sums.keys():
+                self.episode_sums[name] = torch_zeros()
+
+        print(self.episode_sums)
     
     def cleanup(self) -> None:
         """ Prepares torch buffers for RL data collection."""
@@ -327,9 +342,12 @@ class MFP2DVirtual(RLTask):
 
     def calculate_metrics(self) -> None:
         position_reward = self.task.compute_reward(self.current_state, self.actions)
+        penalties = self._penalties.compute_penalty(self.current_state, self.actions)
+
         #print(target_dist[0], position_reward[0])
-        self.rew_buf[:] = position_reward
+        self.rew_buf[:] = position_reward + penalties
         self.episode_sums = self.task.update_statistics(self.episode_sums)
+        self.episode_sums = self._penalties.update_statistics(self.episode_sums)
 
     def is_done(self) -> None:
         # resets due to misbehavior
