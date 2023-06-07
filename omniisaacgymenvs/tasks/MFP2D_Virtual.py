@@ -41,6 +41,34 @@ class MFP2DVirtual(RLTask):
 
         self._device = self._cfg["sim_device"]
 
+        # Split the maximum amount of thrust across all thrusters.
+        self.split_thrust = self._task_cfg['env']['split_thrust']
+
+        # Uneven floor generation
+        self.use_uneven_floor = self._task_cfg['env']['use_uneven_floor']
+        self.min_freq = self._task_cfg['env']['floor_min_freq']
+        self.max_freq = self._task_cfg['env']['floor_max_freq']
+        self.min_offset = self._task_cfg['env']['floor_min_offset']
+        self.max_offset = self._task_cfg['env']['floor_max_offset']
+        self.max_floor_force = self._task_cfg['env']['max_floor_force'] 
+        self.max_floor_force = math.sqrt(self.max_floor_force**2 / 2)
+
+        # Add noisy observations
+        self.add_noise_on_pos = self._task_cfg['env']['add_noise_on_pos']
+        self.position_noise_min = self._task_cfg['env']['position_noise_min']
+        self.position_noise_max = self._task_cfg['env']['position_noise_max']
+        self.add_noise_on_vel = self._task_cfg['env']['add_noise_on_vel']
+        self.velocity_noise_min = self._task_cfg['env']['velocity_noise_min']
+        self.velocity_noise_max = self._task_cfg['env']['velocity_noise_max']
+        self.add_noise_on_heading = self._task_cfg['env']['add_noise_on_heading']
+        self.heading_noise_min = self._task_cfg['env']['heading_noise_min']
+        self.heading_noise_max = self._task_cfg['env']['heading_noise_max']
+
+        # Add noisy actions
+        self.add_noise_on_act = self._task_cfg['env']['add_noise_on_act']
+        self.min_action_noise = self._task_cfg['env']['min_action_noise']
+        self.max_action_noise = self._task_cfg['env']['max_action_noise']
+
         # Platform parameters
         self.dt = self._task_cfg["sim"]["dt"]
 
@@ -76,6 +104,12 @@ class MFP2DVirtual(RLTask):
         self.actions = torch.zeros((self._num_envs, self._max_actions), device=self._device, dtype=torch.float32)
         self.heading = torch.zeros((self._num_envs, 2), device=self._device, dtype=torch.float32)
 
+        self.floor_x_freq = torch.zeros((self._num_envs), device=self._device, dtype=torch.float32)
+        self.floor_y_freq = torch.zeros((self._num_envs), device=self._device, dtype=torch.float32)
+        self.floor_x_offset = torch.zeros((self._num_envs), device=self._device, dtype=torch.float32)
+        self.floor_y_offset = torch.zeros((self._num_envs), device=self._device, dtype=torch.float32)
+        self.floor_forces = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
+
         self.all_indices = torch.arange(self._num_envs, dtype=torch.int32, device=self._device)
      
         # Extra info
@@ -110,6 +144,7 @@ class MFP2DVirtual(RLTask):
 
         # Add views to scene
         scene.add(self._platforms)
+        scene.add(self._platforms.base)
         scene.add(self._pins)
         scene.add(self._platforms.thrusters)
         return
@@ -135,13 +170,20 @@ class MFP2DVirtual(RLTask):
             color=color)
 
     def update_state(self) -> None:
-        root_pos, root_quats = self._platforms.get_world_poses(clone=True)
+        self.root_pos, self.root_quats = self._platforms.get_world_poses(clone=True)
         root_velocities = self._platforms.get_velocities(clone=True)
-        root_positions = root_pos - self._env_pos
+        root_positions = self.root_pos - self._env_pos
         # Cast quaternion to Yaw
-        siny_cosp = 2 * (root_quats[:,0] * root_quats[:,3] + root_quats[:,1] * root_quats[:,2])
-        cosy_cosp = 1 - 2 * (root_quats[:,2] * root_quats[:,2] + root_quats[:,3] * root_quats[:,3])
+        siny_cosp = 2 * (self.root_quats[:,0] * self.root_quats[:,3] + self.root_quats[:,1] * self.root_quats[:,2])
+        cosy_cosp = 1 - 2 * (self.root_quats[:,2] * self.root_quats[:,2] + self.root_quats[:,3] * self.root_quats[:,3])
         orient_z = torch.arctan2(siny_cosp, cosy_cosp)
+        # Add noise on obs
+        if self.add_noise_on_heading:
+            orient_z += torch.rand(orient_z.shape, dtype=torch.float32, device=self._device) * (self.heading_noise_max - self.heading_noise_min) + self.heading_noise_min
+        if self.add_noise_on_pos:
+            root_positions += torch.rand(root_positions.shape, dtype=torch.float32, device=self._device) * (self.position_noise_max - self.position_noise_min) + self.position_noise_min
+        if self.add_noise_on_vel:
+            root_velocities += torch.rand(root_velocities.shape, dtype=torch.float32, device=self._device) * (self.velocity_noise_max - self.velocity_noise_min) + self.velocity_noise_min
         self.heading[:,0] = torch.cos(orient_z)
         self.heading[:,1] = torch.sin(orient_z)
         # Dump to state
@@ -163,6 +205,16 @@ class MFP2DVirtual(RLTask):
             }
         }
         return observations
+    
+    def generate_floor(self, env_ids, num_resets) -> None:
+        self.floor_x_freq[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self.max_freq - self.min_freq) + self.min_freq
+        self.floor_y_freq[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self.max_freq - self.min_freq) + self.min_freq
+        self.floor_x_offset[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self.max_offset - self.min_offset) + self.min_offset
+        self.floor_y_offset[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self.max_offset - self.min_offset) + self.min_offset
+
+    def get_floor_forces(self): 
+        self.floor_forces[:,0] = torch.sin(self.root_pos[:,0] * self.floor_x_freq + self.floor_x_offset) * self.max_floor_force
+        self.floor_forces[:,1] = torch.sin(self.root_pos[:,1] * self.floor_y_freq + self.floor_y_offset) * self.max_floor_force
 
     def pre_physics_step(self, actions: torch.Tensor) -> None:
         # implement logic to be performed before physics steps
@@ -194,13 +246,25 @@ class MFP2DVirtual(RLTask):
         
         # Applies the thrust multiplier
         thrusts = self.virtual_platform.thruster_cfg.thrust_force * thrust_cmds
+        if self.add_noise_on_act:
+            thrusts += torch.rand(thrusts.shape, dtype=torch.float32, device=self._device) * (self.max_action_noise - self.min_action_noise) + self.min_action_noise
         # clear actions for reset envs
         thrusts[reset_env_ids] = 0
 
-        positions, forces = self.virtual_platform.project_forces(thrusts)
+        # If split thrust, egally share the maximum amount of thrust across thrusters.
+        if self.split_thrust:
+            factor = torch.max(torch.sum(actions,-1),torch.ones((self._num_envs), dtype=torch.float32, device=self._device))
+            positions, forces = self.virtual_platform.project_forces(thrusts / factor.view(self._num_envs,1))
+        else:
+            positions, forces = self.virtual_platform.project_forces(thrusts)
 
         # Apply forces
         self._platforms.thrusters.apply_forces_and_torques_at_pos(forces=forces, positions=positions, is_global=False)
+
+        if self.use_uneven_floor:
+            self.get_floor_forces()
+            self._platforms.base.apply_forces_and_torques_at_pos(forces=self.floor_forces, positions=self.root_pos, is_global=True)
+
         return
 
     def post_reset(self):
@@ -257,6 +321,7 @@ class MFP2DVirtual(RLTask):
         # Resets the counter of steps for which the goal was reached
         self.task.reset(env_ids)
         self.virtual_platform.randomize_thruster_state(env_ids, num_resets)
+        self.generate_floor(env_ids, num_resets)
         # Randomizes the starting position of the platform within a disk around the target
         root_pos, root_rot = self.task.get_spawns(env_ids, self.initial_root_pos.clone(), self.initial_root_rot.clone())
         # Resets the states of the joints

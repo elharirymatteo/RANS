@@ -13,7 +13,34 @@ env:
   action_mode: MultiDiscrete
   numQuantizedActions: 1
 
-  controlFrequencyInv: 10
+  controlFrequencyInv: 1
+
+  # Split the maximum amount of thrust across all thrusters.
+  split_thrust: False
+
+  # Uneven floor generation
+  use_uneven_floor: False
+  floor_min_freq: 0.25
+  floor_max_freq: 3
+  floor_min_offset: -6
+  floor_max_offset: 6
+  max_floor_force: 0.5
+
+  # Add noisy observations
+  add_noise_on_pos: False 
+  position_noise_min: -0.01 
+  position_noise_max:  0.01
+  add_noise_on_vel: False
+  velocity_noise_min: -0.01
+  velocity_noise_max:  0.01
+  add_noise_on_heading: False
+  heading_noise_min: -0.025
+  heading_noise_max:  0.025
+
+  # Add noisy actions
+  add_noise_on_act: False
+  min_action_noise: -0.05
+  max_action_noise:  0.05
 
   clipObservations: {state: 8.0}
   clipActions: 1.0
@@ -65,7 +92,7 @@ env:
       save_path: "config.png"
 
 sim:
-  dt: 0.02
+  dt: 0.2
   use_gpu_pipeline: ${eq:${...pipeline},"gpu"}
   gravity: [0.0, 0.0, 0.0]
   add_ground_plane: False
