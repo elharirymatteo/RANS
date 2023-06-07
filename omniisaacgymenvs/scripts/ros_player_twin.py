@@ -136,11 +136,14 @@ class MyNode:
         self.pub = rospy.Publisher("/spacer_floating_platform/valves/input", ByteMultiArray, queue_size=1)
 
         self.player = player
-
+        self.save_trajectory = False
+        self.obs_buffer = []
+        self.sim_obs_buffer = []
+        self.act_buffer = []
         self.my_msg = ByteMultiArray()
         self.count = 0
 
-        self.end_experiment_at_step = rospy.get_param("end_experiment_at_step", 300)
+        self.end_experiment_at_step = rospy.get_param("end_experiment_at_step", 20)
         self.play_rate = rospy.get_param("play_rate", 5.0)
 
         self.rate = rospy.Rate(self.play_rate) # 1hz
@@ -179,24 +182,56 @@ class MyNode:
             self.ready = True
 
     def run(self):
+        
+        run_once = True
+
         while (not self.rospy.is_shutdown()) and (self.count < self.end_experiment_at_step):
             #print(f'Im in')
+            self.rospy.sleep(self.rospy.Duration(1.0))
             if self.ready:
+                if run_once:
+                    quat = self.pose_buffer[-1].pose.orientation
+                    q = [quat.w, quat.x, quat.y, quat.z]
+
+                    position = self.obs["state"][6:8] + torch.tensor([[2.5, -1.5]], dtype=torch.float32, device="cuda")
+                    heading = torch.tensor([q], dtype=torch.float32, device="cuda")
+                    id = torch.tensor([0], dtype=torch.long, device="cuda")
+                    self.player.env._task.set_to_pose(id, position, heading)
+                    run_once = False
+
                 action = self.player.get_action(self.obs, is_deterministic=True)
+                #print(f'player obs: {self.player.env._obs["state"]}')
+                print(f'Action from model: {action}')
+                obs_sim, _, _, _ = self.player.env.step(action)
+
                 action = action.cpu().tolist()
+                if self.save_trajectory:
+                    self.obs_buffer.append(self.obs)
+                    self.sim_obs_buffer.append(obs_sim)
+                    self.act_buffer.append(action)
                 #bits = "{0:009b}".format(self.count)
                 #action = [int(bits[0]),int(bits[1]),int(bits[2]),int(bits[3]),int(bits[4]),int(bits[5]),int(bits[6]),int(bits[7]),int(bits[8])]
                 action = self.remap_actions(action)
+                print(f'Action after remap: {action}')
                 lifting_active = 1
                 action.insert(0, lifting_active)
                 self.my_msg.data = action
-                self.pub.publish(self.my_msg)
+                #self.pub.publish(self.my_msg)
                 self.count += 1
                 print(f'count: {self.count}')
                 print(self.my_msg.data)
-                print(self.obs)
+                print(f'optitrack obs: {self.obs["state"]}')
+                print(f'sim obs: {obs_sim["obs"]["state"]}')
+
                 self.ready = False
             self.rate.sleep()
+
+        if self.save_trajectory:
+            save_dir = "./lab_tests/trajectory/"+ datetime.now().strftime("%Y%m%d-%H%M%S") + "/"
+            os.makedirs(save_dir, exist_ok=True)
+            np.save(os.path.join(save_dir, "obs.npy"), np.array(self.obs_buffer))
+            np.save(os.path.join(save_dir, "act.npy"), np.array(self.act_buffer))
+            np.save(os.path.join(save_dir, "sim_obs.npy"), np.array(self.sim_obs_buffer))
 
         self.my_msg.data = [0,0,0,0,0,0,0,0,0]
         self.pub.publish(self.my_msg)
@@ -263,7 +298,7 @@ def parse_hydra_configs(cfg: DictConfig):
     node = MyNode(player, task_flag)
     node.run()
     #rospy.spin()
-
+    
     env.close()
 
 if __name__ == '__main__':
