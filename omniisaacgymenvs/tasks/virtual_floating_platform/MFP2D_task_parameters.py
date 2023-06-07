@@ -17,8 +17,9 @@ class GoToXYParameters:
     spawn_curriculum_mode: str = "linear"
     spawn_curriculum_warmup: int = 250
     spawn_curriculum_end: int = 750
-    energy_penalty: float = 0.0
-    velocity_penalty: float = 0.0
+    energy_penalty: float = 0.05
+    linear_velocity_penalty: float = 0.0
+    angular_velocity_penalty: float = 0.05
 
     def __post_init__(self):
         assert self.spawn_curriculum_mode.lower() in ["linear"], "Linear is the only currently supported mode."
@@ -46,8 +47,9 @@ class GoToPoseParameters:
     spawn_curriculum_mode: str = "linear"
     spawn_curriculum_warmup: int = 250
     spawn_curriculum_end: int = 750
-    energy_penalty: float = 0.0
-    velocity_penalty: float = 0.0
+    energy_penalty: float = 0.05
+    linear_velocity_penalty: float = 0.0
+    angular_velocity_penalty: float = 0.05
 
 
     def __post_init__(self):

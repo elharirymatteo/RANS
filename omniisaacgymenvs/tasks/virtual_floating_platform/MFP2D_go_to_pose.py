@@ -64,7 +64,7 @@ class GoToPoseTask(Core):
         self.position_reward -= self._task_parameters.velocity_penalty *  current_state['linear_velocity'].sum(-1)
 
         #adding angular velocity penalty
-        self.heading_reward -= self._task_parameters.velocity_penalty *  current_state['angular_velocity'].sum(-1)
+        self.heading_reward -= self._task_parameters.angular_velocity_penalty *  current_state['angular_velocity'].sum(-1)
 
         return self.position_reward + self.heading_reward
     
