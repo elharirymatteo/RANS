@@ -129,17 +129,17 @@ class Penalties:
     
     def compute_penalty(self, state, actions, step):
         if self.penalize_linear_velocities:
-            self.linear_vel_penalty = self.penalize_linear_velocities_fn(state["linear_velocity"],step)
+            self.linear_vel_penalty = self.penalize_linear_velocities_fn(state["linear_velocity"], torch.tensor(step, dtype=torch.float32, device=actions.device))
         else:
             self.linear_vel_penalty = torch.zeros([actions.shape[0]], dtype=torch.float32, device=actions.device)
 
         if self.penalize_angular_velocities:
-            self.angular_vel_penalty = self.penalize_angular_velocities_fn(state["angular_velocity"],step)
+            self.angular_vel_penalty = self.penalize_angular_velocities_fn(state["angular_velocity"], torch.tensor(step, dtype=torch.float32, device=actions.device))
         else:
             self.angular_vel_penalty = torch.zeros([actions.shape[0]], dtype=torch.float32, device=actions.device)
 
         if self.penalize_energy:
-            self.energy_penalty = self.penalize_energy_fn(torch.sum(actions,-1),step)
+            self.energy_penalty = self.penalize_energy_fn(torch.sum(actions,-1), torch.tensor(step, dtype=torch.float32, device=actions.device))
         else:
             self.energy_penalty = torch.zeros([actions.shape[0]], dtype=torch.float32, device=actions.device)
 

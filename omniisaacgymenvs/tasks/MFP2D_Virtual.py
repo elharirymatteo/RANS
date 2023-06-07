@@ -123,6 +123,7 @@ class MFP2DVirtual(RLTask):
 
         self.episode_sums = self.task.create_stats({})
         self.add_stats(self._penalties.get_stats_name())
+        self.add_stats(['normed_linear_vel', 'normed_angular_vel', 'actions_sum'])
         return
     
     def add_stats(self, names):
@@ -364,6 +365,11 @@ class MFP2DVirtual(RLTask):
                 self.episode_sums[key][env_ids]) / self._max_episode_length
             self.episode_sums[key][env_ids] = 0.
 
+    def update_state_statistics(self):
+        self.episode_sums['normed_linear_vel'] += torch.norm(self.current_state["linear_velocity"], dim=-1)
+        self.episode_sums['normed_angular_vel'] += torch.abs(self.current_state["angular_velocity"])
+        self.episode_sums['actions_sum'] += torch.sum(self.actions, dim=-1)
+
     def calculate_metrics(self) -> None:
         position_reward = self.task.compute_reward(self.current_state, self.actions)
         self.step = 1 / self._task_cfg["env"]["horizon_length"]
@@ -373,6 +379,7 @@ class MFP2DVirtual(RLTask):
         self.rew_buf[:] = position_reward + penalties
         self.episode_sums = self.task.update_statistics(self.episode_sums)
         self.episode_sums = self._penalties.update_statistics(self.episode_sums)
+        self.update_state_statistics()
 
     def is_done(self) -> None:
         # resets due to misbehavior
