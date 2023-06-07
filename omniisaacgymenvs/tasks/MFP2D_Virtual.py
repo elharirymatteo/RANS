@@ -40,6 +40,7 @@ class MFP2DVirtual(RLTask):
         self._env_spacing = self._task_cfg["env"]["envSpacing"]
         self._max_episode_length = self._task_cfg["env"]["maxEpisodeLength"]
         self._discrete_actions = self._task_cfg["env"]["action_mode"]
+        self.step = 0
 
         self._device = self._cfg["sim_device"]
 
@@ -365,7 +366,8 @@ class MFP2DVirtual(RLTask):
 
     def calculate_metrics(self) -> None:
         position_reward = self.task.compute_reward(self.current_state, self.actions)
-        penalties = self._penalties.compute_penalty(self.current_state, self.actions)
+        self.step = 1 / self._task_cfg["env"]["horizon_length"]
+        penalties = self._penalties.compute_penalty(self.current_state, self.actions, self.step)
 
         #print(target_dist[0], position_reward[0])
         self.rew_buf[:] = position_reward + penalties

@@ -12,6 +12,7 @@ env:
   enableDebugVis: False
   action_mode: MultiDiscrete
   numQuantizedActions: 1
+  horizon_length: 16
 
   controlFrequencyInv: 1
 
@@ -60,15 +61,15 @@ env:
 
   penalties_parameters:
     penalize_energy: False
-    penalize_energy_fn: "lambda x: -torch.abs(x)*0.05"
+    penalize_energy_fn: "lambda x,step: -torch.abs(x)*0.01"
     penalize_energy_c1: 0.01
     penalize_energy_c2: 0.00
     penalize_linear_velocities: False
-    penalize_linear_velocities_fn: "lambda x: -torch.norm(x, dim=-1)*0.025"
+    penalize_linear_velocities_fn: "lambda x,step: -torch.norm(x, dim=-1)*0.01"
     penalize_linear_velocities_c1: 0.01
     penalize_linear_velocities_c2: 0.00
     penalize_angular_velocities: False
-    penalize_angular_velocities_fn: "lambda x: -torch.abs(x)*0.1"
+    penalize_angular_velocities_fn: "lambda x,step: -torch.abs(x)*1.0*step/2000"
     penalize_angular_velocities_c1: 0.01
     penalize_angular_velocities_c2: 0.00
 

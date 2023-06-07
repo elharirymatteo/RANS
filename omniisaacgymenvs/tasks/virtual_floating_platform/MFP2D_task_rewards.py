@@ -110,15 +110,15 @@ class TrackXYOVelocityReward:
 @dataclass
 class Penalties:
     penalize_linear_velocities: bool = False
-    penalize_linear_velocities_fn: str = "lambda x : -torch.norm(x, dim=-1)*c1 + c2"
+    penalize_linear_velocities_fn: str = "lambda x,step : -torch.norm(x, dim=-1)*c1 + c2"
     penalize_linear_velocities_c1: float = 0.01
     penalize_linear_velocities_c2: float = 0.0
     penalize_angular_velocities: bool = False
-    penalize_angular_velocities_fn: str = "lambda x : -torch.abs(x)*c1 + c2"
+    penalize_angular_velocities_fn: str = "lambda x,step : -torch.abs(x)*c1 + c2"
     penalize_angular_velocities_c1: float = 0.01
     penalize_angular_velocities_c2: float = 0.0
     penalize_energy: bool = False
-    penalize_energy_fn: str = "lambda x : -torch.abs(x)*c1 + c2"
+    penalize_energy_fn: str = "lambda x,step : -torch.abs(x)*c1 + c2"
     penalize_energy_c1: float = 0.01
     penalize_energy_c2: float = 0.0
 
@@ -127,19 +127,19 @@ class Penalties:
         self.penalize_angular_velocities_fn = eval(self.penalize_angular_velocities_fn)
         self.penalize_energy_fn = eval(self.penalize_energy_fn)
     
-    def compute_penalty(self, state, actions):
+    def compute_penalty(self, state, actions, step):
         if self.penalize_linear_velocities:
-            self.linear_vel_penalty = self.penalize_linear_velocities_fn(state["linear_velocity"])
+            self.linear_vel_penalty = self.penalize_linear_velocities_fn(state["linear_velocity"],step)
         else:
             self.linear_vel_penalty = torch.zeros([actions.shape[0]], dtype=torch.float32, device=actions.device)
 
         if self.penalize_angular_velocities:
-            self.angular_vel_penalty = self.penalize_angular_velocities_fn(state["angular_velocity"])
+            self.angular_vel_penalty = self.penalize_angular_velocities_fn(state["angular_velocity"],step)
         else:
             self.angular_vel_penalty = torch.zeros([actions.shape[0]], dtype=torch.float32, device=actions.device)
 
         if self.penalize_energy:
-            self.energy_penalty = self.penalize_energy_fn(torch.sum(actions,-1))
+            self.energy_penalty = self.penalize_energy_fn(torch.sum(actions,-1),step)
         else:
             self.energy_penalty = torch.zeros([actions.shape[0]], dtype=torch.float32, device=actions.device)
 
