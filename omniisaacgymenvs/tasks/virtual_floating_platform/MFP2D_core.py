@@ -41,6 +41,11 @@ def parse_data_dict(dataclass, data, ask_for_validation=False):
             dataclass.__setattr__(key, data[key])
         else:
             unknown_keys.append(key)
+    try:
+        dataclass.__post_init__()
+    except:
+        pass
+
     print("Parsed configuration parameters:")
     for key in dataclass.__dict__:
         print("     + "+key+":"+str(dataclass.__getattribute__(key)))
