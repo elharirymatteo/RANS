@@ -14,12 +14,13 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
     """
     # TODO: place all the different plots in a separate function, to be called from here based on the episode (best, worst, first etc.)
     reward_history = ep_data['rews']
-    
+    print(f'reward_history.shape[1]: {reward_history.shape[1]}')
     # plot average results over all agents
     best_agent = np.argmax(reward_history.sum(axis=0))
     worst_agent = np.argmin(reward_history.sum(axis=0))
+    rand_agent = np.random.choice(list(set(range(0, reward_history.shape[1]))-set([best_agent, worst_agent])))
     print('Best agent: ', best_agent, '| Worst agent: ', worst_agent)
-    
+    print(f'Random Agent: {rand_agent} \n')
     control_history = ep_data['act']
     reward_history = ep_data['rews']
     info_history = ep_data['info']
@@ -28,7 +29,7 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
     # plot best and worst episodes data
     plot_one_episode({k:np.array([v[best_agent] for v in vals]) for k,vals in ep_data.items()}, save_dir+"best_ep/")
     plot_one_episode({k:np.array([v[worst_agent] for v in vals]) for k,vals in ep_data.items()}, save_dir+"worst_ep/")
-
+    plot_one_episode({k:np.array([v[worst_agent] for v in vals]) for k,vals in ep_data.items()}, save_dir+f'rand_ep_{rand_agent}/')
 
     if all_agents:
         

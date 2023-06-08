@@ -133,7 +133,7 @@ class MFP2DVirtual(RLTask):
             if not name in self.episode_sums.keys():
                 self.episode_sums[name] = torch_zeros()
 
-        print(self.episode_sums)
+        # print(self.episode_sums)
     
     def cleanup(self) -> None:
         """ Prepares torch buffers for RL data collection."""
