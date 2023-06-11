@@ -53,7 +53,7 @@ class CreatePlatform:
                 self.core_CoM = Gf.Vec3d(list(cfg["core"]["CoM"]))
             else:
                 self.core_CoM = Gf.Vec3d([0,0,0])
-            if "Mass" in cfg["core"].keys():
+            if "mass" in cfg["core"].keys():
                 self.core_mass = cfg["core"]["mass"]
             else:
                 self.core_mass = 5.0

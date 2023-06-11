@@ -13,7 +13,7 @@ env:
   action_mode: MultiDiscrete
   numQuantizedActions: 1
 
-  controlFrequencyInv: 1
+  controlFrequencyInv: 10
 
   # Split the maximum amount of thrust across all thrusters.
   split_thrust: False
@@ -77,9 +77,9 @@ env:
       max_thruster_kill: 2
 
     core:
-      mass: 5.0
+      mass: 10.92
       CoM: [0,0,0]
-      radius: 0.25
+      radius: 0.31
       shape: "sphere"
       refinement: 2
 
@@ -106,7 +106,7 @@ env:
     penalize_angular_velocities_c2: 0.00
 
 sim:
-  dt: 0.2
+  dt: 0.02
   use_gpu_pipeline: ${eq:${...pipeline},"gpu"}
   gravity: [0.0, 0.0, 0.0]
   add_ground_plane: False

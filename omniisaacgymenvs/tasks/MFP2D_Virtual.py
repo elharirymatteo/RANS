@@ -133,7 +133,7 @@ class MFP2DVirtual(RLTask):
             if not name in self.episode_sums.keys():
                 self.episode_sums[name] = torch_zeros()
 
-        print(self.episode_sums)
+        # print(self.episode_sums)
     
     def cleanup(self) -> None:
         """ Prepares torch buffers for RL data collection."""
@@ -230,6 +230,7 @@ class MFP2DVirtual(RLTask):
         self.floor_y_offset[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self.max_offset - self.min_offset) + self.min_offset
 
     def get_floor_forces(self): 
+        self.root_pos, self.root_quats = self._platforms.get_world_poses(clone=True)
         self.floor_forces[:,0] = torch.sin(self.root_pos[:,0] * self.floor_x_freq + self.floor_x_offset) * self.max_floor_force
         self.floor_forces[:,1] = torch.sin(self.root_pos[:,1] * self.floor_y_freq + self.floor_y_offset) * self.max_floor_force
 
@@ -251,6 +252,7 @@ class MFP2DVirtual(RLTask):
         # Collect actions
         actions = actions.clone().to(self._device)
         self.actions = actions
+
         # Remap actions to the correct values
         if self._discrete_actions=="MultiDiscrete":
             # If actions are multidiscrete [0, 1]
@@ -270,19 +272,27 @@ class MFP2DVirtual(RLTask):
 
         # If split thrust, egally share the maximum amount of thrust across thrusters.
         if self.split_thrust:
-            factor = torch.max(torch.sum(actions,-1),torch.ones((self._num_envs), dtype=torch.float32, device=self._device))
-            positions, forces = self.virtual_platform.project_forces(thrusts / factor.view(self._num_envs,1))
+            factor = torch.max(torch.sum(self.actions,-1),torch.ones((self._num_envs), dtype=torch.float32, device=self._device))
+            self.positions, self.forces = self.virtual_platform.project_forces(thrusts / factor.view(self._num_envs,1))
         else:
-            positions, forces = self.virtual_platform.project_forces(thrusts)
+            self.positions, self.forces = self.virtual_platform.project_forces(thrusts)
 
         # Apply forces
-        self._platforms.thrusters.apply_forces_and_torques_at_pos(forces=forces, positions=positions, is_global=False)
-
+        self._platforms.thrusters.apply_forces_and_torques_at_pos(forces=self.forces, positions=self.positions, is_global=False)
         if self.use_uneven_floor:
             self.get_floor_forces()
             self._platforms.base.apply_forces_and_torques_at_pos(forces=self.floor_forces, positions=self.root_pos, is_global=True)
-
         return
+    
+    def propagate_forces(self):
+        # Apply forces
+        self._platforms.thrusters.apply_forces_and_torques_at_pos(forces=self.forces, positions=self.positions, is_global=False)
+        if self.use_uneven_floor:
+            self.get_floor_forces()
+            self._platforms.base.apply_forces_and_torques_at_pos(forces=self.floor_forces, positions=self.root_pos, is_global=True)
+        return
+    
+
 
     def post_reset(self):
         # implement any logic required for simulation on-start here

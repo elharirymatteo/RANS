@@ -83,7 +83,7 @@ def eval_multi_agents(cfg):
     total_reward = 0
     num_steps = 0
     
-    total_num_steps = 400
+    total_num_steps = 800
     for _ in range(total_num_steps):
         actions = agent.get_action(obs['obs'], is_deterministic=True)
         obs, reward, done, info = env.step(actions)
@@ -141,12 +141,12 @@ def parse_hydra_configs(cfg: DictConfig):
         return
 
     # set congig params for evaluation
-    cfg.task.env.maxEpisodeLength = 402
+    cfg.task.env.maxEpisodeLength = 802
     cfg.task.env.clipObservations['state'] = 20.0
-    cfg.task.env.task_parameters[0]['max_spawn_dist'] = 5.0
-    cfg.task.env.task_parameters[0]['min_spawn_dist'] = 4.5  
-    cfg.task.env.task_parameters[0]['kill_dist'] = 6.0
-    cfg.task.env.task_parameters[0]['kill_after_n_steps_in_tolerance'] = 400
+    cfg.task.env.task_parameters['max_spawn_dist'] = 5.0
+    cfg.task.env.task_parameters['min_spawn_dist'] = 4.5  
+    cfg.task.env.task_parameters['kill_dist'] = 6.0
+    cfg.task.env.task_parameters['kill_after_n_steps_in_tolerance'] = 400
     # TODO: check error with visualizer of thrusters....  ANTOINE
     #cfg.task.env.platform.configuration.visualize = False
     cfg_dict = omegaconf_to_dict(cfg)
@@ -162,9 +162,10 @@ def parse_hydra_configs(cfg: DictConfig):
     
     from omni.isaac.core.utils.torch.maths import set_seed
     cfg.seed = set_seed(cfg.seed, torch_deterministic=cfg.torch_deterministic)
+    cfg.seed = cfg.seed + 1
     cfg_dict['seed'] = cfg.seed
-
     task = initialize_task(cfg_dict, env)
+
     # Activate wandb logging
     if cfg.wandb_activate:
         activate_wandb(cfg, cfg_dict, task)

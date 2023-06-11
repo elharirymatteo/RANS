@@ -14,7 +14,7 @@ env:
   numQuantizedActions: 1
   horizon_length: 16
 
-  controlFrequencyInv: 1
+  controlFrequencyInv: 10
 
   clipObservations: {state: 8.0}
   clipActions: 1.0
@@ -99,11 +99,11 @@ env:
       num_anchors: 4
       offset: 0.75839816339
       thrust_force: 1.0
-      visualize: True
+      visualize: False
       save_path: "config.png"
 
 sim:
-  dt: 0.2
+  dt: 0.02
   use_gpu_pipeline: ${eq:${...pipeline},"gpu"}
   gravity: [0.0, 0.0, 0.0]
   add_ground_plane: False
