@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import AutoMinorLocator
 import numpy as np
 import os
+import pandas as pd
 
 def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
     """
@@ -14,12 +15,13 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
     """
     # TODO: place all the different plots in a separate function, to be called from here based on the episode (best, worst, first etc.)
     reward_history = ep_data['rews']
-    
+    print(f'reward_history.shape[1]: {reward_history.shape[1]}')
     # plot average results over all agents
     best_agent = np.argmax(reward_history.sum(axis=0))
     worst_agent = np.argmin(reward_history.sum(axis=0))
-    print('Best agent: ', best_agent, '| Worst agent: ', worst_agent)
-    
+    rand_agent = np.random.choice(list(set(range(0, reward_history.shape[1]))-set([best_agent, worst_agent])))
+    print('Best agent: ', best_agent, '| Worst agent: ', worst_agent, '| Random Agent', rand_agent)
+
     control_history = ep_data['act']
     reward_history = ep_data['rews']
     info_history = ep_data['info']
@@ -28,7 +30,7 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
     # plot best and worst episodes data
     plot_one_episode({k:np.array([v[best_agent] for v in vals]) for k,vals in ep_data.items()}, save_dir+"best_ep/")
     plot_one_episode({k:np.array([v[worst_agent] for v in vals]) for k,vals in ep_data.items()}, save_dir+"worst_ep/")
-
+    plot_one_episode({k:np.array([v[worst_agent] for v in vals]) for k,vals in ep_data.items()}, save_dir+f'rand_ep_{rand_agent}/')
 
     if all_agents:
         
@@ -110,6 +112,14 @@ def plot_one_episode(ep_data, save_dir):
     state_history = ep_data['obs']
     all_distances = ep_data['all_dist']
 
+    # save data to csv file
+    pd.DataFrame.to_csv(pd.DataFrame(control_history), save_dir + 'actions.csv')
+    pd.DataFrame.to_csv(pd.DataFrame(state_history[:, :8], columns=['cos_theta','sin_theta', 
+                                                                    'lin_vel_x', 'lin_vel_y', 
+                                                                    'ang_vel_z', 'task_flag',
+                                                                    'error_dist_x', 'error_dist_y']),
+                                     save_dir + 'states_episode.csv')
+
     tgrid = np.linspace(0, len(control_history), len(control_history))
     fig_count = 0
 
@@ -140,6 +150,7 @@ def plot_one_episode(ep_data, save_dir):
     plt.title('Angular speed state history')
     plt.grid()
     plt.savefig(save_dir + '_ang_vel')
+    #plt.show()
     # °°°°°°°°°°°°°°°°°°°°°°°° plot heading cos, sin °°°°°°°°°°°°°°°°°°°°°°°°°
     headings = state_history[:, :2]
     # plot position (x, y coordinates)
@@ -159,7 +170,7 @@ def plot_one_episode(ep_data, save_dir):
     # °°°°°°°°°°°°°°°°°°°°°°°° plot absolute heading angle °°°°°°°°°°°°°°°°°°°°°°°°°
     headings = state_history[:, :2]
     angles = np.arctan2(headings[:, 0], headings[:, 1])
-    angles = np.where(angles < 0, angles + np.pi, angles)
+    #angles = np.where(angles < 0, angles + np.pi, angles)
     # plot position (x, y coordinates)
     fig_count += 1
     plt.figure(fig_count)
