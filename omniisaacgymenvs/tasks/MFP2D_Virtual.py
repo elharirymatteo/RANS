@@ -270,19 +270,19 @@ class MFP2DVirtual(RLTask):
 
         # If split thrust, egally share the maximum amount of thrust across thrusters.
         if self.split_thrust:
-            factor = torch.max(torch.sum(actions,-1),torch.ones((self._num_envs), dtype=torch.float32, device=self._device))
-            positions, forces = self.virtual_platform.project_forces(thrusts / factor.view(self._num_envs,1))
+            factor = torch.max(torch.sum(self.actions,-1),torch.ones((self._num_envs), dtype=torch.float32, device=self._device))
+            self.positions, self.forces = self.virtual_platform.project_forces(thrusts / factor.view(self._num_envs,1))
         else:
-            positions, forces = self.virtual_platform.project_forces(thrusts)
+            self.positions, self.forces = self.virtual_platform.project_forces(thrusts)
 
         # Apply forces
-        self._platforms.thrusters.apply_forces_and_torques_at_pos(forces=forces, positions=positions, is_global=False)
-
+        self._platforms.thrusters.apply_forces_and_torques_at_pos(forces=self.forces, positions=self.positions, is_global=False)
         if self.use_uneven_floor:
             self.get_floor_forces()
             self._platforms.base.apply_forces_and_torques_at_pos(forces=self.floor_forces, positions=self.root_pos, is_global=True)
-
         return
+    
+
 
     def post_reset(self):
         # implement any logic required for simulation on-start here
