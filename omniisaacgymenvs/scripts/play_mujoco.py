@@ -160,8 +160,9 @@ class MuJoCoEnv:
         self.state[0,5] = 0
         self.state[0,6:8] = torch.tensor(dist_to_goal, dtype=torch.float32, device="cuda")
 
-    def runLoop(self, model):
+    def runLoop(self, model, xy):
         self.resetPosition()
+        self.data.qpos[:2] = xy
         mujoco.mj_step(self.model, self.data)
         while self.duration > self.data.time:
             self.updateState()
@@ -177,7 +178,7 @@ model.buildModel()
 model.restore(model_name)
 
 env = MuJoCoEnv()
-env.runLoop(model)
+env.runLoop(model, [4,0])
 
 dpi = 120
 width = 600
