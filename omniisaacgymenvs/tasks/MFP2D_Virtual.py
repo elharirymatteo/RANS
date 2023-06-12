@@ -230,7 +230,7 @@ class MFP2DVirtual(RLTask):
         self.floor_y_offset[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self.max_offset - self.min_offset) + self.min_offset
 
     def get_floor_forces(self): 
-        self.root_pos, self.root_quats = self._platforms.get_world_poses(clone=True)
+        #self.root_pos, self.root_quats = self._platforms.get_world_poses(clone=True)
         self.floor_forces[:,0] = torch.sin(self.root_pos[:,0] * self.floor_x_freq + self.floor_x_offset) * self.max_floor_force
         self.floor_forces[:,1] = torch.sin(self.root_pos[:,1] * self.floor_y_freq + self.floor_y_offset) * self.max_floor_force
 
