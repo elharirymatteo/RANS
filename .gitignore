@@ -1,6 +1,7 @@
 __pycache___
 __pycache__/
 runs
+penalty_tests
 corl_runs
 omniisaacgymenvs.egg-info/
 checkpoints
