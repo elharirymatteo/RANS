@@ -59,7 +59,7 @@ def eval_single_agent(cfg_dict, cfg, env):
 
 def eval_multi_agents(cfg):
 
-    base_dir = "./evaluations/"
+    base_dir = "./evaluations/penalty_tests/"
     experiment_name = cfg.checkpoint.split("/")[1]
     print(f'Experiment name: {experiment_name}')
     evaluation_dir = base_dir + experiment_name + "/"
