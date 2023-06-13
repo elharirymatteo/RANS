@@ -211,7 +211,7 @@ def plot_one_episode(ep_data, actions, save_dir):
 
 if __name__ == "__main__":
 
-    experiment = "20230612-165226"
+    experiment = "20230613-143432"
     load_dir = "./lab_tests/" + experiment
     n_episodes = 1
 

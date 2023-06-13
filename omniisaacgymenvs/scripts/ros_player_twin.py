@@ -55,7 +55,9 @@ def get_observation_from_realsense(obs_type, task_flag, msg, lin_vel, ang_vel):
     # Cast quaternion to Yaw    
     siny_cosp = 2 * (q[0] * q[3] + q[1] * q[2])
     cosy_cosp = 1 - 2 * (q[2] * q[2] + q[3] * q[3])
-    # orient_z = torch.arctan2(siny_cosp, cosy_cosp)
+    orient_z = np.arctan2(siny_cosp, cosy_cosp)
+    cosz = np.cos(orient_z)
+    sinz = np.sin(orient_z)
 
     if obs_type == np.ndarray: 
         obs = torch.tensor(np.array([dist_x, dist_y, dist_z, 
@@ -198,12 +200,13 @@ class MyNode:
                     self.player.env._task.set_to_pose(id, position, heading)
                     run_once = False
 
-                action = self.player.get_action(self.obs, is_deterministic=True)
+                #action = self.player.get_action(self.obs, is_deterministic=True)
+                action = [1, 1, 0, 1, 0, 1, 0, 1, 0]
                 #print(f'player obs: {self.player.env._obs["state"]}')
                 print(f'Action from model: {action}')
                 obs_sim, _, _, _ = self.player.env.step(action)
 
-                action = action.cpu().tolist()
+                #action = action.cpu().tolist()
                 if self.save_trajectory:
                     self.obs_buffer.append(self.obs)
                     self.sim_obs_buffer.append(obs_sim)
@@ -226,7 +229,7 @@ class MyNode:
             self.rate.sleep()
 
         if self.save_trajectory:
-            save_dir = "./lab_tests/trajectory/"+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + "/"
+            save_dir = "./lab_tests/"+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + "/"
             os.makedirs(save_dir, exist_ok=True)
             np.save(os.path.join(save_dir, "obs.npy"), np.array(self.obs_buffer))
             np.save(os.path.join(save_dir, "act.npy"), np.array(self.act_buffer))
