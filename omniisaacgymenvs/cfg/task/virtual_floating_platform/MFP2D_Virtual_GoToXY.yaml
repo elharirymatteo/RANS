@@ -24,6 +24,7 @@ env:
 
   # Uneven floor generation
   use_uneven_floor: False
+  use_sinusoidal_floor: False
   floor_min_freq: 0.25
   floor_max_freq: 3
   floor_min_offset: -6
@@ -50,9 +51,10 @@ env:
     name: GoToXY
     x_y_tolerance: 0.01
     kill_after_n_steps_in_tolerance: 50 # 10seconds
-    max_spawn_dist: 6.0
+    max_spawn_dist: 4.5
     min_spawn_dist: 0.5
     kill_dist: 8.0
+    boundary_cost: 25
 
   reward_parameters:
     name: GoToXY

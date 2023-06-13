@@ -49,6 +49,7 @@ class MFP2DVirtual(RLTask):
 
         # Uneven floor generation
         self.use_uneven_floor = self._task_cfg['env']['use_uneven_floor']
+        self.use_sinosoidal_floor = self._task_cfg['env']['use_sinusoidal_floor']
         self.min_freq = self._task_cfg['env']['floor_min_freq']
         self.max_freq = self._task_cfg['env']['floor_max_freq']
         self.min_offset = self._task_cfg['env']['floor_min_offset']
@@ -110,10 +111,12 @@ class MFP2DVirtual(RLTask):
         self.actions = torch.zeros((self._num_envs, self._max_actions), device=self._device, dtype=torch.float32)
         self.heading = torch.zeros((self._num_envs, 2), device=self._device, dtype=torch.float32)
 
-        self.floor_x_freq = torch.zeros((self._num_envs), device=self._device, dtype=torch.float32)
-        self.floor_y_freq = torch.zeros((self._num_envs), device=self._device, dtype=torch.float32)
-        self.floor_x_offset = torch.zeros((self._num_envs), device=self._device, dtype=torch.float32)
-        self.floor_y_offset = torch.zeros((self._num_envs), device=self._device, dtype=torch.float32)
+        if self.use_sinosoidal_floor:
+            self.floor_x_freq = torch.zeros((self._num_envs), device=self._device, dtype=torch.float32)
+            self.floor_y_freq = torch.zeros((self._num_envs), device=self._device, dtype=torch.float32)
+            self.floor_x_offset = torch.zeros((self._num_envs), device=self._device, dtype=torch.float32)
+            self.floor_y_offset = torch.zeros((self._num_envs), device=self._device, dtype=torch.float32)
+
         self.floor_forces = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
 
         self.all_indices = torch.arange(self._num_envs, dtype=torch.int32, device=self._device)
@@ -224,15 +227,20 @@ class MFP2DVirtual(RLTask):
         return observations
     
     def generate_floor(self, env_ids, num_resets) -> None:
-        self.floor_x_freq[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self.max_freq - self.min_freq) + self.min_freq
-        self.floor_y_freq[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self.max_freq - self.min_freq) + self.min_freq
-        self.floor_x_offset[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self.max_offset - self.min_offset) + self.min_offset
-        self.floor_y_offset[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self.max_offset - self.min_offset) + self.min_offset
+        if self.use_sinosoidal_floor:
+            self.floor_x_freq[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self.max_freq - self.min_freq) + self.min_freq
+            self.floor_y_freq[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self.max_freq - self.min_freq) + self.min_freq
+            self.floor_x_offset[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self.max_offset - self.min_offset) + self.min_offset
+            self.floor_y_offset[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self.max_offset - self.min_offset) + self.min_offset
+        else:
+            self.floor_forces[env_ids,:2] = torch.rand((num_resets, 2), dtype=torch.float32, device=self._device) * self.max_floor_force
 
     def get_floor_forces(self): 
         #self.root_pos, self.root_quats = self._platforms.get_world_poses(clone=True)
-        self.floor_forces[:,0] = torch.sin(self.root_pos[:,0] * self.floor_x_freq + self.floor_x_offset) * self.max_floor_force
-        self.floor_forces[:,1] = torch.sin(self.root_pos[:,1] * self.floor_y_freq + self.floor_y_offset) * self.max_floor_force
+        if self.use_sinosoidal_floor:
+            self.floor_forces[:,0] = torch.sin(self.root_pos[:,0] * self.floor_x_freq + self.floor_x_offset) * self.max_floor_force
+            self.floor_forces[:,1] = torch.sin(self.root_pos[:,1] * self.floor_y_freq + self.floor_y_offset) * self.max_floor_force
+
 
     def pre_physics_step(self, actions: torch.Tensor) -> None:
         # implement logic to be performed before physics steps

@@ -25,7 +25,7 @@ class GoToXYTask(Core):
         if not "boundary_penalty" in stats.keys():
             stats["boundary_penalty"] = torch_zeros()
         if not "boundary_dist" in stats.keys():
-            stats["boundary"] = torch_zeros()
+            stats["boundary_dist"] = torch_zeros()
         return stats
 
     def get_state_observations(self, current_state):

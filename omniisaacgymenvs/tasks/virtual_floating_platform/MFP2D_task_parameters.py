@@ -10,6 +10,7 @@ class GoToXYParameters:
     max_spawn_dist: float = 6.0
     min_spawn_dist: float = 3.0
     kill_dist: float = 8.0
+    boundary_cost: float = 25
     spawn_curriculum: bool = False
     spawn_curriculum_min_dist: float = 0.5
     spawn_curriculum_max_dist: float = 2.5
