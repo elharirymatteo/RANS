@@ -103,7 +103,7 @@ def eval_multi_agents(cfg, horizon):
         total_reward += reward[0]
         num_steps += 1
         is_done = done.any()
-    ep_data['obs'] = np.array(ep_data['obs'])
+    ep_data['obs'] = np.array(ep_data['oobsbs'])
     ep_data['act'] = np.array(ep_data['act'])
     ep_data['rews'] = np.array(ep_data['rews'])
     ep_data['all_dist'] = np.array(ep_data['all_dist'])
