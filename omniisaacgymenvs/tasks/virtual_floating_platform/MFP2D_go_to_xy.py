@@ -22,6 +22,10 @@ class GoToXYTask(Core):
             stats["position_reward"] = torch_zeros()
         if not "position_error" in stats.keys():
             stats["position_error"] = torch_zeros()
+        if not "boundary_penalty" in stats.keys():
+            stats["boundary_penalty"] = torch_zeros()
+        if not "boundary_dist" in stats.keys():
+            stats["boundary"] = torch_zeros()
         return stats
 
     def get_state_observations(self, current_state):
@@ -32,6 +36,9 @@ class GoToXYTask(Core):
     def compute_reward(self, current_state, actions):
         # position error
         self.position_dist = torch.sqrt(torch.square(self._position_error).sum(-1))
+
+        self.boundary_dist = self.position_dist - self._task_parameters.kill_dist 
+        self.boundary_penalty = - torch.exp( - self.boundary_dist / 0.25) * self._task_parameters.boundary_cost
 
         # Checks if the goal is reached
         goal_is_reached = (self.position_dist < self._task_parameters.x_y_tolerance).int()
@@ -53,6 +60,8 @@ class GoToXYTask(Core):
     def update_statistics(self, stats):
         stats["position_reward"] += self.position_reward
         stats["position_error"] += self.position_dist
+        stats["boundary_penalty"] += self.boundary_penalty
+        stats["boundary_dist"] += self.boundary_dist
         return stats
 
     def reset(self, env_ids):
