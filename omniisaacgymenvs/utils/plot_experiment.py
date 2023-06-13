@@ -137,18 +137,17 @@ def plot_one_episode(ep_data, save_dir):
     # setting the right task_data lavels based on the task flag.
     task_flag = state_history[0, 5].astype(int)
     if task_flag == 0:
-        task_data_label = 'error_x', 'error_y'
+        task_data_label = ['error_x', 'error_y']
     elif task_flag == 1:
-        task_data_label = 'error_x', 'error_y', 'cos_error_heading', 'sin_error_heading'
+        task_data_label = ['error_x', 'error_y', 'cos_error_heading', 'sin_error_heading']
     elif task_flag == 2:
-        task_data_label = 'error_vx', 'error_vy'
+        task_data_label = ['error_vx', 'error_vy']
     elif task_flag == 3:
-        task_data_label = 'error_vx', 'error_vy', 'error_omega'
-
-    pd.DataFrame.to_csv(pd.DataFrame(state_history[:, :8], columns=['cos_theta','sin_theta', 
-                                                                    'lin_vel_x', 'lin_vel_y', 
-                                                                    'ang_vel_z', 'task_flag'].append(task_data_label)),
-                                     save_dir + 'states_episode.csv')
+        task_data_label = ['error_vx', 'error_vy', 'error_omega']
+    else:
+        task_data_label = []
+    df_cols = ['cos_theta','sin_theta', 'lin_vel_x', 'lin_vel_y', 'ang_vel_z', 'task_flag'] + task_data_label
+    pd.DataFrame.to_csv(pd.DataFrame(state_history[:, :8], columns=df_cols), save_dir + 'states_episode.csv')
 
     tgrid = np.linspace(0, len(control_history), len(control_history))
     fig_count = 0

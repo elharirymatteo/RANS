@@ -8,4 +8,5 @@ checkpoints
 omniisaacgymenvs/wandb
 evaluations
 *.png
+*.npy
 

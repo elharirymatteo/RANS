@@ -391,10 +391,10 @@ class MFP2DVirtual(RLTask):
     def calculate_metrics(self) -> None:
         position_reward = self.task.compute_reward(self.current_state, self.actions)
         self.step += 1 / self._task_cfg["env"]["horizon_length"]
-        penalties = self._penalties.compute_penalty(self.current_state, self.actions, self.step)
-
+        #penalties = self._penalties.compute_penalty(self.current_state, self.actions, self.step)
+        # TODO: check why compute penalties generates error
         #print(target_dist[0], position_reward[0])
-        self.rew_buf[:] = position_reward + penalties
+        self.rew_buf[:] = position_reward #+ penalties
         self.episode_sums = self.task.update_statistics(self.episode_sums)
         self.episode_sums = self._penalties.update_statistics(self.episode_sums)
         self.update_state_statistics()
