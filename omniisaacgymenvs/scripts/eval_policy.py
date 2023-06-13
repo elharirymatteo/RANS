@@ -57,9 +57,9 @@ def eval_single_agent(cfg_dict, cfg, env):
         print(ep_data)
         #plot_episode_data(ep_data, evaluation_dir)
 
-def eval_multi_agents(cfg):
+def eval_multi_agents(cfg, horizon):
 
-    base_dir = "./evaluations/penalty_tests/"
+    base_dir = "./evaluations/penalty_tests/spawn_close/"
     experiment_name = cfg.checkpoint.split("/")[1]
     print(f'Experiment name: {experiment_name}')
     evaluation_dir = base_dir + experiment_name + "/"
@@ -83,8 +83,7 @@ def eval_multi_agents(cfg):
     total_reward = 0
     num_steps = 0
     
-    total_num_steps = 800
-    for _ in range(total_num_steps):
+    for _ in range(horizon):
         actions = agent.get_action(obs['obs'], is_deterministic=True)
         obs, reward, done, info = env.step(actions)
         
@@ -140,13 +139,14 @@ def parse_hydra_configs(cfg: DictConfig):
         print("No checkpoint specified. Exiting...")
         return
 
+    horizon = 500
     # set congig params for evaluation
-    cfg.task.env.maxEpisodeLength = 802
+    cfg.task.env.maxEpisodeLength = horizon + 2
     cfg.task.env.clipObservations['state'] = 20.0
-    cfg.task.env.task_parameters['max_spawn_dist'] = 5.0
-    cfg.task.env.task_parameters['min_spawn_dist'] = 4.5  
+    cfg.task.env.task_parameters['max_spawn_dist'] = 3.0
+    cfg.task.env.task_parameters['min_spawn_dist'] = 1.5  
     cfg.task.env.task_parameters['kill_dist'] = 6.0
-    cfg.task.env.task_parameters['kill_after_n_steps_in_tolerance'] = 400
+    cfg.task.env.task_parameters['kill_after_n_steps_in_tolerance'] = 800
     # TODO: check error with visualizer of thrusters....  ANTOINE
     #cfg.task.env.platform.configuration.visualize = False
     cfg_dict = omegaconf_to_dict(cfg)
@@ -175,7 +175,7 @@ def parse_hydra_configs(cfg: DictConfig):
     # _____Create players (model)_____
     
     #eval_single_agent(cfg_dict, cfg, env)
-    eval_multi_agents(cfg)
+    eval_multi_agents(cfg,horizon)
 
     if cfg.wandb_activate:
         wandb.finish()

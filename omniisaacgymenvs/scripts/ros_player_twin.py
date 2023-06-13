@@ -136,14 +136,14 @@ class MyNode:
         self.pub = rospy.Publisher("/spacer_floating_platform/valves/input", ByteMultiArray, queue_size=1)
 
         self.player = player
-        self.save_trajectory = False
+        self.save_trajectory = True
         self.obs_buffer = []
         self.sim_obs_buffer = []
         self.act_buffer = []
         self.my_msg = ByteMultiArray()
         self.count = 0
 
-        self.end_experiment_at_step = rospy.get_param("end_experiment_at_step", 20)
+        self.end_experiment_at_step = rospy.get_param("end_experiment_at_step", 300)
         self.play_rate = rospy.get_param("play_rate", 5.0)
 
         self.rate = rospy.Rate(self.play_rate) # 1hz
@@ -184,10 +184,9 @@ class MyNode:
     def run(self):
         
         run_once = True
-
         while (not self.rospy.is_shutdown()) and (self.count < self.end_experiment_at_step):
             #print(f'Im in')
-            self.rospy.sleep(self.rospy.Duration(1.0))
+            #self.rospy.sleep(self.rospy.Duration(1.0))
             if self.ready:
                 if run_once:
                     quat = self.pose_buffer[-1].pose.orientation
@@ -216,7 +215,7 @@ class MyNode:
                 lifting_active = 1
                 action.insert(0, lifting_active)
                 self.my_msg.data = action
-                #self.pub.publish(self.my_msg)
+                self.pub.publish(self.my_msg)
                 self.count += 1
                 print(f'count: {self.count}')
                 print(self.my_msg.data)
@@ -227,13 +226,14 @@ class MyNode:
             self.rate.sleep()
 
         if self.save_trajectory:
-            save_dir = "./lab_tests/trajectory/"+ datetime.now().strftime("%Y%m%d-%H%M%S") + "/"
+            save_dir = "./lab_tests/trajectory/"+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + "/"
             os.makedirs(save_dir, exist_ok=True)
             np.save(os.path.join(save_dir, "obs.npy"), np.array(self.obs_buffer))
             np.save(os.path.join(save_dir, "act.npy"), np.array(self.act_buffer))
             np.save(os.path.join(save_dir, "sim_obs.npy"), np.array(self.sim_obs_buffer))
 
         self.my_msg.data = [0,0,0,0,0,0,0,0,0]
+
         self.pub.publish(self.my_msg)
                 
     def derive_velocities(self):
