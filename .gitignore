@@ -3,6 +3,7 @@ __pycache__/
 runs
 penalty_tests
 corl_runs
+fail_penalty_test
 omniisaacgymenvs.egg-info/
 checkpoints
 omniisaacgymenvs/wandb
