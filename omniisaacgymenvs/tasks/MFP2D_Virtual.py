@@ -55,7 +55,9 @@ class MFP2DVirtual(RLTask):
         self.min_offset = self._task_cfg['env']['floor_min_offset']
         self.max_offset = self._task_cfg['env']['floor_max_offset']
         self.max_floor_force = self._task_cfg['env']['max_floor_force'] 
+        self.min_floor_force = self._task_cfg['env']['min_floor_force'] 
         self.max_floor_force = math.sqrt(self.max_floor_force**2 / 2)
+        self.min_floor_force = math.sqrt(self.min_floor_force**2 / 2)
 
         # Add noisy observations
         self.add_noise_on_pos = self._task_cfg['env']['add_noise_on_pos']
@@ -233,7 +235,8 @@ class MFP2DVirtual(RLTask):
             self.floor_x_offset[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self.max_offset - self.min_offset) + self.min_offset
             self.floor_y_offset[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self.max_offset - self.min_offset) + self.min_offset
         else:
-            self.floor_forces[env_ids,:2] = torch.rand((num_resets, 2), dtype=torch.float32, device=self._device) * self.max_floor_force
+            rand = (torch.rand((num_resets, 2), dtype=torch.float32, device=self._device) *(self.max_floor_force - self.min_floor_force) * 2) - (self.max_floor_force - self.min_floor_force)
+            self.floor_forces[env_ids,:2] = rand + torch.sign(rand) * self.min_floor_force
 
     def get_floor_forces(self): 
         #self.root_pos, self.root_quats = self._platforms.get_world_poses(clone=True)
