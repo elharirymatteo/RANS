@@ -30,7 +30,7 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
     # plot best and worst episodes data
     plot_one_episode({k:np.array([v[best_agent] for v in vals]) for k,vals in ep_data.items()}, save_dir+"best_ep/")
     plot_one_episode({k:np.array([v[worst_agent] for v in vals]) for k,vals in ep_data.items()}, save_dir+"worst_ep/")
-    plot_one_episode({k:np.array([v[worst_agent] for v in vals]) for k,vals in ep_data.items()}, save_dir+f'rand_ep_{rand_agent}/')
+    plot_one_episode({k:np.array([v[rand_agent] for v in vals]) for k,vals in ep_data.items()}, save_dir+f'rand_ep_{rand_agent}/')
 
     if all_agents:
         
