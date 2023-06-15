@@ -133,7 +133,7 @@ class MyNode:
 
         # Initialize Subscriber and Publisher
         self.sub = rospy.Subscriber("/vrpn_client_node/FP_exp_RL/pose", PoseStamped, self.callback)
-        self.pub = rospy.Publisher("/spacer_floating_platform/valves/input", ByteMultiArray, queue_size=1)
+        self.pub = rospy.Publisher("/spacer_floating_platform_a/valves/input", ByteMultiArray, queue_size=1)
 
         self.player = player
 
