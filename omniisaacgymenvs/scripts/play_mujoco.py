@@ -21,7 +21,11 @@ from rl_games.algos_torch.players import BasicPpoPlayerContinuous, BasicPpoPlaye
 
 config_name = "/home/antoine/Documents/Orbitals/Omniverse/omniisaacgymenvs/cfg/train/MFP2D_PPOmulti_dict_MLP.yaml"
 #model_name = "/home/antoine/Documents/Omniverse/omniisaacgymenvs/runs/MFP2D_Virtual_GoToXY/nn/last_MFP2D_Virtual_GoToXY_ep_1000_rew__607.5902_.pth"
-model_name = "/home/antoine/Documents/Orbitals/Omniverse/penalty/MLP_GTXY_UF_0.25_ST_PE_0.03_PAV_1.5_PLV_0.01/nn/last_MLP_GTXY_UF_0.25_ST_PE_0.03_PAV_1.5_PLV_0.01_ep_2000_rew__555.7034_.pth"
+model_name = "/home/antoine/Documents/Orbitals/Omniverse/penalty/MLP_GTXY_UF_0.25_ST_PE_0.03_PAV_1.5_PLV_0.01/nn/last_MLP_GTXY_UF_0.25_ST_PE_0.03_PAV_1.5_PLV_0.01_ep_2000_rew_555.7034.pth"
+#model_name = "/home/antoine/Documents/Orbitals/Omniverse/penalty/MLP_GTXY_UF_0.5_ST_PE_0.01_PAV_1.5_PLV_0.01/nn/last_MLP_GTXY_UF_0.5_ST_PE_0.01_PAV_1.5_PLV_0.01_ep_2000_rew_500.07007.pth"
+#model_name = "/home/antoine/Documents/Orbitals/Omniverse/omniisaacgymenvs/runs/MFP2D_Virtual_GoToXY/nn/last_MFP2D_Virtual_GoToXY_ep_300_rew_586.06573.pth"
+#model_name = "/home/antoine/Documents/Orbitals/Omniverse/omniisaacgymenvs/runs/MFP2D_Virtual_GoToXY/nn/last_MFP2D_Virtual_GoToXY_ep_1000_rew_614.982.pth"
+#model_name="/home/antoine/Documents/Orbitals/Omniverse/omniisaacgymenvs/runs/MFP2D_Virtual_GoToXY/nn/last_MFP2D_Virtual_GoToXY_ep_1000_rew__614.982_.pth"
 
 class RLGamesModel:
     def __init__(self):
@@ -67,7 +71,7 @@ class MuJoCoEnv:
     def setupPhysics(self):
         self.model.opt.timestep = 0.02
         self.model.opt.gravity = [0,0,0]
-        self.duration = 30
+        self.duration = 120
 
     def initializeLoggers(self):
         self.timevals = []
@@ -167,8 +171,11 @@ class MuJoCoEnv:
         while self.duration > self.data.time:
             self.updateState()
             action = model.getAction(self.state)
-            self.applyForces(action)
             for _ in range(10):
+                if _ == 9:
+                    self.applyForces(action)
+                    # Floor
+                    mujoco.mj_applyFT(self.model, self.data, [0,0.3,0], [0,0,0.01], self.data.qpos[:3], self.body_id, self.data.qfrc_applied)
                 mujoco.mj_step(self.model, self.data)
                 self.updateLoggers()
 
@@ -178,7 +185,7 @@ model.buildModel()
 model.restore(model_name)
 
 env = MuJoCoEnv()
-env.runLoop(model, [4,0])
+env.runLoop(model, [-1.5,-2.5])
 
 dpi = 120
 width = 600
@@ -198,7 +205,7 @@ _ = ax[1].set_title('linear_velocity')
 fig.savefig("test_velocities.png")
 
 fig, ax = plt.subplots(2, 1, figsize=figsize, dpi=dpi)
-ax[0].plot(env.timevals, env.position)
+ax[0].plot(env.timevals, np.abs(env.position))
 ax[0].set_xlabel('time (seconds)')
 ax[0].set_ylabel('meters')
 _ = ax[0].set_title('position')
