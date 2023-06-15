@@ -24,7 +24,7 @@ import wandb
 import os
 
 def eval_single_agent(cfg_dict, cfg, env):
-    base_dir = "./evaluations/"
+    base_dir = "./evaluations/2Hz/"
     evaluation_dir = base_dir + str(cfg_dict["task"]["name"]) + "/"
     os.makedirs(evaluation_dir, exist_ok=True)
 
@@ -140,6 +140,9 @@ def parse_hydra_configs(cfg: DictConfig):
         return
 
     horizon = 500
+
+    # choose frequency of evaluation (to be multiplied by 10 -> controlFrequencyInv)
+    cfg.task.sim.dt = 0.05
     # set congig params for evaluation
     cfg.task.env.maxEpisodeLength = horizon + 2
     cfg.task.env.clipObservations['state'] = 20.0

@@ -1,9 +1,9 @@
-from math import e
 import matplotlib.pyplot as plt
 from matplotlib.ticker import AutoMinorLocator
 import numpy as np
 import os
 import pandas as pd
+
 
 def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
     """
@@ -107,6 +107,7 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
             plt.xlabel('X [m]')
             plt.ylabel('Y [m]')
 
+        plt.grid(alpha=0.3)
         plt.title(f'Trajectories in 2D space [{positions.shape[1]} episodes]')
         plt.gcf().dpi = 200
         plt.savefig(save_dir + '_multi_traj')

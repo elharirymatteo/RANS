@@ -9,4 +9,4 @@ omniisaacgymenvs/wandb
 evaluations
 *.png
 *.npy
-
+*.csv
