@@ -19,9 +19,9 @@ from rl_games.algos_torch.players import BasicPpoPlayerContinuous, BasicPpoPlaye
 
 
 
-config_name = "/home/antoine/Documents/Omniverse/omniisaacgymenvs/cfg/train/MFP2D_PPOmulti_dict_MLP.yaml"
+config_name = "/home/matteo/Projects/OmniIsaacGymEnvs/omniisaacgymenvs/cfg/train/MFP2D_PPOmulti_dict_MLP.yaml"
 #model_name = "/home/antoine/Documents/Omniverse/omniisaacgymenvs/runs/MFP2D_Virtual_GoToXY/nn/last_MFP2D_Virtual_GoToXY_ep_1000_rew__607.5902_.pth"
-model_name = "/home/antoine/Documents/Omniverse/penalty/MLP_GTXY_UF_0.25_ST_PE_0.03_PAV_1.5_PLV_0.01/nn/last_MLP_GTXY_UF_0.25_ST_PE_0.03_PAV_1.5_PLV_0.01_ep_2000_rew__555.7034_.pth"
+model_name = "/home/matteo/Projects/OmniIsaacGymEnvs/omniisaacgymenvs/fail_penalty_test/MLP_GTXY_UF_0.25_ST_PE_0.03_PAV_1.5_PLV_0.01/nn/last_MLP_GTXY_UF_0.25_ST_PE_0.03_PAV_1.5_PLV_0.01_ep_2000_rew_574.456.pth"
 
 class RLGamesModel:
     def __init__(self):
@@ -67,7 +67,7 @@ class MuJoCoEnv:
     def setupPhysics(self):
         self.model.opt.timestep = 0.02
         self.model.opt.gravity = [0,0,0]
-        self.duration = 30
+        self.duration = 300
 
     def initializeLoggers(self):
         self.timevals = []

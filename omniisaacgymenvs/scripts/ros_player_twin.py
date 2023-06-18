@@ -202,8 +202,8 @@ class MyNode:
                     self.player.env._task.set_to_pose(id, position, heading)
                     run_once = False
 
-                #action = self.player.get_action(self.obs, is_deterministic=True)
-                action = [1, 1, 0, 1, 0, 1, 0, 1, 0]
+                action = self.player.get_action(self.obs, is_deterministic=True)
+                #action = [1, 1, 0, 1, 0, 1, 0, 1, 0]
                 #print(f'player obs: {self.player.env._obs["state"]}')
                 print(f'Action from model: {action}')
                 #obs_sim, _, _, _ = self.player.env.step(action)
