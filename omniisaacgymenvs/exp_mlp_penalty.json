@@ -18,6 +18,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -0.5*torch.abs(x)*(1 + torch.tanh((12*step/2000 - 6)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "MFP2D-Penalty-5kg"
   },
   "experiment112": {
@@ -39,6 +40,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -0.5*torch.abs(x)*(1 + torch.tanh((12*step/2000 - 6)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "MFP2D-Penalty-5kg"
   },
   "experiment113": {
@@ -60,6 +62,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -0.5*torch.abs(x)*(1 + torch.tanh((12*step/2000 - 6)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "MFP2D-Penalty-5kg"
   },
   "experiment114": {
@@ -81,6 +84,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -0.5*torch.abs(x)*(1 + torch.tanh((12*step/2000 - 6)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "MFP2D-Penalty-5kg"
   },
   "experiment115": {
@@ -102,6 +106,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -0.5*torch.abs(x)*(1 + torch.tanh((12*x/2000 - 6)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "MFP2D-Penalty-5kg"
   },
   "experiment131": {
@@ -123,6 +128,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.05'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -0.5*torch.abs(x)*(1 + torch.tanh((12*step/2000 - 6)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "MFP2D-Penalty-5kg"
   },
   "experiment132": {
@@ -144,6 +150,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.025'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -0.5*torch.abs(x)*(1 + torch.tanh((12*step/2000 - 6)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "MFP2D-Penalty-5kg"
   },
   "experiment211": {
@@ -165,6 +172,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -1.0*torch.abs(x)*(1 + torch.tanh((12*step/2000 - 6)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "MFP2D-Penalty-5kg"
   },
   "experiment212": {
@@ -186,6 +194,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -1.0*torch.abs(x)*(1 + torch.tanh((12*step/2000 - 6)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "MFP2D-Penalty-5kg"
   },
   "experiment213": {
@@ -207,6 +216,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -1.0*torch.abs(x)*(1 + torch.tanh((12*step/2000 - 6)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "MFP2D-Penalty-5kg"
   },
   "experiment214": {
@@ -228,6 +238,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -1.0*torch.abs(x)*(1 + torch.tanh((12*step/2000 - 6)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "MFP2D-Penalty-5kg"
   },
   "experiment215": {
@@ -249,6 +260,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -1.0*torch.abs(x)*(1 + torch.tanh((12*x/2000 - 6)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "MFP2D-Penalty-5kg"
   },
   "experiment231": {
@@ -270,6 +282,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.05'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -1.0*torch.abs(x)*(1 + torch.tanh((12*step/2000 - 6)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "MFP2D-Penalty-5kg"
   },
   "experiment232": {
@@ -291,6 +304,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.025'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -1.0*torch.abs(x)*(1 + torch.tanh((12*step/2000 - 6)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "MFP2D-Penalty-5kg"
   },
   "experiment311": {
@@ -312,6 +326,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -1.5*torch.abs(x)*(1 + torch.tanh((12*step/2000 - 6)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "MFP2D-Penalty-5kg"
   },
   "experiment312": {
@@ -333,6 +348,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -1.5*torch.abs(x)*(1 + torch.tanh((12*step/2000 - 6)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "MFP2D-Penalty-5kg"
   },
   "experiment313": {
@@ -354,6 +370,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -1.5*torch.abs(x)*(1 + torch.tanh((12*step/2000 - 6)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "MFP2D-Penalty-5kg"
   },
   "experiment314": {
@@ -375,6 +392,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -1.5*torch.abs(x)*(1 + torch.tanh((12*step/2000 - 6)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "MFP2D-Penalty-5kg"
   },
   "experiment315": {
@@ -396,6 +414,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -1.5*torch.abs(x)*(1 + torch.tanh((12*x/2000 - 6)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "MFP2D-Penalty-5kg"
   },
   "experiment331": {
@@ -417,6 +436,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.05'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -1.5*torch.abs(x)*(1 + torch.tanh((12*step/2000 - 6)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "MFP2D-Penalty-5kg"
   },
   "experiment332": {
@@ -438,6 +458,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.025'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -1.5*torch.abs(x)*(1 + torch.tanh((12*step/2000 - 6)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "MFP2D-Penalty-5kg"
   }
 }

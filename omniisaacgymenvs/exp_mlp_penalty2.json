@@ -17,6 +17,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -1.5*torch.abs(x)*(1 + torch.tanh((10*step/1500 - 5)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "corl-2d-floating"
   },
   "experiment112": {
@@ -37,6 +38,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -1.5*torch.abs(x)*(1 + torch.tanh((10*step/1500 - 5)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "corl-2d-floating"
   },
   "experiment113": {
@@ -57,6 +59,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -1.5*torch.abs(x)*(1 + torch.tanh((10*step/1500 - 5)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "corl-2d-floating"
   },
   "experiment114": {
@@ -77,6 +80,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -1.5*torch.abs(x)*(1 + torch.tanh((10*step/1500 - 5)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "corl-2d-floating"
   },
   "experiment115": {
@@ -97,6 +101,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -1.5*torch.abs(x)*(1 + torch.tanh((10*step/1500 - 5)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "corl-2d-floating"
   },
   "experiment131": {
@@ -117,6 +122,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.05'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -1.5*torch.abs(x)*(1 + torch.tanh((10*step/1500 - 5)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "corl-2d-floating"
   },
   "experiment132": {
@@ -137,6 +143,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.025'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -1.5*torch.abs(x)*(1 + torch.tanh((10*step/1500 - 5)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "corl-2d-floating"
   },
   "experiment211": {
@@ -157,6 +164,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -3.0*torch.abs(x)*(1 + torch.tanh((10*step/1500 - 5)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "corl-2d-floating"
   },
   "experiment212": {
@@ -177,6 +185,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -3.0*torch.abs(x)*(1 + torch.tanh((10*step/1500 - 5)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "corl-2d-floating"
   },
   "experiment213": {
@@ -197,6 +206,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda,step: -3.0*torch.abs(x)*(1 + torch.tanh((10*step/1500 - 5)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "corl-2d-floating"
   },
   "experiment214": {
@@ -217,6 +227,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -3.0*torch.abs(x)*(1 + torch.tanh((10*step/1500 - 5)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "corl-2d-floating"
   },
   "experiment215": {
@@ -237,6 +248,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -3.0*torch.abs(x)*(1 + torch.tanh((10*step/1500 - 5)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "corl-2d-floating"
   },
   "experiment231": {
@@ -257,6 +269,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.05'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -3.0*torch.abs(x)*(1 + torch.tanh((10*step/1500 - 5)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "corl-2d-floating"
   },
   "experiment232": {
@@ -277,6 +290,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.025'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -3.0*torch.abs(x)*(1 + torch.tanh((10*step/1500 - 5)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "corl-2d-floating"
   },
   "experiment311": {
@@ -297,6 +311,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -4.5*torch.abs(x)*(1 + torch.tanh((10*step/1500 - 5)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "corl-2d-floating"
   },
   "experiment312": {
@@ -317,6 +332,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -4.5*torch.abs(x)*(1 + torch.tanh((10*step/1500 - 5)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "corl-2d-floating"
   },
   "experiment313": {
@@ -337,6 +353,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -4.5*torch.abs(x)*(1 + torch.tanh((10*step/1500 - 5)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "corl-2d-floating"
   },
   "experiment314": {
@@ -357,6 +374,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -4.5*torch.abs(x)*(1 + torch.tanh((10*step/1500 - 5)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "corl-2d-floating"
   },
   "experiment315": {
@@ -377,6 +395,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -4.5*torch.abs(x)*(1 + torch.tanh((10*step/1500 - 5)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "corl-2d-floating"
   },
   "experiment331": {
@@ -397,6 +416,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.05'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -4.5*torch.abs(x)*(1 + torch.tanh((10*step/1500 - 5)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "corl-2d-floating"
   },
   "experiment332": {
@@ -417,6 +437,7 @@
       "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.025'",
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -4.5*torch.abs(x)*(1 + torch.tanh((10*step/1500 - 5)*0.5))/2'",
       "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
       "wandb_project": "corl-2d-floating"
   }
 }

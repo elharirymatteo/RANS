@@ -22,6 +22,7 @@
       "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -0.1*torch.abs(x)*(1 + torch.tanh((10*step/1500 - 5)*0.5))/2'",
       "wandb_activate": "True",
       "wandb_entity": "matteohariry",
+      "wandb_entity": "matteohariry",
       "wandb_project": "fail-penalty-5kg"
     },
     "experiment112": {
@@ -46,6 +47,7 @@
         "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
         "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -0.5*torch.abs(x)*(1 + torch.tanh((10*step/1500 - 5)*0.5))/2'",
         "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
         "wandb_entity": "matteohariry",
         "wandb_project": "fail-penalty-5kg"
     },
@@ -71,6 +73,7 @@
         "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
         "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -1*torch.abs(x)*(1 + torch.tanh((10*step/1500 - 5)*0.5))/2'",
         "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
         "wandb_entity": "matteohariry",
         "wandb_project": "fail-penalty-5kg"
     },
@@ -96,6 +99,7 @@
         "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
         "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -2*torch.abs(x)*(1 + torch.tanh((10*step/1500 - 5)*0.5))/2'",
         "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
         "wandb_entity": "matteohariry",
         "wandb_project": "fail-penalty-5kg"
     },
@@ -121,6 +125,7 @@
         "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
         "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -0.1*torch.abs(x)*(1 + torch.tanh((10*step/1500 - 5)*0.5))/2'",
         "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
         "wandb_entity": "matteohariry",
         "wandb_project": "fail-penalty-5kg"
       },
@@ -146,6 +151,7 @@
           "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
           "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -0.5*torch.abs(x)*(1 + torch.tanh((10*step/1500 - 5)*0.5))/2'",
           "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
           "wandb_entity": "matteohariry",
           "wandb_project": "fail-penalty-5kg"
       },
@@ -171,6 +177,7 @@
           "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
           "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -1*torch.abs(x)*(1 + torch.tanh((10*step/1500 - 5)*0.5))/2'",
           "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
           "wandb_entity": "matteohariry",
           "wandb_project": "fail-penalty-5kg"
       },
@@ -196,6 +203,7 @@
           "task.env.penalties_parameters.penalize_linear_velocities_fn": "'lambda x,step: -torch.norm(x, dim=-1)*0.01'",
           "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step: -2*torch.abs(x)*(1 + torch.tanh((10*step/1500 - 5)*0.5))/2'",
           "wandb_activate": "True",
+      "wandb_entity": "matteohariry",
           "wandb_entity": "matteohariry",
           "wandb_project": "fail-penalty-5kg"
       }
