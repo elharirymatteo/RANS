@@ -26,7 +26,7 @@ import os
 
 def eval_multi_agents(cfg, horizon):
 
-    base_dir = "./evaluations/new_mass/"
+    base_dir = "./evaluations/tests_5.32kg/"
     experiment_name = cfg.checkpoint.split("/")[1]
     print(f'Experiment name: {experiment_name}')
     evaluation_dir = base_dir + experiment_name + "/"
@@ -112,6 +112,9 @@ def parse_hydra_configs(cfg: DictConfig):
     #cfg.task.sim.dt = 0.05
     # set congig params for evaluation
     cfg.task.env.maxEpisodeLength = horizon + 2
+    
+    cfg.task.env.platform.core.mass = 5.32
+
     cfg.task.env.clipObservations['state'] = 20.0
     cfg.task.env.task_parameters['max_spawn_dist'] = 3.0
     cfg.task.env.task_parameters['min_spawn_dist'] = 1.5  
