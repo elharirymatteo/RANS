@@ -25,7 +25,7 @@
   },
   "experiment113": {
       "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
-      "train": "MFP2D_PPOmulti_dict_MLP",
+      "train": "MFP2D_PPOmulti_dict_MLP",   
       "experiment": "nominal_fp_GoToXY_10kg_MLP_r2",
       "headless": "True",
       "num_envs": "4096",
