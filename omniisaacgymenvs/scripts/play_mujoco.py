@@ -97,7 +97,7 @@ class MuJoCoEnv:
             <camera name="closeup" pos="0 -3 2" xyaxes="1 0 0 0 1 2"/>
             <body name="top" pos="0 0 .4">
               <freejoint/>
-              <geom name="ball" type="sphere" size=".31" mass="10.94"/>
+              <geom name="ball" type="sphere" size=".31" mass="5.32"/>
             </body>
           </worldbody>
         
@@ -164,6 +164,18 @@ class MuJoCoEnv:
         self.state[0,5] = 0
         self.state[0,6:8] = torch.tensor(dist_to_goal, dtype=torch.float32, device="cuda")
 
+    def applyFriction(self):
+        print(self.data.qfrc_applied[:2])
+        print(self.data.qvel[:2])
+        print(self.data.qfrc_applied[-1])
+        print(self.data.qvel[-1])
+        
+        vel = data.qvel[:2] + [0]
+        vel_norm = np.linalg.norm(vel)
+        vel_normed = np.array(vel) / vel_norm
+
+        mujoco.mj_applyFT(self.model, self.data, [0,0.3,0], [0,0,0.01], self.data.qpos[:3], self.body_id, self.data.qfrc_applied)
+
     def runLoop(self, model, xy):
         self.resetPosition()
         self.data.qpos[:2] = xy
@@ -176,6 +188,7 @@ class MuJoCoEnv:
                     self.applyForces(action)
                     # Floor
                     mujoco.mj_applyFT(self.model, self.data, [0,0.3,0], [0,0,0.01], self.data.qpos[:3], self.body_id, self.data.qfrc_applied)
+                    self.applyFriction()
                 mujoco.mj_step(self.model, self.data)
                 self.updateLoggers()
 
