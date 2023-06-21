@@ -12,6 +12,7 @@ env:
   enableDebugVis: False
   action_mode: MultiDiscrete
   numQuantizedActions: 1
+  horizon_length: 16
 
   controlFrequencyInv: 10
 
