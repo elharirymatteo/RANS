@@ -231,6 +231,8 @@ class MFP2DVirtual(RLTask):
     def generate_friction(self, env_ids, num_resets) -> None:
         # Static friction cannot be implemented
         # Dynamic friction
+        # TODO: Implement dynamic friction
+        pass
 
     def generate_floor(self, env_ids, num_resets) -> None:
         if self.use_sinosoidal_floor:
@@ -383,7 +385,7 @@ class MFP2DVirtual(RLTask):
         self.reset_buf[env_ids] = 0
         self.progress_buf[env_ids] = 0
 
-        # fill extras
+        # fill `extras`
         self.extras["episode"] = {}
         for key in self.episode_sums.keys():
             self.extras["episode"][key] = torch.mean(
