@@ -228,6 +228,10 @@ class MFP2DVirtual(RLTask):
         }
         return observations
     
+    def generate_friction(self, env_ids, num_resets) -> None:
+        # Static friction cannot be implemented
+        # Dynamic friction
+
     def generate_floor(self, env_ids, num_resets) -> None:
         if self.use_sinosoidal_floor:
             self.floor_x_freq[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self.max_freq - self.min_freq) + self.min_freq
