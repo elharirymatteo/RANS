@@ -30,17 +30,17 @@ def success_rate_from_distances(distances, threshold=0.02):
     all_true_after_index = pd.DataFrame(index=less_than_margin_df.columns)
     all_true_after_index['all_true'] = less_than_margin_df.apply(lambda column: column.loc[first_less_than_thr_idxs[column.name]:].all(), axis=0)
     success_and_stay_rate = all_true_after_index.value_counts(normalize=True)
-    #print(all_true_after_index)
+    success_and_stay_rate = success_and_stay_rate[True] if True in success_and_stay_rate.index else 0
 
     success_rate_thr = (first_less_than_thr_idxs > -1).mean() * 100
     success_rate_thr2 = (first_less_than_thr2_idxs > -1).mean() * 100
     print(f'Success rate with threshold {threshold}: {success_rate_thr}')
     print(f'Success rate with threshold {threshold_2}: {success_rate_thr2}')
-    print(f'Success rate and stay with margin {margin}: {success_and_stay_rate[True] * 100}')
-    print(success_and_stay_rate)
+    print(f'Success rate and stay with margin {margin}: {success_and_stay_rate * 100}')
+
 
     success_rate_df = pd.DataFrame({f'success_rate_{threshold}_m': [success_rate_thr], f'success_rate_{threshold_2}_m': [success_rate_thr2], 
-                                    'success_and_stay_rate': [success_and_stay_rate[True] * 100]})
+                                    'success_and_stay_rate': [success_and_stay_rate * 100]})
     get_success_rate_table(success_rate_df)
     
     return 0

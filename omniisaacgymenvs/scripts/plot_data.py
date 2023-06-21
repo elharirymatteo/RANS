@@ -3,6 +3,7 @@ import numpy as np
 import os 
 import pandas as pd
 from matplotlib.ticker import AutoMinorLocator
+from pathlib import Path
 
 
 def plot_one_episode(ep_data, actions, save_dir):
@@ -211,17 +212,31 @@ def plot_one_episode(ep_data, actions, save_dir):
 
 if __name__ == "__main__":
 
-    experiment = "20230613-143432"
-    load_dir = "./lab_tests/" + experiment
-    n_episodes = 1
-
-    obs = np.load(os.path.join(load_dir, "obs.npy"), allow_pickle=True)
-    actions = np.load(os.path.join(load_dir, "act.npy"))
-
+    load_dir = Path("./lab_tests/new_mass/")
+    sub_dirs = [d for d in load_dir.iterdir() if d.is_dir()]
+    if sub_dirs:
+        latest_exp = max(sub_dirs, key=os.path.getmtime)
+        print("Plotting data for experiment:", latest_exp)
+        n_episodes = 1
+    else:
+        print("No experiments found in", load_dir)
+        exit()
+    obs_path = os.path.join(latest_exp, "obs.npy")
+    actions_path = os.path.join(latest_exp, "act.npy")
     
-    save_to = load_dir + '/plots/'
+    if not os.path.exists(obs_path) or not os.path.exists(actions_path):
+        print("Required files not found in", latest_exp)
+        exit()
+
+    obs = np.load(obs_path, allow_pickle=True)
+    actions = np.load(actions_path)
+
+    save_to = os.path.join(latest_exp, 'plots/')
     os.makedirs(save_to, exist_ok=True)
 
     plot_one_episode(obs, actions, save_to)
+
+    print("Done!")
+
 
 

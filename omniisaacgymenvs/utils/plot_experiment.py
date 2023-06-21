@@ -30,7 +30,7 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
     # plot best and worst episodes data
     plot_one_episode({k:np.array([v[best_agent] for v in vals]) for k,vals in ep_data.items()}, save_dir+"best_ep/")
     plot_one_episode({k:np.array([v[worst_agent] for v in vals]) for k,vals in ep_data.items()}, save_dir+"worst_ep/")
-    plot_one_episode({k:np.array([v[worst_agent] for v in vals]) for k,vals in ep_data.items()}, save_dir+f'rand_ep_{rand_agent}/')
+    plot_one_episode({k:np.array([v[rand_agent] for v in vals]) for k,vals in ep_data.items()}, save_dir+f'rand_ep_{rand_agent}/')
 
     if all_agents:
         
@@ -81,6 +81,7 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
         plt.gca().xaxis.set_minor_locator(minor_locator)
 
         data = np.array([np.sum(control_history[:, i, :], axis=0) for i in range(control_history.shape[1])])
+        print()
         n, bins, patches = plt.hist(np.mean(data, axis=1, dtype=int), bins=n_bins, edgecolor='white')
         xticks = [(bins[idx+1] + value)/2 for idx, value in enumerate(bins[:-1])]
         ticklabels = [f'T{i+1}' for i in range(n_bins)]

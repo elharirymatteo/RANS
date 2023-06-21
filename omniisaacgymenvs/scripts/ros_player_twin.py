@@ -91,6 +91,8 @@ def enable_ros_extension(env_var: str = "ROS_DISTRO"):
         "humble",
     ], f"${env_var} must be one of [noetic, foxy, humble]"
 
+    for name, value in os.environ.items():
+        print("{0}: {1}".format(name, value))
     # Get the extension manager and list of available extensions
     extension_manager = omni.kit.app.get_app().get_extension_manager()
     extensions = extension_manager.get_extensions()
@@ -200,16 +202,16 @@ class MyNode:
                     self.player.env._task.set_to_pose(id, position, heading)
                     run_once = False
 
-                #action = self.player.get_action(self.obs, is_deterministic=True)
-                action = [1, 1, 0, 1, 0, 1, 0, 1, 0]
+                action = self.player.get_action(self.obs, is_deterministic=True)
+                #action = [1, 1, 0, 1, 0, 1, 0, 1, 0]
                 #print(f'player obs: {self.player.env._obs["state"]}')
                 print(f'Action from model: {action}')
-                obs_sim, _, _, _ = self.player.env.step(action)
+                #obs_sim, _, _, _ = self.player.env.step(action)
 
-                #action = action.cpu().tolist()
+                action = action.cpu().tolist()
                 if self.save_trajectory:
                     self.obs_buffer.append(self.obs)
-                    self.sim_obs_buffer.append(obs_sim)
+                   # self.sim_obs_buffer.append(obs_sim)
                     self.act_buffer.append(action)
                 #bits = "{0:009b}".format(self.count)
                 #action = [int(bits[0]),int(bits[1]),int(bits[2]),int(bits[3]),int(bits[4]),int(bits[5]),int(bits[6]),int(bits[7]),int(bits[8])]
@@ -223,13 +225,13 @@ class MyNode:
                 print(f'count: {self.count}')
                 print(self.my_msg.data)
                 print(f'optitrack obs: {self.obs["state"]}')
-                print(f'sim obs: {obs_sim["obs"]["state"]}')
+              #  print(f'sim obs: {obs_sim["obs"]["state"]}')
 
                 self.ready = False
             self.rate.sleep()
 
         if self.save_trajectory:
-            save_dir = "./lab_tests/"+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + "/"
+            save_dir = "./lab_tests/new_mass/"+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + "/"
             os.makedirs(save_dir, exist_ok=True)
             np.save(os.path.join(save_dir, "obs.npy"), np.array(self.obs_buffer))
             np.save(os.path.join(save_dir, "act.npy"), np.array(self.act_buffer))

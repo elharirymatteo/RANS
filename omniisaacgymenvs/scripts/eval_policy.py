@@ -23,43 +23,10 @@ import wandb
 
 import os
 
-def eval_single_agent(cfg_dict, cfg, env):
-    base_dir = "./evaluations/2Hz/"
-    evaluation_dir = base_dir + str(cfg_dict["task"]["name"]) + "/"
-    os.makedirs(evaluation_dir, exist_ok=True)
-
-    player = PpoPlayerDiscrete(cfg_dict['train']['params'])
-    player.restore(cfg.checkpoint)
-    # _____Run Evaluation_____
-    num_episodes = 1 
-    obs = env.reset()
-    ep_data = {'act': [], 'obs': [], 'rews': [], 'info': []}
-    info = {}
-    for episode in range(num_episodes):
-        done = 0
-        step = 0
-        rew_sum = torch.zeros(1, device=cfg_dict['train']['params']['config']['device'])
-
-        while not done:
-            action = player.get_action(obs['obs'], is_deterministic=True)
-            #env._task.pre_physics_step(actions)
-            obs, rews, dones, info =  env.step(action)
-            done = dones[0]
-            rew_sum += rews[0]
-            step += 1
-            ep_data['act'].append(action.cpu().numpy())
-            ep_data['obs'].append(obs['obs'].cpu().numpy().flatten())
-            ep_data['rews'].append(rew_sum.cpu().numpy())
-            ep_data['info'].append(info)
-        ep_data['obs'] = np.array(ep_data['obs'])
-            #print(f'Step {step}: action={action}, obs={obs}, rews={rews}, dones={dones}, info={info} \n')
-        print(f'Episode {episode}: rew_sum={rew_sum}info \n')
-        print(ep_data)
-        #plot_episode_data(ep_data, evaluation_dir)
 
 def eval_multi_agents(cfg, horizon):
 
-    base_dir = "./evaluations/penalty_tests/spawn_close/"
+    base_dir = "./evaluations/tests_5.32kg/"
     experiment_name = cfg.checkpoint.split("/")[1]
     print(f'Experiment name: {experiment_name}')
     evaluation_dir = base_dir + experiment_name + "/"
@@ -142,9 +109,12 @@ def parse_hydra_configs(cfg: DictConfig):
     horizon = 500
 
     # choose frequency of evaluation (to be multiplied by 10 -> controlFrequencyInv)
-    cfg.task.sim.dt = 0.05
+    #cfg.task.sim.dt = 0.05
     # set congig params for evaluation
     cfg.task.env.maxEpisodeLength = horizon + 2
+    
+    cfg.task.env.platform.core.mass = 5.32
+
     cfg.task.env.clipObservations['state'] = 20.0
     cfg.task.env.task_parameters['max_spawn_dist'] = 3.0
     cfg.task.env.task_parameters['min_spawn_dist'] = 1.5  
@@ -165,7 +135,7 @@ def parse_hydra_configs(cfg: DictConfig):
     
     from omni.isaac.core.utils.torch.maths import set_seed
     cfg.seed = set_seed(cfg.seed, torch_deterministic=cfg.torch_deterministic)
-    cfg.seed = cfg.seed + 1
+    cfg.seed = cfg.seed 
     cfg_dict['seed'] = cfg.seed
     task = initialize_task(cfg_dict, env)
 
