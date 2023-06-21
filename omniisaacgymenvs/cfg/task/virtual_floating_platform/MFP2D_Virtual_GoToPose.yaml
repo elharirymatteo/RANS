@@ -20,11 +20,13 @@ env:
 
   # Uneven floor generation
   use_uneven_floor: False
+  use_sinusoidal_floor: False
   floor_min_freq: 0.25
   floor_max_freq: 3
   floor_min_offset: -6
   floor_max_offset: 6
   max_floor_force: 0.5
+  min_floor_force: 0.25
 
   # Add noisy observations
   add_noise_on_pos: False 
