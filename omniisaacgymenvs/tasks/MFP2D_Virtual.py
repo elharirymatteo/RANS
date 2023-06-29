@@ -241,8 +241,10 @@ class MFP2DVirtual(RLTask):
             self.floor_x_offset[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self.max_offset - self.min_offset) + self.min_offset
             self.floor_y_offset[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self.max_offset - self.min_offset) + self.min_offset
         else:
-            rand = (torch.rand((num_resets, 2), dtype=torch.float32, device=self._device) *(self.max_floor_force - self.min_floor_force) * 2) - (self.max_floor_force - self.min_floor_force)
-            self.floor_forces[env_ids,:2] = rand + torch.sign(rand) * self.min_floor_force
+            r = torch.rand((num_resets), dtype=torch.float32, device=self._device) *(self.max_floor_force - self.min_floor_force) + self.min_floor_force
+            theta = torch.rand((num_resets), dtype=torch.float32, device=self._device) * math.pi * 2
+            self.floor_forces[env_ids, 0] = torch.cos(theta) * r
+            self.floor_forces[env_ids, 1] = torch.sin(theta) * r
 
     def get_floor_forces(self): 
         #self.root_pos, self.root_quats = self._platforms.get_world_poses(clone=True)
@@ -262,9 +264,9 @@ class MFP2DVirtual(RLTask):
         if len(reset_env_ids) > 0:
             self.reset_idx(reset_env_ids)
         # Reset the targets (Goals)
-        set_target_ids = (self.progress_buf % 500 == 0).nonzero(as_tuple=False).squeeze(-1)
-        if len(set_target_ids) > 0:
-            self.set_targets(set_target_ids)
+        #set_target_ids = (self.progress_buf % 500 == 0).nonzero(as_tuple=False).squeeze(-1)
+        #if len(set_target_ids) > 0:
+        #    self.set_targets(set_target_ids)
 
         # Collect actions
         actions = actions.clone().to(self._device)
@@ -401,9 +403,7 @@ class MFP2DVirtual(RLTask):
         position_reward = self.task.compute_reward(self.current_state, self.actions)
         self.step += 1 / self._task_cfg["env"]["horizon_length"]
         penalties = self._penalties.compute_penalty(self.current_state, self.actions, self.step)
-        # TODO: check why compute penalties generates error
-        #print(target_dist[0], position_reward[0])
-        self.rew_buf[:] = position_reward #+ penalties
+        self.rew_buf[:] = position_reward + penalties
         self.episode_sums = self.task.update_statistics(self.episode_sums)
         self.episode_sums = self._penalties.update_statistics(self.episode_sums)
         self.update_state_statistics()
