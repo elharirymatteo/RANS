@@ -201,7 +201,8 @@ class MyNode:
         self.my_msg.data = [0,0,0,0,0,0,0,0,0]
         self.pub.publish(self.my_msg)
 
-    def angular_velocities(q, dt):
+    def angular_velocities(self, q, dt, N=1):
+        q = q[0::N]
         return (2 / dt) * np.array([
             q[:-1,0]*q[1:,1] - q[:-1,1]*q[1:,0] - q[:-1,2]*q[1:,3] + q[:-1,3]*q[1:,2],
             q[:-1,0]*q[1:,2] + q[:-1,1]*q[1:,3] - q[:-1,2]*q[1:,0] - q[:-1,3]*q[1:,1],
@@ -221,7 +222,7 @@ class MyNode:
         #angular_rot_matrices = np.array([quaternion_to_rotation_matrix(orientation) for orientation in angular_orientations])
         #dR_matrices = np.diff(angular_rot_matrices, axis=0) / dt
         #angular_velocities = np.array([(dR[2, 1], dR[0, 2], dR[1, 0]) for dR in dR_matrices])
-        average_angular_velocity = np.mean(angular_velocities, axis=0)
+        average_angular_velocity = np.mean(angular_velocities, axis=1)
 
         return average_linear_velocity, average_angular_velocity
 
