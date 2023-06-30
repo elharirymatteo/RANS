@@ -212,7 +212,7 @@ def plot_one_episode(ep_data, actions, save_dir):
 
 if __name__ == "__main__":
 
-    load_dir = Path("./lab_tests/new_mass/")
+    load_dir = Path("./lab_tests/test_ang_speed/")
     sub_dirs = [d for d in load_dir.iterdir() if d.is_dir()]
     if sub_dirs:
         latest_exp = max(sub_dirs, key=os.path.getmtime)
@@ -221,20 +221,23 @@ if __name__ == "__main__":
     else:
         print("No experiments found in", load_dir)
         exit()
-    obs_path = os.path.join(latest_exp, "obs.npy")
-    actions_path = os.path.join(latest_exp, "act.npy")
-    
-    if not os.path.exists(obs_path) or not os.path.exists(actions_path):
-        print("Required files not found in", latest_exp)
-        exit()
+        
+    for d in sub_dirs:
+        print(d)
+        obs_path = os.path.join(d, "obs.npy")
+        actions_path = os.path.join(d, "act.npy")
+        
+        if not os.path.exists(obs_path) or not os.path.exists(actions_path):
+            print("Required files not found in", d)
+            exit()
 
-    obs = np.load(obs_path, allow_pickle=True)
-    actions = np.load(actions_path)
+        obs = np.load(obs_path, allow_pickle=True)
+        actions = np.load(actions_path)
 
-    save_to = os.path.join(latest_exp, 'plots/')
-    os.makedirs(save_to, exist_ok=True)
+        save_to = os.path.join(d, 'plots/')
+        os.makedirs(save_to, exist_ok=True)
 
-    plot_one_episode(obs, actions, save_to)
+        plot_one_episode(obs, actions, save_to)
 
     print("Done!")
 
