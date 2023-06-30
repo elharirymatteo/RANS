@@ -224,7 +224,7 @@ class MyNode:
         # Calculate angular velocities
         angular_orientations = np.array([[pose.pose.orientation.w, pose.pose.orientation.x, pose.pose.orientation.y, pose.pose.orientation.z] for pose in self.pose_buffer])
         dt_buff = np.ones((angular_orientations.shape[0] - 1)) * dt / (angular_orientations.shape[0] - 1)
-        angular_velocities = self.angular_velocities(angular_orientations, dt)
+        angular_velocities = self.angular_velocities(angular_orientations, dt_buff)
         #angular_rot_matrices = np.array([quaternion_to_rotation_matrix(orientation) for orientation in angular_orientations])
         #dR_matrices = np.diff(angular_rot_matrices, axis=0) / dt
         #angular_velocities = np.array([(dR[2, 1], dR[0, 2], dR[1, 0]) for dR in dR_matrices])
