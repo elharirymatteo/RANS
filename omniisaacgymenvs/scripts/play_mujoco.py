@@ -19,9 +19,11 @@ from rl_games.algos_torch.players import BasicPpoPlayerContinuous, BasicPpoPlaye
 
 
 
-config_name = "/home/matteo/Projects/OmniIsaacGymEnvs/omniisaacgymenvs/cfg/train/MFP2D_PPOmulti_dict_MLP.yaml"
+config_name = "/home/antoine/Documents/Omniverse/omniisaacgymenvs/cfg/train/MFP2D_PPOmulti_dict_MLP.yaml"
 #model_name = "/home/antoine/Documents/Omniverse/omniisaacgymenvs/runs/MFP2D_Virtual_GoToXY/nn/last_MFP2D_Virtual_GoToXY_ep_1000_rew__607.5902_.pth"
-model_name = "/home/matteo/Projects/OmniIsaacGymEnvs/omniisaacgymenvs/penalty_tests/MLP_GTXY_UF_0.25_ST_PE_0.03_PAV_1.5_PLV_0.01/nn/last_MLP_GTXY_UF_0.25_ST_PE_0.03_PAV_1.5_PLV_0.01_ep_2000_rew__555.7034_.pth"
+#model_name = "/home/matteo/Projects/OmniIsaacGymEnvs/omniisaacgymenvs/penalty_tests/MLP_GTXY_UF_0.25_ST_PE_0.03_PAV_1.5_PLV_0.01/nn/last_MLP_GTXY_UF_0.25_ST_PE_0.03_PAV_1.5_PLV_0.01_ep_2000_rew__555.7034_.pth"
+model_name = "/home/antoine/Documents/Omniverse/omniisaacgymenvs/runs/test_xy_expo_reward_pen_ang_vel_5_split_uf/nn/last_test_xy_expo_reward_pen_ang_vel_5_split_uf_ep_2000_rew__433.5198_.pth"
+
 
 class RLGamesModel:
     def __init__(self):
@@ -67,7 +69,7 @@ class MuJoCoEnv:
     def setupPhysics(self):
         self.model.opt.timestep = 0.02
         self.model.opt.gravity = [0,0,0]
-        self.duration = 300
+        self.duration = 60
 
     def initializeLoggers(self):
         self.timevals = []
@@ -160,32 +162,40 @@ class MuJoCoEnv:
         self.state[0,5] = 0
         self.state[0,6:8] = torch.tensor(dist_to_goal, dtype=torch.float32, device="cuda")
 
-    def applyFriction(self):
-        print(self.data.qfrc_applied[:2])
-        print(self.data.qvel[:2])
-        print(self.data.qfrc_applied[-1])
-        print(self.data.qvel[-1])
-        
-        vel = data.qvel[:2] + [0]
-        vel_norm = np.linalg.norm(vel)
-        vel_normed = np.array(vel) / vel_norm
-
-        mujoco.mj_applyFT(self.model, self.data, [0,0.3,0], [0,0,0.01], self.data.qpos[:3], self.body_id, self.data.qfrc_applied)
+    def applyFriction(self, fdyn=0.1, fstat=0.1, tdyn=0.05, tstat=0.0):
+        lin_vel = self.data.qvel[:3]
+        lin_vel_norm = np.linalg.norm(lin_vel)
+        ang_vel = self.data.qvel[-1]
+        forces = self.data.qfrc_applied[:3]
+        forces_norm = np.linalg.norm(forces)
+        torques = self.data.qfrc_applied[3:]
+        torques_norm = np.linalg.norm(torques)
+        #if (forces_norm > fstat) or (torques_norm > tstat):
+        if lin_vel_norm > 0.001:
+            lin_vel_normed = np.array(lin_vel) / lin_vel_norm
+            force = -lin_vel_normed * fdyn
+            force[-1] = 0
+            mujoco.mj_applyFT(self.model, self.data, list(force), [0,0,0], self.data.qpos[:3], self.body_id, self.data.qfrc_applied)
+        if ang_vel > 0.001:
+            torque = - np.sign(ang_vel) * tdyn
+            mujoco.mj_applyFT(self.model, self.data, [0,0,0], [0,0,torque], self.data.qpos[:3], self.body_id, self.data.qfrc_applied)
+        #else:
+        #    self.data.qfrc_applied[:3] = 0
 
     def runLoop(self, model, xy):
         self.resetPosition()
         self.data.qpos[:2] = xy
-        mujoco.mj_step(self.model, self.data)
+        #mujoco.mj_step(self.model, self.data)
         while self.duration > self.data.time:
             self.updateState()
             action = model.getAction(self.state)
-            self.applyForces(action)
             for _ in range(10):
-                if _ == 9:
-                    self.applyForces(action)
-                    # Floor
-                    mujoco.mj_applyFT(self.model, self.data, [0,0.3,0], [0,0,0.01], self.data.qpos[:3], self.body_id, self.data.qfrc_applied)
-                    self.applyFriction()
+                self.applyForces(action)
+                #if _ == 0:
+                #   self.applyForces(action)
+                #    # Floor
+                mujoco.mj_applyFT(self.model, self.data, [0,0.25,0], [0,0,0.0], self.data.qpos[:3], self.body_id, self.data.qfrc_applied)
+                #self.applyFriction()
                 mujoco.mj_step(self.model, self.data)
                 self.updateLoggers()
 
@@ -195,7 +205,7 @@ model.buildModel()
 model.restore(model_name)
 
 env = MuJoCoEnv()
-env.runLoop(model, [4,0])
+env.runLoop(model, [3,0])
 
 dpi = 120
 width = 600
@@ -215,7 +225,7 @@ _ = ax[1].set_title('linear_velocity')
 fig.savefig("test_velocities.png")
 
 fig, ax = plt.subplots(2, 1, figsize=figsize, dpi=dpi)
-ax[0].plot(env.timevals, env.position)
+ax[0].plot(env.timevals, np.abs(env.position))
 ax[0].set_xlabel('time (seconds)')
 ax[0].set_ylabel('meters')
 _ = ax[0].set_title('position')
