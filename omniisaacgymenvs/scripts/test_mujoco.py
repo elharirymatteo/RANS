@@ -38,7 +38,7 @@ sphere = """
     <camera name="closeup" pos="0 -3 2" xyaxes="1 0 0 0 1 2"/>
     <body name="top" pos="0 0 .4">
       <freejoint/>
-      <geom name="ball" type="sphere" size=".31" mass="10.94"/>
+      <geom name="ball" type="sphere" size=".31" mass="5.32"/>
     </body>
   </worldbody>
 
@@ -57,7 +57,7 @@ media.write_image('/tmp/sphere.png', renderer.render())
 
 body_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY,"top")
 
-model.opt.timestep = 0.002
+model.opt.timestep = 0.02
 model.opt.gravity = [0,0,0]
 
 print('initial_positions', data.qpos)
@@ -95,8 +95,8 @@ positions[:,2]
 # Simulate and save data
 mujoco.mj_resetDataKeyframe(model, data, 0)
 timevals
-for act in actions[:2]:
-  for _ in range(100):
+for act in actions[:25]:
+  for _ in range(10):
     mujoco.mj_step(model, data)
   data.qfrc_applied[...] = 0
   timevals.append(data.time)

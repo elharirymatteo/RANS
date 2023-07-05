@@ -23,11 +23,6 @@ from pdb import set_trace as bp
 import os
 from collections import deque
 
-#from rclpy.node import Node
-#from my_msgs.msg import Observation # replace with your observation message type
-#from my_msgs.msg import Action # replace with your action message type
-
-#import rospy
     
 def get_observation_from_realsense(obs_type, task_flag, msg, lin_vel, ang_vel):
     """
@@ -55,7 +50,6 @@ def get_observation_from_realsense(obs_type, task_flag, msg, lin_vel, ang_vel):
     # Cast quaternion to Yaw    
     siny_cosp = 2 * (q[0] * q[3] + q[1] * q[2])
     cosy_cosp = 1 - 2 * (q[2] * q[2] + q[3] * q[3])
-    # orient_z = torch.arctan2(siny_cosp, cosy_cosp)
 
     if obs_type == np.ndarray: 
         obs = torch.tensor(np.array([dist_x, dist_y, dist_z, 
@@ -136,18 +130,18 @@ class MyNode:
         self.pub = rospy.Publisher("/spacer_floating_platform/valves/input", ByteMultiArray, queue_size=1)
 
         self.player = player
-
+        self.save_trajectory = True
+        self.obs_buffer = []
+        self.sim_obs_buffer = []
+        self.act_buffer = []
         self.my_msg = ByteMultiArray()
         self.count = 0
 
         self.end_experiment_at_step = rospy.get_param("end_experiment_at_step", 300)
         self.play_rate = rospy.get_param("play_rate", 5.0)
-
         self.rate = rospy.Rate(self.play_rate) # 1hz
-
         self.obs = torch.zeros((1,10), dtype=torch.float32, device='cuda')
         self.ready = False
-
         self.obs_type = type(self.player.observation_space.sample())
 
         rospy.on_shutdown(self.shutdown)
@@ -179,13 +173,17 @@ class MyNode:
             self.ready = True
 
     def run(self):
+        
+        run_once = True
         while (not self.rospy.is_shutdown()) and (self.count < self.end_experiment_at_step):
             #print(f'Im in')
             if self.ready:
                 action = self.player.get_action(self.obs, is_deterministic=True)
                 action = action.cpu().tolist()
-                #bits = "{0:009b}".format(self.count)
-                #action = [int(bits[0]),int(bits[1]),int(bits[2]),int(bits[3]),int(bits[4]),int(bits[5]),int(bits[6]),int(bits[7]),int(bits[8])]
+                if self.save_trajectory:
+                    self.obs_buffer.append(self.obs)
+                    self.act_buffer.append(action)
+
                 action = self.remap_actions(action)
                 lifting_active = 1
                 action.insert(0, lifting_active)
@@ -194,13 +192,28 @@ class MyNode:
                 self.count += 1
                 print(f'count: {self.count}')
                 print(self.my_msg.data)
-                print(self.obs)
+                print(f'optitrack obs: {self.obs["state"]}')
+
                 self.ready = False
             self.rate.sleep()
+        
+        if self.save_trajectory:
+            save_dir = "./lab_tests/new_mass/"+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + "/"
+            os.makedirs(save_dir, exist_ok=True)
+            np.save(os.path.join(save_dir, "obs.npy"), np.array(self.obs_buffer))
+            np.save(os.path.join(save_dir, "act.npy"), np.array(self.act_buffer))
+            np.save(os.path.join(save_dir, "sim_obs.npy"), np.array(self.sim_obs_buffer))
 
         self.my_msg.data = [0,0,0,0,0,0,0,0,0]
         self.pub.publish(self.my_msg)
-                
+
+    def angular_velocities(self, q, dt, N=1):
+        q = q[0::N]
+        return (2 / dt) * np.array([
+            q[:-1,0]*q[1:,1] - q[:-1,1]*q[1:,0] - q[:-1,2]*q[1:,3] + q[:-1,3]*q[1:,2],
+            q[:-1,0]*q[1:,2] + q[:-1,1]*q[1:,3] - q[:-1,2]*q[1:,0] - q[:-1,3]*q[1:,1],
+            q[:-1,0]*q[1:,3] - q[:-1,1]*q[1:,2] + q[:-1,2]*q[1:,1] - q[:-1,3]*q[1:,0]])
+
     def derive_velocities(self):
         dt = (self.time_buffer[-1] - self.time_buffer[0]).to_sec() # Time difference between first and last pose
         # Calculate linear velocities
@@ -210,10 +223,12 @@ class MyNode:
 
         # Calculate angular velocities
         angular_orientations = np.array([[pose.pose.orientation.w, pose.pose.orientation.x, pose.pose.orientation.y, pose.pose.orientation.z] for pose in self.pose_buffer])
-        angular_rot_matrices = np.array([quaternion_to_rotation_matrix(orientation) for orientation in angular_orientations])
-        dR_matrices = np.diff(angular_rot_matrices, axis=0) / dt
-        angular_velocities = np.array([(dR[2, 1], dR[0, 2], dR[1, 0]) for dR in dR_matrices])
-        average_angular_velocity = np.mean(angular_velocities, axis=0)
+        dt_buff = np.ones((angular_orientations.shape[0] - 1)) * dt / (angular_orientations.shape[0] - 1)
+        angular_velocities = self.angular_velocities(angular_orientations, dt_buff)
+        #angular_rot_matrices = np.array([quaternion_to_rotation_matrix(orientation) for orientation in angular_orientations])
+        #dR_matrices = np.diff(angular_rot_matrices, axis=0) / dt
+        #angular_velocities = np.array([(dR[2, 1], dR[0, 2], dR[1, 0]) for dR in dR_matrices])
+        average_angular_velocity = np.mean(angular_velocities, axis=1)
 
         return average_linear_velocity, average_angular_velocity
 
@@ -221,7 +236,6 @@ class MyNode:
 @hydra.main(config_name="config", config_path="../cfg")
 def parse_hydra_configs(cfg: DictConfig):
     
-    #cfg.checkpoint = "./runs/MFP2DGoToPose/nn/MFP2DGoToPose.pth"
     #cfg.checkpoint = "./runs/MFP2DGoToPose/nn/MFP2DGoToPose.pth"
     
     # set congig params for evaluation

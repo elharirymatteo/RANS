@@ -193,8 +193,9 @@ class MFP2DVirtual(RLTask):
 
     def update_state(self) -> None:
         self.root_pos, self.root_quats = self._platforms.get_world_poses(clone=True)
-        root_velocities = self._platforms.get_velocities(clone=True)
+        self.root_velocities = self._platforms.get_velocities(clone=True)
         root_positions = self.root_pos - self._env_pos
+        root_velocities = self.root_velocities.clone()
         # Cast quaternion to Yaw
         siny_cosp = 2 * (self.root_quats[:,0] * self.root_quats[:,3] + self.root_quats[:,1] * self.root_quats[:,2])
         cosy_cosp = 1 - 2 * (self.root_quats[:,2] * self.root_quats[:,2] + self.root_quats[:,3] * self.root_quats[:,3])
@@ -247,7 +248,6 @@ class MFP2DVirtual(RLTask):
             self.floor_forces[env_ids, 1] = torch.sin(theta) * r
 
     def get_floor_forces(self): 
-        #self.root_pos, self.root_quats = self._platforms.get_world_poses(clone=True)
         if self.use_sinosoidal_floor:
             self.floor_forces[:,0] = torch.sin(self.root_pos[:,0] * self.floor_x_freq + self.floor_x_offset) * self.max_floor_force
             self.floor_forces[:,1] = torch.sin(self.root_pos[:,1] * self.floor_y_freq + self.floor_y_offset) * self.max_floor_force
