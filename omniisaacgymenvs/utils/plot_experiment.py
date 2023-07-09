@@ -75,22 +75,14 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
         fig_count += 1
         plt.figure(fig_count)
         plt.clf()
-        control_history = np.array(control_history)
-        n_bins = len(control_history[0][0])  
-        minor_locator = AutoMinorLocator(1)
-        plt.gca().xaxis.set_minor_locator(minor_locator)
+        control_history = control_history.reshape((control_history.shape[1], control_history.shape[0], control_history.shape[2]))
+        control_history = np.array([c for c in control_history])
 
-        data = np.array([np.sum(control_history[:, i, :], axis=0) for i in range(control_history.shape[1])])
-        print()
-        n, bins, patches = plt.hist(np.mean(data, axis=1, dtype=int), bins=n_bins, edgecolor='white')
-        xticks = [(bins[idx+1] + value)/2 for idx, value in enumerate(bins[:-1])]
-        ticklabels = [f'T{i+1}' for i in range(n_bins)]
-        plt.xticks(xticks, ticklabels)
-        for idx, value in enumerate(n):
-            if value > 0:
-                plt.text(xticks[idx], value, int(value), ha='center')
+        freq = pd.DataFrame(data=np.array([control_history[i].sum(axis=0) for i in range(control_history.shape[0])]), 
+                    columns=[f'T{i+1}' for i in range(control_history.shape[2])])
+        mean_freq = freq.mean()
+        plt.bar(mean_freq.index, mean_freq.values)
         plt.title(f'Mean number of thrusts in {control_history.shape[1]} episodes')
-        
         plt.savefig(save_dir + '_mean_actions_hist')
 
         # °°°°°°°°°°°°°°°°°°°°°°°° plot all the episodes trajectories in the 2d plane  °°°°°°°°°°°°°°°°°°°°°°°°°
@@ -236,20 +228,12 @@ def plot_one_episode(ep_data, save_dir):
     plt.figure(fig_count)
     plt.clf()
     control_history = np.array(control_history)
-    n_bins = len(control_history[0])  
-    minor_locator = AutoMinorLocator(1)
-    plt.gca().xaxis.set_minor_locator(minor_locator) 
-    n, bins, patches = plt.hist(np.sum(control_history, axis=1), bins=len(control_history[0]), edgecolor='white')
 
-    xticks = [(bins[idx+1] + value)/2 for idx, value in enumerate(bins[:-1])]
-    ticklabels = [f'T{i+1}' for i in range(n_bins)]
-    plt.xticks(xticks, ticklabels)
-    plt.yticks([])
-    for idx, value in enumerate(n):
-        if value > 0:
-            plt.text(xticks[idx], value, int(value), ha='center')
+    actions_df = pd.DataFrame(control_history, columns=[f'T{i+1}' for i in range(control_history.shape[1])])
+    freq = actions_df.sum()
+    plt.bar(freq.index, freq.values)
     plt.title('Number of thrusts in episode')
-    
+    plt.tight_layout()
     plt.savefig(save_dir + '_actions_hist')
 
     # °°°°°°°°°°°°°°°°°°°°°°°° plot rewards °°°°°°°°°°°°°°°°°°°°°°°°°
