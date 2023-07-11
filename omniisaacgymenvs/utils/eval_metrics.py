@@ -20,10 +20,6 @@ def success_rate_from_distances(distances, threshold=0.02):
     first_less_than_thr_idxs = less_than_thr_df.idxmax().where(less_than_thr_df.any(), -1)
     first_less_than_thr2_idxs = less_than_thr2_df.idxmax().where(less_than_thr2_df.any(), -1)
 
-    #less_than_thr_consistent = less_than_thr_df[less_than_thr_df.index.isin(range(first_less_than_thr_idxs, distances.shape[0]))].all(axis=0)
-    #print(first_less_than_thr_idxs)
-    #print(first_less_than_thr2_idxs)
-
     margin = threshold * 7.5
     less_than_margin_df = distances_df.lt(margin)
     # Check if values are all True after the specific index for each column
@@ -40,10 +36,9 @@ def success_rate_from_distances(distances, threshold=0.02):
 
 
     success_rate_df = pd.DataFrame({f'success_rate_{threshold}_m': [success_rate_thr], f'success_rate_{threshold_2}_m': [success_rate_thr2], 
-                                    'success_and_stay_rate': [success_and_stay_rate * 100]})
-    get_success_rate_table(success_rate_df)
+                                    f'success_and_stay_within_{margin}_m': [success_and_stay_rate * 100]})
     
-    return 0
+    return success_rate_df
 
 def get_success_rate_table(success_rate_df):
 
