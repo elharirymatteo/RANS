@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 
-def success_rate_from_distances(distances, threshold=0.02):
+def success_rate_from_distances(distances, threshold=0.02, print_intermediate=False):
     """Compute the success rate from the distances to the target.
     Args:
         distances (np.ndarray): Array of distances to the target for N episodes.
@@ -30,9 +30,10 @@ def success_rate_from_distances(distances, threshold=0.02):
 
     success_rate_thr = (first_less_than_thr_idxs > -1).mean() * 100
     success_rate_thr2 = (first_less_than_thr2_idxs > -1).mean() * 100
-    print(f'Success rate with threshold {threshold}: {success_rate_thr}')
-    print(f'Success rate with threshold {threshold_2}: {success_rate_thr2}')
-    print(f'Success rate and stay with margin {margin}: {success_and_stay_rate * 100}')
+    if print_intermediate:
+        print(f'Success rate with threshold {threshold}: {success_rate_thr}')
+        print(f'Success rate with threshold {threshold_2}: {success_rate_thr2}')
+        print(f'Success rate and stay with margin {margin}: {success_and_stay_rate * 100}')
 
 
     success_rate_df = pd.DataFrame({f'success_rate_{threshold}_m': [success_rate_thr], f'success_rate_{threshold_2}_m': [success_rate_thr2], 

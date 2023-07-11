@@ -24,6 +24,7 @@ import wandb
 import os
 import glob
 import pandas as pd
+from tqdm import tqdm
 
 # filter out invalid experiments and retrieve valid models
 def get_valid_models(load_dir, experiments):
@@ -46,7 +47,7 @@ def get_valid_models(load_dir, experiments):
 
 def eval_multi_agents(agent, models, horizon):
 
-    base_dir = "./evaluations/"
+    base_dir = "./evaluations/corl_runs/"
     experiment_name = models[0].split("/")[1]
     print(f'Experiment name: {experiment_name}')
     evaluation_dir = base_dir + experiment_name + "/"
@@ -55,8 +56,8 @@ def eval_multi_agents(agent, models, horizon):
     store_all_data = False # store all agents generated data, if false only the first agent is stored
     is_done = False
     all_success_rate_df = pd.DataFrame()
-
-    for model in models:
+    
+    for i, model in enumerate(tqdm(models)):
         agent.restore(model)
         env = agent.env
         obs = env.reset()
@@ -84,11 +85,13 @@ def eval_multi_agents(agent, models, horizon):
             
         ep_data['all_dist'] = np.array(ep_data['all_dist'])
     
-        plot_episode_data_virtual(ep_data, evaluation_dir, store_all_data)
+        #plot_episode_data_virtual(ep_data, evaluation_dir, store_all_data)
         success_rate_df = success_rate_from_distances(ep_data['all_dist'])
         all_success_rate_df = pd.concat([all_success_rate_df, success_rate_df], ignore_index=True)
         # If want to print the latex code for the table use the following line
         #get_success_rate_table(success_rate_df)
+
+    # create index for the dataframe and save it
     all_success_rate_df.index = models
     all_success_rate_df.to_csv(evaluation_dir + "multi_model_performance.csv")
 
@@ -97,7 +100,7 @@ def eval_multi_agents(agent, models, horizon):
 def parse_hydra_configs(cfg: DictConfig):
     
     # specify the experiment load directory
-    load_dir = "./new_mass/"
+    load_dir = "./corl_runs/"
     experiments = os.listdir(load_dir)
     print(f'Experiments found in {load_dir} folder: {len(experiments)}')
     models = get_valid_models(load_dir, experiments)
@@ -114,6 +117,7 @@ def parse_hydra_configs(cfg: DictConfig):
     cfg.task.env.task_parameters['min_spawn_dist'] = 1.5  
     cfg.task.env.task_parameters['kill_dist'] = 6.0
     cfg.task.env.task_parameters['kill_after_n_steps_in_tolerance'] = horizon
+    
     cfg_dict = omegaconf_to_dict(cfg)
     #print_dict(cfg_dict)
 
@@ -131,6 +135,7 @@ def parse_hydra_configs(cfg: DictConfig):
     rlg_trainer.launch_rlg_hydra(env)
 
     # _____Create players (model)_____
+    
     rlg_config_dict = omegaconf_to_dict(cfg.train)
     runner = Runner(RLGPUAlgoObserver())
     runner.load(rlg_config_dict)
