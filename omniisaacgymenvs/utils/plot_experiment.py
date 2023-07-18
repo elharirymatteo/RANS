@@ -4,7 +4,7 @@ import numpy as np
 import os
 import pandas as pd
 import matplotlib.cm as cm
-
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes, mark_inset
 
 def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
     """
@@ -271,13 +271,22 @@ def plot_one_episode(ep_data, save_dir):
     fig_count += 1
     plt.figure(fig_count)
     plt.clf()
-    plt.plot(pos_error[:, 0], pos_error[:, 1])
-    plt.xlabel('X [m]')
-    plt.ylabel('Y [m]')
-    plt.title('Planar position')
-    plt.grid()
-    plt.savefig(save_dir + '_pos_xy_plane')
+    x, y = pos_error[:, 0], pos_error[:, 1]
+    fig,ax = plt.subplots(figsize=(6,6))
+    
+     #Setting the limit of x and y direction to define which portion to zoom
+    x1, x2, y1, y2 = -.08, .08, -.1, .1
+    axins = inset_axes(ax, width=2, height=1.5)
+    ax.plot(x, y)
+    ax.set_xlabel('X [m]')
+    ax.set_ylabel('Y [m]')
+    axins.set_xlim(x1, x2)
+    axins.set_ylim(y1, y2)
+    mark_inset(ax, axins, loc1=2, loc2=4, fc="none", ec="0.5")
+    axins.plot(x, y)
 
+    fig.savefig(save_dir + '_pos_xy_plane')
+    
     # °°°°°°°°°°°°°°°°°°°°°°°° plot distance to target over time °°°°°°°°°°°°°°°°°°°°°°°°°
     pos_error = state_history[:, 6:8]
     # plot position (x, y coordinates)
