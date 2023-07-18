@@ -3,6 +3,7 @@ from matplotlib.ticker import AutoMinorLocator
 import numpy as np
 import os
 import pandas as pd
+import matplotlib.cm as cm
 
 
 def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
@@ -16,23 +17,23 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
     # TODO: place all the different plots in a separate function, to be called from here based on the episode (best, worst, first etc.)
     reward_history = ep_data['rews']
     print(f'reward_history.shape[1]: {reward_history.shape[1]}')
+    all_agents = False if reward_history.shape[1] == 1 else all_agents
     # plot average results over all agents
-    best_agent = np.argmax(reward_history.sum(axis=0))
-    worst_agent = np.argmin(reward_history.sum(axis=0))
-    rand_agent = np.random.choice(list(set(range(0, reward_history.shape[1]))-set([best_agent, worst_agent])))
-    print('Best agent: ', best_agent, '| Worst agent: ', worst_agent, '| Random Agent', rand_agent)
 
     control_history = ep_data['act']
     reward_history = ep_data['rews']
     info_history = ep_data['info']
     state_history = ep_data['obs']
 
-    # plot best and worst episodes data
-    plot_one_episode({k:np.array([v[best_agent] for v in vals]) for k,vals in ep_data.items()}, save_dir+"best_ep/")
-    plot_one_episode({k:np.array([v[worst_agent] for v in vals]) for k,vals in ep_data.items()}, save_dir+"worst_ep/")
-    plot_one_episode({k:np.array([v[rand_agent] for v in vals]) for k,vals in ep_data.items()}, save_dir+f'rand_ep_{rand_agent}/')
-
     if all_agents:
+        best_agent = np.argmax(reward_history.sum(axis=0))
+        worst_agent = np.argmin(reward_history.sum(axis=0))
+        rand_agent = np.random.choice(list(set(range(0, reward_history.shape[1]))-set([best_agent, worst_agent])))
+        print('Best agent: ', best_agent, '| Worst agent: ', worst_agent, '| Random Agent', rand_agent)
+        # plot best and worst episodes data
+        plot_one_episode({k:np.array([v[best_agent] for v in vals]) for k,vals in ep_data.items()}, save_dir+"best_ep/")
+        plot_one_episode({k:np.array([v[worst_agent] for v in vals]) for k,vals in ep_data.items()}, save_dir+"worst_ep/")
+        plot_one_episode({k:np.array([v[rand_agent] for v in vals]) for k,vals in ep_data.items()}, save_dir+f'rand_ep_{rand_agent}/')
         
         all_distances = ep_data['all_dist']
 
@@ -211,17 +212,17 @@ def plot_one_episode(ep_data, save_dir):
     fig_count += 1
     plt.figure(fig_count)
     plt.clf()
-    control_history = np.array(control_history)
-    colours = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'b-', 'g-', 'r-', 'c-']
-    for k in range(control_history.shape[1]):
-        col = colours[k % control_history.shape[0]]
-        plt.step(tgrid, control_history[:, k], col)
-    plt.xlabel('Time steps')
-    plt.ylabel('Control [N]')
-    plt.legend([f'u{k}' for k in range(control_history.shape[1])], loc='best')
-    plt.title('Thrust control')
-    plt.grid()
-    plt.savefig(save_dir + '_actions')
+    control_history_df = pd.DataFrame(data=control_history)
+
+    fig, axes = plt.subplots(len(control_history_df.columns), 1, sharex=True, figsize=(8, 6))
+    # Select subset of colors from a colormap
+    colormap = cm.get_cmap('tab20')
+    num_colors = len(control_history_df.columns)
+    colors = [colormap(i) for i in range(0, num_colors*2, 2)]
+    for i, column in enumerate(control_history_df.columns):
+        control_history_df[column].plot(ax=axes[i], color=colors[i])
+        axes[i].set_ylabel(f'T{column}')
+    fig.savefig(save_dir + '_actions')
     
         # °°°°°°°°°°°°°°°°°°°°°°°° plot actions histogram °°°°°°°°°°°°°°°°°°°°°°°°°
     fig_count += 1
