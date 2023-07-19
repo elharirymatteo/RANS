@@ -58,8 +58,7 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
         # °°°°°°°°°°°°°°°°°°°°°°°° plot meand and std reward °°°°°°°°°°°°°°°°°°°°°°°°°
         fig_count += 1
         fig, ax = plt.subplots()
-        print(f'reward_history.shape: {reward_history.shape}')
-        print(f'reward type: {type(reward_history)}')
+
         ax.plot(tgrid, reward_history.mean(axis=1), alpha=0.5, color='blue', label='mean_dist', linewidth = 2.0)
         ax.fill_between(tgrid, reward_history.mean(axis=1) - reward_history.std(axis=1), reward_history.mean(axis=1) 
                         + reward_history.std(axis=1), color='blue', alpha=0.4)
@@ -78,8 +77,7 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
         fig_count += 1
         fig, ax = plt.subplots()
         ang_vel_z = np.array(state_history[:, :, 4:5])[:,:,0]
-        print(f'ang_vel_z.shape: {ang_vel_z.shape}')
-        print(f'ang_vel_z type: {type(ang_vel_z)}')
+
         ax.plot(tgrid, ang_vel_z.mean(axis=1), alpha=0.5, color='blue', label='mean_dist', linewidth = 1.0)
         ax.fill_between(tgrid, ang_vel_z.mean(axis=1) - ang_vel_z.std(axis=1), ang_vel_z.mean(axis=1) 
                         + ang_vel_z.std(axis=1), color='blue', alpha=0.4)
