@@ -58,6 +58,8 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
         # °°°°°°°°°°°°°°°°°°°°°°°° plot meand and std reward °°°°°°°°°°°°°°°°°°°°°°°°°
         fig_count += 1
         fig, ax = plt.subplots()
+        print(f'reward_history.shape: {reward_history.shape}')
+        print(f'reward type: {type(reward_history)}')
         ax.plot(tgrid, reward_history.mean(axis=1), alpha=0.5, color='blue', label='mean_dist', linewidth = 2.0)
         ax.fill_between(tgrid, reward_history.mean(axis=1) - reward_history.std(axis=1), reward_history.mean(axis=1) 
                         + reward_history.std(axis=1), color='blue', alpha=0.4)
@@ -71,7 +73,27 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
         plt.title(f'Mean, best and worst reward over {all_distances.shape[1]} episodes')
         plt.grid()
         plt.savefig(save_dir + '_mean_best_worst_reward')
-        
+
+        # °°°°°°°°°°°°°°°°°°°°°°°° plot meand and std angular speed °°°°°°°°°°°°°°°°°°°°°°°°°
+        fig_count += 1
+        fig, ax = plt.subplots()
+        ang_vel_z = np.array(state_history[:, :, 4:5])[:,:,0]
+        print(f'ang_vel_z.shape: {ang_vel_z.shape}')
+        print(f'ang_vel_z type: {type(ang_vel_z)}')
+        ax.plot(tgrid, ang_vel_z.mean(axis=1), alpha=0.5, color='blue', label='mean_dist', linewidth = 1.0)
+        ax.fill_between(tgrid, ang_vel_z.mean(axis=1) - ang_vel_z.std(axis=1), ang_vel_z.mean(axis=1) 
+                        + ang_vel_z.std(axis=1), color='blue', alpha=0.4)
+        ax.fill_between(tgrid, ang_vel_z.mean(axis=1) - 2*ang_vel_z.std(axis=1), ang_vel_z.mean(axis=1) 
+                        + 2*ang_vel_z.std(axis=1), color='blue', alpha=0.2)
+        ax.plot(tgrid, ang_vel_z[:, best_agent], alpha=0.5, color='green', label='best', linewidth = 1.0)
+        ax.plot(tgrid, ang_vel_z[:, worst_agent], alpha=0.5, color='red', label='worst', linewidth = 1.0)
+        plt.xlabel('Time steps')
+        plt.ylabel('Angular speed [rad/s]')
+        plt.legend(['mean', 'best', 'worst', '1-std', '2-std'], loc='best')
+        plt.title(f'Angular speed of mean, best and worst agents {ang_vel_z.shape[1]} episodes')
+        plt.grid()
+        plt.savefig(save_dir + '_mean_best_worst_ang_vel')
+
         # °°°°°°°°°°°°°°°°°°°°°°°° plot mean actions histogram °°°°°°°°°°°°°°°°°°°°°°°°°
         fig_count += 1
         plt.figure(fig_count)
