@@ -5,6 +5,7 @@ import os
 import pandas as pd
 import matplotlib.cm as cm
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes, mark_inset
+import seaborn as sns 
 
 def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
     """
@@ -93,6 +94,20 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
         plt.savefig(save_dir + '_mean_best_worst_ang_vel')
 
         # °°°°°°°°°°°°°°°°°°°°°°°° plot mean actions histogram °°°°°°°°°°°°°°°°°°°°°°°°°
+        # fig_count += 1
+        # plt.figure(fig_count)
+        # plt.clf()
+        # control_history = control_history.reshape((control_history.shape[1], control_history.shape[0], control_history.shape[2]))
+        # control_history = np.array([c for c in control_history])
+
+        # freq = pd.DataFrame(data=np.array([control_history[i].sum(axis=0) for i in range(control_history.shape[0])]), 
+        #             columns=[f'T{i+1}' for i in range(control_history.shape[2])])
+        # mean_freq = freq.mean()
+        # plt.bar(mean_freq.index, mean_freq.values)
+        # plt.title(f'Mean number of thrusts in {control_history.shape[0]} episodes')
+        # plt.savefig(save_dir + '_mean_actions_hist')
+        
+        # °°°°°°°°°°°°°°°°°°°°°°°° plot mean actions boxplot °°°°°°°°°°°°°°°°°°°°°°°°°
         fig_count += 1
         plt.figure(fig_count)
         plt.clf()
@@ -101,10 +116,10 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
 
         freq = pd.DataFrame(data=np.array([control_history[i].sum(axis=0) for i in range(control_history.shape[0])]), 
                     columns=[f'T{i+1}' for i in range(control_history.shape[2])])
-        mean_freq = freq.mean()
-        plt.bar(mean_freq.index, mean_freq.values)
-        plt.title(f'Mean number of thrusts in {control_history.shape[1]} episodes')
-        plt.savefig(save_dir + '_mean_actions_hist')
+        #mean_freq = freq.mean()
+        sns.boxplot(data=freq, orient="h")
+        plt.title(f'Mean number of thrusts in {control_history.shape[0]} episodes')
+        plt.savefig(save_dir + '_actions_boxplot')
 
         # °°°°°°°°°°°°°°°°°°°°°°°° plot all the episodes trajectories in the 2d plane  °°°°°°°°°°°°°°°°°°°°°°°°°
       
