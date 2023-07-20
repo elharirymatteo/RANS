@@ -2,6 +2,7 @@ __pycache___
 __pycache__/
 runs
 penalty_tests
+icra24
 new_mass
 corl_runs
 fail_penalty_test

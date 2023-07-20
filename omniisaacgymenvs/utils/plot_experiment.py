@@ -77,7 +77,7 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
         # °°°°°°°°°°°°°°°°°°°°°°°° plot meand and std angular speed °°°°°°°°°°°°°°°°°°°°°°°°°
         fig_count += 1
         fig, ax = plt.subplots()
-        ang_vel_z = np.array(state_history[:, :, 4:5])[:,:,0]
+        ang_vel_z = state_history[:, :, 4:5][:,:,0] # getting rid of the extra dimension
 
         ax.plot(tgrid, ang_vel_z.mean(axis=1), alpha=0.5, color='blue', label='mean_dist', linewidth = 1.0)
         ax.fill_between(tgrid, ang_vel_z.mean(axis=1) - ang_vel_z.std(axis=1), ang_vel_z.mean(axis=1) 

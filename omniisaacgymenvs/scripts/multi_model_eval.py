@@ -1,3 +1,4 @@
+from json import load
 import numpy as np
 import torch
 import hydra
@@ -47,13 +48,13 @@ def get_valid_models(load_dir, experiments):
 
 def eval_multi_agents(agent, models, horizon):
 
-    base_dir = "./evaluations/corl_runs/"
+    base_dir = "./evaluations/" + "icra24/" + "linR/"
     experiment_name = models[0].split("/")[1]
     print(f'Experiment name: {experiment_name}')
     evaluation_dir = base_dir + experiment_name + "/"
     os.makedirs(evaluation_dir, exist_ok=True)
 
-    store_all_data = False # store all agents generated data, if false only the first agent is stored
+    store_all_data = True # store all agents generated data, if false only the first agent is stored
     is_done = False
     all_success_rate_df = pd.DataFrame()
     
@@ -87,6 +88,11 @@ def eval_multi_agents(agent, models, horizon):
     
         #plot_episode_data_virtual(ep_data, evaluation_dir, store_all_data)
         success_rate_df = success_rate_from_distances(ep_data['all_dist'])
+        success_rate_df['avg_rew'] = [np.mean(ep_data['rews'])]
+        ang_vel_z = ep_data['obs'][:, :, 4:5][:,:,0]
+        success_rate_df['avg_ang_vel'] = [np.mean(ang_vel_z.mean(axis=1))]
+        success_rate_df['avg_action_count'] = [np.mean(np.sum(ep_data['act'], axis=1))]
+        plot_episode_data_virtual
         all_success_rate_df = pd.concat([all_success_rate_df, success_rate_df], ignore_index=True)
         # If want to print the latex code for the table use the following line
         #get_success_rate_table(success_rate_df)
@@ -100,7 +106,7 @@ def eval_multi_agents(agent, models, horizon):
 def parse_hydra_configs(cfg: DictConfig):
     
     # specify the experiment load directory
-    load_dir = "./corl_runs/"
+    load_dir = "./icra24/" + "linR/"
     experiments = os.listdir(load_dir)
     print(f'Experiments found in {load_dir} folder: {len(experiments)}')
     models = get_valid_models(load_dir, experiments)
