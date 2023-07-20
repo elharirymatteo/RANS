@@ -242,6 +242,7 @@ def plot_one_episode(ep_data, save_dir):
     for i, column in enumerate(control_history_df.columns):
         control_history_df[column].plot(ax=axes[i], color=colors[i])
         axes[i].set_ylabel(f'T{column}')
+    plt.xlabel('Time steps')
     fig.savefig(save_dir + '_actions')
     
         # °°°°°°°°°°°°°°°°°°°°°°°° plot actions histogram °°°°°°°°°°°°°°°°°°°°°°°°°
@@ -293,10 +294,14 @@ def plot_one_episode(ep_data, save_dir):
     plt.clf()
     x, y = pos_error[:, 0], pos_error[:, 1]
     fig,ax = plt.subplots(figsize=(6,6))
-    
+
      #Setting the limit of x and y direction to define which portion to zoom
-    x1, x2, y1, y2 = -.08, .08, -.1, .1
-    axins = inset_axes(ax, width=2, height=1.5)
+    x1, x2, y1, y2 = -.07, .07, -.08, .08
+    if (y[0] > 0 and x[0] > 0): 
+        location = 4
+    else:
+        location = 2 if (y[0] < 0 and x[0] < 0) else 1
+    axins = inset_axes(ax, width=1.5, height=1.25, loc=location)
     ax.plot(x, y)
     ax.set_xlabel('X [m]')
     ax.set_ylabel('Y [m]')
