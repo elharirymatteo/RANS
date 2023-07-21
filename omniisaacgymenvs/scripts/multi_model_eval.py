@@ -46,12 +46,9 @@ def get_valid_models(load_dir, experiments):
     return valid_models
 
 
-def eval_multi_agents(agent, models, horizon):
+def eval_multi_agents(agent, models, horizon, load_dir):
 
-    base_dir = "./evaluations/" + "icra24/" + "linR/"
-    experiment_name = models[0].split("/")[1]
-    print(f'Experiment name: {experiment_name}')
-    evaluation_dir = base_dir + experiment_name + "/"
+    evaluation_dir = "./evaluations/" + load_dir
     os.makedirs(evaluation_dir, exist_ok=True)
 
     store_all_data = True # store all agents generated data, if false only the first agent is stored
@@ -98,7 +95,8 @@ def eval_multi_agents(agent, models, horizon):
         #get_success_rate_table(success_rate_df)
 
     # create index for the dataframe and save it
-    all_success_rate_df.index = models
+    model_names = [model.split("/")[3] for model in models]
+    all_success_rate_df.insert(loc=0, column="model", value=model_names)
     all_success_rate_df.to_csv(evaluation_dir + "multi_model_performance.csv")
 
 
@@ -106,7 +104,7 @@ def eval_multi_agents(agent, models, horizon):
 def parse_hydra_configs(cfg: DictConfig):
     
     # specify the experiment load directory
-    load_dir = "./icra24/" + "linR/"
+    load_dir = "./icra24/" + "expR/"
     experiments = os.listdir(load_dir)
     print(f'Experiments found in {load_dir} folder: {len(experiments)}')
     models = get_valid_models(load_dir, experiments)
@@ -119,8 +117,8 @@ def parse_hydra_configs(cfg: DictConfig):
     cfg.task.env.maxEpisodeLength = horizon + 2
     cfg.task.env.platform.core.mass = 5.32
     cfg.task.env.clipObservations['state'] = 20.0
-    cfg.task.env.task_parameters['max_spawn_dist'] = 3.0
-    cfg.task.env.task_parameters['min_spawn_dist'] = 1.5  
+    cfg.task.env.task_parameters['max_spawn_dist'] = 4.5
+    cfg.task.env.task_parameters['min_spawn_dist'] = 4.0  
     cfg.task.env.task_parameters['kill_dist'] = 6.0
     cfg.task.env.task_parameters['kill_after_n_steps_in_tolerance'] = horizon
     
@@ -149,7 +147,7 @@ def parse_hydra_configs(cfg: DictConfig):
 
     agent = runner.create_player()
 
-    eval_multi_agents(agent, models, horizon)
+    eval_multi_agents(agent, models, horizon, load_dir)
 
     env.close()    
 
