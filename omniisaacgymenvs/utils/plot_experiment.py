@@ -42,13 +42,13 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
         tgrid = np.linspace(0, len(all_distances), len(control_history))
         fig_count = 0
         fig, ax = plt.subplots()
-        ax.plot(tgrid, all_distances.mean(axis=1), alpha=0.5, color='blue', label='mean_dist', linewidth = 2.0)
+        ax.plot(tgrid, all_distances.mean(axis=1), alpha=0.5, color='blue', label='mean_dist', linewidth = 1.5)
         ax.fill_between(tgrid, all_distances.mean(axis=1) - all_distances.std(axis=1), all_distances.mean(axis=1) 
                         + all_distances.std(axis=1), color='blue', alpha=0.4)
         ax.fill_between(tgrid, all_distances.mean(axis=1) - 2*all_distances.std(axis=1), all_distances.mean(axis=1) 
                         + 2*all_distances.std(axis=1), color='blue', alpha=0.2)
-        ax.plot(tgrid, all_distances[:, best_agent], alpha=0.5, color='green', label='best', linewidth = 2.0)
-        ax.plot(tgrid, all_distances[:, worst_agent], alpha=0.5, color='red', label='worst', linewidth = 2.0)
+        ax.plot(tgrid, all_distances[:, best_agent], alpha=0.5, color='green', label='best', linewidth = 1.5)
+        ax.plot(tgrid, all_distances[:, worst_agent], alpha=0.5, color='red', label='worst', linewidth = 1.5)
         plt.xlabel('Time steps')
         plt.ylabel('Distance [m]')
         plt.legend(['mean',  'best', 'worst', '1-std', '2-std'], loc='best')
@@ -56,17 +56,30 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
         plt.grid()
         plt.savefig(save_dir + '_mean_best_worst_dist')
 
+        # °°°°°°°°°°°°°°°°°°°°°°°° plot all distances °°°°°°°°°°°°°°°°°°°°°°°°°
+        tgrid = np.linspace(0, len(all_distances), len(control_history))
+        fig_count = 0
+        fig, ax = plt.subplots()
+        cmap = cm.get_cmap('tab20') 
+        for j in range(all_distances.shape[1]):
+            ax.plot(tgrid, all_distances[:, j], alpha=1., color=cmap(j % cmap.N), linewidth = 1.0)
+        plt.xlabel('Time steps')
+        plt.ylabel('Distance [m]')
+        plt.title(f'All distances over {all_distances.shape[1]} episodes')
+        plt.grid()
+        plt.savefig(save_dir + '_all_dist')
+
         # °°°°°°°°°°°°°°°°°°°°°°°° plot meand and std reward °°°°°°°°°°°°°°°°°°°°°°°°°
         fig_count += 1
         fig, ax = plt.subplots()
 
-        ax.plot(tgrid, reward_history.mean(axis=1), alpha=0.5, color='blue', label='mean_dist', linewidth = 2.0)
+        ax.plot(tgrid, reward_history.mean(axis=1), alpha=0.5, color='blue', label='mean_dist', linewidth = 1.5)
         ax.fill_between(tgrid, reward_history.mean(axis=1) - reward_history.std(axis=1), reward_history.mean(axis=1) 
                         + reward_history.std(axis=1), color='blue', alpha=0.4)
         ax.fill_between(tgrid, reward_history.mean(axis=1) - 2*reward_history.std(axis=1), reward_history.mean(axis=1) 
                         + 2*reward_history.std(axis=1), color='blue', alpha=0.2)
-        ax.plot(tgrid, reward_history[:, best_agent], alpha=0.5, color='green', label='best', linewidth = 2.0)
-        ax.plot(tgrid, reward_history[:, worst_agent], alpha=0.5, color='red', label='worst', linewidth = 2.0)
+        ax.plot(tgrid, reward_history[:, best_agent], alpha=0.5, color='green', label='best', linewidth = 1.5)
+        ax.plot(tgrid, reward_history[:, worst_agent], alpha=0.5, color='red', label='worst', linewidth = 1.5)
         plt.xlabel('Time steps')
         plt.ylabel('Reward')
         plt.legend(['mean', 'best', 'worst', '1-std', '2-std'], loc='best')
@@ -79,13 +92,13 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
         fig, ax = plt.subplots()
         ang_vel_z = state_history[:, :, 4:5][:,:,0] # getting rid of the extra dimension
 
-        ax.plot(tgrid, ang_vel_z.mean(axis=1), alpha=0.5, color='blue', label='mean_dist', linewidth = 1.0)
+        ax.plot(tgrid, ang_vel_z.mean(axis=1), alpha=0.5, color='blue', label='mean_dist', linewidth = 1.5)
         ax.fill_between(tgrid, ang_vel_z.mean(axis=1) - ang_vel_z.std(axis=1), ang_vel_z.mean(axis=1) 
                         + ang_vel_z.std(axis=1), color='blue', alpha=0.4)
         ax.fill_between(tgrid, ang_vel_z.mean(axis=1) - 2*ang_vel_z.std(axis=1), ang_vel_z.mean(axis=1) 
                         + 2*ang_vel_z.std(axis=1), color='blue', alpha=0.2)
-        ax.plot(tgrid, ang_vel_z[:, best_agent], alpha=0.5, color='green', label='best', linewidth = 1.0)
-        ax.plot(tgrid, ang_vel_z[:, worst_agent], alpha=0.5, color='red', label='worst', linewidth = 1.0)
+        ax.plot(tgrid, ang_vel_z[:, best_agent], alpha=0.5, color='green', label='best', linewidth = 1.5)
+        ax.plot(tgrid, ang_vel_z[:, worst_agent], alpha=0.5, color='red', label='worst', linewidth = 1.5)
         plt.xlabel('Time steps')
         plt.ylabel('Angular speed [rad/s]')
         plt.legend(['mean', 'best', 'worst', '1-std', '2-std'], loc='best')
@@ -126,13 +139,11 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
         fig_count += 1
         plt.figure(fig_count)
         plt.clf()    
-        colours = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
         positions = state_history[:, :, 6:8]
         print(positions.shape)
 
         cmap = cm.get_cmap('tab20') 
         for j in range(positions.shape[1]):
-            #col = colours[j % len(colours)]
             col = cmap(j % cmap.N)  # Select a color from the colormap based on the current index
             plt.plot(positions[:, j, 0], positions[:, j, 1], color=col, alpha=1., linewidth=0.75)
             plt.xlabel('X [m]')

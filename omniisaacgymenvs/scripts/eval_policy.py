@@ -114,12 +114,12 @@ def parse_hydra_configs(cfg: DictConfig):
     cfg.task.env.maxEpisodeLength = horizon + 2
     
     cfg.task.env.platform.core.mass = 5.32
-
+    cfg.task.env.split_thrust = True
     cfg.task.env.clipObservations['state'] = 20.0
     cfg.task.env.task_parameters['max_spawn_dist'] = 4.5
     cfg.task.env.task_parameters['min_spawn_dist'] = 4.0  
-    cfg.task.env.task_parameters['kill_dist'] = 6.0
-    cfg.task.env.task_parameters['kill_after_n_steps_in_tolerance'] = 800
+    cfg.task.env.task_parameters['kill_dist'] = 8.0
+    cfg.task.env.task_parameters['kill_after_n_steps_in_tolerance'] = 500
     # TODO: check error with visualizer of thrusters....  ANTOINE
     #cfg.task.env.platform.configuration.visualize = False
     cfg_dict = omegaconf_to_dict(cfg)
