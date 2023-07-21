@@ -26,8 +26,8 @@ import os
 
 def eval_multi_agents(cfg, horizon):
 
-    base_dir = "./evaluations/lin_rew/"
-    experiment_name = cfg.checkpoint.split("/")[1]
+    base_dir = "./evaluations/" + cfg.checkpoint.split("/")[0] + "/" +  cfg.checkpoint.split("/")[1] + "/"
+    experiment_name = cfg.checkpoint.split("/")[2]
     print(f'Experiment name: {experiment_name}')
     evaluation_dir = base_dir + experiment_name + "/"
     os.makedirs(evaluation_dir, exist_ok=True)
