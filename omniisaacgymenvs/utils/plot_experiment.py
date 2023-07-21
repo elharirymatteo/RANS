@@ -23,7 +23,7 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
 
     control_history = ep_data['act']
     reward_history = ep_data['rews']
-    info_history = ep_data['info']
+    # info_history = ep_data['info']
     state_history = ep_data['obs']
 
     if all_agents:
@@ -171,7 +171,7 @@ def plot_one_episode(ep_data, save_dir):
 
     control_history = ep_data['act']
     reward_history = ep_data['rews']
-    info_history = ep_data['info']
+    # info_history = ep_data['info']
     state_history = ep_data['obs']
     all_distances = ep_data['all_dist']
 

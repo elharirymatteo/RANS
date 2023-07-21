@@ -46,7 +46,7 @@ def eval_multi_agents(cfg, horizon):
     env = agent.env
     obs = env.reset()
 
-    ep_data = {'act': [], 'obs': [], 'rews': [], 'info': [], 'all_dist': []}
+    ep_data = {'act': [], 'obs': [], 'rews': [], 'all_dist': []}
     total_reward = 0
     num_steps = 0
     
@@ -74,6 +74,17 @@ def eval_multi_agents(cfg, horizon):
     ep_data['act'] = np.array(ep_data['act'])
     ep_data['rews'] = np.array(ep_data['rews'])
     ep_data['all_dist'] = np.array(ep_data['all_dist'])
+
+    # Find the episode where the sum of actions has only zeros (no action) for all the time steps
+    broken_episodes = [i for i in range(0,ep_data['act'].shape[1]) if ep_data['act'][:,i,:].sum() == 0]
+    # Remove episodes that are broken by the environment (IsaacGym bug)
+    if broken_episodes:
+        print(f'Broken episodes: {broken_episodes}')
+        print(f'Ep data shape before: {ep_data["act"].shape}')
+        for key in ep_data.keys():
+            ep_data[key] = np.delete(ep_data[key], broken_episodes, axis=1) 
+        print(f'Ep data shape after: {ep_data["act"].shape}')
+
 
     print(f'\n Episode: rew_sum={total_reward:.2f}, tot_steps={num_steps} \n')
     #print(f'Episode data: {ep_data} \n')
@@ -116,9 +127,9 @@ def parse_hydra_configs(cfg: DictConfig):
     cfg.task.env.platform.core.mass = 5.32
     cfg.task.env.split_thrust = True
     cfg.task.env.clipObservations['state'] = 20.0
-    cfg.task.env.task_parameters['max_spawn_dist'] = 4.5
-    cfg.task.env.task_parameters['min_spawn_dist'] = 4.0  
-    cfg.task.env.task_parameters['kill_dist'] = 8.0
+    cfg.task.env.task_parameters['max_spawn_dist'] = 3.5
+    cfg.task.env.task_parameters['min_spawn_dist'] = 2.5
+    cfg.task.env.task_parameters['kill_dist'] = 6.0
     cfg.task.env.task_parameters['kill_after_n_steps_in_tolerance'] = 500
     # TODO: check error with visualizer of thrusters....  ANTOINE
     #cfg.task.env.platform.configuration.visualize = False

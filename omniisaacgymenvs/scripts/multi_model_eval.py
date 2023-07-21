@@ -104,7 +104,7 @@ def eval_multi_agents(agent, models, horizon, load_dir):
 def parse_hydra_configs(cfg: DictConfig):
     
     # specify the experiment load directory
-    load_dir = "./icra24/" + "expR/"
+    load_dir = "./new_mass/" #+ "expR/"
     experiments = os.listdir(load_dir)
     print(f'Experiments found in {load_dir} folder: {len(experiments)}')
     models = get_valid_models(load_dir, experiments)
