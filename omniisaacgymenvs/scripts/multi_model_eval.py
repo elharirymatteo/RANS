@@ -59,7 +59,7 @@ def eval_multi_agents(agent, models, horizon, load_dir):
         agent.restore(model)
         env = agent.env
         obs = env.reset()
-        ep_data = {'act': [], 'obs': [], 'rews': [], 'info': [], 'all_dist': []}
+        ep_data = {'act': [], 'obs': [], 'rews': [], 'all_dist': []}
         
         for _ in range(horizon):
             actions = agent.get_action(obs['obs'], is_deterministic=True)
@@ -83,7 +83,17 @@ def eval_multi_agents(agent, models, horizon, load_dir):
             
         ep_data['all_dist'] = np.array(ep_data['all_dist'])
     
-        #plot_episode_data_virtual(ep_data, evaluation_dir, store_all_data)
+        # Find the episode where the sum of actions has only zeros (no action) for all the time steps
+        broken_episodes = [i for i in range(0,ep_data['act'].shape[1]) if ep_data['act'][:,i,:].sum() == 0]
+        # Remove episodes that are broken by the environment (IsaacGym bug)
+        if broken_episodes:
+            print(f'Broken episodes: {broken_episodes}')
+            print(f'Ep data shape before: {ep_data["act"].shape}')
+        for key in ep_data.keys():
+            ep_data[key] = np.delete(ep_data[key], broken_episodes, axis=1) 
+        print(f'Ep data shape after: {ep_data["act"].shape}')
+
+        # Collect the data for the success rate table        
         success_rate_df = success_rate_from_distances(ep_data['all_dist'])
         success_rate_df['avg_rew'] = [np.mean(ep_data['rews'])]
         ang_vel_z = ep_data['obs'][:, :, 4:5][:,:,0]
@@ -92,7 +102,6 @@ def eval_multi_agents(agent, models, horizon, load_dir):
         plot_episode_data_virtual
         all_success_rate_df = pd.concat([all_success_rate_df, success_rate_df], ignore_index=True)
         # If want to print the latex code for the table use the following line
-        #get_success_rate_table(success_rate_df)
 
     # create index for the dataframe and save it
     model_names = [model.split("/")[3] for model in models]
@@ -104,7 +113,7 @@ def eval_multi_agents(agent, models, horizon, load_dir):
 def parse_hydra_configs(cfg: DictConfig):
     
     # specify the experiment load directory
-    load_dir = "./new_mass/" #+ "expR/"
+    load_dir = "./icra24/" + "expR_UF/"
     experiments = os.listdir(load_dir)
     print(f'Experiments found in {load_dir} folder: {len(experiments)}')
     models = get_valid_models(load_dir, experiments)
