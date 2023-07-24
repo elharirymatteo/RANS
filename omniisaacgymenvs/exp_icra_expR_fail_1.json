@@ -4,7 +4,7 @@
       "train": "MFP2D_PPOmulti_dict_MLP",
       "task.env.split_thrust": "True",
       "task.env.platform.core.mass": "5.32",
-      "experiment": "nominal_UF_0.25_GoToXY_MLP_expRew",
+      "experiment": "fail_1_UF_0.25_GoToXY_MLP_expRew",
       "headless": "True",
       "num_envs": "4096",     
       "task.env.platform.randomization.kill_thrusters": "True",
@@ -15,14 +15,14 @@
       "max_iterations": "2000",
       "wandb_activate": "True",
       "wandb_entity": "spacer-rl",
-      "wandb_project": "icra24"
+      "wandb_project": "icra24_fail"
   },
   "experiment112": {
     "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
     "train": "MFP2D_PPOmulti_dict_MLP",
     "task.env.split_thrust": "True",
     "task.env.platform.core.mass": "5.32",
-    "experiment": "nominal_UF_0.25_GoToXY_MLP_expRew_PE_0.01",
+    "experiment": "fail_1_UF_0.25_GoToXY_MLP_expRew_PE_0.01",
     "headless": "True",
     "num_envs": "4096",     
     "task.env.platform.randomization.kill_thrusters": "True",
@@ -35,14 +35,14 @@
     "task.env.penalties_parameters.penalize_energy_fn": "'lambda x,step: -torch.abs(x)*0.01'",
     "wandb_activate": "True",
     "wandb_entity": "spacer-rl",
-    "wandb_project": "icra24"
+    "wandb_project": "icra24_fail"
   },
   "experiment113": {
     "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
     "train": "MFP2D_PPOmulti_dict_MLP",
     "task.env.split_thrust": "True",
     "task.env.platform.core.mass": "5.32",
-    "experiment": "nominal_UF_0.25_GoToXY_MLP_expRew_PE_0.02",
+    "experiment": "fail_1_UF_0.25_GoToXY_MLP_expRew_PE_0.02",
     "headless": "True",
     "num_envs": "4096",    
     "task.env.platform.randomization.kill_thrusters": "True",
@@ -55,14 +55,14 @@
     "task.env.penalties_parameters.penalize_energy_fn": "'lambda x,step: -torch.abs(x)*0.02'",
     "wandb_activate": "True",
     "wandb_entity": "spacer-rl",
-    "wandb_project": "icra24"
+    "wandb_project": "icra24_fail"
   },
   "experiment114": {
     "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
     "train": "MFP2D_PPOmulti_dict_MLP",
     "task.env.split_thrust": "True",
     "task.env.platform.core.mass": "5.32",
-    "experiment": "nominal_UF_0.25_GoToXY_MLP_expRew_PE_0.03",
+    "experiment": "fail_1_UF_0.25_GoToXY_MLP_expRew_PE_0.03",
     "headless": "True",
     "num_envs": "4096",     
     "task.env.platform.randomization.kill_thrusters": "True",
@@ -75,14 +75,14 @@
     "task.env.penalties_parameters.penalize_energy_fn": "'lambda x,step: -torch.abs(x)*0.03'",
     "wandb_activate": "True",
     "wandb_entity": "spacer-rl",
-    "wandb_project": "icra24"
+    "wandb_project": "icra24_fail"
   },
   "experiment115": {
     "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
     "train": "MFP2D_PPOmulti_dict_MLP",
     "task.env.split_thrust": "True",
     "task.env.platform.core.mass": "5.32",
-    "experiment": "nominal_UF_0.25_GoToXY_MLP_expRew_PE_0.04",
+    "experiment": "fail_1_UF_0.25_GoToXY_MLP_expRew_PE_0.04",
     "headless": "True",
     "num_envs": "4096",    
     "task.env.platform.randomization.kill_thrusters": "True",
@@ -95,14 +95,14 @@
     "task.env.penalties_parameters.penalize_energy_fn": "'lambda x,step: -torch.abs(x)*0.04'",
     "wandb_activate": "True",
     "wandb_entity": "spacer-rl",
-    "wandb_project": "icra24"
+    "wandb_project": "icra24_fail"
   },
     "experiment116": {
       "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
       "train": "MFP2D_PPOmulti_dict_MLP",
       "task.env.split_thrust": "True",
       "task.env.platform.core.mass": "5.32",
-      "experiment": "nominal_UF_0.25_GoToXY_MLP_expRew_PE_0.05",
+      "experiment": "fail_1_UF_0.25_GoToXY_MLP_expRew_PE_0.05",
       "headless": "True",
       "num_envs": "4096",     
       "task.env.platform.randomization.kill_thrusters": "True",
@@ -115,7 +115,7 @@
       "task.env.penalties_parameters.penalize_energy_fn": "'lambda x,step: -torch.abs(x)*0.05'",
       "wandb_activate": "True",
       "wandb_entity": "spacer-rl",
-      "wandb_project": "icra24"
+      "wandb_project": "icra24_fail"
   }
 
 }
