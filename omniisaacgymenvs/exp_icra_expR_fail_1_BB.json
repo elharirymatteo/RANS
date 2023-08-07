@@ -1,10 +1,10 @@
 {
   "experiment111": {
-      "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY_BB",
       "train": "MFP2D_PPOmulti_dict_MLP",
       "task.env.split_thrust": "True",
       "task.env.platform.core.mass": "5.32",
-      "experiment": "fail_1_UF_0.25_GoToXY_MLP_expRew",
+      "experiment": "fail_1_UF_0.25_GoToXY_BB_MLP_expRew",
       "headless": "True",
       "num_envs": "4096", 
       "train.params.network.mlp.units": [256,256],    
@@ -19,11 +19,11 @@
       "wandb_project": "icra24_fail"
   },
   "experiment112": {
-    "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
+    "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY_BB",
     "train": "MFP2D_PPOmulti_dict_MLP",
     "task.env.split_thrust": "True",
     "task.env.platform.core.mass": "5.32",
-    "experiment": "fail_1_UF_0.25_GoToXY_MLP_expRew_PE_0.01",
+    "experiment": "fail_1_UF_0.25_GoToXY_BB_MLP_expRew_PE_0.01",
     "headless": "True",
     "num_envs": "4096", 
     "train.params.network.mlp.units": [256,256],    
@@ -40,11 +40,11 @@
     "wandb_project": "icra24_fail"
   },
   "experiment113": {
-    "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
+    "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY_BB",
     "train": "MFP2D_PPOmulti_dict_MLP",
     "task.env.split_thrust": "True",
     "task.env.platform.core.mass": "5.32",
-    "experiment": "fail_1_UF_0.25_GoToXY_MLP_expRew_PE_0.02",
+    "experiment": "fail_1_UF_0.25_GoToXY_BB_MLP_expRew_PE_0.02",
     "headless": "True",
     "num_envs": "4096", 
     "train.params.network.mlp.units": [256,256],   
@@ -61,11 +61,11 @@
     "wandb_project": "icra24_fail"
   },
   "experiment114": {
-    "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
+    "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY_BB",
     "train": "MFP2D_PPOmulti_dict_MLP",
     "task.env.split_thrust": "True",
     "task.env.platform.core.mass": "5.32",
-    "experiment": "fail_1_UF_0.25_GoToXY_MLP_expRew_PE_0.03",
+    "experiment": "fail_1_UF_0.25_GoToXY_BB_MLP_expRew_PE_0.03",
     "headless": "True",
     "num_envs": "4096", 
     "train.params.network.mlp.units": [256,256],    
@@ -82,11 +82,11 @@
     "wandb_project": "icra24_fail"
   },
   "experiment115": {
-    "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
+    "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY_BB",
     "train": "MFP2D_PPOmulti_dict_MLP",
     "task.env.split_thrust": "True",
     "task.env.platform.core.mass": "5.32",
-    "experiment": "fail_1_UF_0.25_GoToXY_MLP_expRew_PE_0.04",
+    "experiment": "fail_1_UF_0.25_GoToXY_BB_MLP_expRew_PE_0.04",
     "headless": "True",
     "num_envs": "4096", 
     "train.params.network.mlp.units": [256,256],   
@@ -103,11 +103,11 @@
     "wandb_project": "icra24_fail"
   },
     "experiment116": {
-      "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY_BB",
       "train": "MFP2D_PPOmulti_dict_MLP",
       "task.env.split_thrust": "True",
       "task.env.platform.core.mass": "5.32",
-      "experiment": "fail_1_UF_0.25_GoToXY_MLP_expRew_PE_0.05",
+      "experiment": "fail_1_UF_0.25_GoToXY_BB_MLP_expRew_PE_0.05",
       "headless": "True",
       "num_envs": "4096", 
       "train.params.network.mlp.units": [256,256],    
