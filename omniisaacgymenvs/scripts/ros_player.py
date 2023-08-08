@@ -47,6 +47,7 @@ def get_observation_from_realsense(obs_type, task_flag, msg, lin_vel, ang_vel):
     # rot_x =  quat_axis(q, 0) #np.random.rand(3)
     rot_mat = quaternion_to_rotation_matrix(q)
 
+    
     # Cast quaternion to Yaw    
     siny_cosp = 2 * (q[0] * q[3] + q[1] * q[2])
     cosy_cosp = 1 - 2 * (q[2] * q[2] + q[3] * q[3])
@@ -139,7 +140,7 @@ class MyNode:
 
         self.end_experiment_at_step = rospy.get_param("end_experiment_at_step", 300)
         self.play_rate = rospy.get_param("play_rate", 5.0)
-        self.rate = rospy.Rate(self.play_rate) # 1hz
+        self.rate = rospy.Rate(self.play_rate) # 5hz
         self.obs = torch.zeros((1,10), dtype=torch.float32, device='cuda')
         self.ready = False
         self.obs_type = type(self.player.observation_space.sample())
@@ -198,7 +199,7 @@ class MyNode:
             self.rate.sleep()
         
         if self.save_trajectory:
-            save_dir = "./lab_tests/new_mass/"+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + "/"
+            save_dir = "./lab_tests/icra24_Pose/"+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + "/"
             os.makedirs(save_dir, exist_ok=True)
             np.save(os.path.join(save_dir, "obs.npy"), np.array(self.obs_buffer))
             np.save(os.path.join(save_dir, "act.npy"), np.array(self.act_buffer))
@@ -277,6 +278,7 @@ def parse_hydra_configs(cfg: DictConfig):
     node = MyNode(player, task_flag)
     node.run()
     #rospy.spin()
+    # adding code to collect a ros bag
 
     env.close()
 
