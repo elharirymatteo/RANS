@@ -44,21 +44,6 @@ def initialize_task(config, env, init_sim=True):
     from omniisaacgymenvs.tasks.quadcopter import QuadcopterTask
     from omniisaacgymenvs.tasks.shadow_hand import ShadowHandTask
     from omniisaacgymenvs.tasks.crazyflie import CrazyflieTask
-    from omniisaacgymenvs.tasks.floating_platform import FloatingPlatformTask
-    from omniisaacgymenvs.tasks.MFP2D_go_to_xy import MFP2DGoToXYTask
-    from omniisaacgymenvs.tasks.MFP2D_go_to_xy_v2 import MFP2DGoToXYVirtualTask
-    from omniisaacgymenvs.tasks.MFP2D_go_to_xy_dict_obs import MFP2DGoToXYDictTask
-    from omniisaacgymenvs.tasks.MFP2D_go_to_xy_dict_RP import MFP2DGoToXYDictRPTask
-    from omniisaacgymenvs.tasks.MFP2D_go_to_xy_dict_SR import MFP2DGoToXYDictSRTask
-    from omniisaacgymenvs.tasks.MFP2D_go_to_xy_dict_SR_v2 import MFP2DGoToXYVirtualDictSRTask
-    from omniisaacgymenvs.tasks.MFP2D_go_to_xy_dict_SR_plus_v2 import MFP2DGoToXYVirtualDictSRPlusTask
-    from omniisaacgymenvs.tasks.MFP2D_go_to_xy_dict_SR_plus_plus_v2 import MFP2DGoToXYVirtualDictSRPlusPlusTask
-    from omniisaacgymenvs.tasks.MFP2D_go_to_xy_crippled import MFP2DGoToXYCrippledTask
-    from omniisaacgymenvs.tasks.MFP2D_go_to_pose import MFP2DGoToPoseTask
-    from omniisaacgymenvs.tasks.MFP2D_go_to_pose_crippled import MFP2DGoToPoseCrippledTask
-    from omniisaacgymenvs.tasks.MFP2D_track_xy_vel import MFP2DTrackXYVelocityTask
-    from omniisaacgymenvs.tasks.MFP2D_track_xyo_vel import MFP2DTrackXYOVelocityTask
-    from omniisaacgymenvs.tasks.MFP2D_track_xy_vel_match_heading import MFP2DTrackXYVelocityMatchHeadingTask
     from omniisaacgymenvs.tasks.MFP2D_Virtual import MFP2DVirtual
 
     # Mappings from strings to environments
@@ -78,21 +63,6 @@ def initialize_task(config, env, init_sim=True):
         "ShadowHand": ShadowHandTask,
         "ShadowHandOpenAI_FF": ShadowHandTask,
         "ShadowHandOpenAI_LSTM": ShadowHandTask,
-        "FloatingPlatform": FloatingPlatformTask,
-        "MFP2DGoToXY": MFP2DGoToXYTask,
-        "MFP2DGoToXYVirtual": MFP2DGoToXYVirtualTask,
-        "MFP2DGoToXYDict": MFP2DGoToXYDictTask,
-        "MFP2DGoToXYDictRT": MFP2DGoToXYDictRPTask,
-        "MFP2DGoToXYDictSR": MFP2DGoToXYDictSRTask,
-        "MFP2DGoToXYVirtualDictSR": MFP2DGoToXYVirtualDictSRTask,
-        "MFP2DGoToXYVirtualDictSRPlus": MFP2DGoToXYVirtualDictSRPlusTask,
-        "MFP2DGoToXYVirtualDictSRPlusPlus": MFP2DGoToXYVirtualDictSRPlusPlusTask,
-        "MFP2DGoToXYCrippled": MFP2DGoToXYCrippledTask,
-        "MFP2DGoToPose": MFP2DGoToPoseTask,
-        "MFP2DGoToPoseCrippled": MFP2DGoToPoseCrippledTask,
-        "MFP2DTrackXYVelocity": MFP2DTrackXYVelocityTask,
-        "MFP2DTrackXYOVelocity": MFP2DTrackXYOVelocityTask,
-        "MFP2DTrackXYVelocityMatchHeading": MFP2DTrackXYVelocityMatchHeadingTask,
         "MFP2DVirtual":MFP2DVirtual,
     }
 
