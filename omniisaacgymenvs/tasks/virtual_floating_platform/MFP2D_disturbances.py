@@ -61,8 +61,9 @@ class UnevenFloorDisturbance:
         """
         Applies the floor forces to the platform."""
 
-        self.get_floor_forces(root_pos)
-        platform.apply_forces_and_torques_at_pos(forces=self.floor_forces, positions=root_pos, is_global=True)
+        if self._use_uneven_floor:
+            self.get_floor_forces(root_pos)
+            platform.apply_forces_and_torques_at_pos(forces=self.floor_forces, positions=root_pos, is_global=True)
 
 class NoisyObservations:
     """
