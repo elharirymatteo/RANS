@@ -74,7 +74,7 @@ class VecEnvRLGames(VecEnvBase):
         for _ in range(self._task.control_frequency_inv - 1):
             self._world.step(render=False)
             self._task.update_state()
-            self._task.propagate_forces()
+            self._task.apply_forces()
             self.sim_frame_count += 1
 
         self._world.step(render=self._render)
