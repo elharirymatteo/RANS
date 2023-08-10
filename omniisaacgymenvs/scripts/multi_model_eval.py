@@ -94,10 +94,15 @@ def eval_multi_agents(agent, models, horizon, load_dir):
         print(f'Ep data shape after: {ep_data["act"].shape}')
 
         # Collect the data for the success rate table        
-        success_rate_df = success_rate_from_distances(ep_data['all_dist'],threshold=0.1)
+        success_rate_df = success_rate_from_distances(ep_data['all_dist'],threshold=0.02)
         success_rate_df['avg_rew'] = [np.mean(ep_data['rews'])]
         ang_vel_z = ep_data['obs'][:, :, 4:5][:,:,0]
         success_rate_df['avg_ang_vel'] = [np.mean(ang_vel_z.mean(axis=1))]
+        lin_vel_x = ep_data['obs'][:, 2:3]
+        lin_vel_y = ep_data['obs'][:, 3:4]
+        lin_vel = np.linalg.norm(np.array([lin_vel_x, lin_vel_y]), axis=0)
+        success_rate_df['avg_lin_vel'] = [np.mean(lin_vel.mean(axis=1))]
+
         success_rate_df['avg_action_count'] = [np.mean(np.sum(ep_data['act'], axis=1))]
 
         all_success_rate_df = pd.concat([all_success_rate_df, success_rate_df], ignore_index=True)
@@ -106,14 +111,14 @@ def eval_multi_agents(agent, models, horizon, load_dir):
     # create index for the dataframe and save it
     model_names = [model.split("/")[2] for model in models]
     all_success_rate_df.insert(loc=0, column="model", value=model_names)
-    all_success_rate_df.to_csv(evaluation_dir + "multi_model_noise.csv")
+    all_success_rate_df.to_csv(evaluation_dir + "multi_model_performance_2.csv")
 
 
 @hydra.main(config_name="config", config_path="../cfg")
 def parse_hydra_configs(cfg: DictConfig):
     
     # specify the experiment load directory
-    load_dir = "./icra24_noise/" #+ "linR/"
+    load_dir = "./icra24_noise/" #+ "expR/"
     experiments = os.listdir(load_dir)
     print(f'Experiments found in {load_dir} folder: {len(experiments)}')
     models = get_valid_models(load_dir, experiments)

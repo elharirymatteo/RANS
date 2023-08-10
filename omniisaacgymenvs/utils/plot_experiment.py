@@ -173,7 +173,6 @@ def plot_one_episode(ep_data, save_dir):
     reward_history = ep_data['rews']
     # info_history = ep_data['info']
     state_history = ep_data['obs']
-    all_distances = ep_data['all_dist']
 
     # save data to csv file
     pd.DataFrame.to_csv(pd.DataFrame(control_history), save_dir + 'actions.csv')
