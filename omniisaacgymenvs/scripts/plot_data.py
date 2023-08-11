@@ -29,19 +29,14 @@ if __name__ == "__main__":
 
         obs = np.load(obs_path, allow_pickle=True)
         actions = np.load(actions_path)
-        print(obs[100:200])
         # transform the obs numpy array of dictionaries to numpy array of arrays
-        # obs = np.array([o['state'].cpu().numpy() for o in obs], dtype=object)
-        # print(obs[0])
-        # print(type(obs[0][0]))
-        # print(type(obs[0]))
-        # print(type(obs))
-        # save_to = os.path.join(d, 'plots/')
-        # os.makedirs(save_to, exist_ok=True)
-        # ep_data = {'act': actions, 'obs': obs, 'rews': []}
-        # print(ep_data['obs'].shape)
+        obs = np.array([o["state"].cpu().numpy().flatten() for o in obs])
 
-        # plot_one_episode(ep_data, save_to)
+        save_to = os.path.join(d, 'plots/')
+        os.makedirs(save_to, exist_ok=True)
+        ep_data = {'act': actions, 'obs': obs, 'rews': []}
+
+        plot_one_episode(ep_data, save_to)
 
     print("Done!")
 

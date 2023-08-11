@@ -286,17 +286,18 @@ def plot_one_episode(ep_data, save_dir):
     plt.savefig(save_dir + '_actions_hist')
 
     # °°°°°°°°°°°°°°°°°°°°°°°° plot rewards °°°°°°°°°°°°°°°°°°°°°°°°°
-    fig_count += 1
-    plt.figure(fig_count)
-    plt.clf()
-    plt.plot(tgrid, reward_history, color=cm.get_cmap('tab20')(0))
-    plt.xlabel('Time steps')
-    plt.ylabel('Reward')
-    plt.legend(['reward'], loc='best')
-    plt.title('Reward history')
-    plt.grid()
-    # plt.show()
-    plt.savefig(save_dir + '_reward')
+    if reward_history:
+        fig_count += 1
+        plt.figure(fig_count)
+        plt.clf()
+        plt.plot(tgrid, reward_history, color=cm.get_cmap('tab20')(0))
+        plt.xlabel('Time steps')
+        plt.ylabel('Reward')
+        plt.legend(['reward'], loc='best')
+        plt.title('Reward history')
+        plt.grid()
+        # plt.show()
+        plt.savefig(save_dir + '_reward')
 
     # °°°°°°°°°°°°°°°°°°°°°°°° plot x, y position error over time °°°°°°°°°°°°°°°°°°°°°°°°°
     pos_error = state_history[:, 6:8]
