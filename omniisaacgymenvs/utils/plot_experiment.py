@@ -159,7 +159,7 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
 
 
 
-def plot_one_episode(ep_data, save_dir):
+def plot_one_episode(ep_data, save_dir=None, show=False):
     """
     Plot episode data for a single agent
     :param ep_data: dictionary containing episode data
@@ -207,7 +207,10 @@ def plot_one_episode(ep_data, save_dir):
     plt.legend(['x', 'y'], loc='best')
     plt.title('Velocity state history')
     plt.grid()
-    plt.savefig(save_dir + '_lin_vel')
+    if save_dir:
+        plt.savefig(save_dir + '_lin_vel')
+    if show:
+        plt.show()
     # °°°°°°°°°°°°°°°°°°°°°°°° plot angular speeds in time °°°°°°°°°°°°°°°°°°°°°°°°°
     ang_vel_z = state_history[:, 4:5]
     # plot angular speed (z coordinate)
@@ -220,8 +223,11 @@ def plot_one_episode(ep_data, save_dir):
     plt.legend(['z'], loc='best')
     plt.title('Angular speed state history')
     plt.grid()
-    plt.savefig(save_dir + '_ang_vel')
-    #plt.show()
+    if save_dir:
+        plt.savefig(save_dir + '_ang_vel')
+    if show:
+        plt.show()
+    
     # °°°°°°°°°°°°°°°°°°°°°°°° plot heading cos, sin °°°°°°°°°°°°°°°°°°°°°°°°°
     headings = state_history[:, :2]
     # plot position (x, y coordinates)
@@ -235,8 +241,10 @@ def plot_one_episode(ep_data, save_dir):
     plt.legend(['cos(${\\theta}$)', 'sin(${\\theta}$)'], loc='best')
     plt.title('Heading state history')
     plt.grid()
-    plt.savefig(save_dir + '_heading')
-
+    if save_dir:
+        plt.savefig(save_dir + '_heading')
+    if show:
+        plt.show()
 
     # °°°°°°°°°°°°°°°°°°°°°°°° plot absolute heading angle °°°°°°°°°°°°°°°°°°°°°°°°°
     headings = state_history[:, :2]
@@ -252,7 +260,10 @@ def plot_one_episode(ep_data, save_dir):
     plt.legend(['${\\theta}$'], loc='best')
     plt.title('Angle state history')
     plt.grid()
-    plt.savefig(save_dir + '_angle')
+    if save_dir:
+        plt.savefig(save_dir + '_angle')
+    if show:
+        plt.show()
 # Compute the angle using numpy.arctan2
 
     # °°°°°°°°°°°°°°°°°°°°°°°° plot actions in time °°°°°°°°°°°°°°°°°°°°°°°°°
@@ -270,7 +281,10 @@ def plot_one_episode(ep_data, save_dir):
         control_history_df[column].plot(ax=axes[i], color=colors[i])
         axes[i].set_ylabel(f'T{column}')
     plt.xlabel('Time steps')
-    fig.savefig(save_dir + '_actions')
+    if save_dir:
+        fig.savefig(save_dir + '_actions')
+    if show:
+        plt.show()
     
         # °°°°°°°°°°°°°°°°°°°°°°°° plot actions histogram °°°°°°°°°°°°°°°°°°°°°°°°°
     fig_count += 1
@@ -283,7 +297,10 @@ def plot_one_episode(ep_data, save_dir):
     plt.bar(freq.index, freq.values, color=cm.get_cmap('tab20')(0))
     plt.title('Number of thrusts in episode')
     plt.tight_layout()
-    plt.savefig(save_dir + '_actions_hist')
+    if save_dir:
+        plt.savefig(save_dir + '_actions_hist')
+    if show:
+        plt.show()
 
     # °°°°°°°°°°°°°°°°°°°°°°°° plot rewards °°°°°°°°°°°°°°°°°°°°°°°°°
     if reward_history:
@@ -312,7 +329,10 @@ def plot_one_episode(ep_data, save_dir):
     plt.legend(['x position', 'y position'], loc='best')
     plt.title('Planar position')
     plt.grid()
-    plt.savefig(save_dir + '_pos_error')
+    if save_dir:
+        plt.savefig(save_dir + '_pos_error')
+    if show:
+        plt.show()
 
         # °°°°°°°°°°°°°°°°°°°°°°°° plot x, y position in plane °°°°°°°°°°°°°°°°°°°°°°°°°
     pos_error = state_history[:, 6:8]
@@ -337,9 +357,11 @@ def plot_one_episode(ep_data, save_dir):
     axins.set_ylim(y1, y2)
     mark_inset(ax, axins, loc1=2, loc2=4, fc="none", ec="0.5")
     axins.plot(x, y)
+    if save_dir:
+        fig.savefig(save_dir + '_pos_xy_plane')
+    if show:
+        plt.show()
 
-    fig.savefig(save_dir + '_pos_xy_plane')
-    
     # °°°°°°°°°°°°°°°°°°°°°°°° plot distance to target over time °°°°°°°°°°°°°°°°°°°°°°°°°
     pos_error = state_history[:, 6:8]
     # plot position (x, y coordinates)
@@ -353,7 +375,10 @@ def plot_one_episode(ep_data, save_dir):
     plt.legend(['abs dist'], loc='best')
     plt.title('Distance to target')
     plt.grid()
-    plt.savefig(save_dir + '_dist_to_target')
+    if save_dir:
+        plt.savefig(save_dir + '_dist_to_target')
+    if show:
+        plt.show()
 
     # °°°°°°°°°°°°°°°°°°°°°°°° plot log-distance to target over time °°°°°°°°°°°°°°°°°°°°°°°°°
     pos_error = state_history[:, 6:8]
@@ -369,5 +394,7 @@ def plot_one_episode(ep_data, save_dir):
     plt.legend(['x-y dist'], loc='best')
     plt.title('Log distance to target')
     plt.grid(True)
-    plt.savefig(save_dir + '_log_dist_to_target')
-
+    if save_dir:
+        plt.savefig(save_dir + '_log_dist_to_target')
+    if show:
+        plt.show()

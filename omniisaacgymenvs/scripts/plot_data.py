@@ -8,7 +8,7 @@ from utils.plot_experiment import plot_one_episode
 
 if __name__ == "__main__":
 
-    load_dir = Path("./lab_tests/icra24_AN/")
+    load_dir = Path("./lab_tests/icra24/act_noise_new/")
     sub_dirs = [d for d in load_dir.iterdir() if d.is_dir()]
     if sub_dirs:
         latest_exp = max(sub_dirs, key=os.path.getmtime)

@@ -113,7 +113,7 @@ class MyNode:
         self.rospy = rospy
 
         # Initialize variables
-        self.buffer_size = 20  # Number of samples for differentiation
+        self.buffer_size = 30  # Number of samples for differentiation
         self.pose_buffer = deque(maxlen=self.buffer_size)
         self.time_buffer = deque(maxlen=self.buffer_size)
         self.act_every = 0 # act every 5 steps
@@ -153,6 +153,9 @@ class MyNode:
     def shutdown(self):
         self.my_msg.data = [1,0,0,0,0,0,0,0,0]
         self.pub.publish(self.my_msg)
+        self.rospy.sleep(1)
+        self.my_msg.data = [0,0,0,0,0,0,0,0,0]
+        self.pub.publish(self.my_msg)
 
     def remap_actions(self, actions):
         return [actions[i] for i in self.map]
@@ -164,7 +167,7 @@ class MyNode:
 
         # Add current pose and time to the buffer
         self.pose_buffer.append(msg)
-        self.time_buffer.append(current_time)
+        self.time_buffer.append(current_time.to_sec())
         self.act_every += 1
 
         # Calculate velocities if buffer is filled
@@ -201,7 +204,7 @@ class MyNode:
             self.rate.sleep()
         
         if self.save_trajectory:
-            save_dir = "./lab_tests/icra24/act_noise/"+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + "/"
+            save_dir = "./lab_tests/icra24/act_noise_new/"+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + "/"
             os.makedirs(save_dir, exist_ok=True)
             np.save(os.path.join(save_dir, "obs.npy"), np.array(self.obs_buffer))
             np.save(os.path.join(save_dir, "act.npy"), np.array(self.act_buffer))
@@ -218,21 +221,22 @@ class MyNode:
             q[:-1,0]*q[1:,3] - q[:-1,1]*q[1:,2] + q[:-1,2]*q[1:,1] - q[:-1,3]*q[1:,0]])
 
     def derive_velocities(self):
-        dt = (self.time_buffer[-1] - self.time_buffer[0]).to_sec() # Time difference between first and last pose
+        dt = (self.time_buffer[-1] - self.time_buffer[0]) # Time difference between first and last pose
         # Calculate linear velocities
         linear_positions = np.array([[pose.pose.position.x, pose.pose.position.y, pose.pose.position.z] for pose in self.pose_buffer])
-        #linear_velocities = np.diff(linear_positions, axis=0) / dt
+        linear_velocities = np.diff(linear_positions, axis=0) / (dt/self.buffer_size)
         #average_linear_velocity = np.mean(linear_velocities, axis=0)
 
-        time_diffs = np.diff(self.time_buffer) # coming from `msg.header.stamp`
-        linear_velocities = np.diff(linear_positions, axis=0) / time_diffs
+        #time_diffs = np.diff(self.time_buffer) # coming from `msg.header.stamp`
+        #print(f'dt: {dt}')
+        #linear_velocities = np.diff(linear_positions, axis=0) / np.repeat(time_diffs, 3).reshape(-1, 3)
         average_linear_velocity = np.mean(linear_velocities, axis=0)
-
+        #print(f'average_linear_velocity: {average_linear_velocity}')
 
         # Calculate angular velocities
         angular_orientations = np.array([[pose.pose.orientation.w, pose.pose.orientation.x, pose.pose.orientation.y, pose.pose.orientation.z] for pose in self.pose_buffer])
-        dt_buff = np.ones((angular_orientations.shape[0] - 1)) * dt / (angular_orientations.shape[0] - 1)
-        angular_velocities = self.angular_velocities(angular_orientations, dt_buff)
+        #dt_buff = np.ones((angular_orientations.shape[0] - 1)) * dt / (angular_orientations.shape[0] - 1)
+        angular_velocities = self.angular_velocities(angular_orientations, (dt/self.buffer_size))
         #angular_rot_matrices = np.array([quaternion_to_rotation_matrix(orientation) for orientation in angular_orientations])
         #dR_matrices = np.diff(angular_rot_matrices, axis=0) / dt
         #angular_velocities = np.array([(dR[2, 1], dR[0, 2], dR[1, 0]) for dR in dR_matrices])
@@ -247,7 +251,7 @@ def parse_hydra_configs(cfg: DictConfig):
     #cfg.checkpoint = "./runs/MFP2DGoToPose/nn/MFP2DGoToPose.pth"
     
     # set congig params for evaluation
-    cfg.task.env.maxEpisodeLength = 500
+    cfg.task.env.maxEpisodeLength = 300
     cfg_dict = omegaconf_to_dict(cfg)
     print_dict(cfg_dict)
 
