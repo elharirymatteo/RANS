@@ -140,7 +140,6 @@ def plot_episode_data_virtual(ep_data, save_dir, all_agents=False):
         plt.figure(fig_count)
         plt.clf()    
         positions = state_history[:, :, 6:8]
-        print(positions.shape)
 
         cmap = cm.get_cmap('tab20') 
         for j in range(positions.shape[1]):
@@ -173,7 +172,7 @@ def plot_one_episode(ep_data, save_dir=None, show=False):
     reward_history = ep_data['rews']
     # info_history = ep_data['info']
     state_history = ep_data['obs']
-    print(state_history.shape)
+
     # save data to csv file
     pd.DataFrame.to_csv(pd.DataFrame(control_history), save_dir + 'actions.csv')
     # setting the right task_data lavels based on the task flag.
@@ -303,7 +302,7 @@ def plot_one_episode(ep_data, save_dir=None, show=False):
         plt.show()
 
     # °°°°°°°°°°°°°°°°°°°°°°°° plot rewards °°°°°°°°°°°°°°°°°°°°°°°°°
-    if reward_history:
+    if reward_history.any():
         fig_count += 1
         plt.figure(fig_count)
         plt.clf()

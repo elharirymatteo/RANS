@@ -109,7 +109,7 @@ def eval_multi_agents(agent, models, horizon, load_dir):
         # If want to print the latex code for the table use the following line
 
     # create index for the dataframe and save it
-    model_names = [model.split("/")[3] for model in models]
+    model_names = [model.split("/")[2] for model in models]
     all_success_rate_df.insert(loc=0, column="model", value=model_names)
     all_success_rate_df.to_csv(evaluation_dir + "multi_model_performance.csv")
 
@@ -118,7 +118,7 @@ def eval_multi_agents(agent, models, horizon, load_dir):
 def parse_hydra_configs(cfg: DictConfig):
     
     # specify the experiment load directory
-    load_dir = "./icra24/" + "expR/"
+    load_dir = "./icra24_noise/" #+ "expR_SE/"
     experiments = os.listdir(load_dir)
     print(f'Experiments found in {load_dir} folder: {len(experiments)}')
     models = get_valid_models(load_dir, experiments)
