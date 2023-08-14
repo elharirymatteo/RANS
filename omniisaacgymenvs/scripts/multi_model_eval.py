@@ -111,18 +111,18 @@ def eval_multi_agents(agent, models, horizon, load_dir):
     # create index for the dataframe and save it
     model_names = [model.split("/")[2] for model in models]
     all_success_rate_df.insert(loc=0, column="model", value=model_names)
-    all_success_rate_df.to_csv(evaluation_dir + "multi_model_performance.csv")
+    all_success_rate_df.to_csv(evaluation_dir + "multi_model_performance_BB.csv")
 
 
 @hydra.main(config_name="config", config_path="../cfg")
 def parse_hydra_configs(cfg: DictConfig):
     
     # specify the experiment load directory
-    load_dir = "./icra24_noise/" #+ "expR_SE/"
+    load_dir = "./icra24_Pose/" #+ "expR_SE/"
     experiments = os.listdir(load_dir)
     print(f'Experiments found in {load_dir} folder: {len(experiments)}')
     models = get_valid_models(load_dir, experiments)
-    #models = [m for m in models if "nominal_UF_0.25_GoToP" in m.split("/")[2]]
+    models = [m for m in models if "BB" in m.split("/")[2]]
     print(f'Final models: {(models)}')
     if not models:
         print('No valid models found')

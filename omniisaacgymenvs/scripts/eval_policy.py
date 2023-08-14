@@ -90,9 +90,9 @@ def eval_multi_agents(cfg, horizon):
     #print(f'Episode data: {ep_data} \n')
     print(f'Episode data obs shape: {ep_data["obs"].shape} \n')
 
-    #if not cfg.headless:
-    plot_episode_data_virtual(ep_data, evaluation_dir, store_all_agents)
-    success_rate = success_rate_from_distances(ep_data['all_dist'])
+    if cfg.headless:
+        plot_episode_data_virtual(ep_data, evaluation_dir, store_all_agents)
+        success_rate = success_rate_from_distances(ep_data['all_dist'])
 
 
 def activate_wandb(cfg, cfg_dict, task):
