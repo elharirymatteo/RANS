@@ -1,6 +1,9 @@
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_core import Core, parse_data_dict
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_rewards import GoToXYReward
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_parameters import GoToXYParameters
+from omniisaacgymenvs.utils.pin import VisualPin
+
+from omni.isaac.core.prims import XFormPrimView
 
 import math
 import torch
@@ -136,3 +139,29 @@ class GoToXYTask(Core):
         initial_orientation[env_ids, 0] = torch.cos(random_orient*0.5)
         initial_orientation[env_ids, 3] = torch.sin(random_orient*0.5)
         return initial_position, initial_orientation
+
+    def generate_target(self, path, position):
+        """
+        Generates a visual marker to help visualize the performance of the agent from the UI.
+        A pin is generated to represent the 2D position to be reached by the agent."""
+
+        color = torch.tensor([1, 0, 0])
+        ball_radius = 0.2
+        poll_radius = 0.025
+        poll_length = 2
+        VisualPin(
+            prim_path=path + "/pin",
+            translation=position,
+            name="target_0",
+            ball_radius = ball_radius,
+            poll_radius = poll_radius,
+            poll_length = poll_length,
+            color=color)
+        
+    def add_visual_marker_to_scene(self, scene): 
+        """
+        Adds the visual marker to the scene."""
+
+        pins = XFormPrimView(prim_paths_expr="/World/envs/.*/pin")
+        scene.add(pins)
+        return scene, pins

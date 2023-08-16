@@ -81,6 +81,18 @@ class Core:
         Generates spawning positions for the robots following a curriculum."""
 
         raise NotImplementedError
+    
+    def generate_target(self, path, position):
+        """
+        Generates a visual marker to help visualize the performance of the agent from the UI."""
+
+        raise NotImplementedError
+    
+    def add_visual_marker_to_scene(self):
+        """
+        Adds the visual marker to the scene."""
+
+        raise NotImplementedError
 
 class TaskDict:
     """

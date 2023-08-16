@@ -2,6 +2,8 @@ from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_core import Core, pa
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_rewards import TrackXYVelocityReward
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_parameters import TrackXYVelocityParameters
 
+from omni.isaac.core.prims import XFormPrimView
+
 import math
 import torch
 
@@ -107,3 +109,14 @@ class TrackXYVelocityTask(Core):
         initial_orientation[env_ids, 0] = torch.cos(random_orient*0.5)
         initial_orientation[env_ids, 3] = torch.sin(random_orient*0.5)
         return initial_position, initial_orientation
+    
+    def generate_target(self, path, position):
+        """
+        Generates a visual marker to help visualize the performance of the agent from the UI."""
+        pass
+
+    def add_visual_marker_to_scene(self, scene):
+        """
+        Adds the visual marker to the scene."""
+
+        return scene, None

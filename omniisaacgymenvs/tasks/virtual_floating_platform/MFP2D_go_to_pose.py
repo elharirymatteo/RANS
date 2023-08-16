@@ -1,6 +1,9 @@
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_core import Core, parse_data_dict
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_rewards import GoToPoseReward
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_parameters import GoToPoseParameters
+from omniisaacgymenvs.utils.arrow import VisualArrow
+
+from omni.isaac.core.prims import XFormPrimView
 
 import math
 import torch
@@ -148,3 +151,35 @@ class GoToPoseTask(Core):
         initial_orientation[env_ids, 0] = torch.cos(random_orient*0.5)
         initial_orientation[env_ids, 3] = torch.sin(random_orient*0.5)
         return initial_position, initial_orientation
+
+    def generate_target(self, path, position):
+        """
+        Generates a visual marker to help visualize the performance of the agent from the UI.
+        An arrow is generated to represent the 2D pose to be reached by the agent."""
+
+        color = torch.tensor([1, 0, 0])
+        body_radius = 0.1
+        body_length = 0.5
+        head_radius = 0.2
+        head_length = 0.5
+        poll_radius = 0.025
+        poll_length = 2
+        VisualArrow(
+            prim_path=path + "/arrow",
+            translation=position,
+            name="target_0",
+            body_radius=body_radius,
+            body_length=body_length,
+            poll_radius=poll_radius,
+            poll_length=poll_length,
+            head_radius=head_radius,
+            head_length=head_length,
+            color=color)
+        
+    def add_visual_marker_to_scene(self, scene):
+        """
+        Adds the visual marker to the scene."""
+
+        arrows = XFormPrimView(prim_paths_expr="/World/envs/.*/arrow")
+        scene.add(arrows)
+        return scene, arrows

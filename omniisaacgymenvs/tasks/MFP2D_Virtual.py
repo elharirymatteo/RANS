@@ -11,7 +11,6 @@ from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_rewards import 
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_disturbances import UnevenFloorDisturbance, NoisyObservations, NoisyActions
 
 from omni.isaac.core.utils.torch.rotations import *
-from omni.isaac.core.prims import XFormPrimView
 from omni.isaac.core.utils.prims import get_prim_at_path
 
 import numpy as np
@@ -75,7 +74,8 @@ class MFP2DVirtual(RLTask):
         self.set_action_and_observation_spaces()
         # Sets the initial positions of the target and platform
         self._fp_position = torch.tensor([0, 0., 0.5])
-        self._ball_position = torch.tensor([0, 0, 1.0])
+        self._default_marker_position = torch.tensor([0, 0, 1.0])
+        self._marker = None
         # Preallocate tensors
         self.actions = torch.zeros((self._num_envs, self._max_actions), device=self._device, dtype=torch.float32)
         self.heading = torch.zeros((self._num_envs, 2), device=self._device, dtype=torch.float32)
@@ -153,13 +153,7 @@ class MFP2DVirtual(RLTask):
         scene.add(self._platforms.thrusters)
 
         # Add arrows to scene if task is go to pose
-        if "Pose" in str(self.task):
-            print("Adding arrows to scene")
-            self._arrows = XFormPrimView(prim_paths_expr="/World/envs/.*/arrow")
-            scene.add(self._arrows)
-        else:
-            self._pins = XFormPrimView(prim_paths_expr="/World/envs/.*/pin")
-            scene.add(self._pins)
+        scene, self._marker = self.task.add_visual_marker_to_scene(scene)
         return
 
     def get_floating_platform(self):
@@ -173,39 +167,8 @@ class MFP2DVirtual(RLTask):
 
     def get_target(self) -> None:
         """
-        Adds the target to the scene.
-        TODO retrieve the target type from the sub-task."""
-
-        ball_radius = 0.2
-        poll_radius = 0.025
-        poll_length = 2
-        color = torch.tensor([1, 0, 0])
-        
-        if "Pose" in str(self.task):
-            body_radius = 0.1
-            body_length = 0.5
-            head_radius = 0.2
-            head_length = 0.5
-            arrow = VisualArrow(
-                prim_path=self.default_zero_env_path + "/arrow",
-                translation=self._ball_position,
-                name="target_0",
-                body_radius=body_radius,
-                body_length=body_length,
-                poll_radius=poll_radius,
-                poll_length=poll_length,
-                head_radius=head_radius,
-                head_length=head_length,
-                color=color)
-        else:
-            VisualPin(
-                prim_path=self.default_zero_env_path + "/pin",
-                translation=self._ball_position,
-                name="target_0",
-                ball_radius = ball_radius,
-                poll_radius = poll_radius,
-                poll_length = poll_length,
-                color=color)
+        Adds the visualization target to the scene."""
+        self.task.generate_target(self.default_zero_env_path, self._default_marker_position)
 
     def update_state(self) -> None:
         """
@@ -331,10 +294,8 @@ class MFP2DVirtual(RLTask):
         target_positions, target_orientation = self.task.get_goals(env_long, self.initial_pin_pos.clone(), self.initial_pin_rot.clone())
         target_positions[env_long, 2] = torch.ones(num_sets, device=self._device) * 2.0
         # Apply the new goals
-        if "Pose" in str(self.task):
-            self._arrows.set_world_poses(target_positions[env_long], target_orientation[env_long], indices=env_long)
-        else:
-            self._pins.set_world_poses(target_positions[env_long], target_orientation[env_long], indices=env_long)
+        if self._marker:
+            self._marker.set_world_poses(target_positions[env_long], target_orientation[env_long], indices=env_long)
 
     def set_to_pose(self, env_ids, positions, heading):
         """
