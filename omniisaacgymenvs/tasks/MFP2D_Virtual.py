@@ -2,6 +2,7 @@ from omniisaacgymenvs.tasks.base.rl_task import RLTask
 from omniisaacgymenvs.robots.articulations.MFP2D_virtual_thrusters import ModularFloatingPlatform
 from omniisaacgymenvs.robots.articulations.views.mfp2d_virtual_thrusters_view import ModularFloatingPlatformView
 from omniisaacgymenvs.utils.pin import VisualPin
+from omniisaacgymenvs.utils.arrow import VisualArrow
 
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_thruster_generator import VirtualPlatform
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_factory import task_factory
@@ -162,13 +163,21 @@ class MFP2DVirtual(RLTask):
 
         root_path = "/World/envs/.*/Modular_floating_platform" 
         self._platforms = ModularFloatingPlatformView(prim_paths_expr=root_path, name="modular_floating_platform_view") 
-        self._pins = XFormPrimView(prim_paths_expr="/World/envs/.*/pin")
 
         # Add views to scene
         scene.add(self._platforms)
         scene.add(self._platforms.base)
-        scene.add(self._pins)
+
         scene.add(self._platforms.thrusters)
+
+        # Add arrows to scene if task is go to pose
+        if "Pose" in str(self.task):
+            print("Adding arrows to scene")
+            self._arrows = XFormPrimView(prim_paths_expr="/World/envs/.*/arrow")
+            scene.add(self._arrows)
+        else:
+            self._pins = XFormPrimView(prim_paths_expr="/World/envs/.*/pin")
+            scene.add(self._pins)
         return
 
     def get_floating_platform(self):
@@ -182,14 +191,32 @@ class MFP2DVirtual(RLTask):
         poll_radius = 0.025
         poll_length = 2
         color = torch.tensor([1, 0, 0])
-        VisualPin(
-            prim_path=self.default_zero_env_path + "/pin",
-            translation=self._ball_position,
-            name="target_0",
-            ball_radius = ball_radius,
-            poll_radius = poll_radius,
-            poll_length = poll_length,
-            color=color)
+        
+        if "Pose" in str(self.task):
+            body_radius = 0.1
+            body_length = 0.5
+            head_radius = 0.2
+            head_length = 0.5
+            arrow = VisualArrow(
+                prim_path=self.default_zero_env_path + "/arrow",
+                translation=self._ball_position,
+                name="target_0",
+                body_radius=body_radius,
+                body_length=body_length,
+                poll_radius=poll_radius,
+                poll_length=poll_length,
+                head_radius=head_radius,
+                head_length=head_length,
+                color=color)
+        else:
+            VisualPin(
+                prim_path=self.default_zero_env_path + "/pin",
+                translation=self._ball_position,
+                name="target_0",
+                ball_radius = ball_radius,
+                poll_radius = poll_radius,
+                poll_length = poll_length,
+                color=color)
 
     def update_state(self) -> None:
         self.root_pos, self.root_quats = self._platforms.get_world_poses(clone=True)
@@ -337,7 +364,10 @@ class MFP2DVirtual(RLTask):
         target_positions, target_orientation = self.task.get_goals(env_long, self.initial_pin_pos.clone(), self.initial_pin_rot.clone())
         target_positions[env_long, 2] = torch.ones(num_sets, device=self._device) * 2.0
         # Apply the new goals
-        self._pins.set_world_poses(target_positions[env_long], target_orientation[env_long], indices=env_long)
+        if "Pose" in str(self.task):
+            self._arrows.set_world_poses(target_positions[env_long], target_orientation[env_long], indices=env_long)
+        else:
+            self._pins.set_world_poses(target_positions[env_long], target_orientation[env_long], indices=env_long)
 
     def set_to_pose(self, env_ids, positions, heading):
         num_resets = len(env_ids)
