@@ -18,7 +18,7 @@ from matplotlib.ticker import AutoMinorLocator
 from torch._C import fork
 
 from utils.plot_experiment import plot_episode_data_virtual
-from utils.eval_metrics import success_rate_from_distances
+from utils.eval_metrics import get_GoToXY_success_rate, get_GoToPose_success_rate, get_TrackXYVelocity_success_rate, get_TrackXYOVelocity_success_rate
 import wandb
 
 import os
@@ -47,7 +47,7 @@ def eval_multi_agents(cfg, horizon):
     env = agent.env
     obs = env.reset()
 
-    ep_data = {'act': [], 'obs': [], 'rews': [], 'all_dist': []}
+    ep_data = {'act': [], 'obs': [], 'rews': []}
     total_reward = 0
     num_steps = 0
     
@@ -55,7 +55,6 @@ def eval_multi_agents(cfg, horizon):
         actions = agent.get_action(obs['obs'], is_deterministic=True)
         obs, reward, done, info = env.step(actions)
         
-        #print(f'Step {num_steps}: obs={obs["obs"]}, rews={reward}, dones={done}, info={info} \n')
         if store_all_agents:
             ep_data['act'].append(actions.cpu().numpy())
             ep_data['obs'].append(obs['obs']['state'].cpu().numpy())
@@ -64,17 +63,12 @@ def eval_multi_agents(cfg, horizon):
             ep_data['act'].append(actions[0].cpu().numpy())
             ep_data['obs'].append(obs['obs']['state'][0].cpu().numpy())
             ep_data['rews'].append(reward[0].cpu().numpy())
-        #ep_data['info'].append(info)
-        x_pos = obs['obs']['state'][:,6].cpu().numpy()
-        y_pos = obs['obs']['state'][:,7].cpu().numpy()
-        ep_data['all_dist'].append(np.linalg.norm(np.array([x_pos, y_pos]), axis=0))
         total_reward += reward[0]
         num_steps += 1
         is_done = done.any()
     ep_data['obs'] = np.array(ep_data['obs'])
     ep_data['act'] = np.array(ep_data['act'])
     ep_data['rews'] = np.array(ep_data['rews'])
-    ep_data['all_dist'] = np.array(ep_data['all_dist'])
 
     # Find the episode where the sum of actions has only zeros (no action) for all the time steps
     broken_episodes = [i for i in range(0,ep_data['act'].shape[1]) if ep_data['act'][:,i,:].sum() == 0]
@@ -92,8 +86,15 @@ def eval_multi_agents(cfg, horizon):
 
     if cfg.headless:
         plot_episode_data_virtual(ep_data, evaluation_dir, store_all_agents)
-        success_rate = success_rate_from_distances(ep_data['all_dist'])
-
+        task_flag = ep_data['obs'][0, 0, 5].astype(int)
+        if task_flag == 0: # GoToXY
+            success_rate = get_GoToXY_success_rate(ep_data, print_intermediate=True)
+        elif task_flag == 1: # GoToPose
+            success_rate = get_GoToPose_success_rate(ep_data, print_intermediate=True)
+        elif task_flag == 2: # TrackXYVelocity
+            success_rate = get_TrackXYVelocity_success_rate(ep_data, print_intermediate=True)
+        elif task_flag == 3: # TrackXYOVelocity
+            success_rate = get_TrackXYOVelocity_success_rate(ep_data, print_intermediate=True)
 
 def activate_wandb(cfg, cfg_dict, task):
     """
@@ -126,15 +127,8 @@ def parse_hydra_configs(cfg: DictConfig):
     # set congig params for evaluation
     cfg.task.env.maxEpisodeLength = horizon + 2
     
-    cfg.task.env.platform.core.mass = 5.32
     cfg.task.env.split_thrust = True
-    cfg.task.env.clipObservations['state'] = 20.0
-    cfg.task.env.task_parameters['max_spawn_dist'] = 4.0
-    cfg.task.env.task_parameters['min_spawn_dist'] = 3.0
-    cfg.task.env.task_parameters['kill_dist'] = 6.0
     cfg.task.env.task_parameters['kill_after_n_steps_in_tolerance'] = 500
-    # TODO: check error with visualizer of thrusters....  ANTOINE
-    #cfg.task.env.platform.configuration.visualize = False
     cfg_dict = omegaconf_to_dict(cfg)
     print_dict(cfg_dict)
 
