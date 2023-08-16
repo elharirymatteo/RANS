@@ -20,7 +20,7 @@ class TrackXYVelocityTask(Core):
         # Buffers
         self._goal_reached = torch.zeros((self._num_envs), device=self._device, dtype=torch.int32)
         self._target_velocities = torch.zeros((self._num_envs, 2), device=self._device, dtype=torch.float32)
-        self._task_label = self._task_label * 0 
+        self._task_label = self._task_label * 2 
 
     def create_stats(self, stats:dict) -> dict:
         """
