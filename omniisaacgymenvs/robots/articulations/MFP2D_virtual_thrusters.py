@@ -17,7 +17,10 @@ from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_core import parse_da
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_thruster_generator import ConfigurationParameters
 
 class CreatePlatform:
-    def __init__(self, path, cfg):
+    """
+    Creates a floating platform with a core body and a set of thrusters."""
+
+    def __init__(self, path: str, cfg: dict) -> None:
         self.platform_path = path
         self.joints_path = "joints"
         self.materials_path = "materials"
@@ -26,7 +29,10 @@ class CreatePlatform:
 
         self.read_cfg(cfg)
 
-    def read_cfg(self, cfg):
+    def read_cfg(self, cfg: dict) -> None:
+        """
+        Reads the configuration file and sets the parameters for the platform."""
+
         if "core" in cfg.keys():
             if "shape" in cfg["core"].keys():
                 self.core_shape = cfg["core"]["shape"]
@@ -67,11 +73,14 @@ class CreatePlatform:
                 self.core_CoM = Gf.Vec3d([0,0,0])
                 self.core_mass = 5.0
                 self.refinement = 2
-
+        # Reads the thruster configuration and computes the number of virtual thrusters.
         thruster_cfg = parse_data_dict(ConfigurationParameters(), cfg["configuration"])
         self.num_virtual_thrusters = compute_actions(thruster_cfg)
 
-    def build(self):
+    def build(self) -> None:
+        """
+        Builds the platform."""
+
         # Creates articulation root and the Xforms to store materials/joints.
         self.platform_path, self.platform_prim = createArticulation(self.stage, self.platform_path)
         self.joints_path, self.joints_prim = createXform(self.stage, self.platform_path + "/" + self.joints_path)
@@ -92,7 +101,10 @@ class CreatePlatform:
         for i in range(self.num_virtual_thrusters):
             self.createVirtualThruster(self.platform_path + "/v_thruster_"+str(i), self.joints_path + "/v_thruster_joint_"+str(i), self.core_path, 0.0001, Gf.Vec3d([0,0,0]))
 
-    def createBasicColors(self):
+    def createBasicColors(self) -> None:
+        """
+        Creates a set of basic colors."""
+
         self.colors = {}
         self.colors["red"] = createColor(self.stage, self.materials_path+"/red", [1,0,0])
         self.colors["green"] = createColor(self.stage, self.materials_path+"/green", [0,1,0])
@@ -102,18 +114,28 @@ class CreatePlatform:
         self.colors["dark_grey"] = createColor(self.stage, self.materials_path+"/dark_grey", [0.25,0.25,0.25])
         self.colors["black"] = createColor(self.stage, self.materials_path+"/black", [0,0,0])
 
-    def createArrowXform(self, path: str):
+    def createArrowXform(self, path: str) -> None:
+        """
+        Creates an Xform to store the arrow indicating the platform heading."""
+
         self.arrow_path, self.arrow_prim = createXform(self.stage, path)
         createArrow(self.stage, self.arrow_path, 0.1, 0.5, [self.core_radius, 0, 0], self.refinement)
         applyMaterial(self.arrow_prim, self.colors["blue"])
 
-    def createPositionMarkerXform(self, path: str):
+    def createPositionMarkerXform(self, path: str) -> None:
+        """
+        Creates an Xform to store the position marker."""
+
         self.marker_path, self.marker_prim = createXform(self.stage, path)
         sphere_path, sphere_geom = createSphere(self.stage, self.marker_path+"/marker_sphere", 0.05, self.refinement)
         setTranslate(sphere_geom, Gf.Vec3d([0, 0, self.core_radius]))
         applyMaterial(self.marker_prim, self.colors["green"])
 
-    def createRigidSphere(self, path:str, name:str, radius:float, CoM:list, mass:float):
+    def createRigidSphere(self, path:str, name:str, radius:float, CoM:list, mass:float) -> str:
+        """
+        Creates a rigid sphere. The sphere is a RigidBody, a Collider, and has a mass and CoM.
+        It is used to create the main body of the platform."""
+
         # Creates an Xform to store the core body
         path, prim = createXform(self.stage, path)
         # Creates a sphere
@@ -127,7 +149,11 @@ class CreatePlatform:
         applyMass(sphere_prim, mass, CoM)
         return sphere_path
     
-    def createRigidCylinder(self, path:str, name:str, radius:float, height:float, CoM:list, mass:float):
+    def createRigidCylinder(self, path:str, name:str, radius:float, height:float, CoM:list, mass:float) -> str:
+        """
+        Creates a rigid cylinder. The cylinder is a RigidBody, a Collider, and has a mass and CoM.
+        It is used to create the main body of the platform."""
+
         # Creates an Xform to store the core body
         path, prim = createXform(self.stage, path)
         # Creates a sphere
@@ -141,7 +167,11 @@ class CreatePlatform:
         applyMass(sphere_prim, mass, CoM)
         return sphere_path
 
-    def createVirtualThruster(self, path:str, joint_path:str, parent_path:str, thruster_mass, thruster_CoM):
+    def createVirtualThruster(self, path:str, joint_path:str, parent_path:str, thruster_mass, thruster_CoM) -> str:
+        """
+        Creates a virtual thruster. The thruster is a RigidBody, a Collider, and has a mass and CoM.
+        It is used to create the thrusters of the platform."""
+
         # Create Xform
         thruster_path, thruster_prim = createXform(self.stage, path)
         # Add shapes
@@ -172,14 +202,6 @@ class ModularFloatingPlatform(Robot):
         self._usd_path = usd_path
         self._name = name
 
-        #if self._usd_path is None:
-        #    assets_root_path = get_assets_root_path()
-        #    if assets_root_path is None:
-        #        carb.log_error("Could not find Isaac Sim assets folder")
-        #    self._usd_path = "/home/matteo/Projects/OmniIsaacGymEnvs/omniisaacgymenvs/robots/usd/fp3.usd"
-
-        #add_reference_to_stage(self._usd_path, prim_path)
-        #scale = torch.tensor([1, 1, 1])
         fp = CreatePlatform(prim_path, cfg)
         fp.build()
 

@@ -5,6 +5,9 @@ import math
 
 @dataclass
 class ConfigurationParameters:
+    """
+    Thruster configuration parameters."""
+
     use_four_configurations: bool = False
     num_anchors: int = 4
     offset: float = math.pi/4
@@ -15,16 +18,24 @@ class ConfigurationParameters:
     def __post_init__(self):
         assert self.num_anchors > 1, "num_anchors must be larger or equal to 2."
 
+
 @dataclass
 class PlatformParameters:
+    """
+    Platform physical parameters."""
+
     mass: float = 5.0
     radius: float = 0.25
     refinement: int = 2
     CoM: tuple = (0,0,0)
     shape: str = "sphere"
 
+
 @dataclass
 class PlatformRandomization:
+    """
+    Platform randomization parameters."""
+
     random_permutation: bool = False
     random_offset: bool = False
     randomize_thruster_position: bool = False
@@ -38,6 +49,9 @@ class PlatformRandomization:
     max_thruster_kill: int = 1
 
 def compute_actions(cfg_param: ConfigurationParameters):
+    """
+    Computes the number of actions for the thruster configuration."""
+
     if cfg_param.use_four_configurations:
         return 10
     else:
@@ -45,33 +59,45 @@ def compute_actions(cfg_param: ConfigurationParameters):
 
 
 class VirtualPlatform:
-    def __init__(self, num_envs, platform_cfg, device):
+    """
+    Generates a virtual floating platform with thrusters."""
+
+    def __init__(self, num_envs: int, platform_cfg: dict, device: str) -> None:
         self._num_envs = num_envs
         self._device = device
 
+        # Generates dataclasses from the configuration file
         self.core_cfg = parse_data_dict(PlatformParameters(), platform_cfg["core"])
         self.rand_cfg = parse_data_dict(PlatformRandomization(), platform_cfg["randomization"])
         self.thruster_cfg = parse_data_dict(ConfigurationParameters(), platform_cfg["configuration"])
-
+        # Computes the number of actions
         self._max_thrusters = compute_actions(self.thruster_cfg)
-
+        # Sets the empty buffers
         self.transforms2D = torch.zeros((num_envs, self._max_thrusters, 3, 3), device=self._device, dtype=torch.float32)
         self.current_transforms = torch.zeros((num_envs, self._max_thrusters, 5), device=self._device, dtype=torch.float32)
         self.action_masks = torch.zeros((num_envs, self._max_thrusters), device=self._device, dtype=torch.long)
         self.thrust_force = torch.zeros((num_envs, self._max_thrusters), device=self._device, dtype=torch.float32)
-
+        # Creates a unit vector to project the forces
         self.create_unit_vector()
 
+        # Generates a visualization file for the provided thruster configuration
         if self.thruster_cfg.visualize:
             self.generate_base_platforms(self._num_envs, torch.arange(self._num_envs))
             self.visualize(self.thruster_cfg.save_path)
 
-    def create_unit_vector(self):
+    def create_unit_vector(self) -> None:
+        """
+        Creates a unit vector to project the forces.
+        The forces are in 2D so the unit vector is a 2D vector."""
+
         tmp_x = torch.ones((self._num_envs, self._max_thrusters, 1), device=self._device, dtype=torch.float32)
         tmp_y = torch.zeros((self._num_envs, self._max_thrusters, 1), device=self._device, dtype=torch.float32)
         self.unit_vector = torch.cat([tmp_x, tmp_y], dim=-1)
 
-    def project_forces(self, forces):
+    def project_forces(self, forces: torch.Tensor) -> list:
+        """
+        Projects the forces on the platform."""
+
         # Applies force scaling, applies action masking
         rand_forces = forces * self.thrust_force * (1 - self.action_masks)
         # Split transforms into translation and rotation
@@ -88,10 +114,20 @@ class VirtualPlatform:
 
         return positions, projected_forces
     
-    def randomize_thruster_state(self, env_ids, num_resets):
+    def randomize_thruster_state(self, env_ids: torch.Tensor, num_resets: int) -> None:
+        """
+        Randomizes the spatial configuration of the thruster."""
+
         self.generate_base_platforms(num_resets, env_ids)
 
-    def generate_base_platforms(self, num_envs, env_ids):
+    def generate_base_platforms(self, num_envs: int, env_ids: torch.Tensor) -> None:
+        """
+        Generates the spatial configuration of the thruster."""
+
+        # ==================== 
+        # Basic thruster positioning
+        # ==================== 
+
         # Generates a fixed offset between the heading and the first generated thruster
         random_offset = torch.ones((self._num_envs), device=self._device).view(-1,1).expand(self._num_envs, self._max_thrusters) * math.pi / self.thruster_cfg.num_anchors
         # Adds a random offset to each simulated platform between the heading and the first generated thruster
@@ -112,6 +148,7 @@ class VirtualPlatform:
             mask2 = torch.ones((self._num_envs//4, self._max_thrusters), device=self._device)
             mask3 = torch.ones((self._num_envs//4, self._max_thrusters), device=self._device)
             mask4 = torch.ones((self._num_envs//4, self._max_thrusters), device=self._device)
+            # TODO document this
             mask1[:,4:] = 0
             mask2[:,6:] = 0
             mask3[:,8:] = 0
@@ -121,6 +158,10 @@ class VirtualPlatform:
             thrust_offset = torch.arange(self.thruster_cfg.num_anchors, device=self._device).repeat_interleave(2).expand(self._num_envs, self._max_thrusters)/self.thruster_cfg.num_anchors * math.pi * 2
             # Generates a mask indicating if the thrusters are usable or not. Used by the transformer to mask the sequence.
             mask = torch.ones((self._num_envs, self._max_thrusters), device=self._device)
+
+        # ==================== 
+        # Random thruster killing
+        # ==================== 
 
         # Kill thrusters:
         if self.rand_cfg.kill_thrusters:
@@ -149,6 +190,11 @@ class VirtualPlatform:
         action_masks = torch.zeros_like(self.action_masks) # Used to mask actions
         current_transforms = torch.zeros_like(self.current_transforms) # Used to feed to the transformer
 
+        # ==================== 
+        # Randomizes the thruster poses and characteristics.
+        # ==================== 
+
+        # Randomizes the thrust force:
         if self.rand_cfg.randomize_thrust_force:
             thrust_force = torch.rand((self._num_envs, self._max_thrusters), device=self._device) * (self.rand_cfg.max_thrust_force - self.rand_cfg.min_thrust_force) + self.rand_cfg.min_thrust_force
         else:
@@ -156,16 +202,20 @@ class VirtualPlatform:
 
         # Thruster angular position with regards to the center of mass.
         theta2 = random_offset + thrust_offset
-        # Generates random thruster positions if requested
+        # Randomizes thruster poses if requested:
         if self.rand_cfg.randomize_thruster_position:
             radius = self.core_cfg.radius * (1 + torch.rand((self._num_envs,self._max_thrusters), device=self._device)*(self.rand_cfg.max_random_radius + self.rand_cfg.min_random_radius) - self.rand_cfg.min_random_radius)
             theta2 += torch.rand((self._num_envs, self._max_thrusters), device=self._device)*(self.rand_cfg.random_theta*2) - self.rand_cfg.random_theta
         else:
             radius = self.core_cfg.radius
-        # Thruster angle
+        # Thruster angle:
         theta = theta2 + thrust_90
 
-        # Fills the values
+        # ====================
+        # Computes the 2D transforms of the thruster locations.
+        # ====================
+
+        # 2D transforms defining the thruster locations.
         transforms2D[:,:,0,0] = torch.cos(theta) * mask
         transforms2D[:,:,0,1] = torch.sin(-theta) * mask
         transforms2D[:,:,1,0] = torch.sin(theta) * mask
@@ -173,9 +223,9 @@ class VirtualPlatform:
         transforms2D[:,:,2,0] = torch.cos(theta2) * radius * mask
         transforms2D[:,:,2,1] = torch.sin(theta2) * radius * mask
         transforms2D[:,:,2,2] = 1 * mask
-
+        # Actions masks to define which thrusters can be used.
         action_masks[:, :] = 1 - mask.long()
-
+        # Transforms to feed to the transformer.
         current_transforms[:, :, 0] = torch.cos(theta) * mask
         current_transforms[:, :, 1] = torch.sin(-theta) * mask
         current_transforms[:, :, 2] = torch.cos(theta2) * radius * mask
@@ -195,14 +245,16 @@ class VirtualPlatform:
             action_masks = torch.gather(action_masks, 1, selected_thrusters)
             thrust_force = torch.gather(thrust_force, 1, selected_thrusters)
 
-        # Updates the proper indices 
+        # Updates the proper indices
         self.thrust_force[env_ids] = thrust_force[env_ids]
         self.action_masks[env_ids] = action_masks[env_ids]
         self.current_transforms[env_ids] = current_transforms[env_ids]
         self.transforms2D[env_ids] = transforms2D[env_ids]
 
+    def visualize(self, save_path: str=None):
+        """
+        Visualizes the thruster configuration."""
 
-    def visualize(self, save_path=None):
         from matplotlib import pyplot as plt
         from matplotlib import cm
         import numpy as np
