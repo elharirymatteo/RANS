@@ -1,9 +1,6 @@
-import mujoco
-import numpy as np
-
-# Graphics and plotting.
 import matplotlib.pyplot as plt
 import numpy as np
+import mujoco
 
 class MuJoCoFloatingPlatform:
     """
