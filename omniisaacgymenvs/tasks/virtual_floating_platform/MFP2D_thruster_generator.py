@@ -148,6 +148,7 @@ class VirtualPlatform:
             mask2 = torch.ones((self._num_envs//4, self._max_thrusters), device=self._device)
             mask3 = torch.ones((self._num_envs//4, self._max_thrusters), device=self._device)
             mask4 = torch.ones((self._num_envs//4, self._max_thrusters), device=self._device)
+            # TODO document this
             mask1[:,4:] = 0
             mask2[:,6:] = 0
             mask3[:,8:] = 0

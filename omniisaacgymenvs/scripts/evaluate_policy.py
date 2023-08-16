@@ -25,6 +25,8 @@ import os
 
 
 def eval_multi_agents(cfg, horizon):
+    """
+    Evaluate a trained agent for a given number of steps"""
 
     base_dir = "./evaluations/" + cfg.checkpoint.split("/")[0] + "/" +  cfg.checkpoint.split("/")[1] + "/"
     experiment_name = cfg.checkpoint.split("/")[2]
@@ -33,7 +35,6 @@ def eval_multi_agents(cfg, horizon):
     os.makedirs(evaluation_dir, exist_ok=True)
 
     rlg_config_dict = omegaconf_to_dict(cfg.train)
-    print(rlg_config_dict)
     runner = Runner(RLGPUAlgoObserver())
     runner.load(rlg_config_dict)
     runner.reset()
@@ -87,7 +88,6 @@ def eval_multi_agents(cfg, horizon):
 
 
     print(f'\n Episode: rew_sum={total_reward:.2f}, tot_steps={num_steps} \n')
-    #print(f'Episode data: {ep_data} \n')
     print(f'Episode data obs shape: {ep_data["obs"].shape} \n')
 
     #if not cfg.headless:
@@ -96,6 +96,9 @@ def eval_multi_agents(cfg, horizon):
 
 
 def activate_wandb(cfg, cfg_dict, task):
+    """
+    Activate wandb logging for the evaluation run"""
+
     time_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     run_name = f"evaluate_{task.name}_{time_str}"
     cfg.wandb_entity = "matteohariry"
@@ -120,7 +123,6 @@ def parse_hydra_configs(cfg: DictConfig):
     horizon = 500
 
     # choose frequency of evaluation (to be multiplied by 10 -> controlFrequencyInv)
-    #cfg.task.sim.dt = 0.05
     # set congig params for evaluation
     cfg.task.env.maxEpisodeLength = horizon + 2
     
