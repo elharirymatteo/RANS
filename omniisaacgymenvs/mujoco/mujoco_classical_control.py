@@ -28,7 +28,14 @@ class MuJoCoFloatingPlatform:
         self.initializeLoggers()
 
         self.goal = np.zeros((2), dtype=np.float32)
-        self.state = np.zeros((10), dtype=np.float32)
+
+    def setGoal(self, goal):
+        """
+        Sets the goal for the simulation.
+        goal: The goal position for the agent to reach.
+        """
+
+        self.goal = goal
 
     def initializeModel(self):
         """
@@ -36,12 +43,13 @@ class MuJoCoFloatingPlatform:
 
         self.data = mujoco.MjData(self.model)
         mujoco.mj_forward(self.model, self.data)
-        self.body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY,"top")
+        self.body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "top")
 
     def setupPhysics(self, step_time, duration):
         """
         Sets up the physics parameters for the simulation.
-        Setups the gravity, timestep, and duration of the simulation."""
+        step_time: The time between steps in the simulation (seconds).
+        duration: The duration of the simulation (seconds)."""
 
         self.model.opt.timestep = step_time
         self.model.opt.gravity = [0,0,0]
@@ -178,7 +186,7 @@ class MuJoCoFloatingPlatform:
         while self.duration > self.data.time:
             state = self.updateState() # Updates the state of the simulation.
             # Get the actions from the controller
-            action = controller.getAction(self.state)
+            action = controller.getAction(state)
             # Plays only once every self.inv_play_rate steps.
             for _ in range(self.inv_play_rate):
                 self.applyForces(action)
