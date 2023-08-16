@@ -9,7 +9,7 @@ class MuJoCoFloatingPlatform:
     """
     A class for the MuJoCo Floating Platform environment."""
 
-    def __init__(self, step_time=0.02, duration=60, inv_play_rate=10):
+    def __init__(self, step_time:float = 0.02, duration:float = 60.0, inv_play_rate:int = 10) -> None:
         """
         Initializes the MuJoCo Floating Platform environment.
         step_time: The time between steps in the simulation.
@@ -29,7 +29,7 @@ class MuJoCoFloatingPlatform:
 
         self.goal = np.zeros((2), dtype=np.float32)
 
-    def setGoal(self, goal):
+    def setGoal(self, goal:np.ndarray) -> None:
         """
         Sets the goal for the simulation.
         goal: The goal position for the agent to reach.
@@ -37,7 +37,7 @@ class MuJoCoFloatingPlatform:
 
         self.goal = goal
 
-    def initializeModel(self):
+    def initializeModel(self) -> None:
         """
         Initializes the mujoco model for the simulation."""
 
@@ -45,7 +45,7 @@ class MuJoCoFloatingPlatform:
         mujoco.mj_forward(self.model, self.data)
         self.body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "top")
 
-    def setupPhysics(self, step_time, duration):
+    def setupPhysics(self, step_time: float, duration: float) -> None:
         """
         Sets up the physics parameters for the simulation.
         step_time: The time between steps in the simulation (seconds).
@@ -55,7 +55,7 @@ class MuJoCoFloatingPlatform:
         self.model.opt.gravity = [0,0,0]
         self.duration = duration
 
-    def initializeLoggers(self):
+    def initializeLoggers(self) -> None:
         """
         Initializes the loggers for the simulation.
         Allowing for the simulation to be replayed/plotted."""
@@ -66,7 +66,7 @@ class MuJoCoFloatingPlatform:
         self.position = []
         self.heading = []
 
-    def createModel(self):
+    def createModel(self) -> None:
         """
         A YAML style string that defines the MuJoCo model for the simulation.
         The mass is set to 5.32 kg, the radius is set to 0.31 m.
@@ -99,7 +99,7 @@ class MuJoCoFloatingPlatform:
         """
         self.model = mujoco.MjModel.from_xml_string(sphere)
 
-    def initForceAnchors(self):
+    def initForceAnchors(self) -> None:
         """"
         Defines where the forces are applied relatively to the center of mass of the body.
         self.forces: 8x3 array of forces, indicating the direction of the force.
@@ -124,12 +124,12 @@ class MuJoCoFloatingPlatform:
                               [ 1, -1, 0]]) * 0.2192
 
 
-    def resetPosition(self):
+    def resetPosition(self) -> None:
         """
         Resets the position of the body to the initial position, (3, 3, 0.4) m"""
         mujoco.mj_resetDataKeyframe(self.model, self.data, 0)
 
-    def applyForces(self, action):
+    def applyForces(self, action) -> None:
         """
         Applies the forces to the body."""
 
@@ -150,7 +150,7 @@ class MuJoCoFloatingPlatform:
               p2 = np.matmul(rmat, self.positions[i]) + p # Compute the position of the force.
               mujoco.mj_applyFT(self.model, self.data, force, [0,0,0], p2, self.body_id, self.data.qfrc_applied) # Apply the force.
 
-    def updateLoggers(self):
+    def updateLoggers(self) -> None:
         """
         Updates the loggers with the current state of the simulation."""
 
@@ -159,7 +159,7 @@ class MuJoCoFloatingPlatform:
         self.linear_velocity.append(self.data.qvel[0:3].copy())
         self.position.append(self.data.qpos[0:3].copy())
 
-    def updateState(self):
+    def updateState(self) -> list:
         """
         Updates the state of the simulation."""
 
@@ -176,9 +176,11 @@ class MuJoCoFloatingPlatform:
         # Returns the state.
         return orient_z, dist_to_goal, angular_velocity, linear_velocity
 
-    def runLoop(self, controller, xy):
+    def runLoop(self, controller, xy: np.ndarray) -> None:
         """
-        Runs the simulation loop."""
+        Runs the simulation loop.
+        controller: the position controller.
+        xy: 2D position of the body."""
 
         self.resetPosition() # Resets the position of the body.
         self.data.qpos[:2] = xy # Sets the position of the body.
@@ -193,7 +195,7 @@ class MuJoCoFloatingPlatform:
                 mujoco.mj_step(self.model, self.data)
                 self.updateLoggers()
     
-    def plotSimulation(self, dpi=120, width=600, height=800, save=False):
+    def plotSimulation(self, dpi:int = 120, width:int = 600, height:int = 800, save:bool = False) -> None:
         """
         Plots the simulation."""
 
