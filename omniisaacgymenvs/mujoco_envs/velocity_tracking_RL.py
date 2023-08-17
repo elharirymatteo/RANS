@@ -32,7 +32,7 @@ class MuJoCoVelTracking(MuJoCoFloatingPlatform):
         self.resetPosition() # Resets the position of the body.
         self.data.qpos[:2] = xy # Sets the position of the body.
 
-        while self.duration > self.data.time:
+        while (self.duration > self.data.time) and (model.isDone() == False):
             state = self.updateState() # Updates the state of the simulation.
             # Get the actions from the controller
             action = model.getAction(state)
@@ -80,6 +80,7 @@ class TrajectoryTracker:
         self.current_point = -1
         self.lookhead = lookahead
         self.closed = closed
+        self.is_done = False
 
     def generateCircle(self, radius=2, num_points=360*10):
         theta = np.linspace(0, 2*np.pi, num_points, endpoint=(not self.closed))
@@ -125,6 +126,9 @@ class TrajectoryTracker:
             self.positions = self.positions[self.current_point:]
             self.angles = self.angles[self.current_point:]
             self.current_point = 0
+        
+        if self.positions.shape[0] <= 1:
+            self.is_done = True
 
     def getPointForTracking(self):
         position = self.positions[self.current_point]
@@ -158,6 +162,9 @@ class VelocityTracker:
     
     def get_target_position(self):
         return self.trajectory_tracker.get_target_position()
+    
+    def isDone(self):
+        return self.trajectory_tracker.is_done
 
     def make_observation_buffer(self, state, velocity_vector):
         self.obs_state[0,:2] = torch.tensor(state["orientation"], dtype=torch.float32, device="cuda")
@@ -182,7 +189,7 @@ def parseArgs():
     parser.add_argument("--height", type=float, default=3.0, help="The height of the square trajectory. In meters.")
     parser.add_argument("--start_radius", type=float, default=0.5, help="The starting radius for the spiral for the spiral trajectory. In meters.")
     parser.add_argument("--end_radius", type=float, default=2.0, help="The final radius for the spiral trajectory. In meters.")
-    parser.add_argument("--num_loop", type=float, default=0.0, help="The number of loops the spiral trajectory should make. Must be greater than 0.")
+    parser.add_argument("--num_loop", type=float, default=5.0, help="The number of loops the spiral trajectory should make. Must be greater than 0.")
     parser.add_argument("--closed", type=bool, default=True, help="Whether the trajectory is closed (it forms a loop) or not.")
     parser.add_argument("--lookahead_dist", type=float, default=0.15, help="How far the velocity tracker looks to generate the velocity vector that will track the trajectory. In meters.")
     parser.add_argument("--sim_duration", type=float, default=240, help="The length of the simulation. In seconds.")
@@ -218,8 +225,6 @@ if __name__ == "__main__":
     else:
         raise ValueError("Unknown trajectory type. Must be square, circle or spiral.")
 
-    #cfg_path = "/home/antoine/Documents/Orbitals/Omniverse/omniisaacgymenvs/cfg/train/virtual_floating_platform/MFP2D_PPOmulti_dict_MLP.yaml"
-    #model_path = "/home/antoine/Documents/Orbitals/Omniverse/omniisaacgymenvs/runs/MFP2D_Virtual_TrackXYVelocity/nn/last_MFP2D_Virtual_TrackXYVelocity_ep_1000_rew_637.1514.pth"
     model = RLGamesModel(args.config_path, args.model_path)
 
     velocity_tracker = VelocityTracker(tracker, model)
