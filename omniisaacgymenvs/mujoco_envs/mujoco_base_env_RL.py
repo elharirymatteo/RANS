@@ -164,9 +164,6 @@ class MuJoCoFloatingPlatform:
         # Cast the quaternion to the yaw (roll and pitch are invariant).
         siny_cosp = 2 * (qpos[3] * qpos[6] + qpos[4] * qpos[5])
         cosy_cosp = 1 - 2 * (qpos[5] * qpos[5] + qpos[6] * qpos[6])
-        orient_z = np.arctan2(siny_cosp, cosy_cosp)
-        # Compute the distance to the goal. (in the global frame)
-        dist_to_goal = self.goal - qpos[:2]
         # Gets the angular and linear velocity.
         linear_velocity = self.data.qvel[0:2].copy() # X and Y velocities.
         angular_velocity = self.data.qvel[5].copy() # Yaw velocity.
@@ -201,11 +198,11 @@ class MuJoCoFloatingPlatform:
 
         fig, ax = plt.subplots(2, 1, figsize=figsize, dpi=dpi)
 
-        ax[0].plot(env.timevals, env.angular_velocity)
+        ax[0].plot(self.timevals, self.angular_velocity)
         ax[0].set_title('angular velocity')
         ax[0].set_ylabel('radians / second')
 
-        ax[1].plot(env.timevals, env.linear_velocity)
+        ax[1].plot(self.timevals, self.linear_velocity)
         ax[1].set_xlabel('time (seconds)')
         ax[1].set_ylabel('meters / second')
         _ = ax[1].set_title('linear_velocity')
@@ -213,14 +210,14 @@ class MuJoCoFloatingPlatform:
             fig.savefig("test_velocities.png")
 
         fig, ax = plt.subplots(2, 1, figsize=figsize, dpi=dpi)
-        ax[0].plot(env.timevals, np.abs(env.position))
+        ax[0].plot(self.timevals, np.abs(self.position))
         ax[0].set_xlabel('time (seconds)')
         ax[0].set_ylabel('meters')
         _ = ax[0].set_title('position')
         ax[0].set_yscale('log')
 
 
-        ax[1].plot(np.array(env.position)[:,0], np.array(env.position)[:,1])
+        ax[1].plot(np.array(self.position)[:,0], np.array(self.position)[:,1])
         ax[1].set_xlabel('meters')
         ax[1].set_ylabel('meters')
         _ = ax[1].set_title('x y coordinates')

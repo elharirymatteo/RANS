@@ -7,10 +7,13 @@ from rl_games.algos_torch.players import BasicPpoPlayerContinuous, BasicPpoPlaye
 
 
 class RLGamesModel:
-    def __init__(self):
+    def __init__(self, config_path, model_path):
         self.obs = dict({'state':torch.zeros((1,10), dtype=torch.float32, device='cuda'),
                     'transforms': torch.zeros(5,8, device='cuda'),
                     'masks': torch.zeros(8, dtype=torch.float32, device='cuda')})
+        self.loadConfig(config_path)
+        self.buildModel()
+        self.restore(model_path)
 
     def buildModel(self):
         act_space = spaces.Tuple([spaces.Discrete(2)]*8)
