@@ -104,6 +104,7 @@ class MuJoCoEnv:
           </keyframe>
         </mujoco>
         """
+        print(mujoco)
         self.model = mujoco.MjModel.from_xml_string(sphere)
 
     def initForceAnchors(self):
@@ -199,12 +200,13 @@ class MuJoCoEnv:
                 mujoco.mj_step(self.model, self.data)
                 self.updateLoggers()
 
+env = MuJoCoEnv()
+
 model = RLGamesModel()
 model.loadConfig(config_name)
 model.buildModel()
 model.restore(model_name)
 
-env = MuJoCoEnv()
 env.runLoop(model, [3,0])
 
 dpi = 120
