@@ -21,7 +21,7 @@ class Core:
         # Observation buffers
         self._num_observations = 10
         self._obs_buffer = torch.zeros((self._num_envs, self._num_observations), device=self._device, dtype=torch.float32)
-        self._task_label = torch.zeros((self._num_envs), device=self._device, dtype=torch.float32)
+        self._task_label = torch.ones((self._num_envs), device=self._device, dtype=torch.float32)
         self._task_data = torch.zeros((self._num_envs, 4), device=self._device, dtype=torch.float32)
     
     def update_observation_tensor(self, current_state: dict) -> torch.Tensor:
