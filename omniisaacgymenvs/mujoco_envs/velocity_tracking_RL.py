@@ -5,12 +5,13 @@ import mujoco
 import torch 
 import os
 
-from omniisaacgymenvs.mujoco_envs.mujoco_base_env_RL import MuJoCoFloatingPlatform
+from omniisaacgymenvs.mujoco_envs.mujoco_base_env import MuJoCoFloatingPlatform
 from omniisaacgymenvs.mujoco_envs.RL_games_model_4_mujoco import RLGamesModel
 
 class MuJoCoVelTracking(MuJoCoFloatingPlatform):
-    def __init__(self, step_time:float = 0.02, duration:float = 240.0, inv_play_rate:int = 10) -> None:
-        super().__init__(step_time, duration, inv_play_rate)
+    def __init__(self, step_time:float = 0.02, duration:float = 60.0, inv_play_rate:int = 10,
+                 mass:float = 5.32, max_thrust:float = 1.0, radius:float = 0.31) -> None:
+        super().__init__(step_time, duration, inv_play_rate, mass, max_thrust, radius)
 
     def initializeLoggers(self) -> None:
         super().initializeLoggers()
@@ -157,16 +158,16 @@ class VelocityTracker:
 
         self.obs_state = torch.zeros((1,10), dtype=torch.float32, device="cuda")
     
-    def get_goal(self):
+    def getGoal(self):
         return self.velocity_vector*self.target_tracking_velocity
     
-    def get_target_position(self):
+    def getTargetPosition(self):
         return self.trajectory_tracker.get_target_position()
     
     def isDone(self):
         return self.trajectory_tracker.is_done
 
-    def make_observation_buffer(self, state, velocity_vector):
+    def makeObservationBuffer(self, state, velocity_vector):
         self.obs_state[0,:2] = torch.tensor(state["orientation"], dtype=torch.float32, device="cuda")
         self.obs_state[0,2:4] = torch.tensor(state["linear_velocity"], dtype=torch.float32, device="cuda")
         self.obs_state[0,4] = state["angular_velocity"]
@@ -176,7 +177,7 @@ class VelocityTracker:
     def getAction(self, state):
         self.velocity_vector = self.trajectory_tracker.getVelocityVector(state["position"])
         velocity_goal = self.velocity_vector*self.target_tracking_velocity - state["linear_velocity"]
-        self.make_observation_buffer(state, velocity_goal)
+        self.makeObservationBuffer(state, velocity_goal)
         action = self.model.getAction(self.obs_state)
         return action
 
@@ -195,6 +196,11 @@ def parseArgs():
     parser.add_argument("--sim_duration", type=float, default=240, help="The length of the simulation. In seconds.")
     parser.add_argument("--play_rate", type=float, default=5.0, help="The frequency at which the agent will played. In Hz. Note, that this depends on the sim_rate, the agent my not be able to play at this rate depending on the sim_rate value. To be consise, the agent will play at: sim_rate / int(sim_rate/play_rate)")
     parser.add_argument("--sim_rate", type=float, default=50.0, help="The frequency at which the simulation will run. In Hz.")
+    parser.add_argument("--tracking velocity", type=float, default=0.25, help="The tracking velocity. In meters per second.")
+    parser.add_argument("--save_dir", type=str, default="velocity_exp", help="The path to the folder in which the results will be stored.")
+    parser.add_argument("--platform_mass", type=float, default=5.32, help="The mass of the floating platform. In Kg.")
+    parser.add_argument("--platform_radius", type=float, default=0.31, help="The radius of the floating platform. In meters.")
+    parser.add_argument("--platform_max_thrust", type=float, default=1.0, help="The maximum thrust of the floating platform. In newtons.")
     args, unknown_args = parser.parse_known_args()
     return args, unknown_args
 
@@ -214,7 +220,13 @@ if __name__ == "__main__":
     assert args.sim_duration > 0, "The simulation duration must be greater than 0."
     assert args.play_rate > 0, "The play rate must be greater than 0."
     assert args.sim_rate > 0, "The simulation rate must be greater than 0."
-
+    assert args.tracking_velocity > 0, "The tracking velocity must be greater than 0."
+    # Try to create the save directory
+    try:
+        os.makedirs(args.save_dir, exist_ok=True)
+    except:
+        raise ValueError("Could not create the save directory.")
+    # Creates the trajectory tracker
     tracker = TrajectoryTracker(lookahead=args.lookahead_dist, closed=args.closed)
     if args.trajectory_type.lower() == "square":
         tracker.generateSquare(h=args.height)
@@ -224,11 +236,16 @@ if __name__ == "__main__":
         tracker.generateSpiral(start_radius=args.start_radius, end_radius=args.end_radius, num_loop=args.num_loop)
     else:
         raise ValueError("Unknown trajectory type. Must be square, circle or spiral.")
-
+    # Instantiates the RL agent
     model = RLGamesModel(args.config_path, args.model_path)
-
+    #  Creates the velocity tracker
     velocity_tracker = VelocityTracker(tracker, model)
-
-    env = MuJoCoVelTracking(step_time=1.0/args.sim_rate, duration=args.sim_duration, inv_play_rate=int(args.sim_rate/args.play_rate))
+    # Creates the environment
+    env = MuJoCoVelTracking(step_time=1.0/args.sim_rate, duration=args.sim_duration, inv_play_rate=int(args.sim_rate/args.play_rate),
+                            mass=args.platform_mass, radius=args.platform_radius, max_thrust=args.platform_max_thrust)
+    # Runs the simulation
     env.runLoop(velocity_tracker, [0,0])
-    env.plotSimulation(save=True)
+    # Plots the simulation
+    env.plotSimulation(args.save_dir)
+    # Saves the simulation data
+    env.saveSimulationData(args.save_dir)
