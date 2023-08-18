@@ -11,7 +11,7 @@
       "seed": 42,
       "max_iterations": "2000",
       "task.env.penalties_parameters.penalize_angular_velocities": "True",
-      "task.env.penalties_parameters.penalize_angular_velocities_fn": "lambda x,step : -torch.abs(x)*(x>0.25).float()*0.01",
+      "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step : -torch.abs(x)*(x>0.25).float()*0.01'",
       "wandb_activate": "True",
       "wandb_entity": "spacer-rl",
       "wandb_project": "icra24_an_avp"
@@ -30,7 +30,7 @@
     "task.env.penalties_parameters.penalize_energy": "True",
     "task.env.penalties_parameters.penalize_energy_fn": "'lambda x,step: -torch.abs(x)*0.01'",
     "task.env.penalties_parameters.penalize_angular_velocities": "True",
-    "task.env.penalties_parameters.penalize_angular_velocities_fn": "lambda x,step : -torch.abs(x)*(x>0.25).float()*0.01",
+    "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step : -torch.abs(x)*(x>0.25).float()*0.01'",
     "wandb_activate": "True",
     "wandb_entity": "spacer-rl",
     "wandb_project": "icra24_an_avp"
@@ -49,7 +49,7 @@
     "task.env.penalties_parameters.penalize_energy": "True",
     "task.env.penalties_parameters.penalize_energy_fn": "'lambda x,step: -torch.abs(x)*0.02'",
     "task.env.penalties_parameters.penalize_angular_velocities": "True",
-    "task.env.penalties_parameters.penalize_angular_velocities_fn": "lambda x,step : -torch.abs(x)*(x>0.25).float()*0.01",
+    "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step : -torch.abs(x)*(x>0.25).float()*0.01'",
     "wandb_activate": "True",
     "wandb_entity": "spacer-rl",
     "wandb_project": "icra24_an_avp"
@@ -68,7 +68,7 @@
     "task.env.penalties_parameters.penalize_energy": "True",
     "task.env.penalties_parameters.penalize_energy_fn": "'lambda x,step: -torch.abs(x)*0.03'",
     "task.env.penalties_parameters.penalize_angular_velocities": "True",
-    "task.env.penalties_parameters.penalize_angular_velocities_fn": "lambda x,step : -torch.abs(x)*(x>0.25).float()*0.01",
+    "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step : -torch.abs(x)*(x>0.25).float()*0.01'",
     "wandb_activate": "True",
     "wandb_entity": "spacer-rl",
     "wandb_project": "icra24_an_avp"
@@ -87,7 +87,7 @@
     "task.env.penalties_parameters.penalize_energy": "True",
     "task.env.penalties_parameters.penalize_energy_fn": "'lambda x,step: -torch.abs(x)*0.04'",
     "task.env.penalties_parameters.penalize_angular_velocities": "True",
-    "task.env.penalties_parameters.penalize_angular_velocities_fn": "lambda x,step : -torch.abs(x)*(x>0.25).float()*0.01",
+    "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step : -torch.abs(x)*(x>0.25).float()*0.01'",
     "wandb_activate": "True",
     "wandb_entity": "spacer-rl",
     "wandb_project": "icra24_an_avp"
@@ -106,7 +106,7 @@
       "task.env.penalties_parameters.penalize_energy": "True",
       "task.env.penalties_parameters.penalize_energy_fn": "'lambda x,step: -torch.abs(x)*0.05'",
       "task.env.penalties_parameters.penalize_angular_velocities": "True",
-      "task.env.penalties_parameters.penalize_angular_velocities_fn": "lambda x,step : -torch.abs(x)*(x>0.25).float()*0.01",
+      "task.env.penalties_parameters.penalize_angular_velocities_fn": "'lambda x,step : -torch.abs(x)*(x>0.25).float()*0.01'",
       "wandb_activate": "True",
       "wandb_entity": "spacer-rl",
       "wandb_project": "icra24_an_avp"
