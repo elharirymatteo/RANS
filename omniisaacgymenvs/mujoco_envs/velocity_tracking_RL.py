@@ -44,7 +44,7 @@ class MuJoCoVelTracking(MuJoCoFloatingPlatform):
                 mujoco.mj_step(self.model, self.data)
                 self.updateLoggers(model.getGoal(), model.getTargetPosition())
     
-    def plotSimulation(self, dpi:int = 90, width:int = 1000, height:int = 1000, save:bool = False) -> None:
+    def plotSimulation(self, dpi:int = 90, width:int = 1000, height:int = 1000, save:bool = False, save_dir:str = "velocity_exp") -> None:
         """
         Plots the simulation."""
 
@@ -63,7 +63,11 @@ class MuJoCoVelTracking(MuJoCoFloatingPlatform):
         ax[1].set_ylabel('meters / second')
         _ = ax[1].set_title('linear_velocity')
         if save:
-            fig.savefig("test_velocities.png")
+            try:
+                os.makedirs(save_dir, exist_ok=True)
+                fig.savefig(os.path.join(save_dir,"velocities.png"))
+            except Exception as e:
+                print("Saving failed: ", e)
 
         fig, ax = plt.subplots(1, 1, figsize=figsize, dpi=dpi)
         ax.plot(np.array(self.position_target)[:,0], np.array(self.position_target)[:,1], label="trajectory")
@@ -75,7 +79,11 @@ class MuJoCoVelTracking(MuJoCoFloatingPlatform):
         _ = ax.set_title('x y coordinates')
         plt.tight_layout()
         if save:
-            fig.savefig("test_positions.png")
+            try:
+                os.makedirs(save_dir, exist_ok=True)
+                fig.savefig(os.path.join(save_dir, "positions.png"))
+            except Exception as e:
+                print("Saving failed: ", e)
 
 class TrajectoryTracker:
     def __init__(self, lookahead=0.25, closed=False):

@@ -16,11 +16,11 @@ class MuJoCoPositionControl(MuJoCoFloatingPlatform):
 
     def initializeLoggers(self) -> None:
         super().initializeLoggers()
-        self.position_target = []
+        self.logs["position_target"] = []
 
     def updateLoggers(self, target) -> None:
         super().updateLoggers()
-        self.position_target.append(target)
+        self.logs["position_target"].append(target)
 
     def applyFriction(self, fdyn=0.1, fstat=0.1, tdyn=0.05, tstat=0.0):
         lin_vel = self.data.qvel[:3]
@@ -61,7 +61,7 @@ class MuJoCoPositionControl(MuJoCoFloatingPlatform):
                 mujoco.mj_step(self.model, self.data)
                 self.updateLoggers(model.getGoal())
 
-    def plotSimulation(self, dpi:int = 90, width:int = 1000, height:int = 1000, save:bool = False) -> None:
+    def plotSimulation(self, dpi:int = 90, width:int = 1000, height:int = 1000, save:bool = True, save_dir:str = "position_exp") -> None:
         """
         Plots the simulation."""
 
@@ -69,21 +69,25 @@ class MuJoCoPositionControl(MuJoCoFloatingPlatform):
 
         fig, ax = plt.subplots(2, 1, figsize=figsize, dpi=dpi)
 
-        ax[0].plot(self.timevals, self.angular_velocity)
+        ax[0].plot(self.logs["timevals"], self.logs["angular_velocity"])
         ax[0].set_title('angular velocity')
         ax[0].set_ylabel('radians / second')
 
-        ax[1].plot(self.timevals, self.linear_velocity, label="system velocities")
+        ax[1].plot(self.logs["timevals"], self.logs["linear_velocity"], label="system velocities")
         ax[1].legend()
         ax[1].set_xlabel('time (seconds)')
         ax[1].set_ylabel('meters / second')
         _ = ax[1].set_title('linear_velocity')
         if save:
-            fig.savefig("test_velocities.png")
+            try:
+                os.makedirs(save_dir, exist_ok=True)
+                fig.savefig(os.path.join(save_dir, "velocities.png"))
+            except Exception as e:
+                print("Saving failed: ", e)
 
         fig, ax = plt.subplots(1, 1, figsize=figsize, dpi=dpi)
-        ax.scatter(np.array(self.position_target)[:,0], np.array(self.position_target)[:,1], label="position goals")
-        ax.plot(np.array(self.position)[:,0], np.array(self.position)[:,1], label="system position")
+        ax.scatter(np.array(self.logs["position_target"])[:,0], np.array(self.logs["position_target"])[:,1], label="position goals")
+        ax.plot(np.array(self.logs["position"])[:,0], np.array(self.logs["position"])[:,1], label="system position")
         ax.legend()
         ax.set_xlabel('meters')
         ax.set_ylabel('meters')
@@ -91,7 +95,11 @@ class MuJoCoPositionControl(MuJoCoFloatingPlatform):
         _ = ax.set_title('x y coordinates')
         plt.tight_layout()
         if save:
-            fig.savefig("test_positions.png")
+            try:
+                os.makedirs(save_dir, exist_ok=True)
+                fig.savefig(os.path.join(save_dir, "positions.png"))
+            except Exception as e:
+                print("Saving failed: ", e)
 
 class PositionController:
     def __init__(self, model: RLGamesModel, goal_x: List[float], goal_y: List[float], distance_threshold: float = 0.03) -> None:
@@ -141,7 +149,7 @@ def parseArgs():
     parser.add_argument("--play_rate", type=float, default=5.0, help="The frequency at which the agent will played. In Hz. Note, that this depends on the sim_rate, the agent my not be able to play at this rate depending on the sim_rate value. To be consise, the agent will play at: sim_rate / int(sim_rate/play_rate)")
     parser.add_argument("--sim_rate", type=float, default=50.0, help="The frequency at which the simulation will run. In Hz.")
     parser.add_argument("--tracking velocity", type=float, default=0.25, help="The tracking velocity. In meters per second.")
-    parser.add_argument("--save_dir", type=str, default="velocity_exp", help="The path to the folder in which the results will be stored.")
+    parser.add_argument("--save_dir", type=str, default="position_exp", help="The path to the folder in which the results will be stored.")
     parser.add_argument("--platform_mass", type=float, default=5.32, help="The mass of the floating platform. In Kg.")
     parser.add_argument("--platform_radius", type=float, default=0.31, help="The radius of the floating platform. In meters.")
     parser.add_argument("--platform_max_thrust", type=float, default=1.0, help="The maximum thrust of the floating platform. In newtons.")
@@ -179,6 +187,6 @@ if __name__ == "__main__":
     # Runs the simulation
     env.runLoop(position_controller, [0,0])
     # Plots the simulation
-    env.plotSimulation(save=args.save_dir)
+    env.plotSimulation(save_dir = args.save_dir)
     # Saves the simulation data
-    env.saveSimulationData(args.save_dir)
+    env.saveSimulationData(save_dir = args.save_dir)
