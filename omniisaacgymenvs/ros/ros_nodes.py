@@ -1,5 +1,8 @@
 from collections import deque
+import numpy as np
+import datetime
 import torch
+import os
 
 from std_msgs.msg import ByteMultiArray
 from geometry_msgs.msg import PoseStamped, Point
@@ -18,6 +21,7 @@ class RLPlayerNode:
         self.map = map
         self.save_trajectory = save_trajectory
         self.player = player
+
         self.reset()
 
         # Initialize Subscriber and Publisher
@@ -36,9 +40,10 @@ class RLPlayerNode:
 
     def reset(self) -> None:
         """
-        """
+        Resets the goal and the buffers."""
 
         self.ready = False
+        self.get_default_goal()
         self.instantiate_buffers()
 
     def instantiate_buffers(self) -> None:
@@ -52,6 +57,8 @@ class RLPlayerNode:
         self.task_data = torch.zeros((1,4), dtype=torch.float32, device='cuda')
         self.ang_vel = torch.zeros((1,2), dtype=torch.float32, device='cuda')
         self.obs = torch.zeros((1,10), dtype=torch.float32, device='cuda')
+        # Obs dict
+        self.obs_dict = dict({'state': self.obs, 'transforms': torch.zeros(5*8, device='cuda'), 'masks': torch.zeros(8, dtype=torch.float32, device='cuda')})
         self.state = None
         # ROS buffers
         self.count = 0
@@ -107,28 +114,33 @@ class RLPlayerNode:
     
     def goal_callback(self, msg):
         """
-        """
+        Callback for the goal topic. It updates the task data with the new goal data."""
+        self.goal_data = msg
 
-        if self.task_id == 0:
-            target_position = torch.Tensor([[msg.point.x,msg.point.y]], dtype=torch.float32, device="cuda")
+    def update_task_data(self):
+        """
+        Updates the task data based on the task id."""
+
+        if self.task_id == 0: # GoToXY
+            target_position = torch.Tensor([[self.goal_data.point.x, self.goal_data.point.y]], dtype=torch.float32, device="cuda")
             position_error = target_position - self.state["position"]
             self.task_data[:,:2] = position_error
-        elif self.task_id == 1:
-            target_position = torch.Tensor([[msg.point.x,msg.point.y]])
-            target_heading = torch.Tensor([[msg.point.z]], dtype=torch.float32, device="cuda")
+        elif self.task_id == 1: # GoToPose
+            target_position = torch.Tensor([[self.goal_data.point.x, self.goal_data.point.y]])
+            target_heading = torch.Tensor([[self.goal_data.point.z]], dtype=torch.float32, device="cuda")
             self._position_error = target_position - self.state["position"]
             heading = torch.arctan2(self.state["orientation"][:,1], self.state["orientation"][:, 0])
             heading_error = torch.arctan2(torch.sin(target_heading - heading), torch.cos(target_heading - heading))
             self.task_data[:,:2] = self._position_error
             self.task_data[:, 2] = torch.cos(heading_error)
             self.task_data[:, 3] = torch.sin(heading_error)
-        elif self.task_id == 2:
-            target_velocity = torch.Tensor([[msg.point.x,msg.point.y]], dtype=torch.float32, device="cuda")
+        elif self.task_id == 2: # TrackXYVelocity
+            target_velocity = torch.Tensor([[self.goal_data.point.x, self.goal_data.point.y]], dtype=torch.float32, device="cuda")
             velocity_error = target_velocity - self.state["linear_velocity"]
             self.task_data[:,:2] = velocity_error
-        elif self.task_id == 3:
-            target_linear_velocity = torch.Tensor([[msg.point.x,msg.point.y]], dtype=torch.float32, device="cuda")
-            target_angular_velocity = torch.Tensor([[msg.point.z]], dtype=torch.float32, device="cuda")
+        elif self.task_id == 3: # TrackXYOVelocity
+            target_linear_velocity = torch.Tensor([[self.goal_data.point.x, self.goal_data.point.y]], dtype=torch.float32, device="cuda")
+            target_angular_velocity = torch.Tensor([[self.goal_data.point.z]], dtype=torch.float32, device="cuda")
             linear_velocity_error = target_linear_velocity - self.state["linear_velocity"]
             angular_velocity_error = target_angular_velocity - self.state["angular_velocity"]
             self.task_data[:,:2] = linear_velocity_error
@@ -136,64 +148,67 @@ class RLPlayerNode:
     
     def get_default_goal(self):
         """
-        """
+        Sets the default goal data."""
 
-        if self.task_id == 0:
-            self.task_data[:,:] = 0
-        elif self.task_id == 1:
-            self.task_data[:,:2] = 0
-            self.task_data[:, 2] = torch.cos(0)
-            self.task_data[:, 3] = torch.sin(0)
-        elif self.task_id == 2:
-            self.task_data[:,:] = 0
-        elif self.task_id == 3:
-            self.task_data[:,:] = 0
+        self.goal_data = Point()
     
     def generate_obs(self):
         """
         Updates the observation tensor with the current state of the robot."""
-
+        self.update_task_data()
         self.obs[:, 0:2] = self.state["orientation"]
         self.obs[:, 2:4] = self.state["linear_velocity"]
         self.obs[:, 4] = self.state["angular_velocity"]
         self.obs[:, 5] = self.task_id
         self.obs[:, 6:10] = self.task_data
-        obs = dict({'state': self.obs, 'transforms': torch.zeros(5*8, device='cuda'), 'masks': torch.zeros(8, dtype=torch.float32, device='cuda')})
-        return obs 
+        self.obs_dict["state"] = self.obs#dict({'state': self.obs, 'transforms': torch.zeros(5*8, device='cuda'), 'masks': torch.zeros(8, dtype=torch.float32, device='cuda')})
+
+    def send_action(self):
+        self.action = self.player.get_action(self.obs, is_deterministic=True)
+        self.action = self.action.cpu().tolist()
+        action = self.remap_actions(self.action)
+        lifting_active = 1
+        action.insert(0, lifting_active)
+        self.my_msg.data = action
+        self.pub.publish(self.my_msg)
+
+    def print(self):
+        print("=========================================")
+        print(f"step number: {self.count}")
+        print(f"task id: {self.task_id}")
+        print(f"goal: {self.goal_data}")
+        print(f"observation: {self.obs_dict['state']}")
+        print(f"state: {self.state}")
+        print(f"action: {self.action}")
+
+    def update_loggers(self):
+        self.obs_buffer.append(self.obs)
+        self.act_buffer.append(self.action)
+
+    def save_logs(self):
+        save_dir = "./lab_tests/icra24_Pose/"+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + "/"
+        os.makedirs(save_dir, exist_ok=True)
+        np.save(os.path.join(save_dir, "obs.npy"), np.array(self.obs_buffer))
+        np.save(os.path.join(save_dir, "act.npy"), np.array(self.act_buffer))
+        np.save(os.path.join(save_dir, "sim_obs.npy"), np.array(self.sim_obs_buffer))
+
 
     def run(self): 
-        run_once = True
         self.rate = rospy.Rate(self.play_rate)
 
         while (not rospy.is_shutdown()) and (self.count < self.end_experiment_after_n_steps):
-            #print(f'Im in')
             if self.ready:
-                action = self.player.get_action(self.obs, is_deterministic=True)
-                action = action.cpu().tolist()
-                if self.save_trajectory:
-                    self.obs_buffer.append(self.obs)
-                    self.act_buffer.append(action)
-
-                action = self.remap_actions(action)
-                lifting_active = 1
-                action.insert(0, lifting_active)
-                self.my_msg.data = action
-                self.pub.publish(self.my_msg)
+                self.generate_obs()
+                self.send_action()
+                self.update_loggers()
                 self.count += 1
-                print(f'count: {self.count}')
-                print(self.my_msg.data)
-                print(f'optitrack obs: {self.obs["state"]}')
-
-                self.ready = False
+                if self.debug:
+                    self.print()
             self.rate.sleep()
-        
-        if self.save_trajectory:
-            save_dir = "./lab_tests/icra24_Pose/"+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + "/"
-            os.makedirs(save_dir, exist_ok=True)
-            np.save(os.path.join(save_dir, "obs.npy"), np.array(self.obs_buffer))
-            np.save(os.path.join(save_dir, "act.npy"), np.array(self.act_buffer))
-            np.save(os.path.join(save_dir, "sim_obs.npy"), np.array(self.sim_obs_buffer))
 
+        # Saves the logs
+        self.save_logs()
+        # Kills the thrusters once done
         self.my_msg.data = [0,0,0,0,0,0,0,0,0]
         self.pub.publish(self.my_msg)
     
