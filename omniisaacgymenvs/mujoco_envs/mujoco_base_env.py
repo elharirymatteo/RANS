@@ -1,7 +1,9 @@
 from typing import Dict
 import matplotlib.pyplot as plt
+import pandas as pd
 import numpy as np
 import mujoco
+import os
 
 class MuJoCoFloatingPlatform:
     """
@@ -51,12 +53,12 @@ class MuJoCoFloatingPlatform:
         """
         Initializes the loggers for the simulation.
         Allowing for the simulation to be replayed/plotted."""
-
-        self.timevals = []
-        self.angular_velocity = []
-        self.linear_velocity = []
-        self.position = []
-        self.heading = []
+        self.logs = {}
+        self.logs["timevals"] = []
+        self.logs["angular_velocity"] = []
+        self.logs["linear_velocity"] = []
+        self.logs["position"] = []
+        self.logs["quaternion"] = []
 
     def createModel(self) -> None:
         """
@@ -153,10 +155,11 @@ class MuJoCoFloatingPlatform:
         """
         Updates the loggers with the current state of the simulation."""
 
-        self.timevals.append(self.data.time)
-        self.angular_velocity.append(self.data.qvel[3:6].copy())
-        self.linear_velocity.append(self.data.qvel[0:3].copy())
-        self.position.append(self.data.qpos[0:3].copy())
+        self.logs["timevals"].append(self.data.time)
+        self.logs["angular_velocity"].append(self.data.qvel[3:6].copy())
+        self.logs["linear_velocity"].append(self.data.qvel[0:3].copy())
+        self.logs["position"].append(self.data.qpos[0:3].copy())
+        self.logs["quaternion"].append(np.roll(self.data.qpos[3:].copy(),-1))
 
     def updateState(self) -> Dict[str, np.ndarray]:
         """
@@ -192,7 +195,7 @@ class MuJoCoFloatingPlatform:
                 mujoco.mj_step(self.model, self.data)
                 self.updateLoggers()
     
-    def plotSimulation(self, dpi:int = 120, width:int = 600, height:int = 800, save:bool = False) -> None:
+    def plotSimulation(self, dpi:int = 120, width:int = 600, height:int = 800, save:bool = False, save_dir:str = "mujoco_experiment") -> None:
         """
         Plots the simulation."""
 
@@ -200,29 +203,59 @@ class MuJoCoFloatingPlatform:
 
         fig, ax = plt.subplots(2, 1, figsize=figsize, dpi=dpi)
 
-        ax[0].plot(self.timevals, self.angular_velocity)
+        ax[0].plot(self.logs["timevals"], self.logs["angular_velocity"])
         ax[0].set_title('angular velocity')
         ax[0].set_ylabel('radians / second')
 
-        ax[1].plot(self.timevals, self.linear_velocity)
+        ax[1].plot(self.logs["timevals"], self.logs["linear_velocity"])
         ax[1].set_xlabel('time (seconds)')
         ax[1].set_ylabel('meters / second')
         _ = ax[1].set_title('linear_velocity')
         if save:
-            fig.savefig("test_velocities.png")
+            try:
+                os.makedirs(save_dir, exist_ok=True)
+                fig.savefig(os.path.join(save_dir,"velocities.png"))
+            except Exception as e:
+                print("Saving failed: ", e)
 
         fig, ax = plt.subplots(2, 1, figsize=figsize, dpi=dpi)
-        ax[0].plot(self.timevals, np.abs(self.position))
+        ax[0].plot(self.logs["timevals"], np.abs(self.logs["position"]))
         ax[0].set_xlabel('time (seconds)')
         ax[0].set_ylabel('meters')
         _ = ax[0].set_title('position')
         ax[0].set_yscale('log')
 
 
-        ax[1].plot(np.array(self.position)[:,0], np.array(self.position)[:,1])
+        ax[1].plot(np.array(self.logs["position"])[:,0], np.array(self.logs["position"])[:,1])
         ax[1].set_xlabel('meters')
         ax[1].set_ylabel('meters')
         _ = ax[1].set_title('x y coordinates')
         plt.tight_layout()
         if save:
-            fig.savefig("test_positions.png")
+            try:
+                os.makedirs(save_dir, exist_ok=True)
+                fig.savefig(os.path.join(save_dir, "positions.png"))
+            except Exception as e:
+                print("Saving failed: ", e)
+
+    def saveSimulationData(self, save:bool = True, save_dir:str = "mujoco_experiment") -> None:
+        """
+        Saves the simulation data."""
+        var_name = ["x","y","z","w"]
+        if save:
+            try:
+                os.makedirs(save_dir, exist_ok=True)
+                csv_data = pd.DataFrame()
+                for key in self.logs.keys():
+                    if len(self.logs[key]) != 0:
+                        data = np.array(self.logs[key])
+                        if len(data.shape) > 1:
+                            for i in range(data.shape[1]):
+                                csv_data[var_name[i]+"_"+key] = data[:,i]
+                        else:
+                            csv_data[key] = data
+                        #csv_data[key] = self.logs[key]
+                csv_data.to_csv(os.path.join(save_dir, "exp_logs.csv"))
+
+            except Exception as e:
+                print("Saving failed: ", e)
