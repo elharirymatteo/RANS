@@ -484,7 +484,7 @@ def plot_one_episode(ep_data:dict, save_dir:str = None, show:bool = False, debug
         args["fig_count"] = fig_count
 
     df_cols = ['cos_theta','sin_theta', 'lin_vel_x', 'lin_vel_y', 'ang_vel_z', 'task_flag'] + task_data_label
-    pd.DataFrame.to_csv(pd.DataFrame(state_history, columns=df_cols), save_dir + 'states_episode.csv')
+    pd.DataFrame.to_csv(pd.DataFrame(state_history[:, :len(df_cols)], columns=df_cols), save_dir + 'states_episode.csv')
 
     fig_count = 0
 
@@ -823,7 +823,7 @@ def plot_single_GoToPose_distance_to_target(state_history:np.ndarray, tgrid:np.n
     plt.clf()
     plt.plot(tgrid, np.abs(heading_error), color=cm.get_cmap('tab20')(0))
     plt.xlabel('Time steps')
-    plt.ylabel('Distance [m]')
+    plt.ylabel('Heading [rad]')
     plt.legend(['abs dist'], loc='best')
     plt.title('Distance to target')
     plt.grid()
@@ -863,7 +863,7 @@ def plot_single_GoToPose_log_distance_to_target(state_history:np.ndarray, tgrid:
     plt.yscale('log')
     plt.plot(tgrid, np.abs(heading_error), color=cm.get_cmap('tab20')(0))
     plt.xlabel('Time steps')
-    plt.ylabel('Log distance [m]')
+    plt.ylabel('Log distance [rad]')
     plt.legend(['x-y dist'], loc='best')
     plt.title('Log distance to target')
     plt.grid(True)

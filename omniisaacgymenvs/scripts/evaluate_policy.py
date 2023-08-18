@@ -84,17 +84,19 @@ def eval_multi_agents(cfg, horizon):
     print(f'\n Episode: rew_sum={total_reward:.2f}, tot_steps={num_steps} \n')
     print(f'Episode data obs shape: {ep_data["obs"].shape} \n')
 
+    task_flag = ep_data['obs'][0, 0, 5].astype(int)
+    if task_flag == 0: # GoToXY
+        success_rate = get_GoToXY_success_rate(ep_data, print_intermediate=True)
+    elif task_flag == 1: # GoToPose
+        success_rate = get_GoToPose_success_rate(ep_data, print_intermediate=True)
+    elif task_flag == 2: # TrackXYVelocity
+        success_rate = get_TrackXYVelocity_success_rate(ep_data, print_intermediate=True)
+    elif task_flag == 3: # TrackXYOVelocity
+        success_rate = get_TrackXYOVelocity_success_rate(ep_data, print_intermediate=True)
+    
     if cfg.headless:
         plot_episode_data_virtual(ep_data, evaluation_dir, store_all_agents)
-        task_flag = ep_data['obs'][0, 0, 5].astype(int)
-        if task_flag == 0: # GoToXY
-            success_rate = get_GoToXY_success_rate(ep_data, print_intermediate=True)
-        elif task_flag == 1: # GoToPose
-            success_rate = get_GoToPose_success_rate(ep_data, print_intermediate=True)
-        elif task_flag == 2: # TrackXYVelocity
-            success_rate = get_TrackXYVelocity_success_rate(ep_data, print_intermediate=True)
-        elif task_flag == 3: # TrackXYOVelocity
-            success_rate = get_TrackXYOVelocity_success_rate(ep_data, print_intermediate=True)
+
 
 def activate_wandb(cfg, cfg_dict, task):
     """
@@ -127,7 +129,12 @@ def parse_hydra_configs(cfg: DictConfig):
     # set congig params for evaluation
     cfg.task.env.maxEpisodeLength = horizon + 2
     
+    cfg.task.env.platform.core.mass = 5.32
     cfg.task.env.split_thrust = True
+    cfg.task.env.clipObservations['state'] = 20.0
+    cfg.task.env.task_parameters['max_spawn_dist'] = 4.0
+    cfg.task.env.task_parameters['min_spawn_dist'] = 3.0
+    cfg.task.env.task_parameters['kill_dist'] = 6.0
     cfg.task.env.task_parameters['kill_after_n_steps_in_tolerance'] = 500
     cfg_dict = omegaconf_to_dict(cfg)
     print_dict(cfg_dict)
