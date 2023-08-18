@@ -6,7 +6,8 @@ class MuJoCoFloatingPlatform:
     """
     A class for the MuJoCo Floating Platform environment."""
 
-    def __init__(self, step_time:float = 0.02, duration:float = 60.0, inv_play_rate:int = 10) -> None:
+    def __init__(self, step_time:float = 0.02, duration:float = 60.0, inv_play_rate:int = 10,
+                 mass:float = 5.32, max_thrust:float = 1.0, radius:float = 0.31) -> None:
         """
         Initializes the MuJoCo Floating Platform environment.
         step_time: The time between steps in the simulation.
@@ -17,6 +18,9 @@ class MuJoCoFloatingPlatform:
         """
 
         self.inv_play_rate = inv_play_rate
+        self.mass = mass
+        self.max_thrust = max_thrust
+        self.radius = radius
 
         self.createModel()
         self.initializeModel()
@@ -69,7 +73,7 @@ class MuJoCoFloatingPlatform:
         The mass is set to 5.32 kg, the radius is set to 0.31 m.
         The initial position is set to (3, 3, 0.4) m."""
 
-        sphere = """
+        sphere_p1 = """
         <mujoco model="tippe top">
           <option integrator="RK4"/>
         
@@ -85,15 +89,18 @@ class MuJoCoFloatingPlatform:
             <camera name="closeup" pos="0 -3 2" xyaxes="1 0 0 0 1 2"/>
             <body name="top" pos="0 0 .4">
               <freejoint/>
-              <geom name="ball" type="sphere" size=".31" mass="5.32"/>
+        """
+        sphere_p2 = '<geom name="ball" type="sphere" size="'+str(self.radius)+'" mass="'+str(self.mass)+'"/>'
+        sphere_p3 = """
             </body>
           </worldbody>
-        
           <keyframe>
             <key name="idle" qpos="3 3 0.4 1 0 0 0" qvel="0 0 0 0 0 0" />
           </keyframe>
         </mujoco>
         """
+        sphere = "\n".join([sphere_p1, sphere_p2, sphere_p3])
+        
         self.model = mujoco.MjModel.from_xml_string(sphere)
 
     def initForceAnchors(self) -> None:
@@ -110,6 +117,10 @@ class MuJoCoFloatingPlatform:
                            [ 1, -1, 0],
                            [-1, -1, 0],
                            [ 1,  1, 0]])
+        # Normalize the forces.
+        self.forces = self.forces / np.linalg.norm(self.forces, axis=1)
+        # Multiply by the max thrust.
+        self.forces = self.forces * self.max_thrust
         
         self.positions = np.array([[ 1,  1, 0],
                               [ 1,  1, 0],
@@ -143,7 +154,7 @@ class MuJoCoFloatingPlatform:
           force = action[i] * (1./factor) * self.forces[i] * np.sqrt(0.5)
           # If the force is not zero, apply the force.
           if np.sum(np.abs(force)) > 0:
-              force = np.matmul(rmat, force) # Rotate the force to the body frame.
+              force = np.matmul(rmat, force) # Rotate the force to the global frame.
               p2 = np.matmul(rmat, self.positions[i]) + p # Compute the position of the force.
               mujoco.mj_applyFT(self.model, self.data, force, [0,0,0], p2, self.body_id, self.data.qfrc_applied) # Apply the force.
 
