@@ -94,7 +94,10 @@ class MuJoCoPoseControl(MuJoCoFloatingPlatform):
 
 
 class DiscreteController:
-    def __init__(self, target_position, target_orientation, thruster_count=8, dt=0.02, Mod=None):
+    """
+    Discrete pose controller for the Floating Platform."""
+
+    def __init__(self, target_position: List[float], target_orientation: List[float], thruster_count:int=8, dt:float=0.02, Mod:MuJoCoFloatingPlatform=None) -> None:
         self.target_position    = np.array(target_position)
         self.target_orientation = np.array(target_orientation)
         self.thruster_count     = thruster_count
@@ -114,14 +117,18 @@ class DiscreteController:
         self.P = solve_discrete_are(self.A, self.B, self.Q, self.R)
         self.L = np.linalg.inv(self.R + self.B.T @ self.P @ self.B) @ self.B.T @ self.P @ self.A
 
-    def set_target(self, target_position, target_orientation):
+    def set_target(self, target_position: List[float], target_orientation: List[float]) -> None:
+        """
+        Sets the target position and orientation."""
+
         self.target_position    = np.array(target_position)
         self.target_orientation = np.array(target_orientation)
 
-    def compute_linearized_system(self):
-        # Compute linearized system matrices A and B
-        # A should be the state transition matrix
-        # B should be the control input matrix
+    def compute_linearized_system(self) -> None:
+        """
+        Compute linearized system matrices A and B.
+        With A the state transition matrix.
+        With B the control input matrix."""
 
         r0      = np.concatenate((self.FP.data.qpos[:3],self.FP.data.qvel[:3], self.FP.data.qpos[3:], self.FP.data.qvel[3:]),axis =None) 
         t_int   = 0.2 # time-interval at 5Hz
@@ -131,11 +138,10 @@ class DiscreteController:
         
         return A, B
 
-    def make_planar_compatible(self):
-        # Remove elements of the STM to make it planar compatible 
-        # Required states #[x,y,vx,vy,qw,qz,wz]
-
-        #r0      = np.concatenate((self.FP.data.qpos[:3],self.FP.data.qvel[:3], self.FP.data.qpos[3:], self.FP.data.qvel[3:]),axis =None) 
+    def make_planar_compatible(self) -> None:
+        """
+        Remove elements of the STM to make it planar compatible.
+        Required states #[x,y,vx,vy,qw,qz,wz]."""
         
         a = self.A
         b = self.B
@@ -168,9 +174,10 @@ class DiscreteController:
         
         return None
 
-    def f_STM(self,r0,t_int,model,data,body_id):
-            
-        # Identify A matrix of linearized system through finite differencing    
+    def f_STM(self, r0:np.ndarray, t_int: float, model, data, body_id) -> None:
+        """
+        Identify A matrix of linearized system through finite differencing."""
+
         IC_temp0    = r0
         force       = [0.0,0.0,0.0]
         torque      = [0.0,0.0,0.0]
@@ -222,9 +229,10 @@ class DiscreteController:
 
         return STM
 
-    def f_STM_analytical(self,r0,t_int,model,data,body_id):
-                
-        # Identify A matrix of linearized system through finite differencing    
+    def f_STM_analytical(self, r0:np.ndarray, t_int:float, model, data, body_id) -> None:
+        """        
+        Identify A matrix of linearized system through finite differencing."""
+
         IC_temp0    = r0
 
         STM = np.eye(np.size(r0))
@@ -275,8 +283,10 @@ class DiscreteController:
         STM[9,12] = 0.5*qw*t_int 
         return STM
 
-    def f_B(self,r0,t_int,model,data,body_id,number_thrust):
-        # Identify B matrix of linearized system through finite differencing
+    def f_B(self, r0: np.ndarray, t_int: float, model, data, body_id, number_thrust: int) -> None:
+        """
+        Identify B matrix of linearized system through finite differencing."""
+
         IC_temp0    = r0
         force       = [0.0,0.0,0.0]
         torque      = [0.0,0.0,0.0]
@@ -335,12 +345,12 @@ class DiscreteController:
 
         return B
 
-    def control_cost(self):
+    def control_cost(self) -> np.ndarray:
         # Cost function to be minimized for control input optimization
         control_input = np.array(-self.L @ self.state) + self.disturbance
         return control_input
 
-    def update(self, current_position, current_orientation, current_velocity, current_angular_velocity, disturbance=None):
+    def update(self, current_position: np.ndarray, current_orientation: np.ndarray, current_velocity: np.ndarray, current_angular_velocity:np.ndarray, disturbance:np.ndarray = None):
         
         # Calculate errors
         position_error      = self.target_position - current_position
@@ -364,7 +374,6 @@ class DiscreteController:
         final_U = np.round(normalized_array).astype(int)
 
         self.thrusters = final_U
-
         return self.thrusters
 
 
@@ -377,18 +386,18 @@ class PositionController:
         self.current_goal_controller[:2] = self.current_goal
         self.distance_threshold = distance_threshold
 
-    def isGoalReached(self, state):
+    def isGoalReached(self, state: Dict[str, np.ndarray]) -> bool:
         dist = np.linalg.norm(self.current_goal - state["position"][:2])
         if dist < self.distance_threshold:
             return True
     
-    def getGoal(self):
+    def getGoal(self) -> np.ndarray:
         return self.current_goal
 
-    def isDone(self):
+    def isDone(self) -> bool:
         return len(self.goals) == 0
 
-    def makeState4Controller(self, state):
+    def makeState4Controller(self, state: Dict[str, np.ndarray]) -> List[np.ndarray]:
         current_position = state["position"]
         current_position[-1] = 0
         current_orientation = state["quaternion"]
@@ -396,7 +405,7 @@ class PositionController:
         current_angular_velocity = state["angular_velocity"]
         return current_position, current_orientation, current_linear_velocity, current_angular_velocity
 
-    def getAction(self, state):
+    def getAction(self, state: Dict[str, np.ndarray]) -> np.ndarray:
         if self.isGoalReached(state):
             print("Goal reached!")
             if len(self.goals) > 1:
