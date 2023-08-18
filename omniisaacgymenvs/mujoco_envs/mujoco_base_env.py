@@ -53,6 +53,7 @@ class MuJoCoFloatingPlatform:
         """
         Initializes the loggers for the simulation.
         Allowing for the simulation to be replayed/plotted."""
+
         self.logs = {}
         self.logs["timevals"] = []
         self.logs["angular_velocity"] = []
@@ -123,7 +124,6 @@ class MuJoCoFloatingPlatform:
                               [-1, -1, 0],
                               [ 1, -1, 0],
                               [ 1, -1, 0]]) * 0.2192
-
 
     def resetPosition(self) -> None:
         """
@@ -241,6 +241,7 @@ class MuJoCoFloatingPlatform:
     def saveSimulationData(self, save:bool = True, save_dir:str = "mujoco_experiment") -> None:
         """
         Saves the simulation data."""
+
         var_name = ["x","y","z","w"]
         if save:
             try:
