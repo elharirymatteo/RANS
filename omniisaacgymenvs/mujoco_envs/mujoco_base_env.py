@@ -1,12 +1,16 @@
+from typing import Dict
 import matplotlib.pyplot as plt
+import pandas as pd
 import numpy as np
 import mujoco
+import os
 
 class MuJoCoFloatingPlatform:
     """
     A class for the MuJoCo Floating Platform environment."""
 
-    def __init__(self, step_time:float = 0.02, duration:float = 60.0, inv_play_rate:int = 10) -> None:
+    def __init__(self, step_time:float = 0.02, duration:float = 60.0, inv_play_rate:int = 10,
+                 mass:float = 5.32, max_thrust:float = 1.0, radius:float = 0.31) -> None:
         """
         Initializes the MuJoCo Floating Platform environment.
         step_time: The time between steps in the simulation.
@@ -17,22 +21,15 @@ class MuJoCoFloatingPlatform:
         """
 
         self.inv_play_rate = inv_play_rate
+        self.mass = mass
+        self.max_thrust = max_thrust
+        self.radius = radius
 
         self.createModel()
         self.initializeModel()
         self.setupPhysics(step_time, duration)
         self.initForceAnchors()
         self.initializeLoggers()
-
-        self.goal = np.zeros((2), dtype=np.float32)
-
-    def setGoal(self, goal:np.ndarray) -> None:
-        """
-        Sets the goal for the simulation.
-        goal: The goal position for the agent to reach.
-        """
-
-        self.goal = goal
 
     def initializeModel(self) -> None:
         """
@@ -57,11 +54,12 @@ class MuJoCoFloatingPlatform:
         Initializes the loggers for the simulation.
         Allowing for the simulation to be replayed/plotted."""
 
-        self.timevals = []
-        self.angular_velocity = []
-        self.linear_velocity = []
-        self.position = []
-        self.heading = []
+        self.logs = {}
+        self.logs["timevals"] = []
+        self.logs["angular_velocity"] = []
+        self.logs["linear_velocity"] = []
+        self.logs["position"] = []
+        self.logs["quaternion"] = []
 
     def createModel(self) -> None:
         """
@@ -69,7 +67,7 @@ class MuJoCoFloatingPlatform:
         The mass is set to 5.32 kg, the radius is set to 0.31 m.
         The initial position is set to (3, 3, 0.4) m."""
 
-        sphere = """
+        sphere_p1 = """
         <mujoco model="tippe top">
           <option integrator="RK4"/>
         
@@ -85,15 +83,18 @@ class MuJoCoFloatingPlatform:
             <camera name="closeup" pos="0 -3 2" xyaxes="1 0 0 0 1 2"/>
             <body name="top" pos="0 0 .4">
               <freejoint/>
-              <geom name="ball" type="sphere" size=".31" mass="5.32"/>
+        """
+        sphere_p2 = '<geom name="ball" type="sphere" size="'+str(self.radius)+'" mass="'+str(self.mass)+'"/>'
+        sphere_p3 = """
             </body>
           </worldbody>
-        
           <keyframe>
             <key name="idle" qpos="3 3 0.4 1 0 0 0" qvel="0 0 0 0 0 0" />
           </keyframe>
         </mujoco>
         """
+        sphere = "\n".join([sphere_p1, sphere_p2, sphere_p3])
+        
         self.model = mujoco.MjModel.from_xml_string(sphere)
 
     def initForceAnchors(self) -> None:
@@ -110,6 +111,10 @@ class MuJoCoFloatingPlatform:
                            [ 1, -1, 0],
                            [-1, -1, 0],
                            [ 1,  1, 0]])
+        # Normalize the forces.
+        self.forces = self.forces / np.linalg.norm(self.forces, axis=1).reshape(-1, 1)
+        # Multiply by the max thrust.
+        self.forces = self.forces * self.max_thrust
         
         self.positions = np.array([[ 1,  1, 0],
                               [ 1,  1, 0],
@@ -119,7 +124,6 @@ class MuJoCoFloatingPlatform:
                               [-1, -1, 0],
                               [ 1, -1, 0],
                               [ 1, -1, 0]]) * 0.2192
-
 
     def resetPosition(self) -> None:
         """
@@ -143,7 +147,7 @@ class MuJoCoFloatingPlatform:
           force = action[i] * (1./factor) * self.forces[i] * np.sqrt(0.5)
           # If the force is not zero, apply the force.
           if np.sum(np.abs(force)) > 0:
-              force = np.matmul(rmat, force) # Rotate the force to the body frame.
+              force = np.matmul(rmat, force) # Rotate the force to the global frame.
               p2 = np.matmul(rmat, self.positions[i]) + p # Compute the position of the force.
               mujoco.mj_applyFT(self.model, self.data, force, [0,0,0], p2, self.body_id, self.data.qfrc_applied) # Apply the force.
 
@@ -151,12 +155,13 @@ class MuJoCoFloatingPlatform:
         """
         Updates the loggers with the current state of the simulation."""
 
-        self.timevals.append(self.data.time)
-        self.angular_velocity.append(self.data.qvel[3:6].copy())
-        self.linear_velocity.append(self.data.qvel[0:3].copy())
-        self.position.append(self.data.qpos[0:3].copy())
+        self.logs["timevals"].append(self.data.time)
+        self.logs["angular_velocity"].append(self.data.qvel[3:6].copy())
+        self.logs["linear_velocity"].append(self.data.qvel[0:3].copy())
+        self.logs["position"].append(self.data.qpos[0:3].copy())
+        self.logs["quaternion"].append(np.roll(self.data.qpos[3:].copy(),-1))
 
-    def updateState(self) -> list:
+    def updateState(self) -> Dict[str, np.ndarray]:
         """
         Updates the state of the simulation."""
 
@@ -190,7 +195,7 @@ class MuJoCoFloatingPlatform:
                 mujoco.mj_step(self.model, self.data)
                 self.updateLoggers()
     
-    def plotSimulation(self, dpi:int = 120, width:int = 600, height:int = 800, save:bool = False) -> None:
+    def plotSimulation(self, dpi:int = 120, width:int = 600, height:int = 800, save:bool = False, save_dir:str = "mujoco_experiment") -> None:
         """
         Plots the simulation."""
 
@@ -198,29 +203,60 @@ class MuJoCoFloatingPlatform:
 
         fig, ax = plt.subplots(2, 1, figsize=figsize, dpi=dpi)
 
-        ax[0].plot(self.timevals, self.angular_velocity)
+        ax[0].plot(self.logs["timevals"], self.logs["angular_velocity"])
         ax[0].set_title('angular velocity')
         ax[0].set_ylabel('radians / second')
 
-        ax[1].plot(self.timevals, self.linear_velocity)
+        ax[1].plot(self.logs["timevals"], self.logs["linear_velocity"])
         ax[1].set_xlabel('time (seconds)')
         ax[1].set_ylabel('meters / second')
         _ = ax[1].set_title('linear_velocity')
         if save:
-            fig.savefig("test_velocities.png")
+            try:
+                os.makedirs(save_dir, exist_ok=True)
+                fig.savefig(os.path.join(save_dir,"velocities.png"))
+            except Exception as e:
+                print("Saving failed: ", e)
 
         fig, ax = plt.subplots(2, 1, figsize=figsize, dpi=dpi)
-        ax[0].plot(self.timevals, np.abs(self.position))
+        ax[0].plot(self.logs["timevals"], np.abs(self.logs["position"]))
         ax[0].set_xlabel('time (seconds)')
         ax[0].set_ylabel('meters')
         _ = ax[0].set_title('position')
         ax[0].set_yscale('log')
 
 
-        ax[1].plot(np.array(self.position)[:,0], np.array(self.position)[:,1])
+        ax[1].plot(np.array(self.logs["position"])[:,0], np.array(self.logs["position"])[:,1])
         ax[1].set_xlabel('meters')
         ax[1].set_ylabel('meters')
         _ = ax[1].set_title('x y coordinates')
         plt.tight_layout()
         if save:
-            fig.savefig("test_positions.png")
+            try:
+                os.makedirs(save_dir, exist_ok=True)
+                fig.savefig(os.path.join(save_dir, "positions.png"))
+            except Exception as e:
+                print("Saving failed: ", e)
+
+    def saveSimulationData(self, save:bool = True, save_dir:str = "mujoco_experiment") -> None:
+        """
+        Saves the simulation data."""
+
+        var_name = ["x","y","z","w"]
+        if save:
+            try:
+                os.makedirs(save_dir, exist_ok=True)
+                csv_data = pd.DataFrame()
+                for key in self.logs.keys():
+                    if len(self.logs[key]) != 0:
+                        data = np.array(self.logs[key])
+                        if len(data.shape) > 1:
+                            for i in range(data.shape[1]):
+                                csv_data[var_name[i]+"_"+key] = data[:,i]
+                        else:
+                            csv_data[key] = data
+                        #csv_data[key] = self.logs[key]
+                csv_data.to_csv(os.path.join(save_dir, "exp_logs.csv"))
+
+            except Exception as e:
+                print("Saving failed: ", e)
