@@ -1,3 +1,4 @@
+from typing import Callable, NamedTuple, Optional, Union, List
 import matplotlib.pyplot as plt
 import numpy as np
 import argparse
