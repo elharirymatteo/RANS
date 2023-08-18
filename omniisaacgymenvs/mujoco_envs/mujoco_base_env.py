@@ -1,3 +1,4 @@
+from typing import Dict
 import matplotlib.pyplot as plt
 import numpy as np
 import mujoco
@@ -27,16 +28,6 @@ class MuJoCoFloatingPlatform:
         self.setupPhysics(step_time, duration)
         self.initForceAnchors()
         self.initializeLoggers()
-
-        self.goal = np.zeros((2), dtype=np.float32)
-
-    def setGoal(self, goal:np.ndarray) -> None:
-        """
-        Sets the goal for the simulation.
-        goal: The goal position for the agent to reach.
-        """
-
-        self.goal = goal
 
     def initializeModel(self) -> None:
         """
@@ -118,7 +109,7 @@ class MuJoCoFloatingPlatform:
                            [-1, -1, 0],
                            [ 1,  1, 0]])
         # Normalize the forces.
-        self.forces = self.forces / np.linalg.norm(self.forces, axis=1)
+        self.forces = self.forces / np.linalg.norm(self.forces, axis=1).reshape(-1, 1)
         # Multiply by the max thrust.
         self.forces = self.forces * self.max_thrust
         
@@ -167,7 +158,7 @@ class MuJoCoFloatingPlatform:
         self.linear_velocity.append(self.data.qvel[0:3].copy())
         self.position.append(self.data.qpos[0:3].copy())
 
-    def updateState(self) -> list:
+    def updateState(self) -> Dict[str, np.ndarray]:
         """
         Updates the state of the simulation."""
 
