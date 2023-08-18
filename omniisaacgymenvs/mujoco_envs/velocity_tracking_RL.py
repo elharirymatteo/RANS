@@ -42,7 +42,7 @@ class MuJoCoVelTracking(MuJoCoFloatingPlatform):
             for _ in range(self.inv_play_rate):
                 self.applyForces(action)
                 mujoco.mj_step(self.model, self.data)
-                self.updateLoggers(model.get_goal(), model.get_target_position())
+                self.updateLoggers(model.getGoal(), model.getTargetPosition())
     
     def plotSimulation(self, dpi:int = 90, width:int = 1000, height:int = 1000, save:bool = False) -> None:
         """
@@ -197,7 +197,7 @@ def parseArgs():
     parser.add_argument("--sim_duration", type=float, default=240, help="The length of the simulation. In seconds.")
     parser.add_argument("--play_rate", type=float, default=5.0, help="The frequency at which the agent will played. In Hz. Note, that this depends on the sim_rate, the agent my not be able to play at this rate depending on the sim_rate value. To be consise, the agent will play at: sim_rate / int(sim_rate/play_rate)")
     parser.add_argument("--sim_rate", type=float, default=50.0, help="The frequency at which the simulation will run. In Hz.")
-    parser.add_argument("--tracking velocity", type=float, default=0.25, help="The tracking velocity. In meters per second.")
+    parser.add_argument("--tracking_velocity", type=float, default=0.25, help="The tracking velocity. In meters per second.")
     parser.add_argument("--save_dir", type=str, default="velocity_exp", help="The path to the folder in which the results will be stored.")
     parser.add_argument("--platform_mass", type=float, default=5.32, help="The mass of the floating platform. In Kg.")
     parser.add_argument("--platform_radius", type=float, default=0.31, help="The radius of the floating platform. In meters.")
@@ -222,6 +222,9 @@ if __name__ == "__main__":
     assert args.play_rate > 0, "The play rate must be greater than 0."
     assert args.sim_rate > 0, "The simulation rate must be greater than 0."
     assert args.tracking_velocity > 0, "The tracking velocity must be greater than 0."
+    assert args.platform_mass > 0, "The mass of the platform must be greater than 0."
+    assert args.platform_radius > 0, "The radius of the platform must be greater than 0."
+    assert args.platform_max_thrust > 0, "The maximum thrust of the platform must be greater than 0."
     # Try to create the save directory
     try:
         os.makedirs(args.save_dir, exist_ok=True)
@@ -247,6 +250,6 @@ if __name__ == "__main__":
     # Runs the simulation
     env.runLoop(velocity_tracker, [0,0])
     # Plots the simulation
-    env.plotSimulation(args.save_dir)
+    env.plotSimulation(save=args.save_dir)
     # Saves the simulation data
     env.saveSimulationData(args.save_dir)
