@@ -119,7 +119,7 @@ class DiscreteController:
         self.FP                 = Mod
 
         # H-infinity parameters
-        self.Q = np.diag([1,1,10,10,1,1,1])                      # State cost matrix
+        self.Q = np.diag([1,1,15,15,1,1,1])                      # State cost matrix
         self.R = np.diag([0.01] * self.thruster_count)  # Control cost matrix
         self.W = np.diag([0.1] * 7) # Disturbance weight matrix
         self.find_gains()
