@@ -4,14 +4,15 @@ import datetime
 import torch
 import os
 
+import rospy
 from std_msgs.msg import ByteMultiArray
 from geometry_msgs.msg import PoseStamped, Point
-import rospy
 
 from ros.ros_utills import derive_velocities
+from omniisaacgymenvs.mujoco_envs.RL_games_model_4_mujoco import RLGamesModel
 
 class RLPlayerNode:
-    def __init__(self, player, task_id=0, map=[2,5,4,7,6,1,0,3], save_trajectory=True):
+    def __init__(self, model: RLGamesModel, task_id:int=0, map:List[int]=[2,5,4,7,6,1,0,3], save_trajectory:bool=True, save_dir:str=None) -> None:
         # Initialize variables
         self.buffer_size = 20  # Number of samples for differentiation
         self.pose_buffer = deque(maxlen=self.buffer_size)
@@ -20,9 +21,20 @@ class RLPlayerNode:
 
         self.map = map
         self.save_trajectory = save_trajectory
-        self.player = player
+        self.model = model
+        self.save_dir = save_dir
 
         self.reset()
+
+        # Collect parameters
+        self.model_path = rospy.get_param("model_path", type=str, default=None, help="The path to the model to be loaded. It must be a velocity tracking model.")
+        self.config_path = rospy.get_param("config_path", type=str, default=None, help="The path to the network configuration to be loaded.")
+        self.goal_x = rospy.get_param("goal_x", type=float, nargs="+", default=None, help="List of x coordinates for the goals to be reached by the platform.")
+        self.goal_y = rospy.get_param("goal_y", type=float, nargs="+", default=None, help="List of y coordinates for the goals to be reached by the platform.")
+        self.goal_theta = rospy.get_param("goal_theta", type=float, nargs="+", default=None, help="List of headings for the goals to be reached by the platform. In world frame, radiants.")
+        self. = rospy.get_param("play_rate", type=float, default=5.0, help="The frequency at which the agent will played. In Hz. Note, that this depends on the sim_rate, the agent my not be able to play at this rate depending on the sim_rate value. To be consise, the agent will play at: sim_rate / int(sim_rate/play_rate)")
+        self. = rospy.get_param("tracking velocity", type=float, default=0.25, help="The tracking velocity. In meters per second.")
+        self. = rospy.get_param("save_dir", type=str, default="position_exp", help="The path to the folder in which the results will be stored.")
 
         # Initialize Subscriber and Publisher
         self.pose_sub = rospy.Subscriber("/vrpn_client_node/FP_exp_RL/pose", PoseStamped, self.pose_callback)
@@ -164,7 +176,7 @@ class RLPlayerNode:
         self.obs_dict["state"] = self.obs#dict({'state': self.obs, 'transforms': torch.zeros(5*8, device='cuda'), 'masks': torch.zeros(8, dtype=torch.float32, device='cuda')})
 
     def send_action(self):
-        self.action = self.player.get_action(self.obs, is_deterministic=True)
+        self.action = self.model.get_action(self.obs, is_deterministic=True)
         self.action = self.action.cpu().tolist()
         action = self.remap_actions(self.action)
         lifting_active = 1
@@ -172,7 +184,7 @@ class RLPlayerNode:
         self.my_msg.data = action
         self.pub.publish(self.my_msg)
 
-    def print(self):
+    def print_logs(self):
         print("=========================================")
         print(f"step number: {self.count}")
         print(f"task id: {self.task_id}")
@@ -186,12 +198,11 @@ class RLPlayerNode:
         self.act_buffer.append(self.action)
 
     def save_logs(self):
-        save_dir = "./lab_tests/icra24_Pose/"+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + "/"
+        save_dir = self.save_dir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + "/"
         os.makedirs(save_dir, exist_ok=True)
         np.save(os.path.join(save_dir, "obs.npy"), np.array(self.obs_buffer))
         np.save(os.path.join(save_dir, "act.npy"), np.array(self.act_buffer))
         np.save(os.path.join(save_dir, "sim_obs.npy"), np.array(self.sim_obs_buffer))
-
 
     def run(self): 
         self.rate = rospy.Rate(self.play_rate)
@@ -203,7 +214,7 @@ class RLPlayerNode:
                 self.update_loggers()
                 self.count += 1
                 if self.debug:
-                    self.print()
+                    self.print_logs()
             self.rate.sleep()
 
         # Saves the logs
