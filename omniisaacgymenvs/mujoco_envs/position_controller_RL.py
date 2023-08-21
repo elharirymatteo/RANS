@@ -54,10 +54,10 @@ class MuJoCoPositionControl(MuJoCoFloatingPlatform):
         while (self.duration > self.data.time) and (model.isDone() == False):
             state = self.updateState() # Updates the state of the simulation.
             # Get the actions from the controller
-            action = model.getAction(state)
+            self.actions = model.getAction(state)
             # Plays only once every self.inv_play_rate steps.
             for _ in range(self.inv_play_rate):
-                self.applyForces(action)
+                self.applyForces(self.actions)
                 mujoco.mj_step(self.model, self.data)
                 self.updateLoggers(model.getGoal())
 
@@ -143,12 +143,11 @@ def parseArgs():
     parser = argparse.ArgumentParser("Generates meshes out of Digital Elevation Models (DEMs) or Heightmaps.")
     parser.add_argument("--model_path", type=str, default=None, help="The path to the model to be loaded. It must be a velocity tracking model.")
     parser.add_argument("--config_path", type=str, default=None, help="The path to the network configuration to be loaded.")
-    parser.add_argument("--goal_x", type=float, nargs="+", default=None, help="List of x coordinates for the goals to be reached by the platform.")
-    parser.add_argument("--goal_y", type=float, nargs="+", default=None, help="List of y coordinates for the goals to be reached by the platform.")
+    parser.add_argument("--goal_x", type=float, nargs="+", default=None, help="List of x coordinates for the goals to be reached by the platform. In world frame, meters.")
+    parser.add_argument("--goal_y", type=float, nargs="+", default=None, help="List of y coordinates for the goals to be reached by the platform. In world frame, meters.")
     parser.add_argument("--sim_duration", type=float, default=240, help="The length of the simulation. In seconds.")
     parser.add_argument("--play_rate", type=float, default=5.0, help="The frequency at which the agent will played. In Hz. Note, that this depends on the sim_rate, the agent my not be able to play at this rate depending on the sim_rate value. To be consise, the agent will play at: sim_rate / int(sim_rate/play_rate)")
     parser.add_argument("--sim_rate", type=float, default=50.0, help="The frequency at which the simulation will run. In Hz.")
-    parser.add_argument("--tracking velocity", type=float, default=0.25, help="The tracking velocity. In meters per second.")
     parser.add_argument("--save_dir", type=str, default="position_exp", help="The path to the folder in which the results will be stored.")
     parser.add_argument("--platform_mass", type=float, default=5.32, help="The mass of the floating platform. In Kg.")
     parser.add_argument("--platform_radius", type=float, default=0.31, help="The radius of the floating platform. In meters.")
