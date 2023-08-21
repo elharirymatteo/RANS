@@ -119,10 +119,12 @@ class DiscreteController:
         self.FP                 = Mod
 
         # H-infinity parameters
-        self.Q = np.diag([100] * 7)                      # State cost matrix
+        self.Q = np.diag([1,1,15,15,1,1,1])                      # State cost matrix
         self.R = np.diag([0.01] * self.thruster_count)  # Control cost matrix
         self.W = np.diag([0.1] * 7) # Disturbance weight matrix
+        self.find_gains()
 
+    def find_gains(self):
         # Compute linearized system matrices A and B based on your system dynamics
         self.A, self.B = self.compute_linearized_system()  # Compute linearized system matrices
         self.make_planar_compatible()
@@ -145,7 +147,7 @@ class DiscreteController:
         r0      = np.concatenate((self.FP.data.qpos[:3],self.FP.data.qvel[:3], self.FP.data.qpos[3:], self.FP.data.qvel[3:]),axis =None) 
         t_int   = 0.2 # time-interval at 5Hz
         A       = self.f_STM(r0,t_int,self.FP.model,self.FP.data,self.FP.body_id)
-        Aan     = self.f_STM(r0,t_int,self.FP.model,self.FP.data,self.FP.body_id)
+        #Aan     = self.f_STM(r0,t_int,self.FP.model,self.FP.data,self.FP.body_id)
         B       = self.f_B(r0,t_int,self.FP.model,self.FP.data,self.FP.body_id,self.thruster_count)
         
         return A, B
@@ -179,7 +181,7 @@ class DiscreteController:
         b = np.delete(b, 5, axis=0)  # Remove row: vz
         b = np.delete(b, 2, axis=0)  # Remove row: z
 
-        b[b == 0] = 1e-3
+        b[b == 0] = 1e-4
 
         self.A = a
         self.B = b
@@ -436,6 +438,7 @@ class PoseController:
                 self.current_goal = self.goals[1,:2]
                 self.current_goal_controller[:2] = self.current_goal
                 self.goals = self.goals[1:]
+                self.model.find_gains()
             else:
                 self.goals = []
         current_position, current_orientation, current_linear_velocity, current_angular_velocity = self.makeState4Controller(state)
