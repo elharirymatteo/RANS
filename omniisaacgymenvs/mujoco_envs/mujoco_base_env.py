@@ -60,6 +60,7 @@ class MuJoCoFloatingPlatform:
         self.logs["linear_velocity"] = []
         self.logs["position"] = []
         self.logs["quaternion"] = []
+        self.logs["actions"] = []
 
     def createModel(self) -> None:
         """
@@ -160,6 +161,7 @@ class MuJoCoFloatingPlatform:
         self.logs["linear_velocity"].append(self.data.qvel[0:3].copy())
         self.logs["position"].append(self.data.qpos[0:3].copy())
         self.logs["quaternion"].append(np.roll(self.data.qpos[3:].copy(),-1))
+        self.logs["actions"].append(self.actions)
 
     def updateState(self) -> Dict[str, np.ndarray]:
         """
