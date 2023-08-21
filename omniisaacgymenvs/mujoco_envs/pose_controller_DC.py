@@ -18,10 +18,12 @@ class MuJoCoPoseControl(MuJoCoFloatingPlatform):
     def initializeLoggers(self) -> None:
         super().initializeLoggers()
         self.logs["position_target"] = []
+        self.logs["heading_target"] = []
 
     def updateLoggers(self, target) -> None:
         super().updateLoggers()
-        self.logs["position_target"].append(target)
+        self.logs["position_target"].append(target[:2])
+        self.logs["heading_target"].append(target[-1])
 
     def updateState(self) -> Dict[str, np.ndarray]:
         """
@@ -45,10 +47,10 @@ class MuJoCoPoseControl(MuJoCoFloatingPlatform):
         while (self.duration > self.data.time) and (model.isDone() == False):
             state = self.updateState() # Updates the state of the simulation.
             # Get the actions from the controller
-            action = model.getAction(state)
+            self.actions = model.getAction(state)
             # Plays only once every self.inv_play_rate steps.
             for _ in range(self.inv_play_rate):
-                self.applyForces(action)
+                self.applyForces(self.actions)
                 mujoco.mj_step(self.model, self.data)
                 self.updateLoggers(model.getGoal())
 
@@ -91,6 +93,16 @@ class MuJoCoPoseControl(MuJoCoFloatingPlatform):
                 fig.savefig(os.path.join(save_dir, "positions.png"))
             except Exception as e:
                 print("Saving failed: ", e)
+        
+        fig, ax = plt.subplots(1, 1, figsize=figsize, dpi=dpi)
+        ax.plot(self.logs["timevals"], np.array(self.logs["actions"]), label="system action")
+        plt.tight_layout()
+        if save:
+            #try:
+                os.makedirs(save_dir, exist_ok=True)
+                fig.savefig(os.path.join(save_dir, "actions.png"))
+            #except Exception as e:
+                #print("Saving failed: ", e)
 
 
 class DiscreteController:
@@ -107,7 +119,7 @@ class DiscreteController:
         self.FP                 = Mod
 
         # H-infinity parameters
-        self.Q = np.diag([1] * 7)                      # State cost matrix
+        self.Q = np.diag([100] * 7)                      # State cost matrix
         self.R = np.diag([0.01] * self.thruster_count)  # Control cost matrix
         self.W = np.diag([0.1] * 7) # Disturbance weight matrix
 
@@ -290,10 +302,12 @@ class DiscreteController:
         IC_temp0    = r0
         force       = [0.0,0.0,0.0]
         torque      = [0.0,0.0,0.0]
+        default_tstep = model.opt.timestep 
         model.opt.timestep = t_int
         
         u = np.zeros(number_thrust)
 
+        #for k in range(np.size(u)):
         for k in range(np.size(u)):
             delta           = 0.01
             delta_vec       = np.zeros(np.size(u))
@@ -301,7 +315,7 @@ class DiscreteController:
 
             # Positive direction
             u_plus                  = np.add(u,delta_vec)
-            force_plus              = u_plus[k] * self.FP.forces[k] * np.sqrt(0.5)
+            force_plus              = u_plus[k] * self.FP.forces[k]# * np.sqrt(0.5)
             rmat                    = data.xmat[body_id].reshape(3,3) # Rotation matrix.
             p                       = data.xpos[body_id]              # Position of the body.
             force_plus              = np.matmul(rmat, force_plus)               # Rotate the force to the body frame.
@@ -342,12 +356,13 @@ class DiscreteController:
                 B  = np.vstack((B,temp))
 
         B = B.transpose()
+        model.opt.timestep = default_tstep
 
         return B
 
     def control_cost(self) -> np.ndarray:
         # Cost function to be minimized for control input optimization
-        control_input = np.array(-self.L @ self.state) + self.disturbance
+        control_input = np.array(self.L @ self.state) + self.disturbance
         return control_input
 
     def update(self, current_position: np.ndarray, current_orientation: np.ndarray, current_velocity: np.ndarray, current_angular_velocity:np.ndarray, disturbance:np.ndarray = None):
@@ -360,7 +375,7 @@ class DiscreteController:
         angvel_error        = np.array([0.0, 0.0, 0.0]) - current_angular_velocity
 
         if disturbance == None:
-            disturbance         = np.random.rand(8) * 0.0001                              # Example disturbance 
+            disturbance         = np.random.rand(8) * 0.000                              # Example disturbance 
         self.disturbance    = disturbance
 
         # Combine errors into the state vector 
@@ -377,17 +392,26 @@ class DiscreteController:
         return self.thrusters
 
 
-class PositionController:
-    def __init__(self, model: DiscreteController, goal_x: List[float], goal_y: List[float], distance_threshold: float = 0.03) -> None:
+class PoseController:
+    """
+    Controller for the pose of the robot."""
+
+    def __init__(self, model: DiscreteController, goal_x: List[float], goal_y: List[float], goal_theta: List[float], distance_threshold: float = 0.03) -> None:
+        # Discrete controller
         self.model = model
-        self.goals = np.array([goal_x, goal_y]).T
+        # Creates an array goals
+        if goal_theta is None:
+            goal_theta = np.zeros_like(goal_x)
+        self.goals = np.array([goal_x, goal_y, goal_theta]).T
+
         self.current_goal = self.goals[0]
         self.current_goal_controller = np.zeros((3), dtype=np.float32)
-        self.current_goal_controller[:2] = self.current_goal
+        self.current_goal_controller[:2] = self.current_goal[:2]
+
         self.distance_threshold = distance_threshold
 
     def isGoalReached(self, state: Dict[str, np.ndarray]) -> bool:
-        dist = np.linalg.norm(self.current_goal - state["position"][:2])
+        dist = np.linalg.norm(self.current_goal[:2] - state["position"][:2])
         if dist < self.distance_threshold:
             return True
     
@@ -409,7 +433,7 @@ class PositionController:
         if self.isGoalReached(state):
             print("Goal reached!")
             if len(self.goals) > 1:
-                self.current_goal = self.goals[1]
+                self.current_goal = self.goals[1,:2]
                 self.current_goal_controller[:2] = self.current_goal
                 self.goals = self.goals[1:]
             else:
@@ -423,10 +447,10 @@ def parseArgs():
     parser = argparse.ArgumentParser("Generates meshes out of Digital Elevation Models (DEMs) or Heightmaps.")
     parser.add_argument("--goal_x", type=float, nargs="+", default=None, help="List of x coordinates for the goals to be reached by the platform.")
     parser.add_argument("--goal_y", type=float, nargs="+", default=None, help="List of y coordinates for the goals to be reached by the platform.")
+    parser.add_argument("--goal_theta", type=float, nargs="+", default=None, help="List of headings for the goals to be reached by the platform. In world frame, radiants.")
     parser.add_argument("--sim_duration", type=float, default=240, help="The length of the simulation. In seconds.")
     parser.add_argument("--play_rate", type=float, default=5.0, help="The frequency at which the agent will played. In Hz. Note, that this depends on the sim_rate, the agent my not be able to play at this rate depending on the sim_rate value. To be consise, the agent will play at: sim_rate / int(sim_rate/play_rate)")
     parser.add_argument("--sim_rate", type=float, default=50.0, help="The frequency at which the simulation will run. In Hz.")
-    parser.add_argument("--tracking velocity", type=float, default=0.25, help="The tracking velocity. In meters per second.")
     parser.add_argument("--save_dir", type=str, default="position_exp", help="The path to the folder in which the results will be stored.")
     parser.add_argument("--platform_mass", type=float, default=5.32, help="The mass of the floating platform. In Kg.")
     parser.add_argument("--platform_radius", type=float, default=0.31, help="The radius of the floating platform. In meters.")
@@ -454,13 +478,13 @@ if __name__ == "__main__":
     except:
         raise ValueError("Could not create the save directory.")
     # Creates the environment
+    print(1.0/args.sim_rate)
     env = MuJoCoPoseControl(step_time=1.0/args.sim_rate, duration=args.sim_duration, inv_play_rate=int(args.sim_rate/args.play_rate),
                             mass=args.platform_mass, radius=args.platform_radius, max_thrust=args.platform_max_thrust)
     # Instantiates the Discrete Controller (DC)
     model = DiscreteController([0,0,0],[1,0,0,0], Mod=env)
     #  Creates the velocity tracker
-    position_controller = PositionController(model, args.goal_x, args.goal_y)
-    env.resetPosition()
+    position_controller = PoseController(model, args.goal_x, args.goal_y, args.goal_theta)
     # Runs the simulation
     env.runLoop(position_controller, [0,0])
     # Plots the simulation
