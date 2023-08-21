@@ -10,26 +10,32 @@ from omniisaacgymenvs.mujoco_envs.mujoco_base_env import MuJoCoFloatingPlatform
 from omniisaacgymenvs.mujoco_envs.RL_games_model_4_mujoco import RLGamesModel
 
 class MuJoCoVelTracking(MuJoCoFloatingPlatform):
+    """
+    The environment for the velocity tracking task inside Mujoco."""
+
     def __init__(self, step_time:float = 0.02, duration:float = 60.0, inv_play_rate:int = 10,
                  mass:float = 5.32, max_thrust:float = 1.0, radius:float = 0.31) -> None:
         super().__init__(step_time, duration, inv_play_rate, mass, max_thrust, radius)
 
     def initializeLoggers(self) -> None:
+        """
+        Initializes the loggers."""
+
         super().initializeLoggers()
         self.velocity_goal = []
         self.position_target = []
 
-    def updateLoggers(self, goal, target) -> None:
+    def updateLoggers(self, goal: np.ndarray, target: np.ndarray) -> None:
+        """
+        Updates the loggers."""
+
         super().updateLoggers()
         self.velocity_goal.append(goal)
-        self.position_target.append(target)
-    
+        self.position_target.append(target) 
 
     def runLoop(self, model, xy: np.ndarray) -> None:
         """
-        Runs the simulation loop.
-        model: the agent.
-        xy: 2D position of the body."""
+        Runs the simulation loop."""
 
         self.resetPosition() # Resets the position of the body.
         self.data.qpos[:2] = xy # Sets the position of the body.
@@ -86,18 +92,21 @@ class MuJoCoVelTracking(MuJoCoFloatingPlatform):
                 print("Saving failed: ", e)
 
 class TrajectoryTracker:
-    def __init__(self, lookahead=0.25, closed=False):
+    """
+    A class to generate and track trajectories."""
+
+    def __init__(self, lookahead:float = 0.25, closed:bool = False):
         self.current_point = -1
         self.lookhead = lookahead
         self.closed = closed
         self.is_done = False
 
-    def generateCircle(self, radius=2, num_points=360*10):
+    def generateCircle(self, radius:float = 2, num_points:int = 360*10):
         theta = np.linspace(0, 2*np.pi, num_points, endpoint=(not self.closed))
         self.positions = np.array([np.cos(theta) * radius, np.sin(theta) * radius]).T
         self.angles = np.array([-np.sin(theta), np.cos(theta)]).T
 
-    def generateSquare(self, h=2, num_points=360*10):
+    def generateSquare(self, h:float = 2, num_points:int = 360*10) -> None:
         points_per_side = num_points // 4
         s1y = np.linspace(-h/2,h/2, num_points, endpoint=False)
         s1x = np.ones_like(s1y)*h/2
@@ -110,13 +119,13 @@ class TrajectoryTracker:
         self.positions = np.vstack([np.hstack([s1x,s2x,s3x,s4x]), np.hstack([s1y,s2y,s3y,s4y])]).T
         self.angles = np.ones_like(self.positions)#np.array([-np.sin(theta), np.cos(theta)]).T
 
-    def generateSpiral(self, start_radius=0.5, end_radius=2, num_loop=5, num_points=360*20):
+    def generateSpiral(self, start_radius:float = 0.5, end_radius:float = 2, num_loop:float = 5, num_points: int = 360*20) -> None:
         radius = np.linspace(start_radius, end_radius, num_points, endpoint=(not self.closed))
         theta = np.linspace(0, 2*np.pi*num_loop, num_points, endpoint=(not self.closed))
         self.positions = np.array([np.cos(theta) * radius, np.sin(theta) * radius]).T
         self.angles = np.array([-np.sin(theta), np.cos(theta)]).T
     
-    def getTrackingPointIdx(self, position):
+    def getTrackingPointIdx(self, position:np.ndarray) -> None:
         distances = np.linalg.norm(self.positions - position, axis=1)
         if self.current_point == -1:
             self.current_point = 0
@@ -127,7 +136,7 @@ class TrajectoryTracker:
                 if len(indices) > 0:
                     self.current_point = np.max(indices)
 
-    def rollTrajectory(self):
+    def rollTrajectory(self) -> None:
         if self.closed:
             self.positions = np.roll(self.positions, -self.current_point, axis=0)
             self.angles = np.roll(self.angles, -self.current_point, axis=0)
@@ -135,25 +144,24 @@ class TrajectoryTracker:
         else:
             self.positions = self.positions[self.current_point:]
             self.angles = self.angles[self.current_point:]
-            self.current_point = 0
-        
+            self.current_point = 0 
         if self.positions.shape[0] <= 1:
             self.is_done = True
 
-    def getPointForTracking(self):
+    def getPointForTracking(self) -> List[np.ndarray]:
         position = self.positions[self.current_point]
         angle = self.angles[self.current_point]
         self.rollTrajectory()
         return position, angle
     
-    def get_target_position(self):
+    def get_target_position(self) -> np.ndarray:
         return self.target_position
     
-    def computeVelocityVector(self, target_position, position):
+    def computeVelocityVector(self, target_position:np.ndarray, position:np.ndarray) -> np.ndarray:
         diff = target_position - position
         return diff / np.linalg.norm(diff)
     
-    def getVelocityVector(self, position):
+    def getVelocityVector(self, position:np.ndarray) -> np.ndarray:
         self.getTrackingPointIdx(position)
         self.target_position, target_angle = self.getPointForTracking()
         velocity_vector = self.computeVelocityVector(self.target_position, position)
