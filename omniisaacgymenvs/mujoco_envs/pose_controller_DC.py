@@ -118,6 +118,7 @@ class DiscreteController:
         self.dt                 = dt
 
         self.FP                 = Mod
+        self.control_type       = control_type
 
         # control parameters
         self.Q = np.diag([1,1,15,15,1,1,1])                      # State cost matrix
