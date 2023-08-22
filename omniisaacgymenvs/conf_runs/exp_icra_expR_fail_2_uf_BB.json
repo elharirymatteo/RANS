@@ -1,6 +1,6 @@
 {
   "experiment111": {
-      "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY_BB",
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
       "train": "virtual_floating_platform/MFP2D_PPOmulti_dict_MLP",
       "task.env.split_thrust": "True",
       "task.env.platform.core.mass": "5.32",
@@ -19,7 +19,7 @@
       "wandb_project": "icra24_fail"
   },
   "experiment112": {
-    "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY_BB",
+    "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
     "train": "virtual_floating_platform/MFP2D_PPOmulti_dict_MLP",
     "task.env.split_thrust": "True",
     "task.env.platform.core.mass": "5.32",
@@ -40,7 +40,7 @@
     "wandb_project": "icra24_fail"
   },
   "experiment113": {
-    "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY_BB",
+    "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
     "train": "virtual_floating_platform/MFP2D_PPOmulti_dict_MLP",
     "task.env.split_thrust": "True",
     "task.env.platform.core.mass": "5.32",
@@ -61,7 +61,7 @@
     "wandb_project": "icra24_fail"
   },
   "experiment114": {
-    "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY_BB",
+    "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
     "train": "virtual_floating_platform/MFP2D_PPOmulti_dict_MLP",
     "task.env.split_thrust": "True",
     "task.env.platform.core.mass": "5.32",
@@ -82,7 +82,7 @@
     "wandb_project": "icra24_fail"
   },
   "experiment115": {
-    "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY_BB",
+    "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
     "train": "virtual_floating_platform/MFP2D_PPOmulti_dict_MLP",
     "task.env.split_thrust": "True",
     "task.env.platform.core.mass": "5.32",
@@ -103,7 +103,7 @@
     "wandb_project": "icra24_fail"
   },
     "experiment116": {
-      "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY_BB",
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToXY",
       "train": "virtual_floating_platform/MFP2D_PPOmulti_dict_MLP",
       "task.env.split_thrust": "True",
       "task.env.platform.core.mass": "5.32",
