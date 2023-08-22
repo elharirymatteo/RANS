@@ -19,7 +19,7 @@ from matplotlib.ticker import AutoMinorLocator
 from torch._C import fork
 
 from utils.plot_experiment import plot_episode_data_virtual
-from utils.eval_metrics import success_rate_from_distances
+from utils.eval_metrics import get_GoToXY_success_rate
 import wandb
 
 import os
@@ -94,7 +94,7 @@ def eval_multi_agents(agent, models, horizon, load_dir):
         print(f'Ep data shape after: {ep_data["act"].shape}')
 
         # Collect the data for the success rate table        
-        success_rate_df = success_rate_from_distances(ep_data['all_dist'],threshold=0.02)
+        success_rate_df = get_GoToXY_success_rate(ep_data, threshold=0.02)['position']
         success_rate_df['avg_rew'] = [np.mean(ep_data['rews'])]
         ang_vel_z = np.absolute(ep_data['obs'][:, :, 4:5][:,:,0])
         success_rate_df['avg_ang_vel'] = [np.mean(ang_vel_z.mean(axis=1))]
@@ -111,18 +111,18 @@ def eval_multi_agents(agent, models, horizon, load_dir):
     # create index for the dataframe and save it
     model_names = [model.split("/")[2] for model in models]
     all_success_rate_df.insert(loc=0, column="model", value=model_names)
-    all_success_rate_df.to_csv(evaluation_dir + "multi_model_performance_BB.csv")
+    all_success_rate_df.to_csv(evaluation_dir + "multi_model_performance.csv")
 
 
 @hydra.main(config_name="config", config_path="../cfg")
 def parse_hydra_configs(cfg: DictConfig):
     
     # specify the experiment load directory
-    load_dir = "./icra24_Pose/" #+ "expR_SE/"
+    load_dir = "./icra24_fail/" #+ "expR_SE/"
     experiments = os.listdir(load_dir)
     print(f'Experiments found in {load_dir} folder: {len(experiments)}')
     models = get_valid_models(load_dir, experiments)
-    models = [m for m in models if "BB" in m.split("/")[2]]
+    models = [m for m in models if "BB" not in m.split("/")[2]]
     print(f'Final models: {(models)}')
     if not models:
         print('No valid models found')
