@@ -46,6 +46,13 @@ def eval_multi_agents(cfg, horizon):
     is_done = False
     env = agent.env
     obs = env.reset()
+    # if conf parameter kill_thrusters is true, print the thrusters that are killed for each episode 
+    if cfg.task.env.platform.randomization.kill_thrusters:
+        # access the platform object
+        killed_thrusters_idxs = env._task.virtual_platform.action_masks
+        print(f'Killed thrusters idxs: {killed_thrusters_idxs} shape: {killed_thrusters_idxs.shape}')
+
+
 
     ep_data = {'act': [], 'obs': [], 'rews': []}
     total_reward = 0
@@ -54,6 +61,7 @@ def eval_multi_agents(cfg, horizon):
     for _ in range(horizon):
         actions = agent.get_action(obs['obs'], is_deterministic=True)
         obs, reward, done, info = env.step(actions)
+
         
         if store_all_agents:
             ep_data['act'].append(actions.cpu().numpy())
@@ -67,8 +75,12 @@ def eval_multi_agents(cfg, horizon):
         num_steps += 1
         is_done = done.any()
     ep_data['obs'] = np.array(ep_data['obs'])
-    ep_data['act'] = np.array(ep_data['act'])
     ep_data['rews'] = np.array(ep_data['rews'])
+    ep_data['act'] = np.array(ep_data['act'])
+    # if thrusters were killed during the episode, save the action with the mask applied to the thrusters that were killed
+    if cfg.task.env.platform.randomization.kill_thrusters:
+        ep_data['act'] = ep_data['act'] * (1 - killed_thrusters_idxs.cpu().numpy())
+
 
     # Find the episode where the sum of actions has only zeros (no action) for all the time steps
     broken_episodes = [i for i in range(0,ep_data['act'].shape[1]) if ep_data['act'][:,i,:].sum() == 0]
