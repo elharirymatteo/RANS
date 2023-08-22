@@ -138,6 +138,11 @@ def parse_hydra_configs(cfg: DictConfig):
     cfg.task.env.task_parameters['kill_after_n_steps_in_tolerance'] = 500
     cfg_dict = omegaconf_to_dict(cfg)
     print_dict(cfg_dict)
+    if cfg.task.env.platform.randomization.kill_thrusters:
+        print("Evaluating failing thrusters...")
+    if "BB" in cfg.checkpoint:
+        print("Using BB model ...")
+        cfg.train.params.network.mlp.units = [256, 256]
 
     # _____Create environment_____
 
