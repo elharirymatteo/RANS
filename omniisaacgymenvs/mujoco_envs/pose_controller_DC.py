@@ -7,6 +7,7 @@ import argparse
 import scipy.io
 import mujoco
 import os
+import cvxpy as cp
 
 from omniisaacgymenvs.mujoco_envs.mujoco_base_env import MuJoCoFloatingPlatform
 
@@ -109,7 +110,7 @@ class DiscreteController:
     """
     Discrete pose controller for the Floating Platform."""
 
-    def __init__(self, target_position: List[float], target_orientation: List[float], thruster_count:int=8, dt:float=0.02, Mod:MuJoCoFloatingPlatform=None) -> None:
+    def __init__(self, target_position: List[float], target_orientation: List[float], thruster_count:int=8, dt:float=0.02, Mod:MuJoCoFloatingPlatform=None, control_type = 'LQR') -> None:
         self.target_position    = np.array(target_position)
         self.target_orientation = np.array(target_orientation)
         self.thruster_count     = thruster_count
@@ -118,7 +119,7 @@ class DiscreteController:
 
         self.FP                 = Mod
 
-        # H-infinity parameters
+        # control parameters
         self.Q = np.diag([1,1,15,15,1,1,1])                      # State cost matrix
         self.R = np.diag([0.01] * self.thruster_count)  # Control cost matrix
         self.W = np.diag([0.1] * 7) # Disturbance weight matrix
@@ -128,8 +129,51 @@ class DiscreteController:
         # Compute linearized system matrices A and B based on your system dynamics
         self.A, self.B = self.compute_linearized_system()  # Compute linearized system matrices
         self.make_planar_compatible()
+
+        if self.control_type == 'H-inf':
+            self.compute_hinfinity_gains()
+        elif self.control_type == 'LQR':
+            self.compute_lqr_gains()
+        else:
+            raise ValueError("Invalid control type specified.")
+
+    def compute_lqr_gains(self):
         self.P = solve_discrete_are(self.A, self.B, self.Q, self.R)
         self.L = np.linalg.inv(self.R + self.B.T @ self.P @ self.B) @ self.B.T @ self.P @ self.A
+
+    def compute_hinfinity_gains(self):
+        X = cp.Variable((self.A.shape[0], self.A.shape[0]), symmetric=True)
+        gamma = cp.Parameter(nonneg=True)  # Define gamma as a parameter
+
+        regularization_param = 1e-6
+        # Regularize matrix using the pseudo-inverse
+        A_regularized = self.A @ np.linalg.inv(self.A.T @ self.A + regularization_param * np.eye(self.A.shape[1]))
+        B_regularized = self.B @ np.linalg.inv(self.B.T @ self.B + regularization_param * np.eye(self.B.shape[1]))
+
+        # Define the constraints using regularized matrices
+        constraints = [X >> np.eye(A_regularized.shape[1])]  # X >= 0
+
+        # Define a relaxation factor
+        relaxation_factor = 1  # Adjust this value based on your experimentation
+
+        # Linear matrix inequality constraint with relaxation
+        constraints += [cp.bmat([[A_regularized.T @ X @ A_regularized - X + self.Q, A_regularized.T @ X @ B_regularized],
+                                [B_regularized.T @ X @ A_regularized, B_regularized.T @ X @ B_regularized - (gamma**2) * relaxation_factor * np.eye(B_regularized.shape[1])]]) << 0]
+
+        objective = cp.Minimize(gamma)
+        prob = cp.Problem(objective, constraints)
+
+        # Set the value of the parameter gamma
+        gamma.value = 1.0  # You can set the initial value based on your problem
+        prob.solve()
+    
+        if prob.status == cp.OPTIMAL:
+            self.L = np.linalg.inv(self.B.T @ X.value @ self.B + gamma.value**2 * np.eye(self.B.shape[1])) @ self.B.T @ X.value @ self.A
+            breakpoint()
+        else:
+            raise Exception("H-infinity control design failed.")
+        
+
 
     def set_target(self, target_position: List[float], target_orientation: List[float]) -> None:
         """
@@ -364,7 +408,13 @@ class DiscreteController:
 
     def control_cost(self) -> np.ndarray:
         # Cost function to be minimized for control input optimization
-        control_input = np.array(self.L @ self.state) + self.disturbance
+        if self.control_type == 'H-inf':
+            control_input = np.array(self.L @ self.state) + self.disturbance
+        elif self.control_type == 'LQR':
+            control_input = np.array(self.L @ self.state) 
+        else:
+            raise ValueError("Invalid control type specified.")
+        
         return control_input
 
     def update(self, current_position: np.ndarray, current_orientation: np.ndarray, current_velocity: np.ndarray, current_angular_velocity:np.ndarray, disturbance:np.ndarray = None):
@@ -485,7 +535,7 @@ if __name__ == "__main__":
     env = MuJoCoPoseControl(step_time=1.0/args.sim_rate, duration=args.sim_duration, inv_play_rate=int(args.sim_rate/args.play_rate),
                             mass=args.platform_mass, radius=args.platform_radius, max_thrust=args.platform_max_thrust)
     # Instantiates the Discrete Controller (DC)
-    model = DiscreteController([0,0,0],[1,0,0,0], Mod=env)
+    model = DiscreteController([0,0,0],[1,0,0,0], Mod=env, control_type='LQR') # control type: 'H-inf' or 'LQR' | H-inf not stable at many locations
     #  Creates the velocity tracker
     position_controller = PoseController(model, args.goal_x, args.goal_y, args.goal_theta)
     # Runs the simulation
