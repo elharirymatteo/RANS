@@ -6,10 +6,6 @@ from omni.isaac.kit import SimulationApp
 
 from omniisaacgymenvs.ros.ros_utills import enable_ros_extension
 
-simulation_app = SimulationApp({"headless": False})
-
-
-
 def parseArgs():
     parser = argparse.ArgumentParser("Generates meshes out of Digital Elevation Models (DEMs) or Heightmaps.")
     # Model arguments
