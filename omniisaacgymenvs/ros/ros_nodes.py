@@ -149,11 +149,11 @@ class RLPlayerNode:
 
         self.goal_data = Point()
         if self.task_id == 0: # GoToXY
-            self.controller.setGoal(self.state)
+            self.controller.setGoal([0,0])
         elif self.task_id == 1: # GoToPose
-            self.controller.setGoal(self.state)
+            self.controller.setGoal([0,0,0])
         elif self.task_id == 2: # TrackXYVelocity
-            self.controller.setGoal(self.state)
+            self.controller.setGoal([0,0])
         elif self.task_id == 3: # TrackXYOVelocity
             raise NotImplementedError
 
