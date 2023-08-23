@@ -59,7 +59,7 @@ class RLPlayerNode:
 
         self.ready = False
         self.controller = self.build_controller()
-        self.get_default_goal()
+        self.set_default_goal()
         self.instantiate_buffers()
 
     def instantiate_buffers(self) -> None:
