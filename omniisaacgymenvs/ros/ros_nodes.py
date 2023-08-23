@@ -36,10 +36,6 @@ class RLPlayerNode:
 
         # Initialize ROS message for thrusters
         self.my_msg = ByteMultiArray()
-
-        self.end_experiment_after_n_steps = rospy.get_param("end_experiment_at_step", 300)
-        self.play_rate = rospy.get_param("play_rate", 5.0)
-
         rospy.on_shutdown(self.shutdown)
 
     def build_controller(self) -> Union[PositionController, PoseController, VelocityTracker]:
@@ -168,7 +164,7 @@ class RLPlayerNode:
         print("=========================================")
         print(f"step number: {self.count}")
         print(f"task id: {self.task_id}")
-        print(f"goal: {self.goal_data}")
+        print(f"goal: {self.controller.getGoal()}")
         print(f"observation: {self.controller.getObs()}")
         print(f"state: {self.state}")
         print(f"action: {self.action}")
@@ -185,15 +181,17 @@ class RLPlayerNode:
         np.save(os.path.join(save_dir, "sim_obs.npy"), np.array(self.sim_obs_buffer))
 
     def run(self): 
-        self.rate = rospy.Rate(self.play_rate)
-
-        while (not rospy.is_shutdown()) and (self.count < self.end_experiment_after_n_steps):
+        self.rate = rospy.Rate(self.settings.play_rate)
+        start_time = rospy.Time.now()
+        run_time = rospy.Time.now() - start_time
+        while (not rospy.is_shutdown()) and (run_time.to_sec() < self.settings.exp_duration):
             if self.ready:
                 self.get_action()
                 self.update_loggers()
                 self.count += 1
                 if self.settings.debug:
                     self.print_logs()
+            run_time = rospy.Time.now() - start_time
             self.rate.sleep()
 
         # Saves the logs
