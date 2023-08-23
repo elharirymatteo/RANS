@@ -204,7 +204,7 @@ class MyNode:
             self.rate.sleep()
         
         if self.save_trajectory:
-            save_dir = "./lab_tests/icra24/act_noise_new/"+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + "/"
+            save_dir = "./lab_tests/icra24//"+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + "/"
             os.makedirs(save_dir, exist_ok=True)
             np.save(os.path.join(save_dir, "obs.npy"), np.array(self.obs_buffer))
             np.save(os.path.join(save_dir, "act.npy"), np.array(self.act_buffer))
