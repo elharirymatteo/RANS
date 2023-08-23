@@ -53,7 +53,7 @@ def derive_velocities(time_buffer, pose_buffer):
     # Calculate angular velocities
     angular_orientations = np.array([[pose.pose.orientation.w, pose.pose.orientation.x, pose.pose.orientation.y, pose.pose.orientation.z] for pose in pose_buffer])
     dt_buff = np.ones((angular_orientations.shape[0] - 1)) * dt / (angular_orientations.shape[0] - 1)
-    angular_velocities = angular_velocities(angular_orientations, dt_buff)
-    average_angular_velocity = np.mean(angular_velocities, axis=1)
+    ang_vel = angular_velocities(angular_orientations, dt_buff)
+    average_angular_velocity = np.mean(ang_vel, axis=1)
 
     return average_linear_velocity, average_angular_velocity
