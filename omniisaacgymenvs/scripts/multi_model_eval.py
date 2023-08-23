@@ -63,7 +63,6 @@ def eval_multi_agents(cfg, agent, models, horizon, load_dir):
         # if conf parameter kill_thrusters is true, print the thrusters that are killed for each episode 
         if cfg.task.env.platform.randomization.kill_thrusters:
             killed_thrusters_idxs = env._task.virtual_platform.action_masks
-            print(f'Killed thrusters idxs: {killed_thrusters_idxs} shape: {killed_thrusters_idxs.shape}')
 
         for _ in range(horizon):
             actions = agent.get_action(obs['obs'], is_deterministic=True)
@@ -77,8 +76,7 @@ def eval_multi_agents(cfg, agent, models, horizon, load_dir):
                 ep_data['act'].append(actions[0].cpu().numpy())
                 ep_data['obs'].append(obs['obs']['state'][0].cpu().numpy())
                 ep_data['rews'].append(reward[0].cpu().numpy())
-            total_reward += reward[0]
-            num_steps += 1
+
             is_done = done.any()
         ep_data['obs'] = np.array(ep_data['obs'])
         ep_data['rews'] = np.array(ep_data['rews'])

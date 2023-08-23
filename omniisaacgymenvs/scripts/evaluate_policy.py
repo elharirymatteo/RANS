@@ -49,7 +49,6 @@ def eval_multi_agents(cfg, horizon):
     # if conf parameter kill_thrusters is true, print the thrusters that are killed for each episode 
     if cfg.task.env.platform.randomization.kill_thrusters:
         killed_thrusters_idxs = env._task.virtual_platform.action_masks
-        print(f'Killed thrusters idxs: {killed_thrusters_idxs} shape: {killed_thrusters_idxs.shape}')
 
     ep_data = {'act': [], 'obs': [], 'rews': []}
     total_reward = 0
