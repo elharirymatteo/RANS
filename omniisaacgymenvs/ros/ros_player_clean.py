@@ -1,8 +1,14 @@
 import argparse
 import os
 
-from omniisaacgymenvs.mujoco_envs.RL_games_model_4_mujoco import RLGamesModel
-from omniisaacgymenvs.ros.ros_nodes import RLPlayerNode
+import omni
+from omni.isaac.kit import SimulationApp
+
+from omniisaacgymenvs.ros.ros_utills import enable_ros_extension
+
+simulation_app = SimulationApp({"headless": False})
+
+
 
 def parseArgs():
     parser = argparse.ArgumentParser("Generates meshes out of Digital Elevation Models (DEMs) or Heightmaps.")
@@ -37,6 +43,15 @@ def parseArgs():
     return args, unknown_args
 
 if __name__ == '__main__':
+    simulation_app = SimulationApp({"headless": True})
+    enable_ros_extension()
+
+    from omniisaacgymenvs.mujoco_envs.RL_games_model_4_mujoco import RLGamesModel
+    from omniisaacgymenvs.ros.ros_nodes import RLPlayerNode
+    import rospy
+
+    # Initialize ROS node
+    rospy.init_node('RL_player')
     # Collects args
     args, _ = parseArgs()
     # Checks args
