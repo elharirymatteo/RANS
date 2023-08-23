@@ -125,7 +125,7 @@ class PositionController:
     def isDone(self):
         return len(self.goals) == 0
     
-    def get_obs(self):
+    def getObs(self):
         return self.obs_state.cpu().numpy()
 
     def makeObservationBuffer(self, state):
