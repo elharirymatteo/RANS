@@ -66,11 +66,11 @@ class RLPlayerNode:
         Instantiates the buffers used to store the state variables."""
 
         # Torch buffers
-        self.root_pos = torch.zeros((1,2), dtype=torch.float32, device='cuda')
-        self.heading = torch.zeros((1,2), dtype=torch.float32, device='cuda')
-        self.lin_vel = torch.zeros((1,2), dtype=torch.float32, device='cuda')
-        self.task_data = torch.zeros((1,4), dtype=torch.float32, device='cuda')
-        self.ang_vel = torch.zeros((1,2), dtype=torch.float32, device='cuda')
+        self.root_pos = np.zeros((1,2), dtype=np.float32)
+        self.heading = np.zeros((1,2), dtype=np.float32)
+        self.lin_vel = np.zeros((1,2), dtype=np.float32)
+        self.task_data = np.zeros((1,4), dtype=np.float32)
+        self.ang_vel = np.zeros((1,2), dtype=np.float32)
         # Obs dict
         self.state = None
         # ROS buffers
