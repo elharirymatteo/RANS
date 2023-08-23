@@ -84,7 +84,7 @@ class RLPlayerNode:
         Shutdown the node and kills the thrusters while leaving the air-bearing on."""
 
         self.my_msg.data = [0,0,0,0,0,0,0,0,0]
-        self.pub.publish(self.my_msg)
+        self.action_pub.publish(self.my_msg)
 
     def remap_actions(self, actions: torch.Tensor) -> list:
         """
@@ -158,7 +158,6 @@ class RLPlayerNode:
 
     def get_action(self, lifting_active = 1):
         self.action = self.controller.getAction(self.state, is_deterministic=True)
-        self.action = self.action.cpu().tolist()
         action = self.remap_actions(self.action)
         lifting_active = 1
         action.insert(0, lifting_active)
