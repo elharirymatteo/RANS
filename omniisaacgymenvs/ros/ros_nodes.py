@@ -94,7 +94,7 @@ class RLPlayerNode:
         return [actions[i] for i in self.map]
 
     def pose_callback(self, msg):
-        current_time = self.rospy.Time.now()
+        current_time = rospy.Time.now()
         # Add current pose and time to the buffer
         self.pose_buffer.append(msg)
         self.time_buffer.append(current_time)
