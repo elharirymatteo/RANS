@@ -59,7 +59,7 @@ def eval_multi_agents(cfg, agent, models, horizon, load_dir):
         agent.restore(model)
         env = agent.env
         obs = env.reset()
-        ep_data = {'act': [], 'obs': [], 'rews': [], 'all_dist': []}
+        ep_data = {'act': [], 'obs': [], 'rews': []}
         # if conf parameter kill_thrusters is true, print the thrusters that are killed for each episode 
         if cfg.task.env.platform.randomization.kill_thrusters:
             killed_thrusters_idxs = env._task.virtual_platform.action_masks
@@ -86,12 +86,12 @@ def eval_multi_agents(cfg, agent, models, horizon, load_dir):
             ep_data['act'] = ep_data['act'] * (1 - killed_thrusters_idxs.cpu().numpy())
 
 
-    # Find the episode where the sum of actions has only zeros (no action) for all the time steps
-    broken_episodes = [i for i in range(0,ep_data['act'].shape[1]) if ep_data['act'][:,i,:].sum() == 0]
-    # Remove episodes that are broken by the environment (IsaacGym bug)
-    if broken_episodes:
-        print(f'Broken episodes: {broken_episodes}')
-        print(f'Ep data shape before: {ep_data["act"].shape}')
+        # Find the episode where the sum of actions has only zeros (no action) for all the time steps
+        broken_episodes = [i for i in range(0,ep_data['act'].shape[1]) if ep_data['act'][:,i,:].sum() == 0]
+        # Remove episodes that are broken by the environment (IsaacGym bug)
+        if broken_episodes:
+            print(f'Broken episodes: {broken_episodes}')
+            print(f'Ep data shape before: {ep_data["act"].shape}')
         for key in ep_data.keys():
             ep_data[key] = np.delete(ep_data[key], broken_episodes, axis=1) 
         print(f'Ep data shape after: {ep_data["act"].shape}')
