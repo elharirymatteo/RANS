@@ -96,8 +96,8 @@ if __name__ == '__main__':
         except:
             raise ValueError("Could not create the save directory.")
     # Initialize the model.
-    model = RLGamesModel(args.config_path, task_id, args.model_path)
+    model = RLGamesModel(args.config_path, args.model_path)
     # Initialize the node.
-    node = RLPlayerNode(model, args)
+    node = RLPlayerNode(model, task_id, args)
     # Run the node.
     node.run()
