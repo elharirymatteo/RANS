@@ -28,7 +28,7 @@ def eval_multi_agents(cfg, horizon):
     """
     Evaluate a trained agent for a given number of steps"""
 
-    base_dir = "./evaluations/" + cfg.checkpoint.split("/")[0] + "/" +  cfg.checkpoint.split("/")[1] + "/"
+    base_dir = "./evaluations/" + cfg.checkpoint.split("/")[1] + "/" +  cfg.checkpoint.split("/")[2] + "/"
     experiment_name = cfg.checkpoint.split("/")[2]
     print(f'Experiment name: {experiment_name}')
     evaluation_dir = base_dir + experiment_name + "/"
@@ -48,11 +48,8 @@ def eval_multi_agents(cfg, horizon):
     obs = env.reset()
     # if conf parameter kill_thrusters is true, print the thrusters that are killed for each episode 
     if cfg.task.env.platform.randomization.kill_thrusters:
-        # access the platform object
         killed_thrusters_idxs = env._task.virtual_platform.action_masks
         print(f'Killed thrusters idxs: {killed_thrusters_idxs} shape: {killed_thrusters_idxs.shape}')
-
-
 
     ep_data = {'act': [], 'obs': [], 'rews': []}
     total_reward = 0
@@ -61,8 +58,7 @@ def eval_multi_agents(cfg, horizon):
     for _ in range(horizon):
         actions = agent.get_action(obs['obs'], is_deterministic=True)
         obs, reward, done, info = env.step(actions)
-
-        
+    
         if store_all_agents:
             ep_data['act'].append(actions.cpu().numpy())
             ep_data['obs'].append(obs['obs']['state'].cpu().numpy())
@@ -109,24 +105,6 @@ def eval_multi_agents(cfg, horizon):
     if cfg.headless:
         plot_episode_data_virtual(ep_data, evaluation_dir, store_all_agents)
 
-
-def activate_wandb(cfg, cfg_dict, task):
-    """
-    Activate wandb logging for the evaluation run"""
-
-    time_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    run_name = f"evaluate_{task.name}_{time_str}"
-    cfg.wandb_entity = "matteohariry"
-    wandb.tensorboard.patch(root_logdir="evaluations")
-    wandb.init(
-        project=task.name,
-        entity=cfg.wandb_entity,
-        config=cfg_dict,
-        sync_tensorboard=True,
-        name=run_name,
-        resume="allow",
-        group="eval_agents"
-    )
     
 @hydra.main(config_name="config", config_path="../cfg")
 def parse_hydra_configs(cfg: DictConfig):
@@ -134,13 +112,28 @@ def parse_hydra_configs(cfg: DictConfig):
     if cfg.checkpoint is None:
         print("No checkpoint specified. Exiting...")
         return
-
-    horizon = 500
-
-    # choose frequency of evaluation (to be multiplied by 10 -> controlFrequencyInv)
-    # set congig params for evaluation
-    cfg.task.env.maxEpisodeLength = horizon + 2
     
+    # customize environment parameters based on model
+    if "BB" in cfg.checkpoint:
+        print("Using BB model ...")
+        cfg.train.params.network.mlp.units = [256, 256]
+    if "BB" in cfg.checkpoint:
+        print("Using BBB model ...")
+        cfg.train.params.network.mlp.units = [256, 256, 256]
+    if "AN" in cfg.checkpoint:
+            print("Adding noise on act ...")
+            cfg.task.env.add_noise_on_act = True
+    if "AVN" in cfg.checkpoint:
+            print("Adding noise on act and vel ...")
+            cfg.task.env.add_noise_on_act = True
+            cfg.task.env.add_noise_on_vel = True
+    if "UF" in cfg.checkpoint:
+        print("Setting uneven floor in the environment ...")
+        cfg.task.env.use_uneven_floor = True
+        cfg.task.env.max_floor_force = 0.25
+    
+    horizon = 500
+    cfg.task.env.maxEpisodeLength = horizon + 2
     cfg.task.env.platform.core.mass = 5.32
     cfg.task.env.split_thrust = True
     cfg.task.env.clipObservations['state'] = 20.0
@@ -150,15 +143,7 @@ def parse_hydra_configs(cfg: DictConfig):
     cfg.task.env.task_parameters['kill_after_n_steps_in_tolerance'] = 500
     cfg_dict = omegaconf_to_dict(cfg)
     print_dict(cfg_dict)
-    if cfg.task.env.platform.randomization.kill_thrusters:
-        print("Evaluating failing thrusters...")
-    if "BB" in cfg.checkpoint:
-        print("Using BB model ...")
-        cfg.train.params.network.mlp.units = [256, 256]
-    if "UF" in cfg.checkpoint:
-        print("Setting uneven floor in the environment ...")
-        cfg.task.env.use_uneven_floor = True
-        cfg.task.env.max_floor_force = 0.25
+
 
     # _____Create environment_____
 
@@ -173,10 +158,6 @@ def parse_hydra_configs(cfg: DictConfig):
     cfg_dict['seed'] = cfg.seed
     task = initialize_task(cfg_dict, env)
 
-    # Activate wandb logging
-    if cfg.wandb_activate:
-        activate_wandb(cfg, cfg_dict, task)
-
     rlg_trainer = RLGTrainer(cfg, cfg_dict)
     rlg_trainer.launch_rlg_hydra(env)
     # _____Create players (model)_____
@@ -184,8 +165,6 @@ def parse_hydra_configs(cfg: DictConfig):
     #eval_single_agent(cfg_dict, cfg, env)
     eval_multi_agents(cfg,horizon)
 
-    if cfg.wandb_activate:
-        wandb.finish()
     env.close()
 
 if __name__ == '__main__':

@@ -46,12 +46,12 @@ def get_valid_models(load_dir, experiments):
     return valid_models
 
 
-def eval_multi_agents(agent, models, horizon, load_dir):
+def eval_multi_agents(cfg, agent, models, horizon, load_dir):
 
     evaluation_dir = "./evaluations/" + load_dir
     os.makedirs(evaluation_dir, exist_ok=True)
 
-    store_all_data = True # store all agents generated data, if false only the first agent is stored
+    store_all_agents = True # store all agents generated data, if false only the first agent is stored
     is_done = False
     all_success_rate_df = pd.DataFrame()
     
@@ -60,35 +60,40 @@ def eval_multi_agents(agent, models, horizon, load_dir):
         env = agent.env
         obs = env.reset()
         ep_data = {'act': [], 'obs': [], 'rews': [], 'all_dist': []}
-        
+        # if conf parameter kill_thrusters is true, print the thrusters that are killed for each episode 
+        if cfg.task.env.platform.randomization.kill_thrusters:
+            killed_thrusters_idxs = env._task.virtual_platform.action_masks
+            print(f'Killed thrusters idxs: {killed_thrusters_idxs} shape: {killed_thrusters_idxs.shape}')
+
         for _ in range(horizon):
             actions = agent.get_action(obs['obs'], is_deterministic=True)
             obs, reward, done, info = env.step(actions)
-            
-            #print(f'Step {num_steps}: obs={obs["obs"]}, rews={reward}, dones={done}, info={info} \n')
-            if store_all_data:
+        
+            if store_all_agents:
                 ep_data['act'].append(actions.cpu().numpy())
                 ep_data['obs'].append(obs['obs']['state'].cpu().numpy())
                 ep_data['rews'].append(reward.cpu().numpy())  
-            #ep_data['info'].append(info)
-            x_pos = obs['obs']['state'][:,6].cpu().numpy()
-            y_pos = obs['obs']['state'][:,7].cpu().numpy()
-            ep_data['all_dist'].append(np.linalg.norm(np.array([x_pos, y_pos]), axis=0))
+            else:
+                ep_data['act'].append(actions[0].cpu().numpy())
+                ep_data['obs'].append(obs['obs']['state'][0].cpu().numpy())
+                ep_data['rews'].append(reward[0].cpu().numpy())
+            total_reward += reward[0]
+            num_steps += 1
             is_done = done.any()
+        ep_data['obs'] = np.array(ep_data['obs'])
+        ep_data['rews'] = np.array(ep_data['rews'])
+        ep_data['act'] = np.array(ep_data['act'])
+        # if thrusters were killed during the episode, save the action with the mask applied to the thrusters that were killed
+        if cfg.task.env.platform.randomization.kill_thrusters:
+            ep_data['act'] = ep_data['act'] * (1 - killed_thrusters_idxs.cpu().numpy())
 
-        if store_all_data:
-            ep_data['obs'] = np.array(ep_data['obs'])
-            ep_data['act'] = np.array(ep_data['act'])
-            ep_data['rews'] = np.array(ep_data['rews'])
-            
-        ep_data['all_dist'] = np.array(ep_data['all_dist'])
-    
-        # Find the episode where the sum of actions has only zeros (no action) for all the time steps
-        broken_episodes = [i for i in range(0,ep_data['act'].shape[1]) if ep_data['act'][:,i,:].sum() == 0]
-        # Remove episodes that are broken by the environment (IsaacGym bug)
-        if broken_episodes:
-            print(f'Broken episodes: {broken_episodes}')
-            print(f'Ep data shape before: {ep_data["act"].shape}')
+
+    # Find the episode where the sum of actions has only zeros (no action) for all the time steps
+    broken_episodes = [i for i in range(0,ep_data['act'].shape[1]) if ep_data['act'][:,i,:].sum() == 0]
+    # Remove episodes that are broken by the environment (IsaacGym bug)
+    if broken_episodes:
+        print(f'Broken episodes: {broken_episodes}')
+        print(f'Ep data shape before: {ep_data["act"].shape}')
         for key in ep_data.keys():
             ep_data[key] = np.delete(ep_data[key], broken_episodes, axis=1) 
         print(f'Ep data shape after: {ep_data["act"].shape}')
@@ -109,7 +114,7 @@ def eval_multi_agents(agent, models, horizon, load_dir):
         # If want to print the latex code for the table use the following line
 
     # create index for the dataframe and save it
-    model_names = [model.split("/")[2] for model in models]
+    model_names = [model.split("/")[3] for model in models]
     all_success_rate_df.insert(loc=0, column="model", value=model_names)
     all_success_rate_df.to_csv(evaluation_dir + "multi_model_performance.csv")
 
@@ -118,11 +123,11 @@ def eval_multi_agents(agent, models, horizon, load_dir):
 def parse_hydra_configs(cfg: DictConfig):
     
     # specify the experiment load directory
-    load_dir = "./icra24_fail/" #+ "expR_SE/"
+    load_dir = "./models/icra24_fail/" #+ "expR_SE/"
     experiments = os.listdir(load_dir)
     print(f'Experiments found in {load_dir} folder: {len(experiments)}')
     models = get_valid_models(load_dir, experiments)
-    models = [m for m in models if "BB" not in m.split("/")[2]]
+    models = [m for m in models if "BB" not in m.split("/")[3]]
     print(f'Final models: {(models)}')
     if not models:
         print('No valid models found')
@@ -134,6 +139,9 @@ def parse_hydra_configs(cfg: DictConfig):
     if "BB" in models[0]:
         print("Using BB model ...")
         cfg.train.params.network.mlp.units = [256, 256]
+    if "BB" in models[0]:
+        print("Using BBB model ...")
+        cfg.train.params.network.mlp.units = [256, 256, 256]
     if "AN" in models[0]:
             print("Adding noise on act ...")
             cfg.task.env.add_noise_on_act = True
@@ -141,11 +149,6 @@ def parse_hydra_configs(cfg: DictConfig):
             print("Adding noise on act and vel ...")
             cfg.task.env.add_noise_on_act = True
             cfg.task.env.add_noise_on_vel = True
-    if cfg.task.env.platform.randomization.kill_thrusters:
-        print("Evaluating failing thrusters...")
-    if "BB" in cfg.checkpoint:
-        print("Using BB model ...")
-        cfg.train.params.network.mlp.units = [256, 256]
     if "UF" in cfg.checkpoint:
         print("Setting uneven floor in the environment ...")
         cfg.task.env.use_uneven_floor = True
@@ -186,7 +189,7 @@ def parse_hydra_configs(cfg: DictConfig):
 
     agent = runner.create_player()
 
-    eval_multi_agents(agent, models, horizon, load_dir)
+    eval_multi_agents(cfg, agent, models, horizon, load_dir)
 
     env.close()    
 
