@@ -173,8 +173,6 @@ class DiscreteController:
             breakpoint()
         else:
             raise Exception("H-infinity control design failed.")
-        
-
 
     def set_target(self, target_position: List[float], target_orientation: List[float]) -> None:
         """
@@ -194,7 +192,6 @@ class DiscreteController:
         A       = self.f_STM(r0,t_int,self.FP.model,self.FP.data,self.FP.body_id)
         #Aan     = self.f_STM(r0,t_int,self.FP.model,self.FP.data,self.FP.body_id)
         B       = self.f_B(r0,t_int,self.FP.model,self.FP.data,self.FP.body_id,self.thruster_count)
-        
         return A, B
 
     def make_planar_compatible(self) -> None:
@@ -230,7 +227,6 @@ class DiscreteController:
 
         self.A = a
         self.B = b
-        
         return None
 
     def f_STM(self, r0:np.ndarray, t_int: float, model, data, body_id) -> None:
@@ -285,7 +281,6 @@ class DiscreteController:
         STM[6,6] = 1.0
 
         model.opt.timestep = default_tstep
-
         return STM
 
     def f_STM_analytical(self, r0:np.ndarray, t_int:float, model, data, body_id) -> None:
@@ -404,7 +399,6 @@ class DiscreteController:
 
         B = B.transpose()
         model.opt.timestep = default_tstep
-
         return B
 
     def control_cost(self) -> np.ndarray:
@@ -415,7 +409,6 @@ class DiscreteController:
             control_input = np.array(self.L @ self.state) 
         else:
             raise ValueError("Invalid control type specified.")
-        
         return control_input
 
     def update(self, current_position: np.ndarray, current_orientation: np.ndarray, current_velocity: np.ndarray, current_angular_velocity:np.ndarray, disturbance:np.ndarray = None):

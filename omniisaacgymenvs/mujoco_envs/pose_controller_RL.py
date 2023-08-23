@@ -103,7 +103,7 @@ class MuJoCoPositionControl(MuJoCoFloatingPlatform):
             except Exception as e:
                 print("Saving failed: ", e)
 
-class PositionController:
+class PoseController:
     def __init__(self, model: RLGamesModel, goal_x: List[float], goal_y: List[float], goal_theta: List[float], distance_threshold: float = 0.03) -> None:
         self.model = model
         self.goals = np.array([goal_x, goal_y, goal_theta]).T

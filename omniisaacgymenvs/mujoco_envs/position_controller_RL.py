@@ -117,6 +117,10 @@ class PositionController:
     
     def getGoal(self):
         return self.current_goal
+    
+    def setGoal(self, goal):
+        self.current_goal = goal
+        self.goals.append([goal])
 
     def isDone(self):
         return len(self.goals) == 0
@@ -128,7 +132,7 @@ class PositionController:
         self.obs_state[0,5] = 0
         self.obs_state[0,6:8] = torch.tensor(self.current_goal - state["position"], dtype=torch.float32, device="cuda")
 
-    def getAction(self, state):
+    def getAction(self, state, is_deterministic: bool = True):
         if self.isGoalReached(state):
             print("Goal reached!")
             if len(self.goals) > 1:
@@ -137,7 +141,7 @@ class PositionController:
             else:
                 self.goals = []
         self.makeObservationBuffer(state)
-        return self.model.getAction(self.obs_state)
+        return self.model.getAction(self.obs_state, is_deterministic=is_deterministic)
 
 def parseArgs():
     parser = argparse.ArgumentParser("Generates meshes out of Digital Elevation Models (DEMs) or Heightmaps.")
