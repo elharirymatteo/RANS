@@ -1,4 +1,5 @@
 import numpy as np
+import os
 
 def enable_ros_extension(env_var: str = "ROS_DISTRO"):
     """
