@@ -110,7 +110,7 @@ class RLPlayerNode:
         x_pos = msg.pose.position.x
         y_pos = msg.pose.position.y
         self.root_pos [0,0] = x_pos
-        self.root_pos [1,0] = y_pos
+        self.root_pos [0,1] = y_pos
         quat = msg.pose.orientation 
         ############# Quaternions convention #############
         #     Isaac Sim Core (QW, QX, QY, QZ)
