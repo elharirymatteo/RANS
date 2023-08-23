@@ -175,7 +175,7 @@ class RLPlayerNode:
         print(f"action: {self.action}")
 
     def update_loggers(self):
-        self.obs_buffer.append(self.obs)
+        self.obs_buffer.append(self.controller.getObs())
         self.act_buffer.append(self.action)
 
     def save_logs(self):
