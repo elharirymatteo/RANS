@@ -155,6 +155,10 @@ def parse_hydra_configs(cfg: DictConfig):
     if "BB" in cfg.checkpoint:
         print("Using BB model ...")
         cfg.train.params.network.mlp.units = [256, 256]
+    if "UF" in cfg.checkpoint:
+        print("Setting uneven floor in the environment ...")
+        cfg.task.env.use_uneven_floor = True
+        cfg.task.env.max_floor_force = 0.25
 
     # _____Create environment_____
 

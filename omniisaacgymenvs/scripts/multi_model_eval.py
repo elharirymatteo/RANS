@@ -141,6 +141,15 @@ def parse_hydra_configs(cfg: DictConfig):
             print("Adding noise on act and vel ...")
             cfg.task.env.add_noise_on_act = True
             cfg.task.env.add_noise_on_vel = True
+    if cfg.task.env.platform.randomization.kill_thrusters:
+        print("Evaluating failing thrusters...")
+    if "BB" in cfg.checkpoint:
+        print("Using BB model ...")
+        cfg.train.params.network.mlp.units = [256, 256]
+    if "UF" in cfg.checkpoint:
+        print("Setting uneven floor in the environment ...")
+        cfg.task.env.use_uneven_floor = True
+        cfg.task.env.max_floor_force = 0.25
 
     horizon = 500
     cfg.task.env.maxEpisodeLength = horizon + 2

@@ -46,7 +46,7 @@ def derive_velocities(time_buffer, pose_buffer):
     dt = (time_buffer[-1] - time_buffer[0]).to_sec() # Time difference between first and last pose
     # Calculate linear velocities
     linear_positions = np.array([[pose.pose.position.x, pose.pose.position.y, pose.pose.position.z] for pose in pose_buffer])
-    linear_velocities = np.diff(linear_positions, axis=0) / dt
+    linear_velocities = np.diff(linear_positions, axis=0) / (dt/len(time_buffer))
     average_linear_velocity = np.mean(linear_velocities, axis=0)
 
     # Calculate angular velocities

@@ -14,7 +14,7 @@ from omniisaacgymenvs.mujoco_envs.RL_games_model_4_mujoco import RLGamesModel
 class RLPlayerNode:
     def __init__(self, model: RLGamesModel, task_id:int=0, map:List[int]=[2,5,4,7,6,1,0,3], save_trajectory:bool=True, save_dir:str=None) -> None:
         # Initialize variables
-        self.buffer_size = 20  # Number of samples for differentiation
+        self.buffer_size = 30  # Number of samples for differentiation
         self.pose_buffer = deque(maxlen=self.buffer_size)
         self.time_buffer = deque(maxlen=self.buffer_size)
         self.task_id = task_id
