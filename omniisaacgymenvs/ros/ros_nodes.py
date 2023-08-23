@@ -84,7 +84,7 @@ class RLPlayerNode:
         Shutdown the node and kills the thrusters while leaving the air-bearing on."""
 
         self.my_msg.data = [0,0,0,0,0,0,0,0,0]
-        self.pub.publish(self.my_msg)
+        self.action_pub.publish(self.my_msg)
 
     def remap_actions(self, actions: torch.Tensor) -> list:
         """
@@ -122,7 +122,7 @@ class RLPlayerNode:
         self.heading[0,0] = cosy_cosp
         self.heading[0,1] = siny_cosp
         linear_vel, angular_vel = derive_velocities(self.time_buffer, self.pose_buffer)
-        self.state = {"position": self.root_pos, "orientation": self.heading, "linear_velocity": linear_vel[0,:2], "angular_velocity": angular_vel[0,:2]}
+        self.state = {"position": self.root_pos, "orientation": self.heading, "linear_velocity": linear_vel[:2], "angular_velocity": angular_vel[0]}
     
     def goal_callback(self, msg):
         """
@@ -158,12 +158,11 @@ class RLPlayerNode:
 
     def get_action(self, lifting_active = 1):
         self.action = self.controller.getAction(self.state, is_deterministic=True)
-        self.action = self.action.cpu().tolist()
         action = self.remap_actions(self.action)
         lifting_active = 1
         action.insert(0, lifting_active)
         self.my_msg.data = action
-        self.pub.publish(self.my_msg)
+        self.action_pub.publish(self.my_msg)
 
     def print_logs(self):
         print("=========================================")

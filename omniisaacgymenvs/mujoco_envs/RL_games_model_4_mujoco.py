@@ -29,6 +29,6 @@ class RLGamesModel:
     def restore(self, model_name):
         self.player.restore(model_name)
 
-    def getAction(self, state):
+    def getAction(self, state, is_deterministic=True):
         self.obs['state'] = state
-        return self.player.get_action(self.obs, is_deterministic=True).cpu().numpy()
+        return self.player.get_action(self.obs, is_deterministic=is_deterministic).cpu().numpy()
