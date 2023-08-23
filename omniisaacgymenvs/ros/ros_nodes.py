@@ -122,7 +122,7 @@ class RLPlayerNode:
         self.heading[0,0] = cosy_cosp
         self.heading[0,1] = siny_cosp
         linear_vel, angular_vel = derive_velocities(self.time_buffer, self.pose_buffer)
-        self.state = {"position": self.root_pos, "orientation": self.heading, "linear_velocity": linear_vel[0,:2], "angular_velocity": angular_vel[0,:2]}
+        self.state = {"position": self.root_pos, "orientation": self.heading, "linear_velocity": linear_vel[:2], "angular_velocity": angular_vel[0]}
     
     def goal_callback(self, msg):
         """
@@ -163,7 +163,7 @@ class RLPlayerNode:
         lifting_active = 1
         action.insert(0, lifting_active)
         self.my_msg.data = action
-        self.pub.publish(self.my_msg)
+        self.action_pub.publish(self.my_msg)
 
     def print_logs(self):
         print("=========================================")
