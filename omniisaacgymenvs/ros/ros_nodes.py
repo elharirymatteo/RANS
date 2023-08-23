@@ -1,3 +1,4 @@
+from typing import Callable, NamedTuple, Optional, Union, List
 from collections import deque
 import numpy as np
 import datetime
@@ -9,32 +10,24 @@ from std_msgs.msg import ByteMultiArray
 from geometry_msgs.msg import PoseStamped, Point
 
 from ros.ros_utills import derive_velocities
+from omniisaacgymenvs.mujoco_envs.position_controller_RL import PositionController
+from omniisaacgymenvs.mujoco_envs.pose_controller_RL import PoseController
+from omniisaacgymenvs.mujoco_envs.linear_velocity_tracker_RL import VelocityTracker, TrajectoryTracker
 from omniisaacgymenvs.mujoco_envs.RL_games_model_4_mujoco import RLGamesModel
 
 class RLPlayerNode:
-    def __init__(self, model: RLGamesModel, task_id:int=0, map:List[int]=[2,5,4,7,6,1,0,3], save_trajectory:bool=True, save_dir:str=None) -> None:
+    def __init__(self, model: RLGamesModel, task_id, exp_settings, map:List[int]=[2,5,4,7,6,1,0,3]) -> None:
         # Initialize variables
         self.buffer_size = 30  # Number of samples for differentiation
         self.pose_buffer = deque(maxlen=self.buffer_size)
         self.time_buffer = deque(maxlen=self.buffer_size)
-        self.task_id = task_id
+        self.settings = exp_settings
 
         self.map = map
-        self.save_trajectory = save_trajectory
         self.model = model
-        self.save_dir = save_dir
-
+        self.task_id = task_id
         self.reset()
-
-        # Collect parameters
-        self.model_path = rospy.get_param("model_path", type=str, default=None, help="The path to the model to be loaded. It must be a velocity tracking model.")
-        self.config_path = rospy.get_param("config_path", type=str, default=None, help="The path to the network configuration to be loaded.")
-        self.goal_x = rospy.get_param("goal_x", type=float, nargs="+", default=None, help="List of x coordinates for the goals to be reached by the platform.")
-        self.goal_y = rospy.get_param("goal_y", type=float, nargs="+", default=None, help="List of y coordinates for the goals to be reached by the platform.")
-        self.goal_theta = rospy.get_param("goal_theta", type=float, nargs="+", default=None, help="List of headings for the goals to be reached by the platform. In world frame, radiants.")
-        self. = rospy.get_param("play_rate", type=float, default=5.0, help="The frequency at which the agent will played. In Hz. Note, that this depends on the sim_rate, the agent my not be able to play at this rate depending on the sim_rate value. To be consise, the agent will play at: sim_rate / int(sim_rate/play_rate)")
-        self. = rospy.get_param("tracking velocity", type=float, default=0.25, help="The tracking velocity. In meters per second.")
-        self. = rospy.get_param("save_dir", type=str, default="position_exp", help="The path to the folder in which the results will be stored.")
+        self.controller = self.build_controller()
 
         # Initialize Subscriber and Publisher
         self.pose_sub = rospy.Subscriber("/vrpn_client_node/FP_exp_RL/pose", PoseStamped, self.pose_callback)
@@ -50,11 +43,22 @@ class RLPlayerNode:
 
         rospy.on_shutdown(self.shutdown)
 
+    def build_controller(self) -> Union[PositionController, PoseController, VelocityTracker]:
+        if self.task_id == 0:
+            return PositionController(self.model, self.settings.goal_x, self.settings.goal_y, self.settings.distance_threshold)
+        elif self.task_id == 1:
+            return PoseController(self.model, self.settings.goal_x, self.settings.goal_y, self.settings.goal_theta, self.settings.distance_threshold)
+        elif self.task_id == 2:
+            return VelocityTracker()
+        elif self.task_id == 3:
+            raise NotImplementedError
+
     def reset(self) -> None:
         """
         Resets the goal and the buffers."""
 
         self.ready = False
+        self.controller = self.build_controller()
         self.get_default_goal()
         self.instantiate_buffers()
 
@@ -68,9 +72,7 @@ class RLPlayerNode:
         self.lin_vel = torch.zeros((1,2), dtype=torch.float32, device='cuda')
         self.task_data = torch.zeros((1,4), dtype=torch.float32, device='cuda')
         self.ang_vel = torch.zeros((1,2), dtype=torch.float32, device='cuda')
-        self.obs = torch.zeros((1,10), dtype=torch.float32, device='cuda')
         # Obs dict
-        self.obs_dict = dict({'state': self.obs, 'transforms': torch.zeros(5*8, device='cuda'), 'masks': torch.zeros(8, dtype=torch.float32, device='cuda')})
         self.state = None
         # ROS buffers
         self.count = 0
@@ -96,10 +98,9 @@ class RLPlayerNode:
         # Add current pose and time to the buffer
         self.pose_buffer.append(msg)
         self.time_buffer.append(current_time)
-        self.act_every += 1
 
         # Calculate velocities if buffer is filled
-        if (len(self.pose_buffer) == self.buffer_size) and (self.act_every == self.buffer_size):
+        if (len(self.pose_buffer) == self.buffer_size):
             self.get_state_from_optitrack()
             self.ready = True
 
@@ -134,49 +135,30 @@ class RLPlayerNode:
         Updates the task data based on the task id."""
 
         if self.task_id == 0: # GoToXY
-            target_position = torch.Tensor([[self.goal_data.point.x, self.goal_data.point.y]], dtype=torch.float32, device="cuda")
-            position_error = target_position - self.state["position"]
-            self.task_data[:,:2] = position_error
+            self.controller.makeObservationBuffer(self.state)
         elif self.task_id == 1: # GoToPose
-            target_position = torch.Tensor([[self.goal_data.point.x, self.goal_data.point.y]])
-            target_heading = torch.Tensor([[self.goal_data.point.z]], dtype=torch.float32, device="cuda")
-            self._position_error = target_position - self.state["position"]
-            heading = torch.arctan2(self.state["orientation"][:,1], self.state["orientation"][:, 0])
-            heading_error = torch.arctan2(torch.sin(target_heading - heading), torch.cos(target_heading - heading))
-            self.task_data[:,:2] = self._position_error
-            self.task_data[:, 2] = torch.cos(heading_error)
-            self.task_data[:, 3] = torch.sin(heading_error)
+            self.controller.makeObservationBuffer(self.state)
         elif self.task_id == 2: # TrackXYVelocity
-            target_velocity = torch.Tensor([[self.goal_data.point.x, self.goal_data.point.y]], dtype=torch.float32, device="cuda")
-            velocity_error = target_velocity - self.state["linear_velocity"]
-            self.task_data[:,:2] = velocity_error
+            self.controller.makeObservationBuffer(self.state)
         elif self.task_id == 3: # TrackXYOVelocity
-            target_linear_velocity = torch.Tensor([[self.goal_data.point.x, self.goal_data.point.y]], dtype=torch.float32, device="cuda")
-            target_angular_velocity = torch.Tensor([[self.goal_data.point.z]], dtype=torch.float32, device="cuda")
-            linear_velocity_error = target_linear_velocity - self.state["linear_velocity"]
-            angular_velocity_error = target_angular_velocity - self.state["angular_velocity"]
-            self.task_data[:,:2] = linear_velocity_error
-            self.task_data[:,2] = angular_velocity_error
+            raise NotImplementedError
     
-    def get_default_goal(self):
+    def set_default_goal(self):
         """
         Sets the default goal data."""
 
         self.goal_data = Point()
-    
-    def generate_obs(self):
-        """
-        Updates the observation tensor with the current state of the robot."""
-        self.update_task_data()
-        self.obs[:, 0:2] = self.state["orientation"]
-        self.obs[:, 2:4] = self.state["linear_velocity"]
-        self.obs[:, 4] = self.state["angular_velocity"]
-        self.obs[:, 5] = self.task_id
-        self.obs[:, 6:10] = self.task_data
-        self.obs_dict["state"] = self.obs#dict({'state': self.obs, 'transforms': torch.zeros(5*8, device='cuda'), 'masks': torch.zeros(8, dtype=torch.float32, device='cuda')})
+        if self.task_id == 0: # GoToXY
+            self.controller.setGoal(self.state)
+        elif self.task_id == 1: # GoToPose
+            self.controller.setGoal(self.state)
+        elif self.task_id == 2: # TrackXYVelocity
+            self.controller.setGoal(self.state)
+        elif self.task_id == 3: # TrackXYOVelocity
+            raise NotImplementedError
 
-    def send_action(self):
-        self.action = self.model.get_action(self.obs, is_deterministic=True)
+    def get_action(self, lifting_active = 1):
+        self.action = self.controller.getAction(self.state, is_deterministic=True)
         self.action = self.action.cpu().tolist()
         action = self.remap_actions(self.action)
         lifting_active = 1
@@ -187,7 +169,7 @@ class RLPlayerNode:
     def print_logs(self):
         print("=========================================")
         print(f"step number: {self.count}")
-        print(f"task id: {self.task_id}")
+        print(f"task id: {self.settings.ask_id}")
         print(f"goal: {self.goal_data}")
         print(f"observation: {self.obs_dict['state']}")
         print(f"state: {self.state}")
@@ -209,8 +191,7 @@ class RLPlayerNode:
 
         while (not rospy.is_shutdown()) and (self.count < self.end_experiment_after_n_steps):
             if self.ready:
-                self.generate_obs()
-                self.send_action()
+                self.get_action()
                 self.update_loggers()
                 self.count += 1
                 if self.debug:
@@ -220,6 +201,6 @@ class RLPlayerNode:
         # Saves the logs
         self.save_logs()
         # Kills the thrusters once done
-        self.my_msg.data = [0,0,0,0,0,0,0,0,0]
-        self.pub.publish(self.my_msg)
+        self.action = [0,0,0,0,0,0,0,0]
+        self.get_action(lifting_active=0)
     
