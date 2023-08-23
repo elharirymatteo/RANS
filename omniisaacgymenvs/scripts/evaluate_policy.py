@@ -1,3 +1,4 @@
+import imp
 import numpy as np
 import torch
 import hydra
@@ -21,6 +22,7 @@ from utils.plot_experiment import plot_episode_data_virtual
 from utils.eval_metrics import get_GoToXY_success_rate, get_GoToPose_success_rate, get_TrackXYVelocity_success_rate, get_TrackXYOVelocity_success_rate
 import wandb
 
+import pandas as pd
 import os
 
 
@@ -82,6 +84,10 @@ def eval_multi_agents(cfg, horizon):
     # Remove episodes that are broken by the environment (IsaacGym bug)
     if broken_episodes:
         print(f'Broken episodes: {broken_episodes}')
+        # save in csv the broken episodes
+        broken_episodes_df = pd.DataFrame(ep_data[:, broken_episodes,:], index=broken_episodes) 
+        broken_episodes_df.to_csv(evaluation_dir + 'broken_episodes.csv', index=False)
+
         print(f'Ep data shape before: {ep_data["act"].shape}')
         for key in ep_data.keys():
             ep_data[key] = np.delete(ep_data[key], broken_episodes, axis=1) 

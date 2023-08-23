@@ -1,9 +1,7 @@
 import argparse
 import os
-
 import omni
 from omni.isaac.kit import SimulationApp
-
 from omniisaacgymenvs.ros.ros_utills import enable_ros_extension
 
 def parseArgs():
@@ -35,6 +33,8 @@ def parseArgs():
     parser.add_argument("--play_rate", type=float, default=5.0, help="The frequency at which the agent will played. In Hz. Note, that this depends on the sim_rate, the agent my not be able to play at this rate depending on the sim_rate value. To be consise, the agent will play at: sim_rate / int(sim_rate/play_rate)")
     parser.add_argument("--save_dir", type=str, default="ros_exp", help="The path to the folder in which the results will be stored.")
     parser.add_argument("--save_exp", type=bool, default=False, help="Whether or not the experiment will be saved as np array.")
+    parser.add_argument("--debug", type=bool, default=False, help="Whether or not to print debug data regarding the state.")
+
     args, unknown_args = parser.parse_known_args()
     return args, unknown_args
 
@@ -101,3 +101,5 @@ if __name__ == '__main__':
     node = RLPlayerNode(model, task_id, args)
     # Run the node.
     node.run()
+    # Close the simulationApp.
+    simulation_app.close()

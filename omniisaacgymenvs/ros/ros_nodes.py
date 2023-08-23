@@ -167,9 +167,9 @@ class RLPlayerNode:
     def print_logs(self):
         print("=========================================")
         print(f"step number: {self.count}")
-        print(f"task id: {self.settings.ask_id}")
+        print(f"task id: {self.task_id}")
         print(f"goal: {self.goal_data}")
-        print(f"observation: {self.obs_dict['state']}")
+        print(f"observation: {self.controller.getObs()}")
         print(f"state: {self.state}")
         print(f"action: {self.action}")
 
@@ -178,7 +178,7 @@ class RLPlayerNode:
         self.act_buffer.append(self.action)
 
     def save_logs(self):
-        save_dir = self.save_dir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + "/"
+        save_dir = self.settings.save_dir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + "/"
         os.makedirs(save_dir, exist_ok=True)
         np.save(os.path.join(save_dir, "obs.npy"), np.array(self.obs_buffer))
         np.save(os.path.join(save_dir, "act.npy"), np.array(self.act_buffer))
@@ -192,7 +192,7 @@ class RLPlayerNode:
                 self.get_action()
                 self.update_loggers()
                 self.count += 1
-                if self.debug:
+                if self.settings.debug:
                     self.print_logs()
             self.rate.sleep()
 

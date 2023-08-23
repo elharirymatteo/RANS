@@ -126,7 +126,7 @@ def parse_hydra_configs(cfg: DictConfig):
     print(f'Experiments found in {load_dir} folder: {len(experiments)}')
     models = get_valid_models(load_dir, experiments)
     models = [m for m in models if "BB" not in m.split("/")[3]]
-    print(f'Final models: {(models)}')
+    print(f'Final models: {models}')
     if not models:
         print('No valid models found')
         exit()
@@ -137,20 +137,20 @@ def parse_hydra_configs(cfg: DictConfig):
     if "BB" in models[0]:
         print("Using BB model ...")
         cfg.train.params.network.mlp.units = [256, 256]
-    if "BB" in models[0]:
+    if "BBB" in models[0]:
         print("Using BBB model ...")
         cfg.train.params.network.mlp.units = [256, 256, 256]
-    if "AN" in models[0]:
-            print("Adding noise on act ...")
-            cfg.task.env.add_noise_on_act = True
-    if "AVN" in models[0]:
-            print("Adding noise on act and vel ...")
-            cfg.task.env.add_noise_on_act = True
-            cfg.task.env.add_noise_on_vel = True
-    if "UF" in cfg.checkpoint:
-        print("Setting uneven floor in the environment ...")
-        cfg.task.env.use_uneven_floor = True
-        cfg.task.env.max_floor_force = 0.25
+    # if "AN" in models[0]:
+    #         print("Adding noise on act ...")
+    #         cfg.task.env.add_noise_on_act = True
+    # if "AVN" in models[0]:
+    #         print("Adding noise on act and vel ...")
+    #         cfg.task.env.add_noise_on_act = True
+    #         cfg.task.env.add_noise_on_vel = True
+    # if "UF" in models[0]:
+    #     print("Setting uneven floor in the environment ...")
+    #     cfg.task.env.use_uneven_floor = True
+    #     cfg.task.env.max_floor_force = 0.25
 
     horizon = 500
     cfg.task.env.maxEpisodeLength = horizon + 2
