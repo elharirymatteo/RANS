@@ -120,7 +120,7 @@ class PositionController:
     
     def setGoal(self, goal):
         self.current_goal = goal
-        self.goals.append([goal])
+        self.goals = np.array([goal])
 
     def isDone(self):
         return len(self.goals) == 0
