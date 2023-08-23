@@ -39,7 +39,6 @@ class RLPlayerNode:
 
         self.end_experiment_after_n_steps = rospy.get_param("end_experiment_at_step", 300)
         self.play_rate = rospy.get_param("play_rate", 5.0)
-        self.obs_type = type(self.player.observation_space.sample())
 
         rospy.on_shutdown(self.shutdown)
 
