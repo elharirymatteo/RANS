@@ -100,7 +100,7 @@ class RLPlayerNode:
 
         # Calculate velocities if buffer is filled
         if (len(self.pose_buffer) == self.buffer_size):
-            self.get_state_from_optitrack()
+            self.get_state_from_optitrack(msg)
             self.ready = True
 
     def get_state_from_optitrack(self, msg):
