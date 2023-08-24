@@ -28,6 +28,9 @@ class RLPlayerNode:
         self.task_id = task_id
         self.reset()
         self.controller = self.build_controller()
+        self.thruster_mask = np.ones((8))
+        for i in self.settings.killed_thruster_id:
+            self.thruster_mask[i] = 0
 
         # Initialize Subscriber and Publisher
         self.pose_sub = rospy.Subscriber("/vrpn_client_node/FP_exp_RL/pose", PoseStamped, self.pose_callback)
@@ -88,6 +91,9 @@ class RLPlayerNode:
         """
         Shutdown the node and kills the thrusters while leaving the air-bearing on."""
 
+        self.my_msg.data = [0,0,0,0,0,0,0,0,0]
+        self.action_pub.publish(self.my_msg)
+        rospy.sleep(1)
         self.my_msg.data = [0,0,0,0,0,0,0,0,0]
         self.action_pub.publish(self.my_msg)
 
@@ -163,6 +169,7 @@ class RLPlayerNode:
 
     def get_action(self, lifting_active = 1):
         self.action = self.controller.getAction(self.state, is_deterministic=True)
+        self.action = self.action * self.thruster_mask
         action = self.remap_actions(self.action)
         lifting_active = 1
         action.insert(0, lifting_active)
@@ -206,6 +213,5 @@ class RLPlayerNode:
         # Saves the logs
         self.save_logs()
         # Kills the thrusters once done
-        self.action = [0,0,0,0,0,0,0,0]
-        self.get_action(lifting_active=0)
+        self.shutdown()
     
