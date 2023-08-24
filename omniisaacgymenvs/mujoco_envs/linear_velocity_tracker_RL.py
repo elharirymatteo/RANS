@@ -22,16 +22,16 @@ class MuJoCoVelTracking(MuJoCoFloatingPlatform):
         Initializes the loggers."""
 
         super().initializeLoggers()
-        self.velocity_goal = []
-        self.position_target = []
+        self.logs["velocity_goal"] = []
+        self.logs["position_target"] = []
 
     def updateLoggers(self, goal: np.ndarray, target: np.ndarray) -> None:
         """
         Updates the loggers."""
 
         super().updateLoggers()
-        self.velocity_goal.append(goal)
-        self.position_target.append(target) 
+        self.logs["velocity_goal"].append(goal)
+        self.logs["position_target"].append(target) 
 
     def runLoop(self, model, xy: np.ndarray) -> None:
         """
@@ -43,10 +43,10 @@ class MuJoCoVelTracking(MuJoCoFloatingPlatform):
         while (self.duration > self.data.time) and (model.isDone() == False):
             state = self.updateState() # Updates the state of the simulation.
             # Get the actions from the controller
-            action = model.getAction(state)
+            self.actions = model.getAction(state)
             # Plays only once every self.inv_play_rate steps.
             for _ in range(self.inv_play_rate):
-                self.applyForces(action)
+                self.applyForces(self.actions)
                 mujoco.mj_step(self.model, self.data)
                 self.updateLoggers(model.getGoal(), model.getTargetPosition())
     
@@ -58,12 +58,12 @@ class MuJoCoVelTracking(MuJoCoFloatingPlatform):
 
         fig, ax = plt.subplots(2, 1, figsize=figsize, dpi=dpi)
 
-        ax[0].plot(self.timevals, self.angular_velocity)
+        ax[0].plot(self.logs["timevals"], self.logs["angular_velocity"])
         ax[0].set_title('angular velocity')
         ax[0].set_ylabel('radians / second')
 
-        ax[1].plot(self.timevals, self.linear_velocity, label="system velocities")
-        ax[1].plot(self.timevals, self.velocity_goal, label="target velocities")
+        ax[1].plot(self.logs["timevals"], self.logs["linear_velocity"], label="system velocities")
+        ax[1].plot(self.logs["timevals"], self.logs["velocity_goal"], label="target velocities")
         ax[1].legend()
         ax[1].set_xlabel('time (seconds)')
         ax[1].set_ylabel('meters / second')
@@ -76,8 +76,8 @@ class MuJoCoVelTracking(MuJoCoFloatingPlatform):
                 print("Saving failed: ", e)
 
         fig, ax = plt.subplots(1, 1, figsize=figsize, dpi=dpi)
-        ax.plot(np.array(self.position_target)[:,0], np.array(self.position_target)[:,1], label="trajectory")
-        ax.plot(np.array(self.position)[:,0], np.array(self.position)[:,1], label="system position")
+        ax.plot(np.array(self.logs["position_target"])[:,0], np.array(self.logs["position_target"])[:,1], label="trajectory")
+        ax.plot(np.array(self.logs["position"])[:,0], np.array(self.logs["position"])[:,1], label="system position")
         ax.legend()
         ax.set_xlabel('meters')
         ax.set_ylabel('meters')
@@ -95,15 +95,16 @@ class TrajectoryTracker:
     """
     A class to generate and track trajectories."""
 
-    def __init__(self, lookahead:float = 0.25, closed:bool = False):
+    def __init__(self, lookahead:float = 0.25, closed:bool = False, offset = (0,0)):
         self.current_point = -1
         self.lookhead = lookahead
         self.closed = closed
         self.is_done = False
+        self.offset = np.array(offset)
 
     def generateCircle(self, radius:float = 2, num_points:int = 360*10):
         theta = np.linspace(0, 2*np.pi, num_points, endpoint=(not self.closed))
-        self.positions = np.array([np.cos(theta) * radius, np.sin(theta) * radius]).T
+        self.positions = np.array([np.cos(theta) * radius, np.sin(theta) * radius]).T + self.offset
         self.angles = np.array([-np.sin(theta), np.cos(theta)]).T
 
     def generateSquare(self, h:float = 2, num_points:int = 360*10) -> None:
@@ -116,13 +117,13 @@ class TrajectoryTracker:
         s3x = np.ones_like(s3y) * (-h/2)
         s4x = np.linspace(-h/2,h/2, num_points, endpoint=False)
         s4y = np.ones_like(s4x) * (-h/2)
-        self.positions = np.vstack([np.hstack([s1x,s2x,s3x,s4x]), np.hstack([s1y,s2y,s3y,s4y])]).T
+        self.positions = np.vstack([np.hstack([s1x,s2x,s3x,s4x]), np.hstack([s1y,s2y,s3y,s4y])]).T + self.offset
         self.angles = np.ones_like(self.positions)#np.array([-np.sin(theta), np.cos(theta)]).T
 
     def generateSpiral(self, start_radius:float = 0.5, end_radius:float = 2, num_loop:float = 5, num_points: int = 360*20) -> None:
         radius = np.linspace(start_radius, end_radius, num_points, endpoint=(not self.closed))
         theta = np.linspace(0, 2*np.pi*num_loop, num_points, endpoint=(not self.closed))
-        self.positions = np.array([np.cos(theta) * radius, np.sin(theta) * radius]).T
+        self.positions = np.array([np.cos(theta) * radius, np.sin(theta) * radius]).T + self.offset
         self.angles = np.array([-np.sin(theta), np.cos(theta)]).T
     
     def getTrackingPointIdx(self, position:np.ndarray) -> None:
@@ -203,6 +204,8 @@ def parseArgs():
     parser.add_argument("--model_path", type=str, default=None, help="The path to the model to be loaded. It must be a velocity tracking model.")
     parser.add_argument("--config_path", type=str, default=None, help="The path to the network configuration to be loaded.")
     parser.add_argument("--trajectory_type", type=str, default="Circle", help="The type of trajectory to be generated. Options are: Circle, Square, Spiral.")
+    parser.add_argument("--trajectory_x_offset", type=float, default=0, help="The offset of the trajectory along the x axis. In meters.")
+    parser.add_argument("--trajectory_y_offset", type=float, default=0, help="The offset of the trajectory along the y axis. In meters.")
     parser.add_argument("--radius", type=float, default=1.5, help="The radius of the circle trajectory. In meters.")
     parser.add_argument("--height", type=float, default=3.0, help="The height of the square trajectory. In meters.")
     parser.add_argument("--start_radius", type=float, default=0.5, help="The starting radius for the spiral for the spiral trajectory. In meters.")
@@ -247,7 +250,7 @@ if __name__ == "__main__":
     except:
         raise ValueError("Could not create the save directory.")
     # Creates the trajectory tracker
-    tracker = TrajectoryTracker(lookahead=args.lookahead_dist, closed=args.closed)
+    tracker = TrajectoryTracker(lookahead=args.lookahead_dist, closed=args.closed, offset=(args.trajectory_x_offset, args.trajectory_y_offset))
     if args.trajectory_type.lower() == "square":
         tracker.generateSquare(h=args.height)
     elif args.trajectory_type.lower() == "circle":
