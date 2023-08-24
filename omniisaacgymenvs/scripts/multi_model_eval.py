@@ -1,26 +1,16 @@
-from json import load
 import numpy as np
-import torch
 import hydra
 from omegaconf import DictConfig
-import datetime
 from omniisaacgymenvs.utils.hydra_cfg.hydra_utils import *
-from omniisaacgymenvs.utils.hydra_cfg.reformat import omegaconf_to_dict, print_dict
-from rl_games.algos_torch.players import PpoPlayerDiscrete
-from omniisaacgymenvs.utils.rlgames.rlgames_utils import RLGPUAlgoObserver, RLGPUEnv
+from omniisaacgymenvs.utils.hydra_cfg.reformat import omegaconf_to_dict
+from omniisaacgymenvs.utils.rlgames.rlgames_utils import RLGPUAlgoObserver
 
 from rlgames_train import RLGTrainer
 from rl_games.torch_runner import Runner
 from omniisaacgymenvs.utils.task_util import initialize_task
 from omniisaacgymenvs.envs.vec_env_rlgames import VecEnvRLGames
-from omniisaacgymenvs.utils.config_utils.path_utils import retrieve_checkpoint_path
-import matplotlib.pyplot as plt
-from matplotlib.ticker import AutoMinorLocator
-from torch._C import fork
 
-from utils.plot_experiment import plot_episode_data_virtual
-from utils.eval_metrics import get_GoToXY_success_rate
-import wandb
+from utils.eval_metrics import get_GoToXY_success_rate, get_GoToPose_success_rate, get_TrackXYVelocity_success_rate, get_TrackXYOVelocity_success_rate
 
 import os
 import glob
@@ -96,8 +86,21 @@ def eval_multi_agents(cfg, agent, models, horizon, load_dir):
             ep_data[key] = np.delete(ep_data[key], broken_episodes, axis=1) 
         print(f'Ep data shape after: {ep_data["act"].shape}')
 
+        task_flag = ep_data['obs'][0, 0, 5].astype(int)
+        if task_flag == 0: # GoToXY
+            success_rate = get_GoToXY_success_rate(ep_data, print_intermediate=True)
+            success_rate_df = success_rate['position']
+        elif task_flag == 1: # GoToPose
+            success_rate = get_GoToPose_success_rate(ep_data, print_intermediate=True)
+            success_rate_df = pd.concat([success_rate['position'], success_rate['heading']])
+        elif task_flag == 2: # TrackXYVelocity
+            success_rate = get_TrackXYVelocity_success_rate(ep_data, print_intermediate=True)
+            success_rate_df = success_rate['xy_velocity']
+        elif task_flag == 3: # TrackXYOVelocity
+            success_rate = get_TrackXYOVelocity_success_rate(ep_data, print_intermediate=True)
+            success_rate_df = pd.concat([success_rate['xy_velocity'], success_rate['omega_velocity']])
+
         # Collect the data for the success rate table        
-        success_rate_df = get_GoToXY_success_rate(ep_data, threshold=0.02)['position']
         success_rate_df['avg_rew'] = [np.mean(ep_data['rews'])]
         ang_vel_z = np.absolute(ep_data['obs'][:, :, 4:5][:,:,0])
         success_rate_df['avg_ang_vel'] = [np.mean(ang_vel_z.mean(axis=1))]
@@ -105,7 +108,6 @@ def eval_multi_agents(cfg, agent, models, horizon, load_dir):
         lin_vel_y = ep_data['obs'][:, 3:4]
         lin_vel = np.linalg.norm(np.array([lin_vel_x, lin_vel_y]), axis=0)
         success_rate_df['avg_lin_vel'] = [np.mean(lin_vel.mean(axis=1))]
-
         success_rate_df['avg_action_count'] = [np.mean(np.sum(ep_data['act'], axis=1))]
 
         all_success_rate_df = pd.concat([all_success_rate_df, success_rate_df], ignore_index=True)
@@ -121,7 +123,7 @@ def eval_multi_agents(cfg, agent, models, horizon, load_dir):
 def parse_hydra_configs(cfg: DictConfig):
     
     # specify the experiment load directory
-    load_dir = "./models/icra24_fail/" #+ "expR_SE/"
+    load_dir = "./models/icra24_Pose/" #+ "expR_SE/"
     experiments = os.listdir(load_dir)
     print(f'Experiments found in {load_dir} folder: {len(experiments)}')
     models = get_valid_models(load_dir, experiments)
@@ -140,17 +142,17 @@ def parse_hydra_configs(cfg: DictConfig):
     if "BBB" in models[0]:
         print("Using BBB model ...")
         cfg.train.params.network.mlp.units = [256, 256, 256]
-    # if "AN" in models[0]:
-    #         print("Adding noise on act ...")
-    #         cfg.task.env.add_noise_on_act = True
-    # if "AVN" in models[0]:
-    #         print("Adding noise on act and vel ...")
-    #         cfg.task.env.add_noise_on_act = True
-    #         cfg.task.env.add_noise_on_vel = True
-    # if "UF" in models[0]:
-    #     print("Setting uneven floor in the environment ...")
-    #     cfg.task.env.use_uneven_floor = True
-    #     cfg.task.env.max_floor_force = 0.25
+    if "AN" in models[0]:
+            print("Adding noise on act ...")
+            cfg.task.env.add_noise_on_act = True
+    if "AVN" in models[0]:
+            print("Adding noise on act and vel ...")
+            cfg.task.env.add_noise_on_act = True
+            cfg.task.env.add_noise_on_vel = True
+    if "UF" in models[0]:
+        print("Setting uneven floor in the environment ...")
+        cfg.task.env.use_uneven_floor = True
+        cfg.task.env.max_floor_force = 0.25
 
     horizon = 500
     cfg.task.env.maxEpisodeLength = horizon + 2

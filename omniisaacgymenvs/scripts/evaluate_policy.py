@@ -1,26 +1,17 @@
-import imp
 import numpy as np
-import torch
 import hydra
 from omegaconf import DictConfig
-import datetime
 from omniisaacgymenvs.utils.hydra_cfg.hydra_utils import *
 from omniisaacgymenvs.utils.hydra_cfg.reformat import omegaconf_to_dict, print_dict
-from rl_games.algos_torch.players import PpoPlayerDiscrete
-from omniisaacgymenvs.utils.rlgames.rlgames_utils import RLGPUAlgoObserver, RLGPUEnv
+from omniisaacgymenvs.utils.rlgames.rlgames_utils import RLGPUAlgoObserver
 
 from rlgames_train import RLGTrainer
 from rl_games.torch_runner import Runner
 from omniisaacgymenvs.utils.task_util import initialize_task
 from omniisaacgymenvs.envs.vec_env_rlgames import VecEnvRLGames
-from omniisaacgymenvs.utils.config_utils.path_utils import retrieve_checkpoint_path
-import matplotlib.pyplot as plt
-from matplotlib.ticker import AutoMinorLocator
-from torch._C import fork
 
 from utils.plot_experiment import plot_episode_data_virtual
 from utils.eval_metrics import get_GoToXY_success_rate, get_GoToPose_success_rate, get_TrackXYVelocity_success_rate, get_TrackXYOVelocity_success_rate
-import wandb
 
 import pandas as pd
 import os
