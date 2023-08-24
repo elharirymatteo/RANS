@@ -56,10 +56,10 @@ class MuJoCoPositionControl(MuJoCoFloatingPlatform):
         while (self.duration > self.data.time) and (model.isDone() == False):
             state = self.updateState() # Updates the state of the simulation.
             # Get the actions from the controller
-            action = model.getAction(state)
+            self.actions = model.getAction(state)
             # Plays only once every self.inv_play_rate steps.
             for _ in range(self.inv_play_rate):
-                self.applyForces(action)
+                self.applyForces(self.actions)
                 mujoco.mj_step(self.model, self.data)
                 self.updateLoggers(model.getGoal())
 
@@ -80,6 +80,7 @@ class MuJoCoPositionControl(MuJoCoFloatingPlatform):
         ax[1].set_xlabel('time (seconds)')
         ax[1].set_ylabel('meters / second')
         _ = ax[1].set_title('linear_velocity')
+        print(save_dir)
         if save:
             try:
                 os.makedirs(save_dir, exist_ok=True)
@@ -104,23 +105,36 @@ class MuJoCoPositionControl(MuJoCoFloatingPlatform):
                 print("Saving failed: ", e)
 
 class PoseController:
-    def __init__(self, model: RLGamesModel, goal_x: List[float], goal_y: List[float], goal_theta: List[float], distance_threshold: float = 0.03) -> None:
+    def __init__(self, model: RLGamesModel, goal_x: List[float], goal_y: List[float], goal_theta: List[float], distance_threshold: float = 0.03, heading_threshold: float = 0.03) -> None:
         self.model = model
         self.goals = np.array([goal_x, goal_y, goal_theta]).T
         if goal_theta is None:
             goal_theta = np.zeros_like(goal_x)
         self.current_goal = self.goals[0]
         self.distance_threshold = distance_threshold
+        self.heading_threshold = heading_threshold
 
         self.obs_state = torch.zeros((1,10), dtype=torch.float32, device="cuda")
 
     def isGoalReached(self, state):
         dist = np.linalg.norm(self.current_goal[:2] - state["position"])
+        ang = np.linalg.norm(self.current_goal[2:] - state["orientation"])
+        heading = np.arctan2(state["orientation"][1], state["orientation"][0])
+        ang = np.arctan2(np.sin(self.current_goal[-1] - heading), np.cos(self.current_goal[-1] - heading))
+        dist_cd = False
+        ang_cd = False
         if dist < self.distance_threshold:
-            return True
+            dist_cd = True
+        if ang < self.heading_threshold:
+            ang_cd = True
+        return dist_cd and ang_cd
     
     def getGoal(self):
         return self.current_goal
+
+    def setGoal(self, goal):
+        self.current_goal = goal
+        self.goals = np.array([goal])
 
     def isDone(self):
         return len(self.goals) == 0
@@ -131,8 +145,8 @@ class PoseController:
         self.obs_state[0,4] = state["angular_velocity"]
         self.obs_state[0,5] = 0
         self.obs_state[0,6:8] = torch.tensor(self.current_goal[:2] - state["position"], dtype=torch.float32, device="cuda")
-        heading = torch.arctan2(state["orientation"][:,1], state["orientation"][:, 0])
-        heading_error = torch.arctan2(torch.sin(self.current_goal[-1] - heading), torch.cos(self.current_goal[-1] - heading))
+        heading = np.arctan2(state["orientation"][1], state["orientation"][0])
+        heading_error = np.arctan2(np.sin(self.current_goal[-1] - heading), np.cos(self.current_goal[-1] - heading))
         self.obs_state[0,8] = torch.tensor(np.cos(heading_error), dtype=torch.float32, device="cuda")
         self.obs_state[0,9] = torch.tensor(np.sin(heading_error), dtype=torch.float32, device="cuda")
 
@@ -172,6 +186,7 @@ if __name__ == "__main__":
     assert os.path.exists(args.config_path), "The configuration file does not exist."
     assert not args.goal_x is None, "The x coordinates of the goals must be specified."
     assert not args.goal_y is None, "The y coordinates of the goals must be specified."
+    assert not args.goal_theta is None, "The theta coordinates of the goals must be specified."
     assert args.sim_rate > args.play_rate, "The simulation rate must be greater than the play rate."
     assert args.sim_duration > 0, "The simulation duration must be greater than 0."
     assert args.play_rate > 0, "The play rate must be greater than 0."
@@ -180,8 +195,7 @@ if __name__ == "__main__":
     assert args.platform_radius > 0, "The radius of the platform must be greater than 0."
     assert args.platform_max_thrust > 0, "The maximum thrust of the platform must be greater than 0."
     assert len(args.goal_x) == len(args.goal_y), "The number of x coordinates must be equal to the number of y coordinates."
-    if not args.goal_theta is None:
-        assert len(args.goal_x) == len(args.goal_theta), "The number of x coordinates must be equal to the number of headings."
+    assert len(args.goal_x) == len(args.goal_theta), "The number of x coordinates must be equal to the number of headings."
     # Try to create the save directory
     try:
         os.makedirs(args.save_dir, exist_ok=True)
@@ -190,7 +204,7 @@ if __name__ == "__main__":
     # Instantiates the RL agent
     model = RLGamesModel(args.config_path, args.model_path)
     #  Creates the velocity tracker
-    position_controller = PositionController(model, args.goal_x, args.goal_y)
+    position_controller = PoseController(model, args.goal_x, args.goal_y, args.goal_theta)
     # Creates the environment
     env = MuJoCoPositionControl(step_time=1.0/args.sim_rate, duration=args.sim_duration, inv_play_rate=int(args.sim_rate/args.play_rate),
                             mass=args.platform_mass, radius=args.platform_radius, max_thrust=args.platform_max_thrust)
