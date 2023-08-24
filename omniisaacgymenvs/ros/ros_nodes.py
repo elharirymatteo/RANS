@@ -42,9 +42,18 @@ class RLPlayerNode:
         if self.task_id == 0:
             return PositionController(self.model, self.settings.goal_x, self.settings.goal_y, self.settings.distance_threshold)
         elif self.task_id == 1:
-            return PoseController(self.model, self.settings.goal_x, self.settings.goal_y, self.settings.goal_theta, self.settings.distance_threshold)
+            return PoseController(self.model, self.settings.goal_x, self.settings.goal_y, self.settings.goal_theta, self.settings.distance_threshold, self.settings.angle_threshold)
         elif self.task_id == 2:
-            return VelocityTracker()
+            tracker = TrajectoryTracker(lookahead=self.settings.lookahead_dist, closed=self.settings.closed)
+            if self.settings.trajectory_type.lower() == "square":
+                tracker.generateSquare(h=self.settings.height)
+            elif self.settings.trajectory_type.lower() == "circle":
+                tracker.generateCircle(radius=self.settings.radius)
+            elif self.settings.trajectory_type.lower() == "spiral":
+                tracker.generateSpiral(start_radius=self.settings.start_radius, end_radius=self.settings.end_radius, num_loop=self.settings.num_loop)
+            else:
+                raise ValueError("Unknown trajectory type. Must be square, circle or spiral.")
+            return VelocityTracker(tracker, self.model)
         elif self.task_id == 3:
             raise NotImplementedError
 
