@@ -122,7 +122,7 @@ def parse_hydra_configs(cfg: DictConfig):
     if "BB" in cfg.checkpoint:
         print("Using BB model ...")
         cfg.train.params.network.mlp.units = [256, 256]
-    if "BB" in cfg.checkpoint:
+    if "BBB" in cfg.checkpoint:
         print("Using BBB model ...")
         cfg.train.params.network.mlp.units = [256, 256, 256]
     if "AN" in cfg.checkpoint:
