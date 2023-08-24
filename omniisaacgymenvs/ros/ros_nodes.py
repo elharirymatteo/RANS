@@ -75,7 +75,7 @@ class RLPlayerNode:
 
         # Torch buffers
         self.root_pos = np.zeros((1,2), dtype=np.float32)
-        self.heading = np.zeros((1,2), dtype=np.float32)
+        self.heading = np.zeros((1,2), dtype=np.float32).flatten()
         self.lin_vel = np.zeros((1,2), dtype=np.float32)
         self.task_data = np.zeros((1,4), dtype=np.float32)
         self.ang_vel = np.zeros((1,2), dtype=np.float32)

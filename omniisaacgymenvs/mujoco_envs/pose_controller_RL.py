@@ -138,6 +138,9 @@ class PoseController:
 
     def isDone(self):
         return len(self.goals) == 0
+    
+    def getObs(self):
+        return self.obs_state.cpu().numpy()
 
     def makeObservationBuffer(self, state):
         self.obs_state[0,:2] = torch.tensor(state["orientation"], dtype=torch.float32, device="cuda")
