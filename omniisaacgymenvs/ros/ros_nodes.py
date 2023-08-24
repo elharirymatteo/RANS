@@ -28,7 +28,7 @@ class RLPlayerNode:
         self.task_id = task_id
         self.reset()
         self.controller = self.build_controller()
-        self.thruster_mask = np.ones((8))
+        self.thruster_mask = np.ones((8), dtype=np.int64)
         for i in self.settings.killed_thruster_id:
             self.thruster_mask[i] = 0
 

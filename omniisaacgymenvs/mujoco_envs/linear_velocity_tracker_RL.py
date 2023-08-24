@@ -179,6 +179,12 @@ class VelocityTracker:
     def getGoal(self):
         return self.velocity_vector*self.target_tracking_velocity
     
+    def setGoal(self, goal):
+        self.target_tracking_velocity = goal
+
+    def getObs(self):
+        return self.obs_state.cpu().numpy()
+    
     def getTargetPosition(self):
         return self.trajectory_tracker.get_target_position()
     
@@ -192,11 +198,11 @@ class VelocityTracker:
         self.obs_state[0,5] = 2
         self.obs_state[0,6:8] = torch.tensor(velocity_vector, dtype=torch.float32, device="cuda")
 
-    def getAction(self, state):
+    def getAction(self, state, is_deterministic=True):
         self.velocity_vector = self.trajectory_tracker.getVelocityVector(state["position"])
         velocity_goal = self.velocity_vector*self.target_tracking_velocity - state["linear_velocity"]
         self.makeObservationBuffer(state, velocity_goal)
-        action = self.model.getAction(self.obs_state)
+        action = self.model.getAction(self.obs_state, is_deterministic=is_deterministic)
         return action
 
 def parseArgs():
