@@ -45,7 +45,7 @@ class RLPlayerNode:
         if self.task_id == 0:
             return PositionController(self.model, self.settings.goal_x, self.settings.goal_y, self.settings.distance_threshold)
         elif self.task_id == 1:
-            return PoseController(self.model, self.settings.goal_x, self.settings.goal_y, self.settings.goal_theta, self.settings.distance_threshold, self.settings.angle_threshold)
+            return PoseController(self.model, self.settings.goal_x, self.settings.goal_y, self.settings.goal_theta, self.settings.distance_threshold, self.settings.heading_threshold)
         elif self.task_id == 2:
             tracker = TrajectoryTracker(lookahead=self.settings.lookahead_dist, closed=self.settings.closed, offset=(self.settings.trajectory_x_offset, self.settings.trajectory_y_offset))
             if self.settings.trajectory_type.lower() == "square":
@@ -91,7 +91,7 @@ class RLPlayerNode:
         """
         Shutdown the node and kills the thrusters while leaving the air-bearing on."""
 
-        self.my_msg.data = [0,0,0,0,0,0,0,0,0]
+        self.my_msg.data = [1,0,0,0,0,0,0,0,0]
         self.action_pub.publish(self.my_msg)
         rospy.sleep(1)
         self.my_msg.data = [0,0,0,0,0,0,0,0,0]
@@ -130,8 +130,8 @@ class RLPlayerNode:
         q = [quat.w, quat.x, quat.y, quat.z]
         siny_cosp = 2 * (q[0] * q[3] + q[1] * q[2])
         cosy_cosp = 1 - 2 * (q[2] * q[2] + q[3] * q[3])
-        self.heading[0,0] = cosy_cosp
-        self.heading[0,1] = siny_cosp
+        self.heading[0] = cosy_cosp
+        self.heading[1] = siny_cosp
         linear_vel, angular_vel = derive_velocities(self.time_buffer, self.pose_buffer)
         self.state = {"position": self.root_pos, "orientation": self.heading, "linear_velocity": linear_vel[:2], "angular_velocity": angular_vel[0]}
     

@@ -150,7 +150,7 @@ class PoseController:
         self.obs_state[0,8] = torch.tensor(np.cos(heading_error), dtype=torch.float32, device="cuda")
         self.obs_state[0,9] = torch.tensor(np.sin(heading_error), dtype=torch.float32, device="cuda")
 
-    def getAction(self, state):
+    def getAction(self, state, is_deterministic: bool = True):
         if self.isGoalReached(state):
             print("Goal reached!")
             if len(self.goals) > 1:
@@ -159,7 +159,7 @@ class PoseController:
             else:
                 self.goals = []
         self.makeObservationBuffer(state)
-        return self.model.getAction(self.obs_state)
+        return self.model.getAction(self.obs_state,is_deterministic=is_deterministic)
 
 def parseArgs():
     parser = argparse.ArgumentParser("Generates meshes out of Digital Elevation Models (DEMs) or Heightmaps.")
