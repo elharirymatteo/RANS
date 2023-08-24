@@ -20,6 +20,8 @@ def parseArgs():
     parser.add_argument("--tracking_velocity", type=float, default=0.25, help="The tracking velocity. In meters per second.")
     # Velocity trajectory arguments
     parser.add_argument("--trajectory_type", type=str, default="Circle", help="The type of trajectory to be generated. Options are: Circle, Square, Spiral.")
+    parser.add_argument("--trajectory_x_offset", type=float, default=0, help="The offset of the trajectory along the x axis. In meters.")
+    parser.add_argument("--trajectory_y_offset", type=float, default=0, help="The offset of the trajectory along the y axis. In meters.")
     parser.add_argument("--radius", type=float, default=1.5, help="The radius of the circle trajectory. In meters.")
     parser.add_argument("--height", type=float, default=3.0, help="The height of the square trajectory. In meters.")
     parser.add_argument("--start_radius", type=float, default=0.5, help="The starting radius for the spiral for the spiral trajectory. In meters.")

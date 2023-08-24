@@ -44,7 +44,7 @@ class RLPlayerNode:
         elif self.task_id == 1:
             return PoseController(self.model, self.settings.goal_x, self.settings.goal_y, self.settings.goal_theta, self.settings.distance_threshold, self.settings.angle_threshold)
         elif self.task_id == 2:
-            tracker = TrajectoryTracker(lookahead=self.settings.lookahead_dist, closed=self.settings.closed)
+            tracker = TrajectoryTracker(lookahead=self.settings.lookahead_dist, closed=self.settings.closed, offset=(self.settings.trajectory_x_offset, self.settings.trajectory_y_offset))
             if self.settings.trajectory_type.lower() == "square":
                 tracker.generateSquare(h=self.settings.height)
             elif self.settings.trajectory_type.lower() == "circle":
