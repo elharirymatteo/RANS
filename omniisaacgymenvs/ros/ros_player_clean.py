@@ -15,6 +15,7 @@ def parseArgs():
     parser.add_argument("--distance_threshold", type=float, default=0.03, help="The threshold to be under to consider a goal reached. In meters.")
     # GoToPose arguments
     parser.add_argument("--goal_theta", type=float, nargs="+", default=None, help="List of headings for the goals to be reached by the platform. In world frame, radiants.")
+    parser.add_argument("--heading_threshold", type=float, default=0.03, help="The threshold to be under to consider a goal reached. In radiants.")
     # TrackXYVelocity arguments
     parser.add_argument("--tracking_velocity", type=float, default=0.25, help="The tracking velocity. In meters per second.")
     # Velocity trajectory arguments
@@ -39,6 +40,10 @@ def parseArgs():
     return args, unknown_args
 
 if __name__ == '__main__':
+    # Starting the simulation to get access to ROS
+    # The simulation in itself is not used at all.
+    # Maybe we could display the robot position, the goal and which thrusters are fired in the sim?
+
     simulation_app = SimulationApp({"headless": True})
     enable_ros_extension()
 
@@ -60,6 +65,7 @@ if __name__ == '__main__':
             assert not args.goal_x is None, "The x coordinates of the goals must be specified."
             assert not args.goal_y is None, "The y coordinates of the goals must be specified."
             assert len(args.goal_x) == len(args.goal_y), "The number of x coordinates must be equal to the number of y coordinates."
+            assert args.distance_threshold > 0, "The distance threshold must be greater than 0."
         else:
             args.goal_x = [0]
             args.goal_y = [0]
@@ -71,6 +77,8 @@ if __name__ == '__main__':
             assert not args.goal_theta is None, "The theta coordinates of the goals must be specified."
             assert len(args.goal_x) == len(args.goal_y), "The number of x coordinates must be equal to the number of y coordinates."
             assert len(args.goal_x) == len(args.goal_theta), "The number of x coordinates must be equal to the number of theta coordinates."
+            assert args.distance_threshold > 0, "The distance threshold must be greater than 0."
+            assert args.heading_threshold > 0, "The heading threshold must be greater than 0."
         else:
             args.goal_x = [0]
             args.goal_y = [0]
