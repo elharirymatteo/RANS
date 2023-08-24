@@ -251,13 +251,17 @@ class MuJoCoFloatingPlatform:
                 csv_data = pd.DataFrame()
                 for key in self.logs.keys():
                     if len(self.logs[key]) != 0:
-                        data = np.array(self.logs[key])
-                        if len(data.shape) > 1:
+                        if key == "actions":
+                            data = np.array(self.logs[key])
                             for i in range(data.shape[1]):
-                                csv_data[var_name[i]+"_"+key] = data[:,i]
+                                csv_data["t_"+str(i)] = data[:,i]
                         else:
-                            csv_data[key] = data
-                        #csv_data[key] = self.logs[key]
+                            data = np.array(self.logs[key])
+                            if len(data.shape) > 1:
+                                for i in range(data.shape[1]):
+                                    csv_data[var_name[i]+"_"+key] = data[:,i]
+                            else:
+                                csv_data[key] = data
                 csv_data.to_csv(os.path.join(save_dir, "exp_logs.csv"))
 
             except Exception as e:
