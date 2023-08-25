@@ -1,7 +1,7 @@
 {
   "experiment111": {
       "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
-      "train": "MFP2D_PPOmulti_dict_MLP",
+      "train": "virtual_floating_platform/MFP2D_PPOmulti_dict_MLP",
       "task.env.split_thrust": "True",
       "task.env.platform.core.mass": "5.32",
       "experiment": "nominal_GoToPose_MLP_expRew",
@@ -15,7 +15,7 @@
   },
   "experiment112": {
     "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
-    "train": "MFP2D_PPOmulti_dict_MLP",
+    "train": "virtual_floating_platform/MFP2D_PPOmulti_dict_MLP",
     "task.env.split_thrust": "True",
     "task.env.platform.core.mass": "5.32",
     "experiment": "nominal_GoToPose_MLP_expRew_PE_0.01",
@@ -31,7 +31,7 @@
   },
   "experiment113": {
     "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
-    "train": "MFP2D_PPOmulti_dict_MLP",
+    "train": "virtual_floating_platform/MFP2D_PPOmulti_dict_MLP",
     "task.env.split_thrust": "True",
     "task.env.platform.core.mass": "5.32",
     "experiment": "nominal_GoToPose_MLP_expRew_PE_0.02",
@@ -47,7 +47,7 @@
   },
   "experiment114": {
     "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
-    "train": "MFP2D_PPOmulti_dict_MLP",
+    "train": "virtual_floating_platform/MFP2D_PPOmulti_dict_MLP",
     "task.env.split_thrust": "True",
     "task.env.platform.core.mass": "5.32",
     "experiment": "nominal_GoToPose_MLP_expRew_PE_0.03",
@@ -63,7 +63,7 @@
   },
   "experiment115": {
     "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
-    "train": "MFP2D_PPOmulti_dict_MLP",
+    "train": "virtual_floating_platform/MFP2D_PPOmulti_dict_MLP",
     "task.env.split_thrust": "True",
     "task.env.platform.core.mass": "5.32",
     "experiment": "nominal_GoToPose_MLP_expRew_PE_0.04",
@@ -79,7 +79,7 @@
   },
     "experiment116": {
       "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
-      "train": "MFP2D_PPOmulti_dict_MLP",
+      "train": "virtual_floating_platform/MFP2D_PPOmulti_dict_MLP",
       "task.env.split_thrust": "True",
       "task.env.platform.core.mass": "5.32",
       "experiment": "nominal_GoToPose_MLP_expRew_PE_0.05",
