@@ -92,13 +92,13 @@ def eval_multi_agents(cfg, agent, models, horizon, load_dir):
             success_rate_df = success_rate['position']
         elif task_flag == 1: # GoToPose
             success_rate = get_GoToPose_success_rate(ep_data, print_intermediate=True)
-            success_rate_df = pd.concat([success_rate['position'], success_rate['heading']])
+            success_rate_df = pd.concat([success_rate['position'], success_rate['heading']], axis=1)
         elif task_flag == 2: # TrackXYVelocity
             success_rate = get_TrackXYVelocity_success_rate(ep_data, print_intermediate=True)
             success_rate_df = success_rate['xy_velocity']
         elif task_flag == 3: # TrackXYOVelocity
             success_rate = get_TrackXYOVelocity_success_rate(ep_data, print_intermediate=True)
-            success_rate_df = pd.concat([success_rate['xy_velocity'], success_rate['omega_velocity']])
+            success_rate_df = pd.concat([success_rate['xy_velocity'], success_rate['omega_velocity']], axis=1)
 
         # Collect the data for the success rate table        
         success_rate_df['avg_rew'] = [np.mean(ep_data['rews'])]
@@ -109,14 +109,13 @@ def eval_multi_agents(cfg, agent, models, horizon, load_dir):
         lin_vel = np.linalg.norm(np.array([lin_vel_x, lin_vel_y]), axis=0)
         success_rate_df['avg_lin_vel'] = [np.mean(lin_vel.mean(axis=1))]
         success_rate_df['avg_action_count'] = [np.mean(np.sum(ep_data['act'], axis=1))]
-
         all_success_rate_df = pd.concat([all_success_rate_df, success_rate_df], ignore_index=True)
         # If want to print the latex code for the table use the following line
 
     # create index for the dataframe and save it
     model_names = [model.split("/")[3] for model in models]
     all_success_rate_df.insert(loc=0, column="model", value=model_names)
-    all_success_rate_df.to_csv(evaluation_dir + "multi_model_performance.csv")
+    all_success_rate_df.to_csv(evaluation_dir + "multi_model_performance_BB.csv")
 
 
 @hydra.main(config_name="config", config_path="../cfg")
@@ -127,7 +126,7 @@ def parse_hydra_configs(cfg: DictConfig):
     experiments = os.listdir(load_dir)
     print(f'Experiments found in {load_dir} folder: {len(experiments)}')
     models = get_valid_models(load_dir, experiments)
-    models = [m for m in models if "BB" not in m.split("/")[3]]
+    models = [m for m in models if "BB" in m.split("/")[3]]
     print(f'Final models: {models}')
     if not models:
         print('No valid models found')
