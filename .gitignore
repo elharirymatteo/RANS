@@ -1,14 +1,7 @@
 __pycache___
 __pycache__/
 runs
-penalty_tests
-icra24_Pose
-icra24_noise
-icra24_fail
-icra24
-new_mass
-corl_runs
-fail_penalty_test
+models
 omniisaacgymenvs.egg-info/
 checkpoints
 omniisaacgymenvs/wandb

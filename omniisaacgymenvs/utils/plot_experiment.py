@@ -439,8 +439,9 @@ def plot_one_episode(ep_data:dict, save_dir:str = None, show:bool = False, debug
     else:
         debug_metrics = []
 
-    # setting the right task_data lavels based on the task flag.
+    # setting the right task_data labels based on the task fla.
     task_flag = state_history[0, 5].astype(int)
+
     task_metrics = []
     if task_flag == 0: # GoToXY
         task_data_label = ['error_x', 'error_y']
@@ -624,7 +625,7 @@ def plot_single_rewards(reward_history:np.ndarray, tgrid:np.ndarray, save_dir:st
     """
     Plot rewards of a single agent."""
 
-    if reward_history.any():
+    if any(reward_history):
         fig_count += 1
         plt.figure(fig_count)
         plt.clf()

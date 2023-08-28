@@ -8,7 +8,7 @@ from utils.plot_experiment import plot_one_episode
 
 if __name__ == "__main__":
 
-    load_dir = Path("./lab_tests/icra24/act_noise_new/")
+    load_dir = Path("./ros_lab_exp/kill3/")
     sub_dirs = [d for d in load_dir.iterdir() if d.is_dir()]
     if sub_dirs:
         latest_exp = max(sub_dirs, key=os.path.getmtime)
@@ -19,7 +19,6 @@ if __name__ == "__main__":
         exit()
         
     for d in sub_dirs:
-        print(d)
         obs_path = os.path.join(d, "obs.npy")
         actions_path = os.path.join(d, "act.npy")
         
@@ -29,8 +28,14 @@ if __name__ == "__main__":
 
         obs = np.load(obs_path, allow_pickle=True)
         actions = np.load(actions_path)
+
+        # if obs is empty, skip this experiment and print warning
+        if not obs.any():
+            print(f"Empty obs file in {d}, skipping...")
+            continue
+        
         # transform the obs numpy array of dictionaries to numpy array of arrays
-        obs = np.array([o["state"].cpu().numpy().flatten() for o in obs])
+        obs = np.array([o.flatten() for o in obs])
 
         save_to = os.path.join(d, 'plots/')
         os.makedirs(save_to, exist_ok=True)
