@@ -5,20 +5,11 @@ params:
     name: a2c_discrete
 
   model:
-    name: multi_discrete_a2c
+    name: multi_discrete_transformer_a2c
 
   network:
-    name: actor_critic_mlp_dict
+    name: actor_critic_transformer
     separate: False
-    mlp:
-      units: [128, 128]
-      activation: tanh
-      d2rl: False
-      
-      initializer:
-        name: default
-      regularizer:
-        name: None
     space:
       multi_discrete:
         mu_activation: None
@@ -29,12 +20,34 @@ params:
           name: const_initializer
           val: 0
         fixed_sigma: True
+    transformer:
+      input_sequence_length: 8
+      pos_embedding: learnt
+      num_head: 2
+      num_layer: 2
+      dim_feedforward: 1024
+      transforms_mlp_dim: [128, 128]
+      state_mlp_dim: [128, 128]
+      critic_mlp_dim: [512, 512, 256]
+      fuse_mlp_dim: [128, 128]
+      d_model: 128
+      dropout: 0.0
+      decoder_mlp_dim: [256, 256]
+      embed_init: 0.1
+      decoder_init: 0.01
+
+      activation: tanh
+      
+      initializer:
+        name: default
+      regularizer:
+        name: None
 
   load_checkpoint: ${if:${...checkpoint},True,False} # flag which sets whether to load the checkpoint
   load_path: ${...checkpoint} # path to the checkpoint to load
 
   config:
-    name: ${resolve_default:FloatingPlatform,${....experiment}}
+    name: ${resolve_default:Buoyancy,${....experiment}}
     full_experiment_name: ${.name}
     env_name: rlgpu
     device: ${....rl_device}
@@ -66,7 +79,7 @@ params:
     truncate_grads: True
     e_clip: 0.2
     horizon_length: 16
-    minibatch_size: 32768   #64
+    minibatch_size: 8192
     mini_epochs: 8
     critic_coef: 0.5
     clip_value: True

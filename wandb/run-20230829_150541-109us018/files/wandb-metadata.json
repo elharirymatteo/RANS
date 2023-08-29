@@ -1,0 +1,33 @@
+{
+    "os": "Linux-5.15.0-79-generic-x86_64-with-debian-bullseye-sid",
+    "python": "3.7.13",
+    "heartbeatAt": "2023-08-29T13:05:42.927976",
+    "startedAt": "2023-08-29T13:05:41.171304",
+    "docker": null,
+    "gpu": "NVIDIA GeForce RTX 3090",
+    "gpu_count": 2,
+    "cpu_count": 24,
+    "cuda": null,
+    "args": [
+        "task=buoyancy/Buoyancy_GoToXY",
+        "train=buoyancy/Buoyancy_PPOcontinuous_MLP",
+        "headless=True",
+        "num_envs=4096",
+        "enable_livestream=False",
+        "wandb_activate=True",
+        "wandb_entity=buoyancy-drl",
+        "wandb_project=kingfischer"
+    ],
+    "state": "running",
+    "program": "omniisaacgymenvs/scripts/rlgames_train.py",
+    "codePath": "omniisaacgymenvs/scripts/rlgames_train.py",
+    "git": {
+        "remote": "git@github.com:elharirymatteo/Omniverse.git",
+        "commit": "7a6ddb335d201448fb58aba6934899283e634592"
+    },
+    "email": "axelcoulon1110@gmail.com",
+    "root": "/home/axelcoulon/projects/spaceR_DREAMLab_omniverse/Omniverse",
+    "host": "rivendell",
+    "username": "axelcoulon",
+    "executable": "/home/isaac_user/.local/share/ov/pkg/isaac_sim-2022.2.1/kit/python/bin/python3"
+}

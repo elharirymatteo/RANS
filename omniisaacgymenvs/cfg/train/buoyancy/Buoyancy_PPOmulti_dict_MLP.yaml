@@ -34,7 +34,7 @@ params:
   load_path: ${...checkpoint} # path to the checkpoint to load
 
   config:
-    name: ${resolve_default:FloatingPlatform,${....experiment}}
+    name: ${resolve_default:Buoyancy,${....experiment}}
     full_experiment_name: ${.name}
     env_name: rlgpu
     device: ${....rl_device}
@@ -66,7 +66,7 @@ params:
     truncate_grads: True
     e_clip: 0.2
     horizon_length: 16
-    minibatch_size: 32768   #64
+    minibatch_size: 32768
     mini_epochs: 8
     critic_coef: 0.5
     clip_value: True

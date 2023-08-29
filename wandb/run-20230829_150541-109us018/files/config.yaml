@@ -1,0 +1,381 @@
+wandb_version: 1
+
+_wandb:
+  desc: null
+  value:
+    cli_version: 0.12.21
+    framework: torch
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    python_version: 3.7.13
+    start_time: 1693314341
+    t:
+      1:
+      - 1
+      - 30
+      - 50
+      - 55
+      3:
+      - 13
+      - 16
+      - 35
+      4: 3.7.13
+      5: 0.12.21
+      8:
+      - 5
+checkpoint:
+  desc: null
+  value: ''
+device_id:
+  desc: null
+  value: 0
+enable_livestream:
+  desc: null
+  value: false
+experiment:
+  desc: null
+  value: Buoyancy_GoToXY
+headless:
+  desc: null
+  value: true
+max_iterations:
+  desc: null
+  value: ''
+mt_timeout:
+  desc: null
+  value: 30
+multi_gpu:
+  desc: null
+  value: false
+num_envs:
+  desc: null
+  value: 4096
+num_threads:
+  desc: null
+  value: 4
+physics_engine:
+  desc: null
+  value: physx
+pipeline:
+  desc: null
+  value: gpu
+rl_device:
+  desc: null
+  value: cuda:0
+seed:
+  desc: null
+  value: 42
+sim_device:
+  desc: null
+  value: cuda:0
+solver_type:
+  desc: null
+  value: 1
+task:
+  desc: null
+  value:
+    box:
+      left_thruster_position:
+      - -0.7
+      - 0.35
+      - -0.05
+      right_thruster_position:
+      - -0.7
+      - -0.35
+      - -0.05
+    buoy:
+      box_high: 0.2
+      box_large: 1.4
+      box_width: 1.0
+      mass: 28.0
+      material_density: 133
+      water_density: 1000
+    dynamics:
+      acceleration:
+        alpha: 0.3
+        last_time: -10.0
+      buoyancy:
+        amplify_torque: 20
+        average_buoyancy_force_value: 10
+      damping:
+        linear_damping:
+        - 16.44998712
+        - 15.79776044
+        - 100
+        - 13
+        - 13
+        - 0.001
+        linear_damping_forward_speed:
+        - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+        - 0.0
+        offset_added_mass: 0.0
+        offset_lin_forward_damping_speed: 0.0
+        offset_linear_damping: 0.0
+        offset_nonlin_damping: 0.0
+        quadratic_damping:
+        - 2.942
+        - 2.7617212
+        - 10
+        - 5
+        - 5
+        - 0.001
+        scaling_added_mass: 1.0
+        scaling_damping: 1.0
+        squared_drag_coefficients:
+        - 4.0
+        - 4.0
+        - 100
+        - 4.0
+        - 4.0
+        - 0.003
+      thrusters:
+        cmd_lower_range: -1.0
+        cmd_upper_range: 1.0
+        interpolation:
+          interpolationPointsFromRealData:
+          - -10.1043
+          - -10.0062
+          - -8.5347
+          - -4.4145
+          - -3.3354
+          - -1.4715
+          - -0.981
+          - -0.2943
+          - -0.1962
+          - 0.0
+          - 0.0
+          - -0.0
+          - 0.2943
+          - 0.5886
+          - 2.1582
+          - 10.3986
+          - 18.3447
+          - 21.582
+          - 31.7844
+          - 44.7336
+          - 45.126
+          numberOfPointsForInterpolation: 1000
+        leastSquareMethod:
+          neg_cmd_coeff:
+          - 88.61013986
+          - 163.99545455
+          - 76.81641608
+          - 11.9476958
+          - 0.20374615
+          pos_cmd_coeff:
+          - -197.800699
+          - 334.050699
+          - -97.6197902
+          - 7.59341259
+          - -0.0301846154
+        timeConstant: 0.05
+    env:
+      action_mode: Continuous
+      add_noise_on_act: false
+      add_noise_on_heading: false
+      add_noise_on_pos: false
+      add_noise_on_vel: false
+      clipActions: 1.0
+      clipObservations:
+        state: 8.0
+      controlFrequencyInv: 10
+      enableDebugVis: false
+      envSpacing: 12
+      floor_max_freq: 3
+      floor_max_offset: 6
+      floor_min_freq: 0.25
+      floor_min_offset: -6
+      heading_noise_max: 0.025
+      heading_noise_min: -0.025
+      horizon_length: 16
+      maxEpisodeLength: 700
+      max_action_noise: 0.05
+      max_floor_force: 0.5
+      min_action_noise: -0.05
+      min_floor_force: 0.25
+      numEnvs: 4096
+      numQuantizedActions: 1
+      penalties_parameters:
+        penalize_angular_velocities: false
+        penalize_angular_velocities_c1: 0.01
+        penalize_angular_velocities_c2: 0.0
+        penalize_angular_velocities_fn: 'lambda x,step: -torch.abs(x)*1.0*step/2000'
+        penalize_energy: false
+        penalize_energy_c1: 0.01
+        penalize_energy_c2: 0.0
+        penalize_energy_fn: 'lambda x,step: -torch.abs(x)*0.01'
+        penalize_linear_velocities: false
+        penalize_linear_velocities_c1: 0.01
+        penalize_linear_velocities_c2: 0.0
+        penalize_linear_velocities_fn: 'lambda x,step: -torch.norm(x, dim=-1)*0.01'
+      position_noise_max: 0.01
+      position_noise_min: -0.01
+      reward_parameters:
+        exponential_reward_coeff: 0.25
+        name: GoToXY
+        reward_mode: exponential
+      split_thrust: false
+      task_parameters:
+        boundary_cost: 25
+        kill_after_n_steps_in_tolerance: 50
+        kill_dist: 8.0
+        max_spawn_dist: 4.5
+        min_spawn_dist: 0.5
+        name: GoToXY
+        x_y_tolerance: 0.01
+      use_sinusoidal_floor: false
+      use_uneven_floor: false
+      velocity_noise_max: 0.01
+      velocity_noise_min: -0.01
+    experiment: Buoyancy_GoToXY
+    name: Buoyancy
+    physics_engine: physx
+    sim:
+      add_distant_light: true
+      add_ground_plane: true
+      box:
+        density: -1
+        enable_gyroscopic_forces: true
+        enable_self_collisions: false
+        max_depenetration_velocity: 1000.0
+        override_usd_defaults: false
+        sleep_threshold: 0.005
+        solver_position_iteration_count: 40
+        solver_velocity_iteration_count: 20
+        stabilization_threshold: 0.001
+      disable_contact_processing: false
+      dt: 0.01
+      enable_cameras: false
+      enable_scene_query_support: false
+      gravity:
+      - 0.0
+      - 0.0
+      - -9.81
+      physx:
+        bounce_threshold_velocity: 0.2
+        contact_offset: 0.02
+        enable_sleeping: true
+        enable_stabilization: false
+        friction_correlation_distance: 0.025
+        friction_offset_threshold: 0.04
+        gpu_found_lost_aggregate_pairs_capacity: 33554432
+        gpu_found_lost_pairs_capacity: 4194304
+        gpu_heap_capacity: 67108864
+        gpu_max_num_partitions: 8
+        gpu_max_particle_contacts: 1048576
+        gpu_max_rigid_contact_count: 524288
+        gpu_max_rigid_patch_count: 81920
+        gpu_max_soft_body_contacts: 1048576
+        gpu_temp_buffer_capacity: 16777216
+        gpu_total_aggregate_pairs_capacity: 4194304
+        max_depenetration_velocity: 1000.0
+        num_threads: 4
+        rest_offset: 0.001
+        solver_position_iteration_count: 40
+        solver_type: 1
+        solver_velocity_iteration_count: 20
+        use_gpu: true
+      use_flatcache: true
+      use_gpu_pipeline: true
+task_name:
+  desc: null
+  value: Buoyancy
+test:
+  desc: null
+  value: false
+torch_deterministic:
+  desc: null
+  value: false
+train:
+  desc: null
+  value:
+    params:
+      algo:
+        name: a2c_continuous
+      config:
+        base_lr: 0.0003
+        bounds_loss_coef: 0.0001
+        clip_value: true
+        critic_coef: 0.5
+        device: cuda:0
+        device_name: cuda:0
+        e_clip: 0.2
+        entropy_coef: 0.0
+        env_name: rlgpu
+        full_experiment_name: Buoyancy_GoToXY
+        gamma: 0.99
+        grad_norm: 1.0
+        horizon_length: 16
+        kl_threshold: 0.016
+        learning_rate: 0.0001
+        lr_schedule: adaptive
+        max_epochs: 1000
+        min_lr: 0
+        mini_epochs: 8
+        minibatch_size: 32768
+        mixed_precision: false
+        name: Buoyancy_GoToXY
+        normalize_advantage: true
+        normalize_input: true
+        normalize_input_keys:
+        - state
+        normalize_value: true
+        num_actors: 4096
+        ppo: true
+        reward_shaper:
+          scale_value: 0.01
+        save_best_after: 50
+        save_frequency: 50
+        score_to_win: 20000
+        seq_len: 4
+        tau: 0.95
+        truncate_grads: true
+        warmup_factor: 0.1
+        warmup_steps: 10
+      load_checkpoint: false
+      load_path: ''
+      model:
+        name: continuous_a2c_logstd
+      network:
+        mlp:
+          activation: tanh
+          d2rl: false
+          initializer:
+            name: default
+          regularizer:
+            name: None
+          units:
+          - 128
+          - 128
+        name: actor_critic_mlp_dict
+        separate: false
+        space:
+          continuous:
+            fixed_sigma: true
+            mu_activation: None
+            mu_init:
+              name: default
+            sigma_activation: None
+            sigma_init:
+              name: const_initializer
+              val: 0
+      seed: 42
+wandb_activate:
+  desc: null
+  value: true
+wandb_entity:
+  desc: null
+  value: buoyancy-drl
+wandb_group:
+  desc: null
+  value: ''
+wandb_name:
+  desc: null
+  value: Buoyancy_GoToXY
+wandb_project:
+  desc: null
+  value: kingfischer

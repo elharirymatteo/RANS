@@ -2,6 +2,7 @@
 name: Anymal
 
 physics_engine: ${..physics_engine}
+experiment: Anymal
 
 env:
   numEnvs: ${resolve_default:4096,${...num_envs}}

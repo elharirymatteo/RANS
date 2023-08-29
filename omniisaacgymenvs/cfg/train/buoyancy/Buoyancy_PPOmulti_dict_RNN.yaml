@@ -8,10 +8,11 @@ params:
     name: multi_discrete_a2c
 
   network:
-    name: actor_critic_mlp_dict
+    name: actor_critic_rnn_dict
     separate: False
     mlp:
-      units: [128, 128]
+      first_units: [128]
+      second_units: [128]
       activation: tanh
       d2rl: False
       
@@ -19,6 +20,14 @@ params:
         name: default
       regularizer:
         name: None
+
+    rnn:
+      units: 128
+      layers: 1
+      name: "gru"
+      layer_norm: False
+      concat_input: False
+    
     space:
       multi_discrete:
         mu_activation: None
@@ -34,7 +43,7 @@ params:
   load_path: ${...checkpoint} # path to the checkpoint to load
 
   config:
-    name: ${resolve_default:FloatingPlatform,${....experiment}}
+    name: ${resolve_default:Buoyancy,${....experiment}}
     full_experiment_name: ${.name}
     env_name: rlgpu
     device: ${....rl_device}
@@ -66,7 +75,7 @@ params:
     truncate_grads: True
     e_clip: 0.2
     horizon_length: 16
-    minibatch_size: 32768   #64
+    minibatch_size: 8192
     mini_epochs: 8
     critic_coef: 0.5
     clip_value: True
