@@ -262,17 +262,13 @@ class MFP2DVirtual(RLTask):
         """
         Applies all the forces to the platform and its thrusters."""
 
-        self._platforms.thrusters.apply_forces_and_torques_at_pos(forces=self.forces, positions=self.positions, is_global=False)
-
-        if self.UF._use_uneven_floor:
-            floor_forces = self.UF.get_floor_forces(self.root_pos)
-            print(f'floor_forces: {floor_forces}')
-
-            self._platforms.base.apply_forces_and_torques_at_pos(forces=floor_forces, positions=self.root_pos, is_global=True)
-        if self.TD._use_torque_disturbance:
-            torque_disturbance = self.TD.get_torque_disturbance(self.root_pos)
-            print(f'torque_disturbance: {torque_disturbance}')
-            self._platforms.base.apply_forces_and_torques_at_pos(torques=torque_disturbance, positions=self.root_pos, is_global=True)
+        self._platforms.thrusters.apply_forces_and_torques_at_pos(forces=self.forces, positions=self.positions, 
+                                                                  is_global=False)
+        floor_forces = self.UF.get_floor_forces(self.root_pos)
+        torque_disturbance = self.TD.get_torque_disturbance(self.root_pos)
+        print(f'floor_forces: {floor_forces}, \n\n torque_disturbance: {torque_disturbance}')
+        self._platforms.base.apply_forces_and_torques_at_pos(forces=floor_forces, torques=torque_disturbance,
+                                                              positions=self.root_pos, is_global=True)
 
 
     def post_reset(self):

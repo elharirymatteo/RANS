@@ -35,6 +35,8 @@ env:
   # Torque disturbance generation
   use_torque_diturbance: False
   use_sinusoidal_torque: False
+  max_torque: 0.15
+  min_torque: 0.0
 
   # Add noisy observations
   add_noise_on_pos: False 
