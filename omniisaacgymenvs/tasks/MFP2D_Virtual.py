@@ -266,9 +266,12 @@ class MFP2DVirtual(RLTask):
 
         if self.UF._use_uneven_floor:
             floor_forces = self.UF.get_floor_forces(self.root_pos)
+            print(f'floor_forces: {floor_forces}')
+
             self._platforms.base.apply_forces_and_torques_at_pos(forces=floor_forces, positions=self.root_pos, is_global=True)
         if self.TD._use_torque_disturbance:
             torque_disturbance = self.TD.get_torque_disturbance(self.root_pos)
+            print(f'torque_disturbance: {torque_disturbance}')
             self._platforms.base.apply_forces_and_torques_at_pos(torques=torque_disturbance, positions=self.root_pos, is_global=True)
 
 
@@ -341,6 +344,7 @@ class MFP2DVirtual(RLTask):
         self.task.reset(env_ids)
         self.virtual_platform.randomize_thruster_state(env_ids, num_resets)
         self.UF.generate_floor(env_ids, num_resets)
+        self.TD.generate_torque(env_ids, num_resets)
         # Randomizes the starting position of the platform within a disk around the target
         root_pos, root_rot = self.task.get_spawns(env_ids, self.initial_root_pos.clone(), self.initial_root_rot.clone())
         # Resets the states of the joints

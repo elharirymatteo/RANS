@@ -108,7 +108,6 @@ class TorqueDisturbance:
             r = torch.rand((num_resets), dtype=torch.float32, device=self._device) *(self._max_torque - self._min_torque) + self._min_torque
             # make torques negative for half of the environments at random
             r[torch.rand((num_resets), dtype=torch.float32, device=self._device) > 0.5] *= -1
-            print(r)
             self.torque_forces[env_ids, 2] = r
 
     def get_torque_disturbance(self, root_pos: torch.Tensor) -> None:
@@ -118,7 +117,7 @@ class TorqueDisturbance:
         if self._use_sinusoidal_torque:
             self.torque_forces[:,0] = torch.sin(root_pos[:,0] * self._floor_x_freq + self._floor_x_offset) * self._max_torque
             self.torque_forces[:,1] = torch.sin(root_pos[:,1] * self._floor_y_freq + self._floor_y_offset) * self._max_torque
-      
+
         return self.torque_forces
  
 class NoisyObservations:
