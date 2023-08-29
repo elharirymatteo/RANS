@@ -8,8 +8,9 @@ from utils.plot_experiment import plot_one_episode
 
 if __name__ == "__main__":
 
-    load_dir = Path("./ros_lab_exp/kill3/")
+    load_dir = Path("./ros_lab_exp/")
     sub_dirs = [d for d in load_dir.iterdir() if d.is_dir()]
+    sub_dirs = [d for d in sub_dirs if ("pose" not in str(d) and "kill3" not in str(d) and "new_pose" not in str(d))]
     if sub_dirs:
         latest_exp = max(sub_dirs, key=os.path.getmtime)
         print("Plotting data for experiment:", latest_exp)
@@ -41,7 +42,7 @@ if __name__ == "__main__":
         os.makedirs(save_to, exist_ok=True)
         ep_data = {'act': actions, 'obs': obs, 'rews': []}
 
-        plot_one_episode(ep_data, save_to)
+        plot_one_episode(ep_data, save_to, show=False)
 
     print("Done!")
 

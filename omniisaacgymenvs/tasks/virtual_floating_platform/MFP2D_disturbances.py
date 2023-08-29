@@ -39,10 +39,10 @@ class UnevenFloorDisturbance:
         Generates the uneven floor."""
 
         if self._use_sinosoidal_floor:
-            self.floor_x_freq[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self._max_freq - self._min_freq) + self._min_freq
-            self.floor_y_freq[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self._max_freq - self._min_freq) + self._min_freq
-            self.floor_x_offset[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self._max_offset - self._min_offset) + self._min_offset
-            self.floor_y_offset[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self._max_offset - self._min_offset) + self._min_offset
+            self._floor_x_freq[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self._max_freq - self._min_freq) + self._min_freq
+            self._floor_y_freq[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self._max_freq - self._min_freq) + self._min_freq
+            self._floor_x_offset[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self._max_offset - self._min_offset) + self._min_offset
+            self._floor_y_offset[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self._max_offset - self._min_offset) + self._min_offset
         else:
             r = torch.rand((num_resets), dtype=torch.float32, device=self._device) *(self._max_floor_force - self._min_floor_force) + self._min_floor_force
             theta = torch.rand((num_resets), dtype=torch.float32, device=self._device) * math.pi * 2
