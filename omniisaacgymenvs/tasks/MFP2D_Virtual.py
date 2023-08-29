@@ -8,7 +8,7 @@ from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_thruster_generator i
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_factory import task_factory
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_core import parse_data_dict
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_rewards import Penalties
-from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_disturbances import UnevenFloorDisturbance, NoisyObservations, NoisyActions
+from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_disturbances import UnevenFloorDisturbance, TorqueDisturbance, NoisyObservations, NoisyActions
 
 from omni.isaac.core.utils.torch.rotations import *
 from omni.isaac.core.utils.prims import get_prim_at_path
@@ -54,6 +54,7 @@ class MFP2DVirtual(RLTask):
 
         # Domain randomization and adaptation
         self.UF = UnevenFloorDisturbance(self._task_cfg, self._num_envs, self._device)
+        self.TD = TorqueDisturbance(self._task_cfg, self._num_envs, self._device)
         self.ON = NoisyObservations(self._task_cfg)
         self.AN = NoisyActions(self._task_cfg)
         # Collects the platform parameters
@@ -262,7 +263,14 @@ class MFP2DVirtual(RLTask):
         Applies all the forces to the platform and its thrusters."""
 
         self._platforms.thrusters.apply_forces_and_torques_at_pos(forces=self.forces, positions=self.positions, is_global=False)
-        self.UF.apply_forces(self._platforms.base, self.root_pos)
+
+        if self.UF._use_uneven_floor:
+            floor_forces = self.UF.get_floor_forces(self.root_pos)
+            self._platforms.base.apply_forces_and_torques_at_pos(forces=floor_forces, positions=self.root_pos, is_global=True)
+        if self.TD._use_torque_disturbance:
+            torque_disturbance = self.TD.get_torque_disturbance(self.root_pos)
+            self._platforms.base.apply_forces_and_torques_at_pos(torques=torque_disturbance, positions=self.root_pos, is_global=True)
+
 
     def post_reset(self):
         """

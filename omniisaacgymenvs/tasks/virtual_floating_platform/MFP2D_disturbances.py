@@ -8,7 +8,7 @@ class UnevenFloorDisturbance:
     def __init__(self, task_cfg: dict, num_envs: int, device: str) -> None:
         # Uneven floor generation
         self._use_uneven_floor = task_cfg['env']['use_uneven_floor']
-        self._use_sinosoidal_floor = task_cfg['env']['use_sinusoidal_floor']
+        self._use_sinusoidal_floor = task_cfg['env']['use_sinusoidal_floor']
         self._min_freq = task_cfg['env']['floor_min_freq']
         self._max_freq = task_cfg['env']['floor_max_freq']
         self._min_offset = task_cfg['env']['floor_min_offset']
@@ -26,7 +26,7 @@ class UnevenFloorDisturbance:
         """
         Instantiates the buffers used to store the uneven floor disturbances."""
 
-        if self._use_sinosoidal_floor:
+        if self._use_sinusoidal_floor:
             self._floor_x_freq = torch.zeros((self._num_envs), device=self._device, dtype=torch.float32)
             self._floor_y_freq = torch.zeros((self._num_envs), device=self._device, dtype=torch.float32)
             self._floor_x_offset = torch.zeros((self._num_envs), device=self._device, dtype=torch.float32)
@@ -38,7 +38,7 @@ class UnevenFloorDisturbance:
         """
         Generates the uneven floor."""
 
-        if self._use_sinosoidal_floor:
+        if self._use_sinusoidal_floor:
             self._floor_x_freq[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self._max_freq - self._min_freq) + self._min_freq
             self._floor_y_freq[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self._max_freq - self._min_freq) + self._min_freq
             self._floor_x_offset[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self._max_offset - self._min_offset) + self._min_offset
@@ -53,18 +53,74 @@ class UnevenFloorDisturbance:
         """
         Computes the floor forces for the current state of the robot."""
 
-        if self._use_sinosoidal_floor:
+        if self._use_sinusoidal_floor:
             self.floor_forces[:,0] = torch.sin(root_pos[:,0] * self._floor_x_freq + self._floor_x_offset) * self._max_floor_force
             self.floor_forces[:,1] = torch.sin(root_pos[:,1] * self._floor_y_freq + self._floor_y_offset) * self._max_floor_force
+       
+        return self.floor_forces
 
-    def apply_forces(self, platform, root_pos: torch.Tensor) -> None:
+
+class TorqueDisturbance:
+    """
+    Creates disturbances on the platform by simulating a torque applied to its center."""
+
+    def __init__(self, task_cfg: dict, num_envs: int, device: str) -> None:
+        # Uneven floor generation
+        self._use_torque_disturbance = task_cfg['env']['use_torque_diturbance']
+        self._use_sinusoidal_torque = task_cfg['env']['use_sinusoidal_torque']
+        self._radius = torch.tensor(task_cfg['env']['platform']['core']['radius'])
+        self._mass = task_cfg['env']['platform']['core']['mass']
+        #self._max_floor_force = task_cfg['env']['max_floor_force'] 
+        #self._min_floor_force = task_cfg['env']['min_floor_force'] 
+        self._max_torque = self._mass * torch.square(self._radius) * 0.25
+        self._min_torque = self._mass * torch.square(self._radius) * 0.05
+        #self._max_floor_force = math.sqrt(self._max_floor_force**2 / 2)
+        #self._min_floor_force = math.sqrt(self._min_floor_force**2 / 2)
+        self._num_envs = num_envs
+        self._device = device
+
+        self.instantiate_buffers()
+
+    def instantiate_buffers(self) -> None:
         """
-        Applies the floor forces to the platform."""
+        Instantiates the buffers used to store the uneven floor disturbances."""
 
-        if self._use_uneven_floor:
-            self.get_floor_forces(root_pos)
-            platform.apply_forces_and_torques_at_pos(forces=self.floor_forces, positions=root_pos, is_global=True)
+        if self._use_sinusoidal_torque:
+            # REUSE SAME BUFFERS AS FOR THE FLOOR??
+            self._floor_x_freq = torch.zeros((self._num_envs), device=self._device, dtype=torch.float32)
+            self._floor_y_freq = torch.zeros((self._num_envs), device=self._device, dtype=torch.float32)
+            self._floor_x_offset = torch.zeros((self._num_envs), device=self._device, dtype=torch.float32)
+            self._floor_y_offset = torch.zeros((self._num_envs), device=self._device, dtype=torch.float32)
 
+        self.torque_forces = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
+
+    def generate_torque(self, env_ids: torch.Tensor, num_resets: int) -> None:
+        """
+        Generates the torque disturbance."""
+
+        if self._use_sinusoidal_torque:
+            #  use the same frequencies and offsets for the floor??
+            self._floor_x_freq[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self._max_freq - self._min_freq) + self._min_freq
+            self._floor_y_freq[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self._max_freq - self._min_freq) + self._min_freq
+            self._floor_x_offset[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self._max_offset - self._min_offset) + self._min_offset
+            self._floor_y_offset[env_ids] = torch.rand(num_resets, dtype=torch.float32, device=self._device) * (self._max_offset - self._min_offset) + self._min_offset
+        else:
+            r = torch.rand((num_resets), dtype=torch.float32, device=self._device) *(self._max_torque - self._min_torque) + self._min_torque
+            # make torques negative for half of the environments at random
+            r[torch.rand((num_resets), dtype=torch.float32, device=self._device) > 0.5] *= -1
+            print(r)
+            self.torque_forces[env_ids, 2] = r
+
+    def get_torque_disturbance(self, root_pos: torch.Tensor) -> None:
+        """
+        Computes the floor forces for the current state of the robot."""
+
+        if self._use_sinusoidal_torque:
+            self.torque_forces[:,0] = torch.sin(root_pos[:,0] * self._floor_x_freq + self._floor_x_offset) * self._max_torque
+            self.torque_forces[:,1] = torch.sin(root_pos[:,1] * self._floor_y_freq + self._floor_y_offset) * self._max_torque
+      
+        return self.torque_forces
+ 
 class NoisyObservations:
     """
     Adds noise to the observations of the robot."""

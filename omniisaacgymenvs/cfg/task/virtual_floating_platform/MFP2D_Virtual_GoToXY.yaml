@@ -32,6 +32,10 @@ env:
   max_floor_force: 0.5
   min_floor_force: 0.25
 
+  # Torque disturbance generation
+  use_torque_diturbance: False
+  use_sinusoidal_torque: False
+
   # Add noisy observations
   add_noise_on_pos: False 
   position_noise_min: -0.01 
