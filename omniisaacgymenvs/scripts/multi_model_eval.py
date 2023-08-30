@@ -36,9 +36,9 @@ def get_valid_models(load_dir, experiments):
     return valid_models
 
 
-def eval_multi_agents(cfg, agent, models, horizon, load_dir, plot_intermediate=False):
+def eval_multi_agents(cfg, agent, models, horizon, plot_intermediate=False):
 
-    evaluation_dir = "./evaluations/" + load_dir
+    evaluation_dir = "./evaluations/" + models[0].split("/")[1] + "/" 
     os.makedirs(evaluation_dir, exist_ok=True)
 
     store_all_agents = True # store all agents generated data, if false only the first agent is stored
@@ -112,10 +112,11 @@ def eval_multi_agents(cfg, agent, models, horizon, load_dir, plot_intermediate=F
         all_success_rate_df = pd.concat([all_success_rate_df, success_rate_df], ignore_index=True)
         # If want to print the latex code for the table use the following line
         if plot_intermediate:
-            plot_episode_data_virtual(ep_data, evaluation_dir, store_all_agents)
+            save_dir = evaluation_dir + model.split("/")[2] + "/"
+            plot_episode_data_virtual(ep_data, save_dir, store_all_agents)
 
     # create index for the dataframe and save it
-    model_names = [model.split("/")[3] for model in models]
+    model_names = [model.split("/")[2] for model in models]
     all_success_rate_df.insert(loc=0, column="model", value=model_names)
     all_success_rate_df.to_csv(evaluation_dir + "multi_model_performance.csv")
 
@@ -192,7 +193,7 @@ def parse_hydra_configs(cfg: DictConfig):
 
     agent = runner.create_player()
     plot_intermediate = True
-    eval_multi_agents(cfg, agent, models, horizon, load_dir, plot_intermediate)
+    eval_multi_agents(cfg, agent, models, horizon, plot_intermediate)
 
     env.close()    
 

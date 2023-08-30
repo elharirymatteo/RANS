@@ -129,7 +129,7 @@ def plot_distance_GoToPose(state_history: np.ndarray, tgrid: np.ndarray, save_di
 
     all_position_distances = np.linalg.norm(state_history[:, :, 6:8], axis=2)
     shape = state_history.shape[:-1]
-    all_heading_distances = np.arctan2(state_history[:, :, 8].flatten(), state_history[:, :, 9].flatten())
+    all_heading_distances = np.arctan2(state_history[:, :, 9].flatten(), state_history[:, :, 8].flatten())
     all_heading_distances = all_heading_distances.reshape(shape)
 
     fig_count += 1
@@ -559,7 +559,7 @@ def plot_single_absolute_heading(state_history:np.ndarray, tgrid:np.ndarray, sav
     Plot heading of a single agent."""
 
     headings = state_history[:, :2]
-    angles = np.arctan2(headings[:, 0], headings[:, 1])
+    angles = np.arctan2(headings[:, 1], headings[:, 0])
     # plot position (x, y coordinates)
     fig_count += 1
     plt.figure(fig_count)
@@ -668,7 +668,7 @@ def plot_single_heading_error(state_history:np.ndarray, tgrid:np.ndarray, save_d
     Plot heading error of a single agent."""
 
     heading_error = state_history[:, 8:]
-    heading_error = np.arctan2(heading_error[:, 0], heading_error[:, 1])
+    heading_error = np.arctan2(heading_error[:, 1], heading_error[:, 0])
     # plot position (x, y coordinates)
     fig_count += 1
     plt.figure(fig_count)
