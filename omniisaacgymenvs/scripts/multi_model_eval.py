@@ -9,7 +9,7 @@ from rlgames_train import RLGTrainer
 from rl_games.torch_runner import Runner
 from omniisaacgymenvs.utils.task_util import initialize_task
 from omniisaacgymenvs.envs.vec_env_rlgames import VecEnvRLGames
-
+from utils.plot_experiment import plot_episode_data_virtual
 from utils.eval_metrics import get_GoToXY_success_rate, get_GoToPose_success_rate, get_TrackXYVelocity_success_rate, get_TrackXYOVelocity_success_rate
 
 import os
@@ -36,7 +36,7 @@ def get_valid_models(load_dir, experiments):
     return valid_models
 
 
-def eval_multi_agents(cfg, agent, models, horizon, load_dir):
+def eval_multi_agents(cfg, agent, models, horizon, load_dir, plot_intermediate=False):
 
     evaluation_dir = "./evaluations/" + load_dir
     os.makedirs(evaluation_dir, exist_ok=True)
@@ -111,11 +111,13 @@ def eval_multi_agents(cfg, agent, models, horizon, load_dir):
         success_rate_df['avg_action_count'] = [np.mean(np.sum(ep_data['act'], axis=1))]
         all_success_rate_df = pd.concat([all_success_rate_df, success_rate_df], ignore_index=True)
         # If want to print the latex code for the table use the following line
+        if plot_intermediate:
+            plot_episode_data_virtual(ep_data, evaluation_dir, store_all_agents)
 
     # create index for the dataframe and save it
     model_names = [model.split("/")[3] for model in models]
     all_success_rate_df.insert(loc=0, column="model", value=model_names)
-    all_success_rate_df.to_csv(evaluation_dir + "multi_model_performance_uf.csv")
+    all_success_rate_df.to_csv(evaluation_dir + "multi_model_performance.csv")
 
 
 @hydra.main(config_name="config", config_path="../cfg")
@@ -128,7 +130,7 @@ def parse_hydra_configs(cfg: DictConfig):
     experiments = os.listdir(load_dir)
     print(f'Experiments found in {load_dir} folder: {len(experiments)}')
     models = get_valid_models(load_dir, experiments)
-    models = [m for m in models if "UF" in m.split("/")[2]]
+    models = [m for m in models if "UF" not in m.split("/")[2]]
     print(f'Final models: {models}')
     if not models:
         print('No valid models found')
@@ -189,8 +191,8 @@ def parse_hydra_configs(cfg: DictConfig):
     runner.reset()
 
     agent = runner.create_player()
-
-    eval_multi_agents(cfg, agent, models, horizon, load_dir)
+    plot_intermediate = True
+    eval_multi_agents(cfg, agent, models, horizon, load_dir, plot_intermediate)
 
     env.close()    
 

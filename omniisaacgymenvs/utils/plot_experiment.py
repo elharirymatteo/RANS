@@ -694,7 +694,7 @@ def plot_single_xy_position(state_history:np.ndarray, save_dir:str, fig_count:in
     plt.figure(fig_count)
     plt.clf()
     # Set aspect ratio to be equal
-    #plt.gca().set_aspect('equal', adjustable='box')
+    plt.gca().set_aspect('equal', adjustable='box')
     x, y = pos_error[:, 0], pos_error[:, 1]
     fig,ax = plt.subplots(figsize=(6,6))
 
