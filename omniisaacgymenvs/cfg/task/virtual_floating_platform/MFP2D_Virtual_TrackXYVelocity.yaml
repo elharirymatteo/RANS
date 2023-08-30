@@ -31,6 +31,12 @@ env:
   max_floor_force: 0.5
   min_floor_force: 0.25
 
+  # Torque disturbance generation
+  use_torque_diturbance: False
+  use_sinusoidal_torque: False
+  max_torque: 0.1 # Nm , 30% of max torque of thruster
+  min_torque: 0.0
+
   # Add noisy observations
   add_noise_on_pos: False 
   position_noise_min: -0.01 
@@ -88,7 +94,7 @@ env:
       max_thruster_kill: 2
 
     core:
-      mass: 10.92
+      mass: 5.32
       CoM: [0,0,0]
       radius: 0.31
       shape: "sphere"

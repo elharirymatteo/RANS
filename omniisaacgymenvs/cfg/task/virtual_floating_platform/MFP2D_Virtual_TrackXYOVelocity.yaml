@@ -12,24 +12,59 @@ env:
   enableDebugVis: False
   action_mode: MultiDiscrete
   numQuantizedActions: 1
+  horizon_length: 16
 
   controlFrequencyInv: 10
 
   clipObservations: {state: 5.0}
   clipActions: 1.0
 
+  split_thrust: False
+
+  # Uneven floor generation
+  use_uneven_floor: False
+  use_sinusoidal_floor: False
+  floor_min_freq: 0.25
+  floor_max_freq: 3
+  floor_min_offset: -6
+  floor_max_offset: 6
+  max_floor_force: 0.5
+  min_floor_force: 0.25
+
+  # Torque disturbance generation
+  use_torque_diturbance: False
+  use_sinusoidal_torque: False
+  max_torque: 0.1 # Nm , 30% of max torque of thruster
+  min_torque: 0.0
+
+  # Add noisy observations
+  add_noise_on_pos: False 
+  position_noise_min: -0.01 
+  position_noise_max:  0.01
+  add_noise_on_vel: False
+  velocity_noise_min: -0.01
+  velocity_noise_max:  0.01
+  add_noise_on_heading: False
+  heading_noise_min: -0.025
+  heading_noise_max:  0.025
+
+  # Add noisy actions
+  add_noise_on_act: False
+  min_action_noise: -0.05
+  max_action_noise:  0.05
+
   task_parameters: 
     name: TrackXYOVelocity
     lin_vel_tolerance: 0.01
     ang_vel_tolerance: 0.025
     kill_after_n_steps_in_tolerance: 50
-    goal_random_linear_velocity: 0.75
-    goal_random_angular_velocity: 1.0
+    goal_random_linear_velocity: 0.5
+    goal_random_angular_velocity: 0.5
     kill_dist: 500.0
 
   reward_parameters:
     name: TrackXYOVelocity
-    linear_reward_mode: linear
+    linear_reward_mode: exponential
     angular_reward_mode: linear
     linear_exponential_reward_coeff: 0.25
     angular_exponential_reward_coeff: 0.25
@@ -39,15 +74,15 @@ env:
   penalties_parameters:
     penalize_energy: False
     penalize_energy_fn: "lambda x: x*c1 + c2"
-    penalize_energy_c1: 0.01
+    penalize_energy_c1: 0.00
     penalize_energy_c2: 0.00
     penalize_linear_velocity: False
     penalize_linear_velocity_fn: "lambda x: x*c1 + c2"
-    penalize_linear_velocity_c1: 0.01
+    penalize_linear_velocity_c1: 0.00
     penalize_linear_velocity_c2: 0.00
     penalize_angular_velocity: False
     penalize_angular_velocity_fn: "lambda x: x*c1 + c2"
-    penalize_angular_velocity_c1: 0.01
+    penalize_angular_velocity_c1: 0.00
     penalize_angular_velocity_c2: 0.00
 
   platform:
@@ -65,7 +100,7 @@ env:
       max_thruster_kill: 2
 
     core:
-      mass: 5.0
+      mass: 5.32
       CoM: [0,0,0]
       radius: 0.25
       shape: "sphere"
