@@ -13,7 +13,6 @@ if __name__ == "__main__":
     sub_dirs = [d for d in sub_dirs if ("pose" not in str(d) and "kill3" not in str(d) and "new_pose" not in str(d))]
     if sub_dirs:
         latest_exp = max(sub_dirs, key=os.path.getmtime)
-        print("Plotting data for experiment:", latest_exp)
         n_episodes = 1
     else:
         print("No experiments found in", load_dir)
@@ -35,6 +34,7 @@ if __name__ == "__main__":
             print(f"Empty obs file in {d}, skipping...")
             continue
         
+        print("Plotting data for experiment:", d)
         # transform the obs numpy array of dictionaries to numpy array of arrays
         obs = np.array([o.flatten() for o in obs])
 

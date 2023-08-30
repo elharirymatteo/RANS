@@ -128,7 +128,7 @@ def parse_hydra_configs(cfg: DictConfig):
     experiments = os.listdir(load_dir)
     print(f'Experiments found in {load_dir} folder: {len(experiments)}')
     models = get_valid_models(load_dir, experiments)
-    models = [m for m in models if "UF" in m.split("/")[3]]
+    models = [m for m in models if "UF" in m.split("/")[2]]
     print(f'Final models: {models}')
     if not models:
         print('No valid models found')

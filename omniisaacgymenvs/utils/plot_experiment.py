@@ -679,7 +679,7 @@ def plot_single_heading_error(state_history:np.ndarray, tgrid:np.ndarray, save_d
     plt.title('Heading error')
     plt.grid()
     if save_dir:
-        plt.savefig(save_dir + 'signle_heading_heading_error')
+        plt.savefig(save_dir + 'single_heading_heading_error')
     if show:
         plt.show()
     return fig_count
@@ -693,6 +693,8 @@ def plot_single_xy_position(state_history:np.ndarray, save_dir:str, fig_count:in
     fig_count += 1
     plt.figure(fig_count)
     plt.clf()
+    # Set aspect ratio to be equal
+    #plt.gca().set_aspect('equal', adjustable='box')
     x, y = pos_error[:, 0], pos_error[:, 1]
     fig,ax = plt.subplots(figsize=(6,6))
 
@@ -726,6 +728,8 @@ def plot_single_xy_position_heading(state_history:np.ndarray, save_dir:str, fig_
     fig_count += 1
     plt.figure(fig_count)
     plt.clf()
+    # Set aspect ratio to be equal
+    plt.gca().set_aspect('equal', adjustable='box')
     x, y = pos_error[:, 0], pos_error[:, 1]
     c, s = heading[:, 0], heading[:, 1]
     fig,ax = plt.subplots(figsize=(6,6))

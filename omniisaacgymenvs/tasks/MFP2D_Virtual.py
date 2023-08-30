@@ -266,7 +266,6 @@ class MFP2DVirtual(RLTask):
                                                                   is_global=False)
         floor_forces = self.UF.get_floor_forces(self.root_pos)
         torque_disturbance = self.TD.get_torque_disturbance(self.root_pos)
-        print(f'floor_forces: {floor_forces}, \n\n torque_disturbance: {torque_disturbance}')
         self._platforms.base.apply_forces_and_torques_at_pos(forces=floor_forces, torques=torque_disturbance,
                                                               positions=self.root_pos, is_global=True)
 
