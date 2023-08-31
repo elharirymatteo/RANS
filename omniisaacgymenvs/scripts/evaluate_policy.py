@@ -21,7 +21,7 @@ def eval_multi_agents(cfg, horizon):
     """
     Evaluate a trained agent for a given number of steps"""
 
-    base_dir = "./evaluations/" + cfg.checkpoint.split("/")[1] + "/" +  cfg.checkpoint.split("/")[2] + "/"
+    base_dir = "./evaluations/" + cfg.checkpoint.split("/")[1] + "/" 
     experiment_name = cfg.checkpoint.split("/")[2]
     print(f'Experiment name: {experiment_name}')
     evaluation_dir = base_dir + experiment_name + "/"
