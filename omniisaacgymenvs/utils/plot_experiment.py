@@ -171,7 +171,7 @@ def plot_all_distances_GoToPose(state_history:np.ndarray, tgrid:np.ndarray, save
 
     all_position_distances = np.linalg.norm(state_history[:, :, 6:8], axis=2)
     shape = state_history.shape[:-1]
-    all_heading_distances = np.arctan2(state_history[:, :, 8].flatten(), state_history[:, :, 9].flatten())
+    all_heading_distances = np.arctan2(state_history[:, :, 9].flatten(), state_history[:, :, 8].flatten())
     all_heading_distances = all_heading_distances.reshape(shape)
 
     fig_count += 1
