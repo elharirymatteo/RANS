@@ -8,9 +8,9 @@ from utils.plot_experiment import plot_one_episode
 
 if __name__ == "__main__":
 
-    load_dir = Path("./ros_lab_exp/")
+    load_dir = Path("./ros_lab_exp/nominal/")
     sub_dirs = [d for d in load_dir.iterdir() if d.is_dir()]
-    sub_dirs = [d for d in sub_dirs if ("pose" not in str(d) and "kill3" not in str(d) and "new_pose" not in str(d))]
+    #sub_dirs = [d for d in sub_dirs if ("pose" not in str(d) and "kill3" not in str(d) and "new_pose" not in str(d))]
     if sub_dirs:
         latest_exp = max(sub_dirs, key=os.path.getmtime)
         n_episodes = 1
