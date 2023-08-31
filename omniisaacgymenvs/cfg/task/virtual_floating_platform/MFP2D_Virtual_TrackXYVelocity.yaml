@@ -32,7 +32,7 @@ env:
   min_floor_force: 0.25
 
   # Torque disturbance generation
-  use_torque_diturbance: False
+  use_torque_disturbance: False
   use_sinusoidal_torque: False
   max_torque: 0.1 # Nm , 30% of max torque of thruster
   min_torque: 0.0
