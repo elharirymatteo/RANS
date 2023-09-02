@@ -2,7 +2,7 @@ import numpy as np
 import hydra
 from omegaconf import DictConfig
 from omniisaacgymenvs.utils.hydra_cfg.hydra_utils import *
-from omniisaacgymenvs.utils.hydra_cfg.reformat import omegaconf_to_dict
+from omniisaacgymenvs.utils.hydra_cfg.reformat import omegaconf_to_dict, print_dict
 from omniisaacgymenvs.utils.rlgames.rlgames_utils import RLGPUAlgoObserver
 
 from rlgames_train import RLGTrainer
@@ -118,7 +118,7 @@ def eval_multi_agents(cfg, agent, models, horizon, plot_intermediate=False):
     # create index for the dataframe and save it
     model_names = [model.split("/")[2] for model in models]
     all_success_rate_df.insert(loc=0, column="model", value=model_names)
-    all_success_rate_df.to_csv(evaluation_dir + "multi_model_performance.csv")
+    all_success_rate_df.to_csv(evaluation_dir + "/uf_xy_BB.csv")
 
 
 @hydra.main(config_name="config", config_path="../cfg")
@@ -131,7 +131,7 @@ def parse_hydra_configs(cfg: DictConfig):
     experiments = os.listdir(load_dir)
     print(f'Experiments found in {load_dir} folder: {len(experiments)}')
     models = get_valid_models(load_dir, experiments)
-    models = [m for m in models if "UF" not in m.split("/")[2]]
+    models = [m for m in models if "BB" in m.split("/")[2]]
     print(f'Final models: {models}')
     if not models:
         print('No valid models found')
@@ -143,20 +143,20 @@ def parse_hydra_configs(cfg: DictConfig):
     if "BB" in models[0]:
         print("Using BB model ...")
         cfg.train.params.network.mlp.units = [256, 256]
-    if "BBB" in models[0]:
-        print("Using BBB model ...")
-        cfg.train.params.network.mlp.units = [256, 256, 256]
-    if "AN" in models[0]:
-            print("Adding noise on act ...")
-            cfg.task.env.add_noise_on_act = True
-    if "AVN" in models[0]:
-            print("Adding noise on act and vel ...")
-            cfg.task.env.add_noise_on_act = True
-            cfg.task.env.add_noise_on_vel = True
-    if "UF" in models[0]:
-        print("Setting uneven floor in the environment ...")
-        cfg.task.env.use_uneven_floor = True
-        cfg.task.env.max_floor_force = 0.25
+    # if "BBB" in models[0]:
+    #     print("Using BBB model ...")
+    #     cfg.train.params.network.mlp.units = [256, 256, 256]
+    # if "AN" in models[0]:
+    #         print("Adding noise on act ...")
+    #         cfg.task.env.add_noise_on_act = True
+    # if "AVN" in models[0]:
+    #         print("Adding noise on act and vel ...")
+    cfg.task.env.add_noise_on_act = True
+    #cfg.task.env.add_noise_on_vel = True
+    # if "UF" in models[0]:
+    print("Setting uneven floor in the environment ...")
+    cfg.task.env.use_uneven_floor = True
+    cfg.task.env.max_floor_force = 0.25
 
     horizon = 500
     cfg.task.env.maxEpisodeLength = horizon + 2
@@ -169,7 +169,7 @@ def parse_hydra_configs(cfg: DictConfig):
     cfg.task.env.task_parameters['kill_after_n_steps_in_tolerance'] = 500
     
     cfg_dict = omegaconf_to_dict(cfg)
-    #print_dict(cfg_dict)
+    print_dict(cfg_dict)
 
     # _____Create environment_____
 
@@ -192,7 +192,7 @@ def parse_hydra_configs(cfg: DictConfig):
     runner.reset()
 
     agent = runner.create_player()
-    plot_intermediate = True
+    plot_intermediate = False
     eval_multi_agents(cfg, agent, models, horizon, plot_intermediate)
 
     env.close()    
