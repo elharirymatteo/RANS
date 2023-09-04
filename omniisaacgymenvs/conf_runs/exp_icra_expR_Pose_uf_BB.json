@@ -1,6 +1,6 @@
 {
   "experiment111": {
-      "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose_BB",
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
       "train": "virtual_floating_platform/MFP2D_PPOmulti_dict_MLP",
       "task.env.split_thrust": "True",
       "task.env.platform.core.mass": "5.32",
@@ -17,7 +17,7 @@
       "wandb_project": "icra24_Pose_new"
   },
   "experiment112": {
-    "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose_BB",
+    "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
     "train": "virtual_floating_platform/MFP2D_PPOmulti_dict_MLP",
     "task.env.split_thrust": "True",
     "task.env.platform.core.mass": "5.32",
@@ -36,7 +36,7 @@
     "wandb_project": "icra24_Pose_new"
   },
   "experiment113": {
-    "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose_BB",
+    "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
     "train": "virtual_floating_platform/MFP2D_PPOmulti_dict_MLP",
     "task.env.split_thrust": "True",
     "task.env.platform.core.mass": "5.32",
@@ -55,7 +55,7 @@
     "wandb_project": "icra24_Pose_new"
   },
   "experiment114": {
-    "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose_BB",
+    "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
     "train": "virtual_floating_platform/MFP2D_PPOmulti_dict_MLP",
     "task.env.split_thrust": "True",
     "task.env.platform.core.mass": "5.32",
@@ -74,7 +74,7 @@
     "wandb_project": "icra24_Pose_new"
   },
   "experiment115": {
-    "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose_BB",
+    "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
     "train": "virtual_floating_platform/MFP2D_PPOmulti_dict_MLP",
     "task.env.split_thrust": "True",
     "task.env.platform.core.mass": "5.32",
@@ -93,7 +93,7 @@
     "wandb_project": "icra24_Pose_new"
   },
     "experiment116": {
-      "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose_BB",
+      "task": "virtual_floating_platform/MFP2D_Virtual_GoToPose",
       "train": "virtual_floating_platform/MFP2D_PPOmulti_dict_MLP",
       "task.env.split_thrust": "True",
       "task.env.platform.core.mass": "5.32",
