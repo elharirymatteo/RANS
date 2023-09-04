@@ -1,10 +1,7 @@
 __pycache___
 __pycache__/
 runs
-penalty_tests
-new_mass
-corl_runs
-fail_penalty_test
+models
 omniisaacgymenvs.egg-info/
 checkpoints
 omniisaacgymenvs/wandb
@@ -12,3 +9,5 @@ evaluations
 *.png
 *.npy
 *.csv
+*.zip
+*.ipynb

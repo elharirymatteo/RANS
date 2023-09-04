@@ -1,15 +1,7 @@
-import numpy as np
 import pandas as pd
+import numpy as np
 
-
-def success_rate_from_distances(distances, threshold=0.02):
-    """Compute the success rate from the distances to the target.
-    Args:
-        distances (np.ndarray): Array of distances to the target for N episodes.
-        precision (float): Distance at which the target is considered reached.
-    Returns:
-        float: Success rate.
-    """
+def build_distance_dataframe(distances: np.ndarray, threshold: float) -> list:
     distances_df = pd.DataFrame(distances, columns = [f'Ep_{i}' for i in range(distances.shape[1])])
     # get a boolean dataframe where True means that the distance is less than the threshold
     less_than_thr_df = distances_df.lt(threshold)
@@ -20,13 +12,11 @@ def success_rate_from_distances(distances, threshold=0.02):
     first_less_than_thr_idxs = less_than_thr_df.idxmax().where(less_than_thr_df.any(), -1)
     first_less_than_thr2_idxs = less_than_thr2_df.idxmax().where(less_than_thr2_df.any(), -1)
 
-    #less_than_thr_consistent = less_than_thr_df[less_than_thr_df.index.isin(range(first_less_than_thr_idxs, distances.shape[0]))].all(axis=0)
-    #print(first_less_than_thr_idxs)
-    #print(first_less_than_thr2_idxs)
-
     margin = threshold * 7.5
     less_than_margin_df = distances_df.lt(margin)
-    # Check if values are all True after the specific index for each column
+    return less_than_margin_df, first_less_than_thr_idxs, first_less_than_thr2_idxs
+
+def check_stay(less_than_margin_df: pd.DataFrame, first_less_than_thr_idxs: pd.DataFrame, first_less_than_thr2_idxs: pd.DataFrame) -> list:
     all_true_after_index = pd.DataFrame(index=less_than_margin_df.columns)
     all_true_after_index['all_true'] = less_than_margin_df.apply(lambda column: column.loc[first_less_than_thr_idxs[column.name]:].all(), axis=0)
     success_and_stay_rate = all_true_after_index.value_counts(normalize=True)
@@ -34,18 +24,109 @@ def success_rate_from_distances(distances, threshold=0.02):
 
     success_rate_thr = (first_less_than_thr_idxs > -1).mean() * 100
     success_rate_thr2 = (first_less_than_thr2_idxs > -1).mean() * 100
-    print(f'Success rate with threshold {threshold}: {success_rate_thr}')
-    print(f'Success rate with threshold {threshold_2}: {success_rate_thr2}')
-    print(f'Success rate and stay with margin {margin}: {success_and_stay_rate * 100}')
+    return success_rate_thr, success_rate_thr2, success_and_stay_rate
 
+def print_success(success_rate_thr: float, success_rate_thr2: float, success_and_stay_rate: float, threshold: float, print_intermediate:bool = False) -> None:
+    if print_intermediate:
+        print(f'Success rate with threshold {threshold}: {success_rate_thr}')
+        print(f'Success rate with threshold {threshold/2}: {success_rate_thr2}')
+        print(f'Success rate and stay with margin {threshold*7.5}: {success_and_stay_rate * 100}')
 
-    success_rate_df = pd.DataFrame({f'success_rate_{threshold}_m': [success_rate_thr], f'success_rate_{threshold_2}_m': [success_rate_thr2], 
-                                    'success_and_stay_rate': [success_and_stay_rate * 100]})
-    get_success_rate_table(success_rate_df)
+def get_GoToXY_success_rate(ep_data:dict, threshold:float = 0.02, print_intermediate:bool = False) -> dict:
+    """Compute the success rate from the distances to the target.
+
+    Args:
+        distances (np.ndarray): Array of distances to the target for N episodes.
+        precision (float): Distance at which the target is considered reached.
+    Returns:
+        float: Success rate."""
+
+    distances = np.linalg.norm(ep_data['obs'][:, :, 6:8], axis=2)
+    less_than_margin_df, first_less_than_thr_idxs, first_less_than_thr2_idxs = build_distance_dataframe(distances, threshold)
+    success_rate_thr, success_rate_thr2, success_and_stay_rate = check_stay(less_than_margin_df, first_less_than_thr_idxs, first_less_than_thr2_idxs)
+    print_success(success_rate_thr, success_rate_thr2, success_and_stay_rate, threshold, print_intermediate)
+    success_rate_df = pd.DataFrame({f'success_rate_{threshold}_m': [success_rate_thr], f'success_rate_{threshold/2}_m': [success_rate_thr2], 
+                                    f'success_and_stay_within_{threshold*7.5}_m': [success_and_stay_rate * 100]})
     
-    return 0
+    return {"position":success_rate_df}
 
-def get_success_rate_table(success_rate_df):
+def get_GoToPose_success_rate(ep_data:dict, position_threshold:float = 0.02, heading_threshold:float = 0.087, print_intermediate:bool = False) -> dict:
+    """Compute the success rate from the distances to the target.
+
+    Args:
+        distances (np.ndarray): Array of distances to the target for N episodes.
+        precision (float): Distance at which the target is considered reached.
+    Returns:
+        float: Success rate."""
+
+    position_distances = np.linalg.norm(ep_data['obs'][:, :, 6:8], axis=2)
+    heading_distances = np.arctan2(ep_data['obs'][:, :, 9], ep_data['obs'][:, :, 8]) 
+
+    less_than_margin_df, first_less_than_thr_idxs, first_less_than_thr2_idxs = build_distance_dataframe(position_distances, position_threshold)
+    success_rate_thr, success_rate_thr2, success_and_stay_rate = check_stay(less_than_margin_df, first_less_than_thr_idxs, first_less_than_thr2_idxs)
+    print_success(success_rate_thr, success_rate_thr2, success_and_stay_rate, position_threshold, print_intermediate)
+
+    position_success_rate_df = pd.DataFrame({f'success_rate_{position_threshold}_m': [success_rate_thr], f'success_rate_{position_threshold/2}_m': [success_rate_thr2], 
+                                    f'success_and_stay_within_{position_threshold*7.5}_m': [success_and_stay_rate * 100]})
+    
+    less_than_margin_df, first_less_than_thr_idxs, first_less_than_thr2_idxs = build_distance_dataframe(heading_distances, heading_threshold)
+    success_rate_thr, success_rate_thr2, success_and_stay_rate = check_stay(less_than_margin_df, first_less_than_thr_idxs, first_less_than_thr2_idxs)
+    print_success(success_rate_thr, success_rate_thr2, success_and_stay_rate, heading_threshold, print_intermediate)
+
+    heading_success_rate_df = pd.DataFrame({f'success_rate_{heading_threshold}_rad': [success_rate_thr], f'success_rate_{heading_threshold/2}_rad': [success_rate_thr2], 
+                                    f'success_and_stay_within_{heading_threshold*7.5}_rad': [success_and_stay_rate * 100]})
+    
+    return {"position":position_success_rate_df, "heading":heading_success_rate_df}
+
+def get_TrackXYVelocity_success_rate(ep_data:dict, threshold:float = 0.15, print_intermediate:bool = False) -> dict:
+    """Compute the success rate from the distances to the target.
+
+    Args:
+        distances (np.ndarray): Array of distances to the target for N episodes.
+        precision (float): Distance at which the target is considered reached.
+    Returns:
+        float: Success rate."""
+
+    distances = np.linalg.norm(ep_data['obs'][:, :, 6:8], axis=2)
+    less_than_margin_df, first_less_than_thr_idxs, first_less_than_thr2_idxs = build_distance_dataframe(distances, threshold)
+    success_rate_thr, success_rate_thr2, success_and_stay_rate = check_stay(less_than_margin_df, first_less_than_thr_idxs, first_less_than_thr2_idxs)
+    print_success(success_rate_thr, success_rate_thr2, success_and_stay_rate, threshold, print_intermediate)
+
+    success_rate_df = pd.DataFrame({f'success_rate_{threshold}_m/s': [success_rate_thr], f'success_rate_{threshold/2}_m/s': [success_rate_thr2], 
+                                    f'success_and_stay_within_{threshold*7.5}_m/s': [success_and_stay_rate * 100]})
+    
+    return {"xy_velocity":success_rate_df}
+
+def get_TrackXYOVelocity_success_rate(ep_data:dict, xy_threshold:float = 0.15, omega_threshold:float = 0.3, print_intermediate:bool = False) -> float:
+    """Compute the success rate from the distances to the target.
+
+    Args:
+        distances (np.ndarray): Array of distances to the target for N episodes.
+        precision (float): Distance at which the target is considered reached.
+    Returns:
+        float: Success rate."""
+
+    xy_distances = np.linalg.norm(ep_data['obs'][:, :, 6:8], axis=2)
+    omega_distances = np.abs(ep_data['obs'][:, :, 8])
+
+    less_than_margin_df, first_less_than_thr_idxs, first_less_than_thr2_idxs = build_distance_dataframe(xy_distances, xy_threshold)
+    success_rate_thr, success_rate_thr2, success_and_stay_rate = check_stay(less_than_margin_df, first_less_than_thr_idxs, first_less_than_thr2_idxs)
+    print_success(success_rate_thr, success_rate_thr2, success_and_stay_rate, xy_threshold, print_intermediate)
+
+    xy_success_rate_df = pd.DataFrame({f'success_rate_{xy_threshold}_m/s': [success_rate_thr], f'success_rate_{xy_threshold/2}_m/s': [success_rate_thr2], 
+                                    f'success_and_stay_within_{xy_threshold*7.5}_m/s': [success_and_stay_rate * 100]})
+    
+    less_than_margin_df, first_less_than_thr_idxs, first_less_than_thr2_idxs = build_distance_dataframe(omega_distances, omega_threshold)
+    success_rate_thr, success_rate_thr2, success_and_stay_rate = check_stay(less_than_margin_df, first_less_than_thr_idxs, first_less_than_thr2_idxs)
+    print_success(success_rate_thr, success_rate_thr2, success_and_stay_rate, omega_threshold, print_intermediate)
+
+    omega_success_rate_df = pd.DataFrame({f'success_rate_{omega_threshold}_rad/s': [success_rate_thr], f'success_rate_{omega_threshold/2}_rad/s': [success_rate_thr2], 
+                                    f'success_and_stay_within_{omega_threshold*7.5}_rad/s': [success_and_stay_rate * 100]})
+    
+    return {"xy_velocity":xy_success_rate_df, "omega_velocity":omega_success_rate_df}
+
+
+def get_success_rate_table(success_rate_df: pd.DataFrame) -> None:
 
     print(success_rate_df.to_latex(index=False,
                                    formatters={"name": str.upper},
