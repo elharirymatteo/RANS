@@ -110,7 +110,7 @@ class TorqueDisturbance:
         Computes the floor forces for the current state of the robot."""
 
         if self._use_sinusoidal_torque:
-            self.torque_forces = torch.sin(root_pos * self._torque_freq + self._torque_offset) * self._max_torque
+            self.torque_forces[:,2] = torch.sin(root_pos * self._torque_freq + self._torque_offset) * self._max_torque
 
         return self.torque_forces
  
