@@ -11,3 +11,4 @@ evaluations
 *.csv
 *.zip
 *.ipynb
+!eval_multi_models.ipynb

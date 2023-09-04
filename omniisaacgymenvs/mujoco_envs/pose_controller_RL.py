@@ -146,7 +146,7 @@ class PoseController:
         self.obs_state[0,:2] = torch.tensor(state["orientation"], dtype=torch.float32, device="cuda")
         self.obs_state[0,2:4] = torch.tensor(state["linear_velocity"], dtype=torch.float32, device="cuda")
         self.obs_state[0,4] = state["angular_velocity"]
-        self.obs_state[0,5] = 0
+        self.obs_state[0,5] = 1
         self.obs_state[0,6:8] = torch.tensor(self.current_goal[:2] - state["position"], dtype=torch.float32, device="cuda")
         heading = np.arctan2(state["orientation"][1], state["orientation"][0])
         heading_error = np.arctan2(np.sin(self.current_goal[-1] - heading), np.cos(self.current_goal[-1] - heading))

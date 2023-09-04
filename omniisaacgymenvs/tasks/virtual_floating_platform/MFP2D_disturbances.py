@@ -66,7 +66,7 @@ class TorqueDisturbance:
 
     def __init__(self, task_cfg: dict, num_envs: int, device: str) -> None:
         # Uneven floor generation
-        self._use_torque_disturbance = task_cfg['env']['use_torque_diturbance']
+        self._use_torque_disturbance = task_cfg['env']['use_torque_disturbance']
         self._use_sinusoidal_torque = task_cfg['env']['use_sinusoidal_torque']
         self._max_torque = task_cfg['env']['max_torque']
         self._min_torque = task_cfg['env']['min_torque']
