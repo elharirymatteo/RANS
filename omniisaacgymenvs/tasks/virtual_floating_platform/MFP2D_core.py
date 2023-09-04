@@ -27,6 +27,7 @@ class Core:
     def update_observation_tensor(self, current_state: dict) -> torch.Tensor:
         """
         Updates the observation tensor with the current state of the robot."""
+
         self._obs_buffer[:, 0:2] = current_state["orientation"]
         self._obs_buffer[:, 2:4] = current_state["linear_velocity"]
         self._obs_buffer[:, 4] = current_state["angular_velocity"]
