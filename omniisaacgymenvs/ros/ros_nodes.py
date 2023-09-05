@@ -135,7 +135,7 @@ class RLPlayerNode:
         self.heading[0] = cosy_cosp
         self.heading[1] = siny_cosp
         linear_vel, angular_vel = derive_velocities(self.time_buffer, self.pose_buffer)
-        self.state = {"position": self.root_pos, "orientation": self.heading, "linear_velocity": linear_vel[:2], "angular_velocity": angular_vel[0]}
+        self.state = {"position": self.root_pos, "orientation": self.heading, "linear_velocity": linear_vel[:2], "angular_velocity": angular_vel[-1]}
     
     def goal_callback(self, msg):
         """
