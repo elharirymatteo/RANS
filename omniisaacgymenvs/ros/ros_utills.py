@@ -2,8 +2,8 @@ import numpy as np
 import os
 
 from typing import List, Tuple
-from geometry_msgs.msg import Pose
-import rospy
+#from geometry_msgs.msg import Pose
+#import rospy
 
 def enable_ros_extension(env_var:str = "ROS_DISTRO"):
     """
@@ -59,7 +59,7 @@ def angular_velocities(q:np.ndarray, dt:np.ndarray, N:int=1) -> np.ndarray:
         q[:-1,0]*q[1:,3] - q[:-1,1]*q[1:,2] + q[:-1,2]*q[1:,1] - q[:-1,3]*q[1:,0]])
 
 
-def derive_velocities(time_buffer:List[rospy.Time], pose_buffer: List[Pose]) -> Tuple(np.ndarray, np.ndarray):
+def derive_velocities(time_buffer:list, pose_buffer: list) -> Tuple[np.ndarray, np.ndarray]:
     """
     Derive the velocities from the pose and time buffers.
     

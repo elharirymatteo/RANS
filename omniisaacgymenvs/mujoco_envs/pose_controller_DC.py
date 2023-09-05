@@ -6,6 +6,7 @@ import numpy as np
 import argparse
 import scipy.io
 import mujoco
+import torch
 import os
 import cvxpy as cp
 
@@ -459,6 +460,8 @@ class PoseController:
 
         self.distance_threshold = distance_threshold
 
+        self.obs_state = torch.zeros((1,10), dtype=torch.float32, device="cuda")
+
     def isGoalReached(self, state: Dict[str, np.ndarray]) -> bool:
         dist = np.linalg.norm(self.current_goal[:2] - state["position"][:2])
         if dist < self.distance_threshold:
@@ -466,11 +469,34 @@ class PoseController:
     
     def getGoal(self) -> np.ndarray:
         return self.current_goal
+    
+    def setGoal(self, goal:np.ndarray) -> None:
+        self.current_goal = goal
+        self.goals = np.array([goal])
 
     def isDone(self) -> bool:
         return len(self.goals) == 0
+    
+    def getObs(self):
+        return self.obs_state.cpu().numpy()
+
+    def makeObservationBuffer(self, state):
+        q = state["quaternion"]
+        siny_cosp = 2 * (q[0] * q[3] + q[1] * q[2])
+        cosy_cosp = 1 - 2 * (q[2] * q[2] + q[3] * q[3])
+        self.obs_state[0,:2] = torch.tensor([cosy_cosp, siny_cosp], dtype=torch.float32, device="cuda")
+        self.obs_state[0,2:4] = torch.tensor(state["linear_velocity"][:2], dtype=torch.float32, device="cuda")
+        self.obs_state[0,4] = state["angular_velocity"][-1]
+        self.obs_state[0,5] = 1
+        self.obs_state[0,6:8] = torch.tensor(self.current_goal[:2] - state["position"][:2], dtype=torch.float32, device="cuda")
+        heading = np.arctan2(siny_cosp, cosy_cosp)
+        heading_error = np.arctan2(np.sin(self.current_goal[-1] - heading), np.cos(self.current_goal[-1] - heading))
+        self.obs_state[0,8] = torch.tensor(np.cos(heading_error), dtype=torch.float32, device="cuda")
+        self.obs_state[0,9] = torch.tensor(np.sin(heading_error), dtype=torch.float32, device="cuda")
+
 
     def makeState4Controller(self, state: Dict[str, np.ndarray]) -> List[np.ndarray]:
+        self.makeObservationBuffer(state)
         current_position = state["position"]
         current_position[-1] = 0
         current_orientation = state["quaternion"]
@@ -478,7 +504,7 @@ class PoseController:
         current_angular_velocity = state["angular_velocity"]
         return current_position, current_orientation, current_linear_velocity, current_angular_velocity
 
-    def getAction(self, state: Dict[str, np.ndarray]) -> np.ndarray:
+    def getAction(self, state: Dict[str, np.ndarray], **kwargs) -> np.ndarray:
         if self.isGoalReached(state):
             print("Goal reached!")
             if len(self.goals) > 1:

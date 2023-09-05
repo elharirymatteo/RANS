@@ -68,7 +68,7 @@ if __name__ == '__main__':
         assert os.path.exists(args.model_path), "The model file does not exist."
         assert os.path.exists(args.config_path), "The configuration file does not exist."
 
-    assert args.task_mode.lower() in ["gotoxy", "gotopose", "trackxyvelocity", "trackxyovelocity"], "The task mode must be one of the following: GoToXY, GoToPose, TrackXYVelocity, TrackXYOVelocity."
+    assert args.task_mode.lower() in ["gotoxy", "gotopose", "trackxyvelocity", "trackxyovelocity", "gotoposedc"], "The task mode must be one of the following: GoToXY, GoToPose, TrackXYVelocity, TrackXYOVelocity."
     if args.task_mode.lower() == "gotoxy":
         task_id = 0
         if not args.use_live_goals:

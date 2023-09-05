@@ -57,7 +57,7 @@ class RLPlayerNode:
             Union[PositionController, PoseController, VelocityTracker, PoseControllerDC]: The controller."""
 
         if self.task_id == -1:
-            return PoseControllerDC(self.model, self.settings.goal_x, self.settings.goal_y, self.settings.goal_theta, self.settings.distance_threshold, self.settings.heading_threshold)
+            return PoseControllerDC(self.model, self.settings.goal_x, self.settings.goal_y, self.settings.goal_theta, self.settings.distance_threshold)
         elif self.task_id == 0:
             return PositionController(self.model, self.settings.goal_x, self.settings.goal_y, self.settings.distance_threshold)
         elif self.task_id == 1:

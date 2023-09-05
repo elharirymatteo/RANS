@@ -2,7 +2,6 @@ from typing import Dict
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-from omniisaacgymenvs.mujoco_envs.pose_controller_DC import DiscreteController, MuJoCoPoseControl
 import mujoco
 import math
 import os
