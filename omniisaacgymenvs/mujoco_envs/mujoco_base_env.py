@@ -2,6 +2,7 @@ from typing import Dict
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+from omniisaacgymenvs.mujoco_envs.pose_controller_DC import DiscreteController, MuJoCoPoseControl
 import mujoco
 import math
 import os
@@ -15,8 +16,8 @@ default_cfg['disturbances']['floor_min_freq'] = 0.25
 default_cfg['disturbances']['floor_max_freq'] = 3.0
 default_cfg['disturbances']['floor_min_offset'] = -6.0
 default_cfg['disturbances']['floor_max_offset'] = 6.0
-default_cfg['disturbances']['max_floor_force'] = 0.5
-default_cfg['disturbances']['min_floor_force'] = 0.5
+default_cfg['disturbances']['max_floor_force'] = 0.4
+default_cfg['disturbances']['min_floor_force'] = 0.4
 default_cfg['disturbances']['use_torque_diturbance'] = True
 default_cfg['disturbances']['use_sinusoidal_torque'] = False
 default_cfg['disturbances']['max_torque'] = 0.1
@@ -394,8 +395,8 @@ class MuJoCoFloatingPlatform:
                 p2 = np.matmul(rmat, self.positions[i]) + p # Compute the position of the force.
                 mujoco.mj_applyFT(self.model, self.data, force, [0,0,0], p2, self.body_id, self.data.qfrc_applied) # Apply the force.
 
-        uf_forces = self.UF.get_floor_forces(self.data.qpos[:2])#/self.inv_play_rate
-        td_forces = self.TD.get_torque_disturbance(self.data.qpos[:2])#/self.inv_play_rate
+        uf_forces = self.UF.get_floor_forces(self.data.qpos[:2])
+        td_forces = self.TD.get_torque_disturbance(self.data.qpos[:2])
         mujoco.mj_applyFT(self.model, self.data, uf_forces, td_forces, self.data.qpos[:3], self.body_id, self.data.qfrc_applied) # Apply the force.
 
     def updateLoggers(self) -> None:
