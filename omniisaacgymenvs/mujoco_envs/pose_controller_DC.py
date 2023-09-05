@@ -121,7 +121,7 @@ class DiscreteController:
         self.control_type       = control_type
 
         # control parameters
-        self.Q = np.diag([1,1,15,15,1,1,1])                      # State cost matrix
+        self.Q = np.diag([1,1,8,8,1,1,1])                      # State cost matrix
         self.R = np.diag([0.01] * self.thruster_count)  # Control cost matrix
         self.W = np.diag([0.1] * 7) # Disturbance weight matrix
         self.find_gains()
@@ -408,6 +408,7 @@ class DiscreteController:
         if self.control_type == 'H-inf':
             control_input = np.array(self.L @ self.state) + self.disturbance
         elif self.control_type == 'LQR':
+            self.find_gains()
             control_input = np.array(self.L @ self.state) 
         else:
             raise ValueError("Invalid control type specified.")
