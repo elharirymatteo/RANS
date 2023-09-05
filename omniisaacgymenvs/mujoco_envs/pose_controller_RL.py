@@ -6,7 +6,7 @@ import mujoco
 import torch
 import os
 
-from omniisaacgymenvs.mujoco_envs.mujoco_base_env import MuJoCoFloatingPlatform
+from omniisaacgymenvs.mujoco_envs.mujoco_base_env import MuJoCoFloatingPlatform, default_cfg
 from omniisaacgymenvs.mujoco_envs.RL_games_model_4_mujoco import RLGamesModel
 
 class MuJoCoPositionControl(MuJoCoFloatingPlatform):
@@ -24,34 +24,33 @@ class MuJoCoPositionControl(MuJoCoFloatingPlatform):
         self.logs["position_target"].append(target[:2])
         self.logs["heading_target"].append(target[-1])
 
-    def applyFriction(self, fdyn=0.1, fstat=0.1, tdyn=0.05, tstat=0.0):
-        lin_vel = self.data.qvel[:3]
-        lin_vel_norm = np.linalg.norm(lin_vel)
-        ang_vel = self.data.qvel[-1]
-        forces = self.data.qfrc_applied[:3]
-        forces_norm = np.linalg.norm(forces)
-        torques = self.data.qfrc_applied[3:]
-        torques_norm = np.linalg.norm(torques)
-        #if (forces_norm > fstat) or (torques_norm > tstat):
-        if lin_vel_norm > 0.001:
-            lin_vel_normed = np.array(lin_vel) / lin_vel_norm
-            force = -lin_vel_normed * fdyn
-            force[-1] = 0
-            mujoco.mj_applyFT(self.model, self.data, list(force), [0,0,0], self.data.qpos[:3], self.body_id, self.data.qfrc_applied)
-        if ang_vel > 0.001:
-            torque = - np.sign(ang_vel) * tdyn
-            mujoco.mj_applyFT(self.model, self.data, [0,0,0], [0,0,torque], self.data.qpos[:3], self.body_id, self.data.qfrc_applied)
-        #else:
-        #    self.data.qfrc_applied[:3] = 0
+    #def applyFriction(self, fdyn=0.1, fstat=0.1, tdyn=0.05, tstat=0.0):
+    #    lin_vel = self.data.qvel[:3]
+    #    lin_vel_norm = np.linalg.norm(lin_vel)
+    #    ang_vel = self.data.qvel[-1]
+    #    forces = self.data.qfrc_applied[:3]
+    #    forces_norm = np.linalg.norm(forces)
+    #    torques = self.data.qfrc_applied[3:]
+    #    torques_norm = np.linalg.norm(torques)
+    #    #if (forces_norm > fstat) or (torques_norm > tstat):
+    #    if lin_vel_norm > 0.001:
+    #        lin_vel_normed = np.array(lin_vel) / lin_vel_norm
+    #        force = -lin_vel_normed * fdyn
+    #        force[-1] = 0
+    #        mujoco.mj_applyFT(self.model, self.data, list(force), [0,0,0], self.data.qpos[:3], self.body_id, self.data.qfrc_applied)
+    #    if ang_vel > 0.001:
+    #        torque = - np.sign(ang_vel) * tdyn
+    #        mujoco.mj_applyFT(self.model, self.data, [0,0,0], [0,0,torque], self.data.qpos[:3], self.body_id, self.data.qfrc_applied)
+    #    #else:
+    #    #    self.data.qfrc_applied[:3] = 0
 
-    def runLoop(self, model, xy: np.ndarray) -> None:
+    def runLoop(self, model, initial_position=[0,0], initial_orientation=[1,0,0,0]) -> None:
         """
         Runs the simulation loop.
         model: the agent.
         xy: 2D position of the body."""
 
-        self.resetPosition() # Resets the position of the body.
-        self.data.qpos[:2] = xy # Sets the position of the body.
+        self.reset(initial_position=initial_position, initial_orientation=initial_orientation)
 
         while (self.duration > self.data.time) and (model.isDone() == False):
             state = self.updateState() # Updates the state of the simulation.
@@ -62,6 +61,25 @@ class MuJoCoPositionControl(MuJoCoFloatingPlatform):
                 self.applyForces(self.actions)
                 mujoco.mj_step(self.model, self.data)
                 self.updateLoggers(model.getGoal())
+
+    def runLoopForNSteps(self, model, initial_position=[0,0], initial_orientation=[1,0,0,0], max_steps=502) -> None:
+        """
+        Runs the simulation loop.
+        model: the agent.
+        xy: 2D position of the body."""
+
+        self.reset(initial_position=initial_position, initial_orientation=initial_orientation)
+        i = 0
+        while i < max_steps:
+            state = self.updateState() # Updates the state of the simulation.
+            # Get the actions from the controller
+            self.actions = model.getAction(state)
+            # Plays only once every self.inv_play_rate steps.
+            for _ in range(self.inv_play_rate):
+                self.applyForces(self.actions)
+                mujoco.mj_step(self.model, self.data)
+                self.updateLoggers(model.getGoal())
+            i += 1
 
     def plotSimulation(self, dpi:int = 90, width:int = 1000, height:int = 1000, save:bool = True, save_dir:str = "position_exp") -> None:
         """
@@ -155,7 +173,7 @@ class PoseController:
 
     def getAction(self, state, is_deterministic: bool = True):
         if self.isGoalReached(state):
-            print("Goal reached!")
+            #print("Goal reached!")
             if len(self.goals) > 1:
                 self.current_goal = self.goals[1]
                 self.goals = self.goals[1:]
@@ -163,6 +181,60 @@ class PoseController:
                 self.goals = []
         self.makeObservationBuffer(state)
         return self.model.getAction(self.obs_state,is_deterministic=is_deterministic)
+
+def runBatchEvaluation(args, cfg=default_cfg):
+    horizon = 500
+    #cfg["maxEpisodeLength"] = horizon + 2
+    #cfg["platform_mass"] = 5.32
+    #cfg["clipObservations"]["state"] = 20.0
+    cfg["max_spawn_dist"] = 4.0
+    cfg["min_spawn_dist"] = 3.0
+    #cfg["kill_dist"] = 6.0
+    cfg["num_envs"] = 256
+
+    # Try to create the save directory
+    try:
+        os.makedirs(args.save_dir, exist_ok=True)
+    except:
+        raise ValueError("Could not create the save directory.")
+    # Instantiates the RL agent
+    model = RLGamesModel(args.config_path, args.model_path)
+    #  Creates the velocity tracker
+    position_controller = PoseController(model, [0], [0], [0])
+    # Creates the environment
+    env = MuJoCoPositionControl(step_time=1.0/args.sim_rate, duration=args.sim_duration, inv_play_rate=int(args.sim_rate/args.play_rate),
+                            mass=args.platform_mass, radius=args.platform_radius, max_thrust=args.platform_max_thrust)
+
+    for i in range(cfg["num_envs"]):
+        # Runs the simulation
+        initial_position, initial_orientation = env.RS.getInitialCondition()
+        env.runLoopForNSteps(position_controller, initial_position=initial_position, initial_orientation=initial_orientation)
+        # Plots the simulation
+        # Saves the simulation data
+        env.saveSimulationData(save_dir = args.save_dir, suffix=str(i))
+
+    env.plotBatch(save_dir = args.save_dir)
+
+def runSingleEvaluation(args):
+    try:
+        os.makedirs(args.save_dir, exist_ok=True)
+    except:
+        raise ValueError("Could not create the save directory.")
+    # Instantiates the RL agent
+    model = RLGamesModel(args.config_path, args.model_path)
+    #  Creates the velocity tracker
+    position_controller = PoseController(model, args.goal_x, args.goal_y, args.goal_theta)
+    # Creates the environment
+    env = MuJoCoPositionControl(step_time=1.0/args.sim_rate, duration=args.sim_duration, inv_play_rate=int(args.sim_rate/args.play_rate),
+                            mass=args.platform_mass, radius=args.platform_radius, max_thrust=args.platform_max_thrust)
+    # Runs the simulation
+    env.runLoop(position_controller, [0,0])
+    # Plots the simulation
+    env.plotSimulation(save_dir = args.save_dir)
+    # Saves the simulation data
+    env.saveSimulationData(save_dir = args.save_dir)
+
+
 
 def parseArgs():
     parser = argparse.ArgumentParser("Generates meshes out of Digital Elevation Models (DEMs) or Heightmaps.")
@@ -178,8 +250,13 @@ def parseArgs():
     parser.add_argument("--platform_mass", type=float, default=5.32, help="The mass of the floating platform. In Kg.")
     parser.add_argument("--platform_radius", type=float, default=0.31, help="The radius of the floating platform. In meters.")
     parser.add_argument("--platform_max_thrust", type=float, default=1.0, help="The maximum thrust of the floating platform. In newtons.")
+    parser.add_argument("--run_batch", type=bool, default=False, help="If mujoco should be run in batch mode, it's useful to evaluate models. True will enable batch mode.")
+    parser.add_argument("--num_evals", type=int, default=256, help="The number of experiments that should be ran when in batch mode.")
+    parser.add_argument("--num_steps", type=int, default=502, help="The number of steps the simulation should run for in batch mode.")
+    
     args, unknown_args = parser.parse_known_args()
     return args, unknown_args
+
 
 if __name__ == "__main__":
     # Collects args
@@ -200,20 +277,7 @@ if __name__ == "__main__":
     assert len(args.goal_x) == len(args.goal_y), "The number of x coordinates must be equal to the number of y coordinates."
     assert len(args.goal_x) == len(args.goal_theta), "The number of x coordinates must be equal to the number of headings."
     # Try to create the save directory
-    try:
-        os.makedirs(args.save_dir, exist_ok=True)
-    except:
-        raise ValueError("Could not create the save directory.")
-    # Instantiates the RL agent
-    model = RLGamesModel(args.config_path, args.model_path)
-    #  Creates the velocity tracker
-    position_controller = PoseController(model, args.goal_x, args.goal_y, args.goal_theta)
-    # Creates the environment
-    env = MuJoCoPositionControl(step_time=1.0/args.sim_rate, duration=args.sim_duration, inv_play_rate=int(args.sim_rate/args.play_rate),
-                            mass=args.platform_mass, radius=args.platform_radius, max_thrust=args.platform_max_thrust)
-    # Runs the simulation
-    env.runLoop(position_controller, [0,0])
-    # Plots the simulation
-    env.plotSimulation(save_dir = args.save_dir)
-    # Saves the simulation data
-    env.saveSimulationData(save_dir = args.save_dir)
+    if args.run_batch:
+        runBatchEvaluation(args)
+    else:
+        runSingleEvaluation(args)
