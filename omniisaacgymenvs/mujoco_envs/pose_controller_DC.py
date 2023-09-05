@@ -30,9 +30,9 @@ class MuJoCoPoseControl(MuJoCoFloatingPlatform):
         """
         Updates the loggers with the current state of the simulation."""
         state = {}
-        state["angular_velocity"] = self.data.qvel[3:6].copy()
-        state["linear_velocity"] = self.data.qvel[0:3].copy()
-        state["position"] = self.data.qpos[0:3].copy()
+        state["angular_velocity"] = self.ON.add_noise_on_vel(self.data.qvel[3:6].copy())
+        state["linear_velocity"] = self.ON.add_noise_on_vel(self.data.qvel[0:3].copy())
+        state["position"] = self.ON.add_noise_on_pos(self.data.qpos[0:3].copy())
         state["quaternion"] = self.data.qpos[3:].copy()
         return state
 
@@ -239,7 +239,7 @@ class DiscreteController:
 
         default_tstep = model.opt.timestep 
         model.opt.timestep = t_int
-
+        current_time = data.time
         for k in range(np.size(r0)):
             delta           = max(1e-3,IC_temp0[k]/100) 
             delta_vec       = np.zeros(np.size(r0))
@@ -280,6 +280,7 @@ class DiscreteController:
         STM = STM.transpose()
         STM[6,6] = 1.0
 
+        data.time = current_time
         model.opt.timestep = default_tstep
         return STM
 
@@ -348,7 +349,7 @@ class DiscreteController:
         model.opt.timestep = t_int
         
         u = np.zeros(number_thrust)
-
+        current_time = data.time
         #for k in range(np.size(u)):
         for k in range(np.size(u)):
             delta           = 0.01
@@ -399,6 +400,7 @@ class DiscreteController:
 
         B = B.transpose()
         model.opt.timestep = default_tstep
+        data.time = current_time
         return B
 
     def control_cost(self) -> np.ndarray:
