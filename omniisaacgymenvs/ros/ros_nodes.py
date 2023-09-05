@@ -7,16 +7,24 @@ import os
 
 import rospy
 from std_msgs.msg import ByteMultiArray
-from geometry_msgs.msg import PoseStamped, Point
+from geometry_msgs.msg import PoseStamped, Point, Pose
 
 from ros.ros_utills import derive_velocities
 from omniisaacgymenvs.mujoco_envs.position_controller_RL import PositionController
 from omniisaacgymenvs.mujoco_envs.pose_controller_RL import PoseController
 from omniisaacgymenvs.mujoco_envs.linear_velocity_tracker_RL import VelocityTracker, TrajectoryTracker
+from omniisaacgymenvs.mujoco_envs.pose_controller_DC import PoseController as PoseControllerDC
 from omniisaacgymenvs.mujoco_envs.RL_games_model_4_mujoco import RLGamesModel
 
 class RLPlayerNode:
-    def __init__(self, model: RLGamesModel, task_id, exp_settings, map:List[int]=[2,5,4,7,6,1,0,3]) -> None:
+    def __init__(self, model: RLGamesModel, task_id: int, exp_settings, map:List[int]=[2,5,4,7,6,1,0,3]) -> None:
+        """
+        Args:
+            model (RLGamesModel): The model used for the RL algorithm.
+            task_id (int): The id of the task to be performed.
+            exp_settings (NamedTuple): The settings of the experiment.
+            map (List[int]): The mapping between the thrusters of the platform and the actions of the RL algorithm."""
+
         # Initialize variables
         self.buffer_size = 30  # Number of samples for differentiation
         self.pose_buffer = deque(maxlen=self.buffer_size)
@@ -41,8 +49,16 @@ class RLPlayerNode:
         self.my_msg = ByteMultiArray()
         rospy.on_shutdown(self.shutdown)
 
-    def build_controller(self) -> Union[PositionController, PoseController, VelocityTracker]:
-        if self.task_id == 0:
+    def build_controller(self) -> Union[PositionController, PoseController, VelocityTracker, PoseControllerDC]:
+        """
+        Builds the controller based on the task id.
+        
+        Returns:
+            Union[PositionController, PoseController, VelocityTracker, PoseControllerDC]: The controller."""
+
+        if self.task_id == -1:
+            return PoseControllerDC(self.model, self.settings.goal_x, self.settings.goal_y, self.settings.goal_theta, self.settings.distance_threshold, self.settings.heading_threshold)
+        elif self.task_id == 0:
             return PositionController(self.model, self.settings.goal_x, self.settings.goal_y, self.settings.distance_threshold)
         elif self.task_id == 1:
             return PoseController(self.model, self.settings.goal_x, self.settings.goal_y, self.settings.goal_theta, self.settings.distance_threshold, self.settings.heading_threshold)
@@ -97,13 +113,25 @@ class RLPlayerNode:
         self.my_msg.data = [0,0,0,0,0,0,0,0,0]
         self.action_pub.publish(self.my_msg)
 
-    def remap_actions(self, actions: torch.Tensor) -> list:
+    def remap_actions(self, actions: torch.Tensor) -> List[float]:
         """
-        Remaps the actions from the RL algorithm to the thrusters of the platform."""
+        Remaps the actions from the RL algorithm to the thrusters of the platform.
+        
+        Args:
+            actions (torch.Tensor): The actions from the RL algorithm.
+        
+        Returns:
+            List[float]: The actions for the thrusters."""
 
         return [actions[i] for i in self.map]
 
-    def pose_callback(self, msg):
+    def pose_callback(self, msg: Pose) -> None:
+        """
+        Callback for the pose topic. It updates the state of the agent.
+        
+        Args:
+            msg (Pose): The pose message."""
+        
         #current_time = rospy.Time.now()
         current_time = msg.header.stamp
 
@@ -116,9 +144,12 @@ class RLPlayerNode:
             self.get_state_from_optitrack(msg)
             self.ready = True
 
-    def get_state_from_optitrack(self, msg):
+    def get_state_from_optitrack(self, msg: Pose) -> None:
         """
-        Converts a ROS message to an observation."""
+        Converts a ROS message to an observation.
+        
+        Args:
+            msg (Pose): The pose message."""
 
         x_pos = msg.pose.position.x
         y_pos = msg.pose.position.y
@@ -135,19 +166,28 @@ class RLPlayerNode:
         self.heading[0] = cosy_cosp
         self.heading[1] = siny_cosp
         linear_vel, angular_vel = derive_velocities(self.time_buffer, self.pose_buffer)
-        self.state = {"position": self.root_pos, "orientation": self.heading, "linear_velocity": linear_vel[:2], "angular_velocity": angular_vel[0]}
+        if self.task_id == -1:
+            self.state = {"position": np.array([x_pos, y_pos, 0]), "quaternion": q, "linear_velocity": linear_vel, "angular_velocity": angular_vel}
+        else:
+            self.state = {"position": self.root_pos, "orientation": self.heading, "linear_velocity": linear_vel[:2], "angular_velocity": angular_vel[0]}
     
-    def goal_callback(self, msg):
+    def goal_callback(self, msg: Point) -> None:
         """
-        Callback for the goal topic. It updates the task data with the new goal data."""
+        Callback for the goal topic. It updates the task data with the new goal data.
+        
+        Args:
+            msg (Point): The goal message."""
+        
         self.goal_data = msg
 
-    def update_task_data(self):
+    def update_task_data(self) -> None:
         """
         Updates the task data based on the task id."""
 
         if self.task_id == 0: # GoToXY
             self.controller.makeObservationBuffer(self.state)
+        elif self.task_id == -1: # GoToPose
+            self.controller.makeState4Controller(self.state)
         elif self.task_id == 1: # GoToPose
             self.controller.makeObservationBuffer(self.state)
         elif self.task_id == 2: # TrackXYVelocity
@@ -155,13 +195,15 @@ class RLPlayerNode:
         elif self.task_id == 3: # TrackXYOVelocity
             raise NotImplementedError
     
-    def set_default_goal(self):
+    def set_default_goal(self) -> None:
         """
         Sets the default goal data."""
 
         self.goal_data = Point()
         if self.task_id == 0: # GoToXY
             self.controller.setGoal([0,0])
+        elif self.task_id == -1: # GoToPose DC
+            self.controller.setGoal([0,0,0])
         elif self.task_id == 1: # GoToPose
             self.controller.setGoal([0,0,0])
         elif self.task_id == 2: # TrackXYVelocity
@@ -169,7 +211,12 @@ class RLPlayerNode:
         elif self.task_id == 3: # TrackXYOVelocity
             raise NotImplementedError
 
-    def get_action(self, lifting_active = 1):
+    def get_action(self, lifting_active:int = 1) -> None:
+        """
+        Gets the action from the RL algorithm and publishes it to the thrusters.
+        
+        Args:
+            lifting_active (int, optional): Whether or not the lifting thruster is active. Defaults to 1."""
         self.action = self.controller.getAction(self.state, is_deterministic=True)
         self.action = self.action * self.thruster_mask
         action = self.remap_actions(self.action)
@@ -178,7 +225,10 @@ class RLPlayerNode:
         self.my_msg.data = action
         self.action_pub.publish(self.my_msg)
 
-    def print_logs(self):
+    def print_logs(self) -> None:
+        """
+        Prints the logs."""
+
         print("=========================================")
         print(f"step number: {self.count}")
         print(f"task id: {self.task_id}")
@@ -187,18 +237,27 @@ class RLPlayerNode:
         print(f"state: {self.state}")
         print(f"action: {self.action}")
 
-    def update_loggers(self):
+    def update_loggers(self) -> None:
+        """
+        Updates the loggers."""
+
         self.obs_buffer.append(self.controller.getObs())
         self.act_buffer.append(self.action)
 
-    def save_logs(self):
+    def save_logs(self) -> None:
+        """
+        Saves the logs."""
+
         save_dir = self.settings.save_dir + "/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + "/"
         os.makedirs(save_dir, exist_ok=True)
         np.save(os.path.join(save_dir, "obs.npy"), np.array(self.obs_buffer))
         np.save(os.path.join(save_dir, "act.npy"), np.array(self.act_buffer))
         np.save(os.path.join(save_dir, "sim_obs.npy"), np.array(self.sim_obs_buffer))
 
-    def run(self): 
+    def run(self) -> None:
+        """
+        Runs the RL algorithm."""
+
         self.rate = rospy.Rate(self.settings.play_rate)
         start_time = rospy.Time.now()
         run_time = rospy.Time.now() - start_time

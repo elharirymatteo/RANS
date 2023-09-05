@@ -1,10 +1,14 @@
+from typing import List, Tuple
 import argparse
 import os
 import omni
 from omni.isaac.kit import SimulationApp
 from omniisaacgymenvs.ros.ros_utills import enable_ros_extension
 
-def parseArgs():
+def parseArgs() -> Tuple[argparse.Namespace, List[str]]:
+    """
+    Parse the arguments of the script."""
+
     parser = argparse.ArgumentParser("Generates meshes out of Digital Elevation Models (DEMs) or Heightmaps.")
     # Model arguments
     parser.add_argument("--model_path", type=str, default=None, help="The path to the model to be loaded. It must be a velocity tracking model.")
@@ -51,6 +55,7 @@ if __name__ == '__main__':
     enable_ros_extension()
 
     from omniisaacgymenvs.mujoco_envs.RL_games_model_4_mujoco import RLGamesModel
+    from omniisaacgymenvs.mujoco_envs.pose_controller_DC import DiscreteController, MuJoCoPoseControl
     from omniisaacgymenvs.ros.ros_nodes import RLPlayerNode
     import rospy
 
@@ -59,8 +64,10 @@ if __name__ == '__main__':
     # Collects args
     args, _ = parseArgs()
     # Checks args
-    assert os.path.exists(args.model_path), "The model file does not exist."
-    assert os.path.exists(args.config_path), "The configuration file does not exist."
+    if args.task_mode.lower() != "gotoposedc":
+        assert os.path.exists(args.model_path), "The model file does not exist."
+        assert os.path.exists(args.config_path), "The configuration file does not exist."
+
     assert args.task_mode.lower() in ["gotoxy", "gotopose", "trackxyvelocity", "trackxyovelocity"], "The task mode must be one of the following: GoToXY, GoToPose, TrackXYVelocity, TrackXYOVelocity."
     if args.task_mode.lower() == "gotoxy":
         task_id = 0
@@ -72,6 +79,20 @@ if __name__ == '__main__':
         else:
             args.goal_x = [0]
             args.goal_y = [0]
+    elif args.task_mode.lower() == "gotoposedc":
+        task_id = -1
+        if not args.use_live_goals:
+            assert not args.goal_x is None, "The x coordinates of the goals must be specified."
+            assert not args.goal_y is None, "The y coordinates of the goals must be specified."
+            assert not args.goal_theta is None, "The theta coordinates of the goals must be specified."
+            assert len(args.goal_x) == len(args.goal_y), "The number of x coordinates must be equal to the number of y coordinates."
+            assert len(args.goal_x) == len(args.goal_theta), "The number of x coordinates must be equal to the number of theta coordinates."
+            assert args.distance_threshold > 0, "The distance threshold must be greater than 0."
+            assert args.heading_threshold > 0, "The heading threshold must be greater than 0."
+        else:
+            args.goal_x = [0]
+            args.goal_y = [0]
+            args.goal_theta = [0]
     elif args.task_mode.lower() == "gotopose":
         task_id = 1
         if not args.use_live_goals:
@@ -107,7 +128,12 @@ if __name__ == '__main__':
         except:
             raise ValueError("Could not create the save directory.")
     # Initialize the model.
-    model = RLGamesModel(args.config_path, args.model_path)
+    if args.task_mode.lower() == "gotoposedc":
+        # Load the env to enable weight initilization
+        env = MuJoCoPoseControl(step_time=1.0/50, duration=60.0, inv_play_rate=int(50/5), mass=5.32, radius=0.31, max_thrust=1)
+        model = DiscreteController([0,0,0],[1,0,0,0], Mod=env, control_type='LQR') 
+    else:
+        model = RLGamesModel(args.config_path, args.model_path)
     # Initialize the node.
     node = RLPlayerNode(model, task_id, args)
     # Run the node.
