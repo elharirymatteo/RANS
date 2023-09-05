@@ -8,7 +8,7 @@ from utils.plot_experiment import plot_one_episode
 
 if __name__ == "__main__":
 
-    load_dir = Path("./ros_lab_exp/nominal/")
+    load_dir = Path("./ros_lab_exp/5_9_23/nominal_UF_0.25_GoToPose_MLP_expRew_PE_0.03")
     sub_dirs = [d for d in load_dir.iterdir() if d.is_dir()]
     #sub_dirs = [d for d in sub_dirs if ("pose" not in str(d) and "kill3" not in str(d) and "new_pose" not in str(d))]
     if sub_dirs:

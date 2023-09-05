@@ -169,7 +169,7 @@ class RLPlayerNode:
         if self.task_id == -1:
             self.state = {"position": np.array([x_pos, y_pos, 0]), "quaternion": q, "linear_velocity": linear_vel, "angular_velocity": angular_vel}
         else:
-            self.state = {"position": self.root_pos, "orientation": self.heading, "linear_velocity": linear_vel[:2], "angular_velocity": angular_vel[0]}
+            self.state = {"position": self.root_pos, "orientation": self.heading, "linear_velocity": linear_vel[:2], "angular_velocity": angular_vel[-1]}
     
     def goal_callback(self, msg: Point) -> None:
         """
