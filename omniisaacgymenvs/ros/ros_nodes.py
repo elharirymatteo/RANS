@@ -167,7 +167,7 @@ class RLPlayerNode:
         self.heading[1] = siny_cosp
         linear_vel, angular_vel = derive_velocities(self.time_buffer, self.pose_buffer)
         if self.task_id == -1:
-            self.state = {"position": np.array([x_pos, y_pos, 0]), "quaternion": q, "linear_velocity": linear_vel, "angular_velocity": angular_vel}
+            self.state = {"position": np.array([x_pos, y_pos, 0]), "quaternion": q, "linear_velocity": [linear_vel[0], linear_vel[1], 0], "angular_velocity": [0, 0, angular_vel[-1]]}
         else:
             self.state = {"position": self.root_pos, "orientation": self.heading, "linear_velocity": linear_vel[:2], "angular_velocity": angular_vel[-1]}
     
