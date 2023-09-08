@@ -120,16 +120,17 @@ class DiscreteController:
 
         self.FP                 = Mod
         self.control_type       = control_type
+        self.opti_states        = None
 
         # control parameters
-        self.Q = np.diag([1,1,8,8,1,1,1])                      # State cost matrix
+        self.Q = np.diag([1,1,5,5,1,1,1])                      # State cost matrix
         self.R = np.diag([0.01] * self.thruster_count)  # Control cost matrix
         self.W = np.diag([0.1] * 7) # Disturbance weight matrix
         self.find_gains()
 
-    def find_gains(self):
+    def find_gains(self,r0=None):
         # Compute linearized system matrices A and B based on your system dynamics
-        self.A, self.B = self.compute_linearized_system()  # Compute linearized system matrices
+        self.A, self.B = self.compute_linearized_system(r0)  # Compute linearized system matrices
         self.make_planar_compatible()
 
         if self.control_type == 'H-inf':
@@ -182,13 +183,15 @@ class DiscreteController:
         self.target_position    = np.array(target_position)
         self.target_orientation = np.array(target_orientation)
 
-    def compute_linearized_system(self) -> None:
+    def compute_linearized_system(self, r0=None) -> None:
         """
         Compute linearized system matrices A and B.
         With A the state transition matrix.
         With B the control input matrix."""
+        if r0 is None:
+            r0 = np.concatenate((self.FP.data.qpos[:3],self.FP.data.qvel[:3], self.FP.data.qpos[3:], self.FP.data.qvel[3:]),axis =None) 
 
-        r0      = np.concatenate((self.FP.data.qpos[:3],self.FP.data.qvel[:3], self.FP.data.qpos[3:], self.FP.data.qvel[3:]),axis =None) 
+              
         t_int   = 0.2 # time-interval at 5Hz
         A       = self.f_STM(r0,t_int,self.FP.model,self.FP.data,self.FP.body_id)
         #Aan     = self.f_STM(r0,t_int,self.FP.model,self.FP.data,self.FP.body_id)
@@ -409,7 +412,7 @@ class DiscreteController:
         if self.control_type == 'H-inf':
             control_input = np.array(self.L @ self.state) + self.disturbance
         elif self.control_type == 'LQR':
-            self.find_gains()
+            self.find_gains(r0=self.opti_states)
             control_input = np.array(self.L @ self.state) 
         else:
             raise ValueError("Invalid control type specified.")
@@ -424,6 +427,8 @@ class DiscreteController:
         velocity_error      = np.array([0.0, 0.0, 0.0]) - current_velocity
         angvel_error        = np.array([0.0, 0.0, 0.0]) - current_angular_velocity
 
+        self.opti_states   = np.concatenate((current_position, current_velocity, current_orientation, current_angular_velocity), axis=None)
+
         if disturbance == None:
             disturbance         = np.random.rand(8) * 0.000                              # Example disturbance 
         self.disturbance    = disturbance
@@ -433,10 +438,16 @@ class DiscreteController:
 
         # Optimal U
         original_u = self.control_cost()
-        # Normalize the array to the range [0, 1]
-        normalized_array = (original_u - np.min(original_u)) / (np.max(original_u) - np.min(original_u))
+        # filter to zero values of u that are less than 0.5
+        intermediate_u = np.where(np.abs(original_u) < .5, 0.0, original_u)
+        if np.max(intermediate_u) == 0.0:
+            normalized_array = np.zeros(self.thruster_count)
+        else:
+            normalized_array = (intermediate_u - np.min(intermediate_u)) / (np.max(intermediate_u) - np.min(intermediate_u))
+        
+        # ROund the normalized array to the nearest integer biasing the center to 0.25
+        final_U = np.round(normalized_array - 0.25).astype(int)
         # Round the normalized array to the nearest integer
-        final_U = np.round(normalized_array).astype(int)
 
         self.thrusters = final_U
         return self.thrusters
@@ -510,8 +521,8 @@ class PoseController:
             if len(self.goals) > 1:
                 self.current_goal = self.goals[1,:2]
                 self.current_goal_controller[:2] = self.current_goal
-                self.goals = self.goals[1:]
-                self.model.find_gains()
+                self.goals = self.goals[1:]   
+                self.model.find_gains(r0=self.opti_states)    
             else:
                 self.goals = []
         current_position, current_orientation, current_linear_velocity, current_angular_velocity = self.makeState4Controller(state)
@@ -558,7 +569,7 @@ if __name__ == "__main__":
     env = MuJoCoPoseControl(step_time=1.0/args.sim_rate, duration=args.sim_duration, inv_play_rate=int(args.sim_rate/args.play_rate),
                             mass=args.platform_mass, radius=args.platform_radius, max_thrust=args.platform_max_thrust)
     # Instantiates the Discrete Controller (DC)
-    model = DiscreteController([0,0,0],[1,0,0,0], Mod=env, control_type='LQR') # control type: 'H-inf' or 'LQR' | H-inf not stable at many locations
+    model = DiscreteController([2.5,-1.5,0.],[1,0,0,0], Mod=env, control_type='LQR') # control type: 'H-inf' or 'LQR' | H-inf not stable at many locations
     #  Creates the velocity tracker
     position_controller = PoseController(model, args.goal_x, args.goal_y, args.goal_theta)
     # Runs the simulation

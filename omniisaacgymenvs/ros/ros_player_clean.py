@@ -35,7 +35,7 @@ def parseArgs() -> Tuple[argparse.Namespace, List[str]]:
     parser.add_argument("--lookahead_dist", type=float, default=0.15, help="How far the velocity tracker looks to generate the velocity vector that will track the trajectory. In meters.")
     # General arguments
     parser.add_argument("--killed_thruster_id", type=int, nargs="+", default=[], help="List of indices of thrusters to kill. From 0 to 7.")
-    parser.add_argument("--task_mode", type=str, default="GoToXY", help="The type of task that the agent must solve. Options are: GoToXY, GoToPose, TrackXYVelocity, TrackXYOVelocity.")
+    parser.add_argument("--task_mode", type=str, default="GoToXY", help="The type of task that the agent must solve. Options are: GoToXY, GoToPose, TrackXYVelocity, TrackXYOVelocity, GoToPoseDC.")
     parser.add_argument("--exp_duration", type=float, default=240, help="The length of the experiment. In seconds.")
     parser.add_argument("--use_live_goals", type=bool, default=False, help="Whether the agent should use command live goals or ROS goals. If set to True, the agent will use the live goals.")
     parser.add_argument("--play_rate", type=float, default=5.0, help="The frequency at which the agent will played. In Hz. Note, that this depends on the sim_rate, the agent my not be able to play at this rate depending on the sim_rate value. To be consise, the agent will play at: sim_rate / int(sim_rate/play_rate)")

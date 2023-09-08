@@ -254,15 +254,28 @@ class RLPlayerNode:
         np.save(os.path.join(save_dir, "act.npy"), np.array(self.act_buffer))
         np.save(os.path.join(save_dir, "sim_obs.npy"), np.array(self.sim_obs_buffer))
 
+    def update_controller_matrix(self) -> None:
+        """
+        Updates the controller matrix."""
+        if self.update_once:
+            r0 = np.concatenate((self.state["position"],self.state["linear_velocity"], self.state["quaternion"],self.state["angular_velocity"]),axis =None)
+            print(r0)
+            self.controller.model.compute_linearized_system(r0=r0)
+            self.update_once = False
+
+
+
     def run(self) -> None:
         """
         Runs the RL algorithm."""
-
+        self.update_once = True
         self.rate = rospy.Rate(self.settings.play_rate)
         start_time = rospy.Time.now()
         run_time = rospy.Time.now() - start_time
         while (not rospy.is_shutdown()) and (run_time.to_sec() < self.settings.exp_duration):
             if self.ready:
+                if self.task_id == -1:
+                    self.update_controller_matrix()
                 self.get_action()
                 self.update_loggers()
                 self.count += 1
@@ -270,7 +283,6 @@ class RLPlayerNode:
                     self.print_logs()
             run_time = rospy.Time.now() - start_time
             self.rate.sleep()
-
         # Saves the logs
         self.save_logs()
         # Kills the thrusters once done
