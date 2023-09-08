@@ -439,7 +439,7 @@ class DiscreteController:
         # Optimal U
         original_u = self.control_cost()
         # filter to zero values of u that are less than 0.5
-        intermediate_u = np.where(np.abs(original_u) < .5, 0.0, original_u)
+        intermediate_u = np.where(np.abs(original_u) < .25, 0.0, original_u)
         if np.max(intermediate_u) == 0.0:
             normalized_array = np.zeros(self.thruster_count)
         else:

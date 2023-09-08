@@ -5,10 +5,16 @@ import pandas as pd
 from matplotlib.ticker import AutoMinorLocator
 from pathlib import Path
 from utils.plot_experiment import plot_one_episode
+import argparse
 
 if __name__ == "__main__":
+    # Get load dir from arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--load_dir', type=str, default=None, help='Directory to load data from')
+    args = parser.parse_args()
+    load_dir = Path(args.load_dir)
 
-    load_dir = Path("./ros_lab_exp/7_9_23/dc_controller")
+    #load_dir = Path("./ros_lab_exp/7_9_23/dc_controller")
     sub_dirs = [d for d in load_dir.iterdir() if d.is_dir()]
     #sub_dirs = [d for d in sub_dirs if ("pose" not in str(d) and "kill3" not in str(d) and "new_pose" not in str(d))]
     if sub_dirs:
