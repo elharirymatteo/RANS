@@ -454,6 +454,7 @@ def plot_one_episode(ep_data:dict, save_dir:str = None, show:bool = False, debug
     elif task_flag == 1: # GoToPose
         task_data_label = ['error_x', 'error_y', 'cos_error_heading', 'sin_error_heading']
         task_metrics = [plot_single_xy_position,
+                        plot_single_xy_pose,
                         plot_single_xy_position_error,
                         plot_single_heading_error,
                         plot_single_xy_position_heading,
@@ -686,41 +687,41 @@ def plot_single_heading_error(state_history:np.ndarray, tgrid:np.ndarray, save_d
         plt.show()
     return fig_count
 
-# def plot_single_xy_position(state_history:np.ndarray, save_dir:str, fig_count:int, show:bool, **kwargs) -> int:
-#     """
-#     Plot position of a single agent."""
-
-#     pos_error = state_history[:, 6:8]
-#     # plot position (x, y coordinates)
-#     fig_count += 1
-#     plt.figure(fig_count)
-#     plt.clf()
-#     # Set aspect ratio to be equal
-#     plt.gca().set_aspect('equal', adjustable='box')
-#     x, y = pos_error[:, 0], pos_error[:, 1]
-#     fig,ax = plt.subplots(figsize=(6,6))
-
-#     # Setting the limit of x and y direction to define which portion to zoom
-#     x1, x2, y1, y2 = -.07, .07, -.08, .08
-#     if (y[0] > 0 and x[0] > 0): 
-#         location = 4
-#     else:
-#         location = 2 if (y[0] < 0 and x[0] < 0) else 1
-#     axins = inset_axes(ax, width=1.5, height=1.25, loc=location)
-#     ax.plot(x, y, color=cm.get_cmap('tab20')(0))
-#     ax.set_xlabel('X [m]')
-#     ax.set_ylabel('Y [m]')
-#     axins.set_xlim(x1, x2)
-#     axins.set_ylim(y1, y2)
-#     mark_inset(ax, axins, loc1=2, loc2=4, fc="none", ec="0.5")
-#     axins.plot(x, y)
-#     if save_dir:
-#         fig.savefig(save_dir + 'single_xy_trajectory')
-#     if show:
-#         plt.show()
-#     return fig_count
-
 def plot_single_xy_position(state_history:np.ndarray, save_dir:str, fig_count:int, show:bool, **kwargs) -> int:
+    """
+    Plot position of a single agent."""
+
+    pos_error = state_history[:, 6:8]
+    # plot position (x, y coordinates)
+    fig_count += 1
+    plt.figure(fig_count)
+    plt.clf()
+    # Set aspect ratio to be equal
+    plt.gca().set_aspect('equal', adjustable='box')
+    x, y = pos_error[:, 0], pos_error[:, 1]
+    fig,ax = plt.subplots(figsize=(6,6))
+
+    # Setting the limit of x and y direction to define which portion to zoom
+    x1, x2, y1, y2 = -.07, .07, -.08, .08
+    if (y[0] > 0 and x[0] > 0): 
+        location = 4
+    else:
+        location = 2 if (y[0] < 0 and x[0] < 0) else 1
+    axins = inset_axes(ax, width=1.5, height=1.25, loc=location)
+    ax.plot(x, y, color=cm.get_cmap('tab20')(0))
+    ax.set_xlabel('X [m]')
+    ax.set_ylabel('Y [m]')
+    axins.set_xlim(x1, x2)
+    axins.set_ylim(y1, y2)
+    mark_inset(ax, axins, loc1=2, loc2=4, fc="none", ec="0.5")
+    axins.plot(x, y)
+    if save_dir:
+        fig.savefig(save_dir + 'single_xy_trajectory')
+    if show:
+        plt.show()
+    return fig_count
+
+def plot_single_xy_pose(state_history:np.ndarray, save_dir:str, fig_count:int, show:bool, **kwargs) -> int:
     """
     Plot position of a single agent."""
 
@@ -764,7 +765,7 @@ def plot_single_xy_position(state_history:np.ndarray, save_dir:str, fig_count:in
     axins.plot(x, y)
     plt.grid(alpha=0.3)
     if save_dir:
-        fig.savefig(save_dir + 'single_xy_trajectory')
+        fig.savefig(save_dir + 'single_pose_trajectory')
     if show:
         plt.show()
     return fig_count
