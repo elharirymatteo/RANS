@@ -121,6 +121,11 @@ if __name__ == '__main__':
         raise NotImplementedError("The TrackXYOVelocity task is not implemented yet.")
     assert args.exp_duration > 0, "The experiment duration must be greater than 0."
     assert args.play_rate > 0, "The play rate must be greater than 0."
+
+    if args.killed_thruster_id:
+        assert args.killed_thruster_id is None or all([i >= 0 and i <= 7 for i in args.killed_thruster_id]), "Thruster indices must be between 0 and 7."
+        print(f'Killing thrusters: {args.killed_thruster_id}.')
+
     # Try to create the save directory
     if args.save_exp:
         try:
