@@ -751,18 +751,7 @@ def plot_single_xy_pose(state_history:np.ndarray, save_dir:str, fig_count:int, s
     plt.grid(alpha=0.3)
     ax.set_xlabel('X [m]')
     ax.set_ylabel('Y [m]')
-        # Setting the limit of x and y direction to define which portion to zoom
-    x1, x2, y1, y2 = -.08, .08, -.08, .08
-    if (y[0] > 0 and x[0] > 0): 
-        location = 4
-    else:
-        location = 2 if (y[0] < 0 and x[0] < 0) else 1
-    axins = inset_axes(ax, width=1.25, height=1.25, loc=location)
-    axins.set_xlim(x1, x2)
-    axins.set_ylim(y1, y2)
-    mark_inset(ax, axins, loc1=2, loc2=4, fc="none", ec="0.5")
-    #axins.add_collection(ls)
-    axins.plot(x, y)
+       
     plt.grid(alpha=0.3)
     if save_dir:
         fig.savefig(save_dir + 'single_pose_trajectory')
