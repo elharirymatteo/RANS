@@ -60,7 +60,7 @@ def get_GoToPose_success_rate(ep_data:dict, position_threshold:float = 0.02, hea
         float: Success rate."""
 
     position_distances = np.linalg.norm(ep_data['obs'][:, :, 6:8], axis=2)
-    heading_distances = np.arctan2(ep_data['obs'][:, :, 9], ep_data['obs'][:, :, 8]) 
+    heading_distances = np.abs(np.arctan2(ep_data['obs'][:, :, 9], ep_data['obs'][:, :, 8]))
 
     less_than_margin_df, first_less_than_thr_idxs, first_less_than_thr2_idxs = build_distance_dataframe(position_distances, position_threshold)
     success_rate_thr, success_rate_thr2, success_and_stay_rate = check_stay(less_than_margin_df, first_less_than_thr_idxs, first_less_than_thr2_idxs)
