@@ -100,6 +100,17 @@ def eval_multi_agents(cfg, agent, models, horizon, plot_intermediate=False):
             success_rate = get_TrackXYOVelocity_success_rate(ep_data, print_intermediate=True)
             success_rate_df = pd.concat([success_rate['xy_velocity'], success_rate['omega_velocity']], axis=1)
 
+        dist = np.linalg.norm(ep_data['obs'][:, :, 6:8],axis=2)
+        avg_p005 = np.mean([dist < 0.05])
+        avg_p002 = np.mean([dist < 0.02])
+        avg_p001 = np.mean([dist < 0.01])
+        heading = np.arctan2(ep_data['obs'][:,:,-1], ep_data['obs'][:,:,-2])
+        avg_h005 = np.mean([heading < np.pi*5/180])
+        avg_h002 = np.mean([heading < np.pi*2/180])
+        avg_h001 = np.mean([heading < np.pi*1/180])
+        print("percentage of time spent under (5cm, 2cm, 1cm):",avg_p005*100, avg_p002*100, avg_p001*100)
+        print("percentage of time spent under (5deg, 2deg, 1deg):",avg_h005*100, avg_h002*100, avg_h001*100)
+        
         # Collect the data for the success rate table        
         success_rate_df['avg_rew'] = [np.mean(ep_data['rews'])]
         ang_vel_z = np.absolute(ep_data['obs'][:, :, 4:5][:,:,0])
