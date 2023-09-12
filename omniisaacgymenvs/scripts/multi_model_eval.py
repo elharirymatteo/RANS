@@ -100,7 +100,7 @@ def eval_multi_agents(cfg, agent, models, horizon, plot_intermediate=False):
         #     success_rate = get_TrackXYOVelocity_success_rate(ep_data, print_intermediate=True)
         #     success_rate_df = pd.concat([success_rate['xy_velocity'], success_rate['omega_velocity']], axis=1)
         success_rate = get_GoToPose_success_rate_new(ep_data, print_intermediate=True)
-        success_rate_df = success_rate['position']
+        success_rate_df = success_rate['pose']
 
         dist = np.linalg.norm(ep_data['obs'][:, :, 6:8],axis=2)
         avg_p005 = np.mean([dist < 0.05])
