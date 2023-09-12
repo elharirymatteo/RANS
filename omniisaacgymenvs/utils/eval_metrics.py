@@ -56,7 +56,7 @@ def get_GoToPose_success_rate_new(ep_data:dict, threshold:float = 0.02, print_in
     success_rate_df = pd.DataFrame({'PT5': [avg_p005], 'PT2': [avg_p002], 'PT1': [avg_p001],
                                     'OT5': [avg_h005], 'OT2': [avg_h002], 'OT1': [avg_h001]})
     
-    return {"position":success_rate_df}
+    return {"pose":success_rate_df}
 
     
 def get_GoToXY_success_rate(ep_data:dict, threshold:float = 0.02, print_intermediate:bool = False) -> dict:

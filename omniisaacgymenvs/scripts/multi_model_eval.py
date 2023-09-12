@@ -10,7 +10,7 @@ from rl_games.torch_runner import Runner
 from omniisaacgymenvs.utils.task_util import initialize_task
 from omniisaacgymenvs.envs.vec_env_rlgames import VecEnvRLGames
 from utils.plot_experiment import plot_episode_data_virtual
-from utils.eval_metrics import get_GoToXY_success_rate, get_GoToPose_success_rate, get_TrackXYVelocity_success_rate, get_TrackXYOVelocity_success_rate
+from utils.eval_metrics import get_GoToPose_success_rate_new
 
 import os
 import glob
@@ -87,18 +87,20 @@ def eval_multi_agents(cfg, agent, models, horizon, plot_intermediate=False):
         print(f'Ep data shape after: {ep_data["act"].shape}')
 
         task_flag = ep_data['obs'][0, 0, 5].astype(int)
-        if task_flag == 0: # GoToXY
-            success_rate = get_GoToXY_success_rate(ep_data, print_intermediate=True)
-            success_rate_df = success_rate['position']
-        elif task_flag == 1: # GoToPose
-            success_rate = get_GoToPose_success_rate(ep_data, print_intermediate=True)
-            success_rate_df = pd.concat([success_rate['position'], success_rate['heading']], axis=1)
-        elif task_flag == 2: # TrackXYVelocity
-            success_rate = get_TrackXYVelocity_success_rate(ep_data, print_intermediate=True)
-            success_rate_df = success_rate['xy_velocity']
-        elif task_flag == 3: # TrackXYOVelocity
-            success_rate = get_TrackXYOVelocity_success_rate(ep_data, print_intermediate=True)
-            success_rate_df = pd.concat([success_rate['xy_velocity'], success_rate['omega_velocity']], axis=1)
+        # if task_flag == 0: # GoToXY
+        #     success_rate = get_GoToXY_success_rate(ep_data, print_intermediate=True)
+        #     success_rate_df = success_rate['position']
+        # elif task_flag == 1: # GoToPose
+        #     success_rate = get_GoToPose_success_rate(ep_data, print_intermediate=True)
+        #     success_rate_df = pd.concat([success_rate['position'], success_rate['heading']], axis=1)
+        # elif task_flag == 2: # TrackXYVelocity
+        #     success_rate = get_TrackXYVelocity_success_rate(ep_data, print_intermediate=True)
+        #     success_rate_df = success_rate['xy_velocity']
+        # elif task_flag == 3: # TrackXYOVelocity
+        #     success_rate = get_TrackXYOVelocity_success_rate(ep_data, print_intermediate=True)
+        #     success_rate_df = pd.concat([success_rate['xy_velocity'], success_rate['omega_velocity']], axis=1)
+        success_rate = get_GoToPose_success_rate_new(ep_data, print_intermediate=True)
+        success_rate_df = success_rate['position']
 
         dist = np.linalg.norm(ep_data['obs'][:, :, 6:8],axis=2)
         avg_p005 = np.mean([dist < 0.05])
@@ -110,16 +112,16 @@ def eval_multi_agents(cfg, agent, models, horizon, plot_intermediate=False):
         avg_h001 = np.mean([heading < np.pi*1/180])
         print("percentage of time spent under (5cm, 2cm, 1cm):",avg_p005*100, avg_p002*100, avg_p001*100)
         print("percentage of time spent under (5deg, 2deg, 1deg):",avg_h005*100, avg_h002*100, avg_h001*100)
-        
+
         # Collect the data for the success rate table        
-        success_rate_df['avg_rew'] = [np.mean(ep_data['rews'])]
-        ang_vel_z = np.absolute(ep_data['obs'][:, :, 4:5][:,:,0])
-        success_rate_df['avg_ang_vel'] = [np.mean(ang_vel_z.mean(axis=1))]
+        #success_rate_df['avg_rew'] = [np.mean(ep_data['rews'])]
         lin_vel_x = ep_data['obs'][:, 2:3]
         lin_vel_y = ep_data['obs'][:, 3:4]
         lin_vel = np.linalg.norm(np.array([lin_vel_x, lin_vel_y]), axis=0)
-        success_rate_df['avg_lin_vel'] = [np.mean(lin_vel.mean(axis=1))]
-        success_rate_df['avg_action_count'] = [np.mean(np.sum(ep_data['act'], axis=1))]
+        success_rate_df['ALV'] = [np.mean(lin_vel.mean(axis=1))]
+        ang_vel_z = np.absolute(ep_data['obs'][:, :, 4:5][:,:,0])
+        success_rate_df['AAV'] = [np.mean(ang_vel_z.mean(axis=1))]
+        success_rate_df['AAC'] = [np.mean(ep_data['act'], axis=1)]
         all_success_rate_df = pd.concat([all_success_rate_df, success_rate_df], ignore_index=True)
         # If want to print the latex code for the table use the following line
         if plot_intermediate:
