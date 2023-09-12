@@ -102,17 +102,6 @@ def eval_multi_agents(cfg, agent, models, horizon, plot_intermediate=False):
         success_rate = get_GoToPose_success_rate_new(ep_data, print_intermediate=True)
         success_rate_df = success_rate['pose']
 
-        dist = np.linalg.norm(ep_data['obs'][:, :, 6:8],axis=2)
-        avg_p005 = np.mean([dist < 0.05])
-        avg_p002 = np.mean([dist < 0.02])
-        avg_p001 = np.mean([dist < 0.01])
-        heading = np.arctan2(ep_data['obs'][:,:,-1], ep_data['obs'][:,:,-2])
-        avg_h005 = np.mean([heading < np.pi*5/180])
-        avg_h002 = np.mean([heading < np.pi*2/180])
-        avg_h001 = np.mean([heading < np.pi*1/180])
-        print("percentage of time spent under (5cm, 2cm, 1cm):",avg_p005*100, avg_p002*100, avg_p001*100)
-        print("percentage of time spent under (5deg, 2deg, 1deg):",avg_h005*100, avg_h002*100, avg_h001*100)
-
         # Collect the data for the success rate table        
         #success_rate_df['avg_rew'] = [np.mean(ep_data['rews'])]
         lin_vel_x = ep_data['obs'][:, 2:3]
@@ -121,7 +110,7 @@ def eval_multi_agents(cfg, agent, models, horizon, plot_intermediate=False):
         success_rate_df['ALV'] = [np.mean(lin_vel.mean(axis=1))]
         ang_vel_z = np.absolute(ep_data['obs'][:, :, 4:5][:,:,0])
         success_rate_df['AAV'] = [np.mean(ang_vel_z.mean(axis=1))]
-        success_rate_df['AAC'] = [np.mean(ep_data['act'], axis=1)]
+        success_rate_df['AAC'] = np.mean(ep_data['act'])
         all_success_rate_df = pd.concat([all_success_rate_df, success_rate_df], ignore_index=True)
         # If want to print the latex code for the table use the following line
         if plot_intermediate:
@@ -131,7 +120,7 @@ def eval_multi_agents(cfg, agent, models, horizon, plot_intermediate=False):
     # create index for the dataframe and save it
     model_names = [model.split("/")[2] for model in models]
     all_success_rate_df.insert(loc=0, column="model", value=model_names)
-    all_success_rate_df.to_csv(evaluation_dir + "/uf_pose.csv")
+    all_success_rate_df.to_csv(evaluation_dir + "/new_xy.csv")
 
 
 @hydra.main(config_name="config", config_path="../cfg")
@@ -167,11 +156,11 @@ def parse_hydra_configs(cfg: DictConfig):
     #cfg.task.env.add_noise_on_act = True
     #cfg.task.env.add_noise_on_vel = True
     # if "UF" in models[0]:
-    print("Setting uneven floor in the environment ...")
-    cfg.task.env.use_uneven_floor = True
-    cfg.task.env.max_floor_force = 0.25
+    # print("Setting uneven floor in the environment ...")
+    # cfg.task.env.use_uneven_floor = True
+    # cfg.task.env.max_floor_force = 0.25
 
-    horizon = 500
+    horizon = 250
     cfg.task.env.maxEpisodeLength = horizon + 2
     cfg.task.env.platform.core.mass = 5.32
     cfg.task.env.split_thrust = True
@@ -179,7 +168,7 @@ def parse_hydra_configs(cfg: DictConfig):
     cfg.task.env.task_parameters['max_spawn_dist'] = 4.0
     cfg.task.env.task_parameters['min_spawn_dist'] = 3.0
     cfg.task.env.task_parameters['kill_dist'] = 6.0
-    cfg.task.env.task_parameters['kill_after_n_steps_in_tolerance'] = 500
+    cfg.task.env.task_parameters['kill_after_n_steps_in_tolerance'] = 250
     
     cfg_dict = omegaconf_to_dict(cfg)
     print_dict(cfg_dict)
