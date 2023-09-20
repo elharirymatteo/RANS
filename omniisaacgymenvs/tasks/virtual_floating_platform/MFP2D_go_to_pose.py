@@ -65,7 +65,7 @@ class GoToPoseTask(Core):
         self.heading_dist = torch.abs(self._heading_error)
 
         # Checks if the goal is reached
-        position_goal_is_reached = (self.position_dist < self._task_parameters.x_y_tolerance).int()
+        position_goal_is_reached = (self.position_dist < self._task_parameters.position_tolerance).int()
         heading_goal_is_reached = (self.heading_dist < self._task_parameters.heading_tolerance).int()
         goal_is_reached = position_goal_is_reached * heading_goal_is_reached
         self._goal_reached *= goal_is_reached # if not set the value to 0

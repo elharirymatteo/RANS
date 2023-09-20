@@ -56,7 +56,7 @@ env:
 
   task_parameters: 
     name: GoToXY
-    x_y_tolerance: 0.01
+    position_tolerance: 0.01
     kill_after_n_steps_in_tolerance: 50 # 10seconds
     max_spawn_dist: 4.5
     min_spawn_dist: 0.5

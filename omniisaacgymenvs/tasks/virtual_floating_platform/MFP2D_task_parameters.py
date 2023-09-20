@@ -7,7 +7,7 @@ class GoToXYParameters:
     """
     Parameters for the GoToXY task."""
 
-    x_y_tolerance: float = 0.01
+    position_tolerance: float = 0.01
     kill_after_n_steps_in_tolerance: int = 50
     goal_random_position: float = 0.0
     max_spawn_dist: float = 6.0
@@ -41,7 +41,7 @@ class GoToPoseParameters:
     """
     Parameters for the GoToPose task."""
 
-    x_y_tolerance: float = 0.01
+    position_tolerance: float = 0.01
     heading_tolerance: float = 0.025
     kill_after_n_steps_in_tolerance: int = 50
     goal_random_position: float = 0.0

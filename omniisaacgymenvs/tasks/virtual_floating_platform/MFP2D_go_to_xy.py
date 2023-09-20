@@ -60,7 +60,7 @@ class GoToXYTask(Core):
         self.boundary_penalty = - torch.exp( - self.boundary_dist / 0.25) * self._task_parameters.boundary_cost
 
         # Checks if the goal is reached
-        goal_is_reached = (self.position_dist < self._task_parameters.x_y_tolerance).int()
+        goal_is_reached = (self.position_dist < self._task_parameters.position_tolerance).int()
         self._goal_reached *= goal_is_reached # if not set the value to 0
         self._goal_reached += goal_is_reached # if it is add 1
 
