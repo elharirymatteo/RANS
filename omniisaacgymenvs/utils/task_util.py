@@ -45,6 +45,7 @@ def initialize_task(config, env, init_sim=True):
     from omniisaacgymenvs.tasks.shadow_hand import ShadowHandTask
     from omniisaacgymenvs.tasks.crazyflie import CrazyflieTask
     from omniisaacgymenvs.tasks.MFP2D_Virtual import MFP2DVirtual
+    from omniisaacgymenvs.tasks.MFP3D_Virtual import MFP3DVirtual
 
     # Mappings from strings to environments
     task_map = {
@@ -64,6 +65,7 @@ def initialize_task(config, env, init_sim=True):
         "ShadowHandOpenAI_FF": ShadowHandTask,
         "ShadowHandOpenAI_LSTM": ShadowHandTask,
         "MFP2DVirtual":MFP2DVirtual,
+        "MFP3DVirtual":MFP3DVirtual,
     }
 
     cfg = sim_config.config
