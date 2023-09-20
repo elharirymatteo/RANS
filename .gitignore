@@ -9,6 +9,7 @@ evaluations
 *.png
 *.npy
 *.csv
+*.mp4
 *.zip
 *.ipynb
 !eval_multi_models.ipynb
