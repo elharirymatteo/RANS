@@ -92,7 +92,7 @@ class GoToXYZTask(GoToXYTask2D, Core):
         A pin is generated to represent the 3D position to be reached by the agent."""
 
         color = torch.tensor([1, 0, 0])
-        ball_radius = 0.2
+        ball_radius = 0.05
         poll_radius = 0.025
         poll_length = 2
         VisualPin3D(

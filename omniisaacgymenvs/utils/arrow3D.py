@@ -15,11 +15,13 @@ from omni.isaac.core.prims.geometry_prim import GeometryPrim
 from omni.isaac.core.materials import PreviewSurface
 from omni.isaac.core.materials import PhysicsMaterial
 from omni.isaac.core.utils.string import find_unique_string_name
+from pxr import UsdGeom, Gf
 from omni.isaac.core.utils.prims import get_prim_at_path, is_prim_path_valid
-from omniisaacgymenvs.utils.shape_utils import Pin3D
+from omni.isaac.core.utils.stage import get_current_stage
+from omniisaacgymenvs.utils.shape_utils import Arrow3D
 
 
-class VisualPin3D(XFormPrim, Pin3D):
+class VisualArrow3D(XFormPrim, Arrow3D):
     """_summary_
 
         Args:
@@ -41,16 +43,19 @@ class VisualPin3D(XFormPrim, Pin3D):
     def __init__(
         self,
         prim_path: str,
-        name: str = "visual_pin",
+        name: str = "visual_arrow",
         position: Optional[Sequence[float]] = None,
         translation: Optional[Sequence[float]] = None,
         orientation: Optional[Sequence[float]] = None,
         scale: Optional[Sequence[float]] = None,
         visible: Optional[bool] = True,
         color: Optional[np.ndarray] = None,
-        ball_radius: Optional[float] = None,
+        body_radius: Optional[float] = None,
+        body_length: Optional[float] = None,
         poll_radius: Optional[float] = None,
         poll_length: Optional[float] = None,
+        head_radius: Optional[float] = None,
+        head_length: Optional[float] = None,
         visual_material: Optional[VisualMaterial] = None,
     ) -> None:
         if visible is None:
@@ -65,13 +70,17 @@ class VisualPin3D(XFormPrim, Pin3D):
             scale=scale,
             visible=visible,
         )
-        Pin3D.__init__(self, prim_path, ball_radius, poll_radius, poll_length) 
-        self.setBallRadius(ball_radius)
+        Arrow3D.__init__(self, prim_path, body_radius, body_length, poll_radius, poll_length, head_radius, head_length)
+        self.setBodyRadius(body_radius)
+        self.setBodyLength(body_length)
         self.setPollRadius(poll_radius)
         self.setPollLength(poll_length)
+        self.setHeadRadius(head_radius)
+        self.setHeadLength(head_length)
+        self.updateExtent()
         return
 
-class FixedPin3D(VisualPin3D):
+class FixedArrow3D(VisualArrow3D):
     """_summary_
 
         Args:
@@ -98,9 +107,12 @@ class FixedPin3D(VisualPin3D):
         scale: Optional[np.ndarray] = None,
         visible: Optional[bool] = None,
         color: Optional[np.ndarray] = None,
-        ball_radius: Optional[float] = None,
+        body_radius: Optional[float] = None,
+        body_length: Optional[float] = None,
         poll_radius: Optional[float] = None,
         poll_length: Optional[float] = None,
+        head_radius: Optional[float] = None,
+        head_length: Optional[float] = None,
         visual_material: Optional[VisualMaterial] = None,
         physics_material: Optional[PhysicsMaterial] = None,
     ) -> None:
@@ -120,7 +132,7 @@ class FixedPin3D(VisualPin3D):
                     static_friction=static_friction,
                     restitution=restitution,
                 )
-        VisualPin3D.__init__(
+        VisualArrow3D.__init__(
             self,
             prim_path=prim_path,
             name=name,
@@ -130,9 +142,12 @@ class FixedPin3D(VisualPin3D):
             scale=scale,
             visible=visible,
             color=color,
-            ball_radius = ball_radius,
+            body_radius = body_radius,
+            body_length = body_length,
             poll_radius = poll_radius,
             poll_length = poll_length,
+            head_radius = head_radius,
+            head_length = head_length,
             visual_material=visual_material,
         )
         #XFormPrim.set_collision_enabled(self, True)
@@ -141,7 +156,7 @@ class FixedPin3D(VisualPin3D):
         return
 
 
-class DynamicPin3D(RigidPrim, FixedPin3D):
+class DynamicArrow3D(RigidPrim, FixedArrow3D):
     """_summary_
 
         Args:
@@ -172,9 +187,12 @@ class DynamicPin3D(RigidPrim, FixedPin3D):
         scale: Optional[np.ndarray] = None,
         visible: Optional[bool] = None,
         color: Optional[np.ndarray] = None,
-        ball_radius: Optional[float] = None,
+        body_radius: Optional[float] = None,
+        body_length: Optional[float] = None,
         poll_radius: Optional[float] = None,
         poll_length: Optional[float] = None,
+        head_radius: Optional[float] = None,
+        head_length: Optional[float] = None,
         visual_material: Optional[VisualMaterial] = None,
         physics_material: Optional[PhysicsMaterial] = None,
         mass: Optional[float] = None,
@@ -185,7 +203,7 @@ class DynamicPin3D(RigidPrim, FixedPin3D):
         if not is_prim_path_valid(prim_path):
             if mass is None:
                 mass = 0.02
-        FixedPin3D.__init__(
+        FixedArrow3D.__init__(
             self,
             prim_path=prim_path,
             name=name,
@@ -195,9 +213,12 @@ class DynamicPin3D(RigidPrim, FixedPin3D):
             scale=scale,
             visible=visible,
             color=color,
-            ball_radius = ball_radius,
+            body_radius = body_radius,
+            body_length = body_length,
             poll_radius = poll_radius,
             poll_length = poll_length,
+            head_radius = head_radius,
+            head_length = head_length,
             visual_material=visual_material,
             physics_material=physics_material,
         )
