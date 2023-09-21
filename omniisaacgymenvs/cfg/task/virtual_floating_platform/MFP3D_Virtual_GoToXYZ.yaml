@@ -77,8 +77,8 @@ env:
     penalize_linear_velocities_fn: "lambda x,step: -torch.norm(x, dim=-1)*0.01"
     penalize_linear_velocities_c1: 0.01
     penalize_linear_velocities_c2: 0.00
-    penalize_angular_velocities: False
-    penalize_angular_velocities_fn: "lambda x,step: -torch.abs(x)*1.0*step/2000"
+    penalize_angular_velocities: True
+    penalize_angular_velocities_fn: "lambda x,step: -(torch.norm(x, dim=-1) - 0.3)*1.0*(torch.norm(x, dim=-1) > 0.3)*step/2000"
     penalize_angular_velocities_c1: 0.01
     penalize_angular_velocities_c2: 0.00
 

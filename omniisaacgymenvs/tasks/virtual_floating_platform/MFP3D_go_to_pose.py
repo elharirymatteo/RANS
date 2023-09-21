@@ -38,7 +38,7 @@ class GoToPoseTask(GoToPoseTask2D):
         self._heading_error = torch.bmm(torch.transpose(current_state["orientation"],-2,-1), self._target_headings_as_mat)
         # Encode task data
         self._task_data[:,:3] = self._position_error
-        self._task_data[:,3:] = self._heading_error[:,:,:2].reshape(self._num_envs, 6)
+        self._task_data[:,3:] = self._heading_error[:,:2,:].reshape(self._num_envs, 6)
         return self.update_observation_tensor(current_state)
 
     def compute_reward(self, current_state: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
@@ -79,9 +79,6 @@ class GoToPoseTask(GoToPoseTask2D):
         quat[env_ids, 3] = torch.sqrt(uvw[:,0])*torch.sin(uvw[:,2]*2*math.pi)
         # cast quaternions to rotation matrix
         self._target_headings = quat_to_mat(quat)
-        #self._target_headings[env_ids] = torch.rand(num_goals, device=self._device) * math.pi * 2
-        #target_orientations[env_ids, 0] = torch.cos(self._target_headings[env_ids]*0.5)
-        #target_orientations[env_ids, 3] = torch.sin(self._target_headings[env_ids]*0.5)
         return target_positions, quat
     
     def get_spawns(self, env_ids: torch.Tensor, initial_position: torch.Tensor, initial_orientation: torch.Tensor, step: int=0) -> list:
