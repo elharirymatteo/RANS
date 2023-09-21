@@ -48,7 +48,7 @@ class RLGTrainer():
     def __init__(self, cfg, cfg_dict):
         self.cfg = cfg
         self.cfg_dict = cfg_dict
-        #self.cfg.train.params.config.name = "128x128/"+self.cfg.train.params.config.name 
+
     def launch_rlg_hydra(self, env):
         # `create_rlgpu_env` is environment construction function which is passed to RL Games and called internally.
         # We use the helper function here to specify the environment config.
