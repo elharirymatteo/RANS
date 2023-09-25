@@ -23,7 +23,7 @@ Once installed, this repository can be used as a python module, `omniisaacgymenv
 To install `omniisaacgymenvs`, first clone this repository:
 
 ```bash
-git clone https://github.com/NVIDIA-Omniverse/OmniIsaacGymEnvs.git
+git clone https://github.com/elharirymatteo/RANS.git
 ```
 
 Once cloned, locate the [python executable in Isaac Sim](https://docs.omniverse.nvidia.com/app_isaacsim/app_isaacsim/install_python.html). By default, this should be `python.sh`. We will refer to this path as `PYTHON_PATH`.
@@ -50,16 +50,16 @@ PYTHON_PATH -m pip install -e .
 To train your first policy, run:
 
 ```bash
-PYTHON_PATH scripts/rlgames_train.py task=Cartpole
+PYTHON_PATH scripts/rlgames_train.py task=virtual_floating_platform/MFP2D_Virtual_GoToXY train=virtual_floating_platform/MFP2D_PPOmulti_dict_MLP
 ```
 
-You should see an Isaac Sim window pop up. Once Isaac Sim initialization completes, the Cartpole scene will be constructed and simulation will start running automatically. The process will terminate once training finishes.
+You should see an Isaac Sim window pop up. Once Isaac Sim initialization completes, the FloatingPlatform scene will be constructed and simulation will start running automatically. The process will terminate once training finishes.
 
 
-Here's another example - Ant locomotion - using the multi-threaded training script:
+Here's another example - GoToPose - using the multi-threaded training script:
 
 ```bash
-PYTHON_PATH scripts/rlgames_train_mt.py task=Ant
+PYTHON_PATH scripts/rlgames_train_mt.py task=virtual_floating_platform/MFP2D_Virtual_GoToPose train=virtual_floating_platform/MFP2D_PPOmulti_dict_MLP
 ```
 
 Note that by default, we show a Viewport window with rendering, which slows down training. You can choose to close the Viewport window during training for better performance. The Viewport window can be re-enabled by selecting `Window > Viewport` from the top menu bar.
@@ -67,7 +67,7 @@ Note that by default, we show a Viewport window with rendering, which slows down
 To achieve maximum performance, you can launch training in `headless` mode as follows:
 
 ```bash
-PYTHON_PATH scripts/rlgames_train.py task=Ant headless=True
+PYTHON_PATH scripts/rlgames_train.py task=virtual_floating_platform/MFP2D_Virtual_GoToPose train=virtual_floating_platform/MFP2D_PPOmulti_dict_MLP headless=True
 ```
 
 #### A Note on the Startup Time of the Simulation
@@ -84,7 +84,7 @@ defaults to the task name, but can also be overridden via the `experiment` argum
 To load a trained checkpoint and continue training, use the `checkpoint` argument:
 
 ```bash
-PYTHON_PATH scripts/rlgames_train.py task=Ant checkpoint=runs/Ant/nn/Ant.pth
+PYTHON_PATH scripts/rlgames_train.py task=virtual_floating_platform/MFP2D_Virtual_GoToPose train=virtual_floating_platform/MFP2D_PPOmulti_dict_MLP checkpoint=runs/MFP2D_Virtual_GoToPose/nn/MFP2D_Virtual_GoToPose.pth
 ```
 
 To load a trained checkpoint and only perform inference (no training), pass `test=True` 
@@ -92,29 +92,12 @@ as an argument, along with the checkpoint name. To avoid rendering overhead, you
 also want to run with fewer environments using `num_envs=64`:
 
 ```bash
-PYTHON_PATH scripts/rlgames_train.py task=Ant checkpoint=runs/Ant/nn/Ant.pth test=True num_envs=64
+PYTHON_PATH scripts/rlgames_train.py task=virtual_floating_platform/MFP2D_Virtual_GoToPose train=virtual_floating_platform/MFP2D_PPOmulti_dict_MLP checkpoint=runs/MFP2D_Virtual_GoToPose/nn/MFP2D_Virtual_GoToPose.pth test=True num_envs=64
 ```
 
 Note that if there are special characters such as `[` or `=` in the checkpoint names, 
 you will need to escape them and put quotes around the string. For example,
 `checkpoint="runs/Ant/nn/last_Antep\=501rew\[5981.31\].pth"`
-
-We provide pre-trained checkpoints on the [Nucleus](https://docs.omniverse.nvidia.com/prod_nucleus/prod_nucleus/overview.html) server under `Assets/Isaac/2022.2.0/Isaac/Samples/OmniIsaacGymEnvs/Checkpoints`. Run the following command
-to launch inference with pre-trained checkpoint:
-
-Localhost (To set up localhost, please refer to the [Isaac Sim installation guide](https://docs.omniverse.nvidia.com/app_isaacsim/app_isaacsim/install_basic.html)):
-
-```bash
-PYTHON_PATH scripts/rlgames_train.py task=Ant checkpoint=omniverse://localhost/NVIDIA/Assets/Isaac/2022.2.0/Isaac/Samples/OmniIsaacGymEnvs/Checkpoints/ant.pth test=True num_envs=64
-```
-
-Production server:
-
-```bash
-PYTHON_PATH scripts/rlgames_train.py task=Ant checkpoint=http://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/2022.2.0/Isaac/Samples/OmniIsaacGymEnvs/Checkpoints/ant.pth test=True num_envs=64
-```
-
-When running with a pre-trained checkpoint for the first time, we will automatically download the checkpoint file to `omniisaacgymenvs/checkpoints`. For subsequent runs, we will re-use the file that has already been downloaded, and will not overwrite existing checkpoints with the same name in the `checkpoints` folder.
 
 ## Training Scripts
 
@@ -123,7 +106,7 @@ All scripts provided in `omniisaacgymenvs/scripts` can be launched directly with
 To test out a task without RL in the loop, run the random policy script with:
 
 ```bash
-PYTHON_PATH scripts/random_policy.py task=Cartpole
+PYTHON_PATH scripts/random_policy.py task=virtual_floating_platform/MFP2D_Virtual_GoToXY
 ```
 
 This script will sample random actions from the action space and apply these actions to your task without running any RL policies. Simulation should start automatically after launching the script, and will run indefinitely until terminated.
@@ -132,7 +115,7 @@ This script will sample random actions from the action space and apply these act
 To run a simple form of PPO from `rl_games`, use the single-threaded training script:
 
 ```bash
-PYTHON_PATH scripts/rlgames_train.py task=Cartpole
+PYTHON_PATH scripts/rlgames_train.py task=virtual_floating_platform/MFP2D_Virtual_GoToXY
 ```
 
 This script creates an instance of the PPO runner in `rl_games` and automatically launches training and simulation. Once training completes (the total number of iterations have been reached), the script will exit. If running inference with `test=True checkpoint=<path/to/checkpoint>`, the script will run indefinitely until terminated. Note that this script will have limitations on interaction with the UI.
@@ -141,7 +124,7 @@ This script creates an instance of the PPO runner in `rl_games` and automaticall
 Lastly, we provide a multi-threaded training script that executes the RL policy on a separate thread than the main thread used for simulation and rendering:
 
 ```bash
-PYTHON_PATH scripts/rlgames_train_mt.py task=Cartpole
+PYTHON_PATH scripts/rlgames_train_mt.py task=virtual_floating_platform/MFP2D_Virtual_GoToXY
 ```
 
 This script uses the same RL Games PPO policy as the above, but runs the RL loop on a new thread. Communication between the RL thread and the main thread happens on threaded Queues. Simulation will start automatically, but the script will **not** exit when training terminates, except when running in headless mode. Simulation will stop when training completes or can be stopped by clicking on the Stop button in the UI. Training can be launched again by clicking on the Play button. Similarly, if running inference with `test=True checkpoint=<path/to/checkpoint>`, simulation will run until the Stop button is clicked, or the script will run indefinitely until the process is terminated.
@@ -202,30 +185,6 @@ Each task follows the frameworks provided in `omni.isaac.core` and `omni.isaac.g
 Refer to [docs/framework.md](docs/framework.md) for how to create your own tasks.
 
 Full details on each of the tasks available can be found in the [RL examples documentation](docs/rl_examples.md).
-
-
-## Demo
-
-We provide an interactable demo based on the `AnymalTerrain` RL example. In this demo, you can click on any of 
-the ANYmals in the scene to go into third-person mode and manually control the robot with your keyboard as follows:
-
-- `Up Arrow`: Forward linear velocity command
-- `Down Arrow`: Backward linear velocity command
-- `Left Arrow`: Leftward linear velocity command
-- `Right Arrow`: Rightward linear velocity command
-- `Z`: Counterclockwise yaw angular velocity command
-- `X`: Clockwise yaw angular velocity command
-- `C`: Toggles camera view between third-person and scene view while maintaining manual control
-- `ESC`: Unselect a selected ANYmal and yields manual control
-
-Launch this demo with the following command. Note that this demo limits the maximum number of ANYmals in the scene to 128.
-
-```
-PYTHON_PATH scripts/rlgames_demo.py task=AnymalTerrain num_envs=64 checkpoint=omniverse://localhost/NVIDIA/Assets/Isaac/2022.2.0/Isaac/Samples/OmniIsaacGymEnvs/Checkpoints/anymal_terrain.pth 
-```
-
-<img src="https://user-images.githubusercontent.com/34286328/184688654-6e7899b2-5847-4184-8944-2a96b129b1ff.gif" width="600" height="300"/>
-
 
 ## A note about Force Sensors
 
