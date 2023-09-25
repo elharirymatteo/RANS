@@ -111,7 +111,10 @@ class MFP3DVirtual(MFP2DVirtual):
 
     def set_up_scene(self, scene) -> None:
         """
-        Sets up the USD scene inside Omniverse for the task."""
+        Sets up the USD scene inside Omniverse for the task.
+        
+        Args:
+            scene: The USD stage to setup."""
 
         # Add the floating platform, and the marker
         self.get_floating_platform()
@@ -177,9 +180,12 @@ class MFP3DVirtual(MFP2DVirtual):
         # Dump to state
         self.current_state = {"position":root_positions, "orientation": heading, "linear_velocity": root_velocities[:,:3], "angular_velocity":root_velocities[:,3:]}
 
-    def set_targets(self, env_ids):
+    def set_targets(self, env_ids: torch.Tensor) -> None:
         """
-        Sets the targets for the task."""
+        Sets the targets for the task.
+        
+        Args:
+            env_ids: The indices of the environments to set the targets for."""
 
         env_long = env_ids.long()
         # Randomizes the position of the ball on the x y axis

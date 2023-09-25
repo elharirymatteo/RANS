@@ -13,6 +13,8 @@ from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_disturbances import 
 from omni.isaac.core.utils.torch.rotations import *
 from omni.isaac.core.utils.prims import get_prim_at_path
 
+from typing import Dict, List, Tuple
+
 import numpy as np
 import omni
 import time
@@ -110,9 +112,13 @@ class MFP2DVirtual(RLTask):
             raise NotImplementedError("The requested discrete action type is not supported.")
 
     
-    def add_stats(self, names: list) -> None:
+    def add_stats(self, names: List[str]) -> None:
         """
-        Adds training statistics to be recorded during training."""
+        Adds training statistics to be recorded during training.
+        
+        Args:
+            names: list of names of the statistics to be recorded."""
+        
         for name in names:
             torch_zeros = lambda: torch.zeros(self._num_envs, dtype=torch.float, device=self._device, requires_grad=False)
             if not name in self.episode_sums.keys():
@@ -135,7 +141,10 @@ class MFP2DVirtual(RLTask):
 
     def set_up_scene(self, scene) -> None:
         """
-        Sets up the USD scene inside Omniverse for the task."""
+        Sets up the USD scene inside Omniverse for the task.
+        
+        Args:
+            scene: the USD scene to be set up."""
 
         # Add the floating platform, and the marker
         self.get_floating_platform()
@@ -196,9 +205,12 @@ class MFP2DVirtual(RLTask):
         # Dump to state
         self.current_state = {"position":root_positions[:,:2], "orientation": self.heading, "linear_velocity": root_velocities[:,:2], "angular_velocity":root_velocities[:,-1]}
 
-    def get_observations(self) -> dict:
+    def get_observations(self) -> Dict[str, torch.Tensor]:
         """
-        Gets the observations of the task to be passed to the policy."""
+        Gets the observations of the task to be passed to the policy.
+        
+        Returns:
+            observations: a dictionary containing the observations of the task."""
 
         # implement logic to retrieve observation states
         self.update_state()
@@ -218,7 +230,10 @@ class MFP2DVirtual(RLTask):
 
     def pre_physics_step(self, actions: torch.Tensor) -> None:
         """
-        This function implements the logic to be performed before physics steps"""
+        This function implements the logic to be performed before physics steps.
+        
+        Args:
+            actions: the actions to be applied to the platform."""
 
         # If is not playing skip
         if not self._env._world.is_playing():
@@ -269,7 +284,6 @@ class MFP2DVirtual(RLTask):
         self._platforms.base.apply_forces_and_torques_at_pos(forces=floor_forces, torques=torque_disturbance,
                                                               positions=self.root_pos, is_global=True)
 
-
     def post_reset(self):
         """
         This function implements the logic to be performed after a reset."""
@@ -290,9 +304,12 @@ class MFP2DVirtual(RLTask):
         
         self.set_targets(self.all_indices)
 
-    def set_targets(self, env_ids):
+    def set_targets(self, env_ids: torch.Tensor):
         """
-        Sets the targets for the task."""
+        Sets the targets for the task.
+        
+        Args:
+            env_ids: the indices of the environments for which to set the targets."""
 
         num_sets = len(env_ids)
         env_long = env_ids.long()
@@ -303,10 +320,15 @@ class MFP2DVirtual(RLTask):
         if self._marker:
             self._marker.set_world_poses(target_positions[env_long], target_orientation[env_long], indices=env_long)
 
-    def set_to_pose(self, env_ids, positions, heading):
+    def set_to_pose(self, env_ids: torch.Tensor, positions: torch.Tensor, heading: torch.Tensor) -> None:
         """
         Sets the platform to a specific pose.
-        TODO: Impose more iniiial conditions, such as linear and angular velocity."""
+        TODO: Impose more iniiial conditions, such as linear and angular velocity.
+        
+        Args:
+            env_ids: the indices of the environments for which to set the pose.
+            positions: the positions of the platform.
+            heading: the heading of the platform."""
 
         num_resets = len(env_ids)
         # Resets the counter of steps for which the goal was reached
@@ -332,7 +354,10 @@ class MFP2DVirtual(RLTask):
 
     def reset_idx(self, env_ids: torch.Tensor) -> None:
         """
-        Resets the environments with the given indices."""
+        Resets the environments with the given indices.
+        
+        Args:
+            env_ids: the indices of the environments to be reset."""
 
         num_resets = len(env_ids)
         # Resets the counter of steps for which the goal was reached
