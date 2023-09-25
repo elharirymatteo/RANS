@@ -1,7 +1,7 @@
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP3D_core import Core, parse_data_dict, quat_to_mat
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP3D_task_rewards import GoToPoseReward
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP3D_task_parameters import GoToPoseParameters
-from omniisaacgymenvs.utils.arrow import VisualArrow
+from omniisaacgymenvs.utils.arrow3D import VisualArrow3D
 
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_go_to_pose import GoToPoseTask as GoToPoseTask2D
 
@@ -12,11 +12,12 @@ import torch
 
 EPS = 1e-6   # small constant to avoid divisions by 0 and log(0)
 
-class GoToPoseTask(GoToPoseTask2D):
+class GoToPoseTask(GoToPoseTask2D, Core):
     """
     Implements the GoToPose task. The robot has to reach a target position and heading."""
 
     def __init__(self, task_param: GoToPoseParameters, reward_param: GoToPoseReward, num_envs: int, device: str) -> None:
+        Core.__init__(self, num_envs, device)
         # Task and reward parameters
         self._task_parameters = parse_data_dict(GoToPoseParameters(), task_param)
         self._reward_parameters = parse_data_dict(GoToPoseReward(), reward_param)
@@ -24,9 +25,12 @@ class GoToPoseTask(GoToPoseTask2D):
         # Buffers
         self._goal_reached = torch.zeros((self._num_envs), device=self._device, dtype=torch.int32)
         self._target_positions = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
-        self._target_headings = torch.zeros((self._num_envs, 4), device=self._device, dtype=torch.float32)
-        self._target_headings_as_mat = torch.zeros((self._num_envs, 3, 3), device=self._device, dtype=torch.float32)
+        self._target_headings = torch.zeros((self._num_envs, 3, 3), device=self._device, dtype=torch.float32)
+        #self._target_headings_as_mat = torch.zeros((self._num_envs, 3, 3), device=self._device, dtype=torch.float32)
         self._task_label = self._task_label * 1 
+ 
+    def update_observation_tensor(self, current_state: dict) -> torch.Tensor:
+        return Core.update_observation_tensor(self, current_state)
 
     def get_state_observations(self, current_state: dict) -> torch.Tensor:
         """
@@ -35,7 +39,7 @@ class GoToPoseTask(GoToPoseTask2D):
         # position distance
         self._position_error = self._target_positions - current_state["position"]
         # heading distance
-        self._heading_error = torch.bmm(torch.transpose(current_state["orientation"],-2,-1), self._target_headings_as_mat)
+        self._heading_error = torch.bmm(torch.transpose(current_state["orientation"],-2,-1), self._target_headings)
         # Encode task data
         self._task_data[:,:3] = self._position_error
         self._task_data[:,3:] = self._heading_error[:,:2,:].reshape(self._num_envs, 6)
@@ -51,15 +55,14 @@ class GoToPoseTask(GoToPoseTask2D):
         self.heading_dist = torch.arccos((trace - 1) / 2)
 
         # Checks if the goal is reached
-        position_goal_is_reached = (self.position_dist < self._task_parameters.x_y_tolerance).int()
-        heading_goal_is_reached = (self.heading_dist < self._task_parameters.heading_tolerance).int()
+        position_goal_is_reached = (self.position_dist < self._task_parameters.position_tolerance).int()
+        heading_goal_is_reached = (self.heading_dist < self._task_parameters.orientation_tolerance).int()
         goal_is_reached = position_goal_is_reached * heading_goal_is_reached
         self._goal_reached *= goal_is_reached # if not set the value to 0
         self._goal_reached += goal_is_reached # if it is add 1
     
         # rewards
         self.position_reward, self.heading_reward = self._reward_parameters.compute_reward(current_state, actions, self.position_dist, self.heading_dist)
-      
         return self.position_reward + self.heading_reward
 
     def get_goals(self, env_ids: torch.Tensor, target_positions: torch.Tensor, target_orientations: torch.Tensor) -> list:
@@ -126,20 +129,16 @@ class GoToPoseTask(GoToPoseTask2D):
         An arrow is generated to represent the 2D pose to be reached by the agent."""
 
         color = torch.tensor([1, 0, 0])
-        body_radius = 0.1
-        body_length = 0.5
-        head_radius = 0.2
+        body_radius = 0.025
+        body_length = 1.5
+        head_radius = 0.075
         head_length = 0.5
-        poll_radius = 0.025
-        poll_length = 2
-        VisualArrow(
+        VisualArrow3D(
             prim_path=path + "/arrow",
             translation=position,
             name="target_0",
             body_radius=body_radius,
             body_length=body_length,
-            poll_radius=poll_radius,
-            poll_length=poll_length,
             head_radius=head_radius,
             head_length=head_length,
             color=color)
