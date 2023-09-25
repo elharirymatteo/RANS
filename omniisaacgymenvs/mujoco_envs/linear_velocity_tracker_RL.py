@@ -50,24 +50,20 @@ class MuJoCoVelTracking(MuJoCoFloatingPlatform):
                 mujoco.mj_step(self.model, self.data)
                 self.updateLoggers(model.getGoal(), model.getTargetPosition())
     
-    def plotSimulation(self, dpi:int = 90, width:int = 1000, height:int = 1000, save:bool = False, save_dir:str = "velocity_exp") -> None:
+    def plotSimulation(self, dpi:int = 135, width:int = 1000, height:int = 1000, save:bool = False, save_dir:str = "velocity_exp") -> None:
         """
         Plots the simulation."""
 
         figsize = (width / dpi, height / dpi)
 
-        fig, ax = plt.subplots(2, 1, figsize=figsize, dpi=dpi)
+        fig, ax = plt.subplots(1, 1, figsize=figsize, dpi=dpi)
 
-        ax[0].plot(self.logs["timevals"], self.logs["angular_velocity"])
-        ax[0].set_title('angular velocity')
-        ax[0].set_ylabel('radians / second')
-
-        ax[1].plot(self.logs["timevals"], self.logs["linear_velocity"], label="system velocities")
-        ax[1].plot(self.logs["timevals"], self.logs["velocity_goal"], label="target velocities")
-        ax[1].legend()
-        ax[1].set_xlabel('time (seconds)')
-        ax[1].set_ylabel('meters / second')
-        _ = ax[1].set_title('linear_velocity')
+        ax.plot(self.logs["timevals"], self.logs["linear_velocity"], label="system velocities")
+        ax.plot(self.logs["timevals"], self.logs["velocity_goal"], label="target velocities")
+        ax.legend()
+        ax.set_xlabel('time (seconds)')
+        ax.set_ylabel('Linear velocities (m/s)')
+        _ = ax.set_title('Linear velocity tracking')
         if save:
             try:
                 os.makedirs(save_dir, exist_ok=True)
@@ -79,10 +75,10 @@ class MuJoCoVelTracking(MuJoCoFloatingPlatform):
         ax.plot(np.array(self.logs["position_target"])[:,0], np.array(self.logs["position_target"])[:,1], label="trajectory")
         ax.plot(np.array(self.logs["position"])[:,0], np.array(self.logs["position"])[:,1], label="system position")
         ax.legend()
-        ax.set_xlabel('meters')
-        ax.set_ylabel('meters')
+        ax.set_xlabel('x (meters)')
+        ax.set_ylabel('y (meters)')
         ax.axis("equal")
-        _ = ax.set_title('x y coordinates')
+        _ = ax.set_title('Trajectory in xy plane')
         plt.tight_layout()
         if save:
             try:
@@ -275,6 +271,6 @@ if __name__ == "__main__":
     # Runs the simulation
     env.runLoop(velocity_tracker, [0,0])
     # Plots the simulation
-    env.plotSimulation(save=args.save_dir)
+    env.plotSimulation(save=True, save_dir = args.save_dir)
     # Saves the simulation data
     env.saveSimulationData(args.save_dir)
