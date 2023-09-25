@@ -120,16 +120,31 @@ class CreatePlatform:
 
         self.arrow_path, self.arrow_prim = createXform(self.stage, path)
         createArrow(self.stage, self.arrow_path, 0.1, 0.5, [self.core_radius, 0, 0], self.refinement)
-        applyMaterial(self.arrow_prim, self.colors["blue"])
+        applyMaterial(self.arrow_prim, self.colors["red"])
 
     def createPositionMarkerXform(self, path: str) -> None:
         """
         Creates an Xform to store the position marker."""
 
         self.marker_path, self.marker_prim = createXform(self.stage, path)
-        sphere_path, sphere_geom = createSphere(self.stage, self.marker_path+"/marker_sphere", 0.05, self.refinement)
+        sphere_path, sphere_geom = createSphere(self.stage, self.marker_path+"/marker_sphere_z_plus", 0.05, self.refinement)
         setTranslate(sphere_geom, Gf.Vec3d([0, 0, self.core_radius]))
-        applyMaterial(self.marker_prim, self.colors["green"])
+        applyMaterial(self.stage.GetPrimAtPath(sphere_path), self.colors["blue"])
+        sphere_path, sphere_geom = createSphere(self.stage, self.marker_path+"/marker_sphere_z_minus", 0.05, self.refinement)
+        setTranslate(sphere_geom, Gf.Vec3d([0, 0, -self.core_radius]))
+        applyMaterial(self.stage.GetPrimAtPath(sphere_path), self.colors["blue"])
+        sphere_path, sphere_geom = createSphere(self.stage, self.marker_path+"/marker_sphere_y_plus", 0.05, self.refinement)
+        setTranslate(sphere_geom, Gf.Vec3d([0, self.core_radius,0]))
+        applyMaterial(self.stage.GetPrimAtPath(sphere_path), self.colors["green"])
+        sphere_path, sphere_geom = createSphere(self.stage, self.marker_path+"/marker_sphere_y_minus", 0.05, self.refinement)
+        setTranslate(sphere_geom, Gf.Vec3d([0, -self.core_radius, 0]))
+        applyMaterial(self.stage.GetPrimAtPath(sphere_path), self.colors["green"])
+        sphere_path, sphere_geom = createSphere(self.stage, self.marker_path+"/marker_sphere_x_plus", 0.05, self.refinement)
+        setTranslate(sphere_geom, Gf.Vec3d([self.core_radius,0,0]))
+        applyMaterial(self.stage.GetPrimAtPath(sphere_path), self.colors["red"])
+        sphere_path, sphere_geom = createSphere(self.stage, self.marker_path+"/marker_sphere_x_minus", 0.05, self.refinement)
+        setTranslate(sphere_geom, Gf.Vec3d([-self.core_radius,0,0]))
+        applyMaterial(self.stage.GetPrimAtPath(sphere_path), self.colors["red"])
 
     def createRigidSphere(self, path:str, name:str, radius:float, CoM:list, mass:float) -> str:
         """
