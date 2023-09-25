@@ -1,0 +1,169 @@
+# used to create the object
+name: MFP3DVirtual
+
+physics_engine: ${..physics_engine}
+experiment: MFP3D_Virtual_GoToPose
+
+# if given, will override the device setting in gym. 
+env:
+  numEnvs: ${resolve_default:64,${...num_envs}}
+  envSpacing: 12
+  maxEpisodeLength: 700
+  enableDebugVis: False
+  action_mode: MultiDiscrete
+  numQuantizedActions: 1
+  horizon_length: 16
+
+  controlFrequencyInv: 10
+
+  # Split the maximum amount of thrust across all thrusters.
+  split_thrust: False
+
+  # Uneven floor generation
+  use_uneven_floor: False
+  use_sinusoidal_floor: False
+  floor_min_freq: 0.25
+  floor_max_freq: 3
+  floor_min_offset: -6
+  floor_max_offset: 6
+  max_floor_force: 0.5
+  min_floor_force: 0.25
+
+  # Torque disturbance generation
+  use_torque_disturbance: False
+  use_sinusoidal_torque: False
+  max_torque: 0.1 # Nm , 30% of max torque of thruster
+  min_torque: 0.0
+
+  # Add noisy observations
+  add_noise_on_pos: False 
+  position_noise_min: -0.01 
+  position_noise_max:  0.01
+  add_noise_on_vel: False
+  velocity_noise_min: -0.01
+  velocity_noise_max:  0.01
+  add_noise_on_heading: False
+  heading_noise_min: -0.025
+  heading_noise_max:  0.025
+
+  # Add noisy actions
+  add_noise_on_act: False
+  min_action_noise: -0.05
+  max_action_noise:  0.05
+
+  clipObservations: {state: 8.0}
+  clipActions: 1.0
+
+  task_parameters:
+    name: GoToPose
+    position_tolerance: 0.01
+    kill_after_n_steps_in_tolerance: 50 # 10seconds
+    max_spawn_dist: 6.0
+    min_spawn_dist: 0.5
+    kill_dist: 8.0
+
+  reward_parameters:
+    name: GoToPose
+    position_reward_mode: exponential
+    heading_reward_mode: exponential
+    position_exponential_reward_coeff: 0.25
+    heading_exponential_reward_coeff: 0.25
+    position_scale: 1.0
+    heading_scale: 1.0
+
+  platform:
+    randomization:
+      random_permutation: False
+      random_offset: False
+      randomize_thruster_position: False
+      min_random_radius: 0.125
+      max_random_radius: 0.5
+      random_theta: 0.39269908169872414 #2pi/16
+      randomize_thrust_force: False
+      min_thrust_force: 0.5
+      max_thrust_force: 1.0
+      kill_thrusters: False
+      max_thruster_kill: 2
+
+    core:
+      mass: 10.92
+      CoM: [0,0,0]
+      radius: 0.31
+      shape: "cylinder"
+      refinement: 2
+
+    configuration:
+      use_four_configurations: False
+      num_anchors: 4
+      offset: 0.75839816339
+      thrust_force: 1.0
+      visualize: True
+      save_path: "config.png"
+
+  penalties_parameters:
+    penalize_energy: True
+    penalize_energy_fn: "lambda x,step: -torch.abs(x)*0.15*step/2000"
+    penalize_energy_c1: 0.01
+    penalize_energy_c2: 0.00
+    penalize_linear_velocities: False
+    penalize_linear_velocities_fn: "lambda x,step: -torch.norm(x, dim=-1)*0.025"
+    penalize_linear_velocities_c1: 0.01
+    penalize_linear_velocities_c2: 0.00
+    penalize_angular_velocities: True
+    penalize_angular_velocities_fn: "lambda x,step: -(torch.norm(x, dim=-1) - 0.3)*1.0*(torch.norm(x, dim=-1) > 0.3)*step/2000"
+    penalize_angular_velocities_c1: 0.01
+    penalize_angular_velocities_c2: 0.00
+
+sim:
+  dt: 0.02
+  use_gpu_pipeline: ${eq:${...pipeline},"gpu"}
+  gravity: [0.0, 0.0, 0.0]
+  add_ground_plane: False
+  add_distant_light: True
+  use_flatcache: True
+  enable_scene_query_support: False
+  # set to True if you use camera sensors in the environment
+  enable_cameras: False
+  disable_contact_processing: False
+
+  physx:
+    worker_thread_count: ${....num_threads}
+    solver_type: ${....solver_type}
+    use_gpu: ${eq:${....sim_device},"gpu"} # set to False to run on CPU
+    solver_position_iteration_count: 40
+    solver_velocity_iteration_count: 20
+    contact_offset: 0.02
+    rest_offset: 0.001
+    bounce_threshold_velocity: 0.2
+    max_depenetration_velocity: 1000.0
+    friction_offset_threshold: 0.04
+    friction_correlation_distance: 0.025
+    enable_sleeping: True
+    enable_stabilization: False
+
+    # GPU buffers
+    gpu_max_rigid_contact_count: 524288
+    gpu_max_rigid_patch_count: 81920
+    gpu_found_lost_pairs_capacity: 1024
+    gpu_found_lost_aggregate_pairs_capacity: 262144
+    gpu_total_aggregate_pairs_capacity: 1024
+    gpu_max_soft_body_contacts: 1048576
+    gpu_max_particle_contacts: 1048576
+    gpu_heap_capacity: 67108864
+    gpu_temp_buffer_capacity: 16777216
+    gpu_max_num_partitions: 8
+
+  mfp2d:
+    # -1 to use default values
+    override_usd_defaults: False
+    enable_self_collisions: False
+    enable_gyroscopic_forces: True
+    # also in stage params
+    # per-actor
+    solver_position_iteration_count: 40
+    solver_velocity_iteration_count: 20
+    sleep_threshold: 0.005
+    stabilization_threshold: 0.001
+    # per-body
+    density: -1
+    max_depenetration_velocity: 1000.0
