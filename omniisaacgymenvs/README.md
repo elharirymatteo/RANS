@@ -1,11 +1,12 @@
 # How it works: One task to rule them all
 
-This file aims at giving a coarse overview of how our code works.
+This file aims at giving a coarse overview of how our code works and how to modify it.
 
 ## How to start the tasks and tune them:
 
-In the latest revision of the tasks, I created them all such that they share the same observation space:\
-The observation space is structured like so:
+### 3DoF observation and action spaces
+The tasks are designed such that they share the same observation space:\
+For 3DoF tasks, constrained in 2D, The observation space is structured like so:
 ```python
 N: number of thrusters
 
@@ -13,17 +14,17 @@ obs = {'state': 10, 'transforms': Nx5, 'masks': N}
 ```
 The values stored inside the `state` are generated as follows:
 ```python
-# heading: The heading of the platform in the global frame
+# heading: The heading of the platform in the global frame (yaw)
 # linear_velocity_x: The linear velocity along the x axis in the global frame
 # linear_velocity_y: The linear velocity along the y axis in the global frame
 # angular_velocity_z: The angular velocity along the z axis.
-# task flag, and integer between 0 and 4.
-#   - 0: GoToXY
-#   - 1: GoToPose
-#   - 2: TrackXYVelocity
-#   - 3: TrackXYOVelocity
-#   - 4: TrackXYVelocityMatchHeading
-# task_data is some bits of data used to fullfil the task.
+# The task flag is an integer between 0 and 4.
+#   - 0: GoToXY (Go to a position in 2D space)
+#   - 1: GoToPose (Go to a pose in 2D space)
+#   - 2: TrackXYVelocity (Track a linear velocity in 2D space)
+#   - 3: TrackXYOVelocity (Track a linear and angular velocity in 2D space)
+#   - 4: TrackXYVelocityMatchHeading (Track a linear velocity and a heading in 2D space)
+# The task_data is some bits of data used to fullfil the task.
 #   - GoToXY: [error_x, error_y, 0, 0]
 #   - GoToPose: [error_x, error_y, cos(error_heading), sin(error_heading)]
 #   - TrackXYVelocity: [error_vx, error_vy, 0 , 0]
@@ -84,6 +85,9 @@ To instantiate the `GoToPose` task you must add the following to the `env` part 
 ```
 
 To instantiate the `TrackXYVelocity` task you must add the following to the `env` part of the config:
+
+### 6DoF observation and action spaces
+
 
 
 ## How to edit the tasks:
