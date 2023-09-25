@@ -8,7 +8,7 @@ The main additions to the Reinforcement Learning examples provided by Omniverse 
 
 Currently, we provide a Floating Platform aimed at simulating the robot present in the ZeroG Lab of the University of Luxembourg (SpaceR group).
 
-<img src="omniisaacgymenvs/demos/3DofGoToPose_v2.gif" width="1080" height="612"/>
+<img src="./omniisaacgymenvs/demos/aDofGoToPose_v2.gif" width="1080" height="612"/>
 <img src="omniisaacgymenvs/demos/3DofGoToXY_v2.gif" width="1080" height="612"/>
 <img src="omniisaacgymenvs/demos/6DofGoToXYZ_v8.gif" width="1080" height="566"/>
 
