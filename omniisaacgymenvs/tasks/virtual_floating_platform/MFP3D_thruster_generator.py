@@ -282,9 +282,9 @@ class VirtualPlatform:
                 idx = env_ids[i*4 + j]
                 ax = fig.add_subplot(4,4,i*4+(j+1),projection='3d')
                 ax.quiver(p[idx,:,0], p[idx,:,1], p[idx,:,2], f[idx,:,0], f[idx,:,1], f[idx,:,2], color = renderColorsForQuiver3d(colors), length=0.2, normalize=True)
-                ax.set_xlim([-0.75, 0.75])
-                ax.set_ylim([-0.75, 0.75])
-                ax.set_zlim([-0.75, 0.75])
+                ax.set_xlim([-0.4, 0.4])
+                ax.set_ylim([-0.4, 0.4])
+                ax.set_zlim([-0.4, 0.4])
         fig.tight_layout()
         fig.savefig(save_path, dpi=300)
         plt.close()
