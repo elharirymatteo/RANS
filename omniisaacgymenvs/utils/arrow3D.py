@@ -52,8 +52,6 @@ class VisualArrow3D(XFormPrim, Arrow3D):
         color: Optional[np.ndarray] = None,
         body_radius: Optional[float] = None,
         body_length: Optional[float] = None,
-        poll_radius: Optional[float] = None,
-        poll_length: Optional[float] = None,
         head_radius: Optional[float] = None,
         head_length: Optional[float] = None,
         visual_material: Optional[VisualMaterial] = None,
@@ -70,11 +68,9 @@ class VisualArrow3D(XFormPrim, Arrow3D):
             scale=scale,
             visible=visible,
         )
-        Arrow3D.__init__(self, prim_path, body_radius, body_length, poll_radius, poll_length, head_radius, head_length)
+        Arrow3D.__init__(self, prim_path, body_radius, body_length, head_radius, head_length)
         self.setBodyRadius(body_radius)
         self.setBodyLength(body_length)
-        self.setPollRadius(poll_radius)
-        self.setPollLength(poll_length)
         self.setHeadRadius(head_radius)
         self.setHeadLength(head_length)
         self.updateExtent()
@@ -109,8 +105,6 @@ class FixedArrow3D(VisualArrow3D):
         color: Optional[np.ndarray] = None,
         body_radius: Optional[float] = None,
         body_length: Optional[float] = None,
-        poll_radius: Optional[float] = None,
-        poll_length: Optional[float] = None,
         head_radius: Optional[float] = None,
         head_length: Optional[float] = None,
         visual_material: Optional[VisualMaterial] = None,
@@ -144,8 +138,6 @@ class FixedArrow3D(VisualArrow3D):
             color=color,
             body_radius = body_radius,
             body_length = body_length,
-            poll_radius = poll_radius,
-            poll_length = poll_length,
             head_radius = head_radius,
             head_length = head_length,
             visual_material=visual_material,
@@ -189,8 +181,6 @@ class DynamicArrow3D(RigidPrim, FixedArrow3D):
         color: Optional[np.ndarray] = None,
         body_radius: Optional[float] = None,
         body_length: Optional[float] = None,
-        poll_radius: Optional[float] = None,
-        poll_length: Optional[float] = None,
         head_radius: Optional[float] = None,
         head_length: Optional[float] = None,
         visual_material: Optional[VisualMaterial] = None,
@@ -215,8 +205,6 @@ class DynamicArrow3D(RigidPrim, FixedArrow3D):
             color=color,
             body_radius = body_radius,
             body_length = body_length,
-            poll_radius = poll_radius,
-            poll_length = poll_length,
             head_radius = head_radius,
             head_length = head_length,
             visual_material=visual_material,

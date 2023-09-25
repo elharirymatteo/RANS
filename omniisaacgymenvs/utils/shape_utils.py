@@ -425,15 +425,11 @@ class Arrow:
         return self.head_geom.GetHeightAttr().Get()
 
 class Arrow3D:
-    def __init__(self, prim_path, body_radius, body_length, poll_radius, poll_length, head_radius, head_length):
+    def __init__(self, prim_path, body_radius, body_length, head_radius, head_length):
         if body_radius is None:
             body_radius = 0.1
         if body_length is None:
             body_length = 0.5
-        if poll_radius is None:
-            poll_radius = 0.02
-        if poll_length is None:
-            poll_length = 2
         if head_radius is None:
             head_radius = 0.25
         if head_length is None:
@@ -456,7 +452,7 @@ class Arrow3D:
         applyTransforms(head_prim1, [0,0,body_length + head_length/2], [0,0,0,1.0], [1,1,1], material=blue_material)
         # Y Axis
         applyTransforms(body_prim2, [0, body_length/2,0], [0.707, 0, 0, 0.707], [1,1,1], material=green_material)
-        applyTransforms(head_prim2, [0,body_length + head_length/2,0], [0.707, 0, 0, 0.707], [1,1,1], material=green_material)
+        applyTransforms(head_prim2, [0,body_length + head_length/2,0], [-0.707, 0, 0, 0.707], [1,1,1], material=green_material)
         # X Axis
         applyTransforms(body_prim3, [body_length/2,0,0], [0, 0.707, 0, 0.707], [1,1,1], material=red_material)
         applyTransforms(head_prim3, [body_length + head_length/2,0,0], [0, 0.707, 0, 0.707], [1,1,1], material=red_material)
