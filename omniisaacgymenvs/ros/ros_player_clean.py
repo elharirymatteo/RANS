@@ -54,8 +54,8 @@ if __name__ == '__main__':
     simulation_app = SimulationApp({"headless": True})
     enable_ros_extension()
 
-    from omniisaacgymenvs.mujoco_envs.RL_games_model_4_mujoco import RLGamesModel
-    from omniisaacgymenvs.mujoco_envs.pose_controller_DC import DiscreteController, MuJoCoPoseControl
+    from omniisaacgymenvs.mujoco_envs.controllers.RL_games_model_4_mujoco import RLGamesModel
+    from omniisaacgymenvs.mujoco_envs.legacy.pose_controller_DC import DiscreteController, MuJoCoPoseControl
     from omniisaacgymenvs.ros.ros_nodes import RLPlayerNode
     import rospy
 
