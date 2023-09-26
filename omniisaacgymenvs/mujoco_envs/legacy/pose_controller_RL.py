@@ -6,8 +6,8 @@ import mujoco
 import torch
 import os
 
-from omniisaacgymenvs.mujoco_envs.mujoco_base_env import MuJoCoFloatingPlatform, default_cfg
-from omniisaacgymenvs.mujoco_envs.RL_games_model_4_mujoco import RLGamesModel
+from omniisaacgymenvs.mujoco_envs.environments.mujoco_base_env import MuJoCoFloatingPlatform
+from omniisaacgymenvs.mujoco_envs.controllers.RL_games_model_4_mujoco import RLGamesModel
 
 class MuJoCoPositionControl(MuJoCoFloatingPlatform):
     def __init__(self, step_time:float = 0.02, duration:float = 60.0, inv_play_rate:int = 10,
@@ -23,26 +23,6 @@ class MuJoCoPositionControl(MuJoCoFloatingPlatform):
         super().updateLoggers()
         self.logs["position_target"].append(target[:2])
         self.logs["heading_target"].append(target[-1])
-
-    #def applyFriction(self, fdyn=0.1, fstat=0.1, tdyn=0.05, tstat=0.0):
-    #    lin_vel = self.data.qvel[:3]
-    #    lin_vel_norm = np.linalg.norm(lin_vel)
-    #    ang_vel = self.data.qvel[-1]
-    #    forces = self.data.qfrc_applied[:3]
-    #    forces_norm = np.linalg.norm(forces)
-    #    torques = self.data.qfrc_applied[3:]
-    #    torques_norm = np.linalg.norm(torques)
-    #    #if (forces_norm > fstat) or (torques_norm > tstat):
-    #    if lin_vel_norm > 0.001:
-    #        lin_vel_normed = np.array(lin_vel) / lin_vel_norm
-    #        force = -lin_vel_normed * fdyn
-    #        force[-1] = 0
-    #        mujoco.mj_applyFT(self.model, self.data, list(force), [0,0,0], self.data.qpos[:3], self.body_id, self.data.qfrc_applied)
-    #    if ang_vel > 0.001:
-    #        torque = - np.sign(ang_vel) * tdyn
-    #        mujoco.mj_applyFT(self.model, self.data, [0,0,0], [0,0,torque], self.data.qpos[:3], self.body_id, self.data.qfrc_applied)
-    #    #else:
-    #    #    self.data.qfrc_applied[:3] = 0
 
     def runLoop(self, model, initial_position=[0,0], initial_orientation=[1,0,0,0]) -> None:
         """

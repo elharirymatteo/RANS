@@ -6,8 +6,8 @@ import mujoco
 import torch
 import os
 
-from omniisaacgymenvs.mujoco_envs.mujoco_base_env import MuJoCoFloatingPlatform
-from omniisaacgymenvs.mujoco_envs.RL_games_model_4_mujoco import RLGamesModel
+from omniisaacgymenvs.mujoco_envs.environments.mujoco_base_env import MuJoCoFloatingPlatform
+from omniisaacgymenvs.mujoco_envs.controllers.RL_games_model_4_mujoco import RLGamesModel
 
 class MuJoCoPositionControl(MuJoCoFloatingPlatform):
     def __init__(self, step_time:float = 0.02, duration:float = 60.0, inv_play_rate:int = 10,

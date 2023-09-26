@@ -10,7 +10,7 @@ import torch
 import os
 import cvxpy as cp
 
-from omniisaacgymenvs.mujoco_envs.mujoco_base_env import MuJoCoFloatingPlatform
+from omniisaacgymenvs.mujoco_envs.environments.mujoco_base_env import MuJoCoFloatingPlatform
 
 class MuJoCoPoseControl(MuJoCoFloatingPlatform):
     def __init__(self, step_time:float = 0.02, duration:float = 60.0, inv_play_rate:int = 10,
