@@ -1,0 +1,6 @@
+name: "position"
+run_batch: 0
+goals_x: [ 2, 2, 2, 2, 2, 1, 0,-1,-2,-2,-2,-2,-2,-1, 0, 1, 2]
+goals_y: [-2,-1, 0, 1, 2, 2, 2, 2, 2, 1, 0,-1,-2,-2,-2,-2,-2]
+position_distance_threshold: 0.03
+save_dir: "mj_runs/position_square"

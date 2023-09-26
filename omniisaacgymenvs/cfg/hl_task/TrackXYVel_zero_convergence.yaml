@@ -1,0 +1,3 @@
+name: "linear_velocity"
+run_batch: 1
+save_dir: "mj_runs/vel_zero_convergence"
