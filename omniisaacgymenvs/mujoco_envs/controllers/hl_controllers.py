@@ -209,7 +209,6 @@ class VelocityTracker:
                        **kwargs):
         
         self.tracker = TrajectoryTracker(lookahead=lookahead_dist, closed=closed, offset=(x_offset, y_offset))
-        print(trajectory_type)
         if trajectory_type.lower() == "square":
             self.tracker.generateSquare(h=height)
         elif trajectory_type.lower() == "circle":
