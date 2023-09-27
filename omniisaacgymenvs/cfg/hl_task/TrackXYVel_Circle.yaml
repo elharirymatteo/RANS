@@ -1,4 +1,4 @@
-name: "pose"
+name: "linear_velocity"
 run_batch: 0
 trajectory_type: "circle"
 x_offset: 0

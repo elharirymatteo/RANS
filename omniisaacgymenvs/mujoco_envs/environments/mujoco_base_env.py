@@ -43,9 +43,17 @@ def parseEnvironmentConfig(cfg):
 
     new_cfg["spawn_parameters"] = {}
     new_cfg["spawn_parameters"]['seed'] = cfg["seed"]
-    new_cfg["spawn_parameters"]["max_spawn_dist"] = cfg["task"]["env"]["task_parameters"]["max_spawn_dist"]
-    new_cfg["spawn_parameters"]["min_spawn_dist"] = cfg["task"]["env"]["task_parameters"]["min_spawn_dist"]
+    try:
+        new_cfg["spawn_parameters"]["max_spawn_dist"] = cfg["task"]["env"]["task_parameters"]["max_spawn_dist"]
+    except:
+        new_cfg["spawn_parameters"]["max_spawn_dist"] = 0
+    try:
+        new_cfg["spawn_parameters"]["min_spawn_dist"] = cfg["task"]["env"]["task_parameters"]["min_spawn_dist"]
+    except:
+        new_cfg["spawn_parameters"]["min_spawn_dist"] = 0
+        
     new_cfg["spawn_parameters"]["kill_dist"] = cfg["task"]["env"]["task_parameters"]["kill_dist"]
+    
 
     new_cfg["step_time"] = cfg["task"]["sim"]["dt"]
     new_cfg["duration"] = cfg["task"]["env"]["maxEpisodeLength"] * cfg["task"]["sim"]["dt"]

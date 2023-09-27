@@ -123,7 +123,6 @@ class TrajectoryTracker:
         self.is_done = False
         self.offset = np.array(offset)
 
-
     def generateCircle(self, radius:float = 2, num_points:int = 360*10):
         theta = np.linspace(0, 2*np.pi, num_points, endpoint=(not self.closed))
         self.positions = np.array([np.cos(theta) * radius, np.sin(theta) * radius]).T + self.offset
@@ -171,6 +170,9 @@ class TrajectoryTracker:
         if self.positions.shape[0] <= 1:
             self.is_done = True
 
+    def isDone(self):
+        return self.is_done
+
     def getPointForTracking(self) -> List[np.ndarray]:
         position = self.positions[self.current_point]
         angle = self.angles[self.current_point]
@@ -206,14 +208,14 @@ class VelocityTracker:
                        trajectory_type: str = "circle",
                        **kwargs):
         
-        self.trajectory_tracker = TrajectoryTracker()
-        tracker = TrajectoryTracker(lookahead=lookahead_dist, closed=closed, offset=(x_offset, y_offset))
+        self.tracker = TrajectoryTracker(lookahead=lookahead_dist, closed=closed, offset=(x_offset, y_offset))
+        print(trajectory_type)
         if trajectory_type.lower() == "square":
-            tracker.generateSquare(h=height)
+            self.tracker.generateSquare(h=height)
         elif trajectory_type.lower() == "circle":
-            tracker.generateCircle(radius=radius)
+            self.tracker.generateCircle(radius=radius)
         elif trajectory_type.lower() == "spiral":
-            tracker.generateSpiral(start_radius=start_radius, end_radius=end_radius, num_loop=num_loops)
+            self.tracker.generateSpiral(start_radius=start_radius, end_radius=end_radius, num_loop=num_loops)
         else:
             raise ValueError("Unknown trajectory type. Must be square, circle or spiral.")
 
@@ -228,16 +230,16 @@ class VelocityTracker:
         self.target_tracking_velocity = goal
     
     def getTargetPosition(self):
-        return self.trajectory_tracker.get_target_position()
+        return self.tracker.get_target_position()
     
     def isDone(self):
-        return self.trajectory_tracker.is_done
+        return self.tracker.is_done
 
     def setTarget(self):
         self.model.setTarget(target_linear_velocity=self.velocity_goal)
 
     def getAction(self, state, is_deterministic=True):
-        self.velocity_vector = self.trajectory_tracker.getVelocityVector(state["position"])
+        self.velocity_vector = self.tracker.getVelocityVector(state["position"][:2])
         self.velocity_goal[0] = self.velocity_vector[0]*self.target_tracking_velocity
         self.velocity_goal[1] = self.velocity_vector[1]*self.target_tracking_velocity
         self.setTarget()
