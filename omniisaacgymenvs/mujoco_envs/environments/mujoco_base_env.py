@@ -9,6 +9,7 @@ import os
 from omniisaacgymenvs.mujoco_envs.environments.disturbances import NoisyActions, NoisyObservations, TorqueDisturbance, UnevenFloorDisturbance, RandomKillThrusters, RandomSpawn
 
 def parseEnvironmentConfig(cfg):
+    print(cfg)
     new_cfg = {}
     new_cfg["disturbances"] = {}
     new_cfg["disturbances"]['seed'] = cfg["seed"]
@@ -21,7 +22,7 @@ def parseEnvironmentConfig(cfg):
     new_cfg["disturbances"]["min_floor_force"] = cfg["task"]["env"]["min_floor_force"]
     new_cfg["disturbances"]["max_floor_force"] = cfg["task"]["env"]["max_floor_force"]
 
-    new_cfg["disturbances"]["use_torque_disturbances"] = cfg["task"]["env"]["use_torque_disturbances"]
+    new_cfg["disturbances"]["use_torque_disturbance"] = cfg["task"]["env"]["use_torque_disturbance"]
     new_cfg["disturbances"]["use_sinusoidal_torque"] = cfg["task"]["env"]["use_sinusoidal_torque"]
     new_cfg["disturbances"]["min_torque"] = cfg["task"]["env"]["min_torque"]
     new_cfg["disturbances"]["max_torque"] = cfg["task"]["env"]["max_torque"]
@@ -81,7 +82,7 @@ class MuJoCoFloatingPlatform:
         self.TD = TorqueDisturbance(disturbances)
         self.UF = UnevenFloorDisturbance(disturbances)
 
-        self.TK = RandomKillThrusters({"num_thrusters_to_kill": platform["randomization"]["max_thruster_kill"], "seed": platform["seed"]})
+        self.TK = RandomKillThrusters({"num_thrusters_to_kill": platform["randomization"]["max_thruster_kill"]*platform["randomization"]["kill_thrusters"], "seed": platform["seed"]})
         self.RS = RandomSpawn(spawn_parameters)
 
         self.createModel()
@@ -140,6 +141,9 @@ class MuJoCoFloatingPlatform:
         The mass is set to 5.32 kg, the radius is set to 0.31 m.
         The initial position is set to (3, 3, 0.4) m."""
 
+        self.radius = self.platform["core"]["radius"]
+        self.mass = self.platform["core"]["mass"]
+
         sphere_p1 = """
         <mujoco model="tippe top">
           <option integrator="RK4"/>
@@ -175,6 +179,8 @@ class MuJoCoFloatingPlatform:
         Defines where the forces are applied relatively to the center of mass of the body.
         self.forces: 8x3 array of forces, indicating the direction of the force.
         self.positions: 8x3 array of positions, indicating the position of the force."""
+
+        self.max_thrust = self.platform["configuration"]["thrust_force"]
 
         self.forces = np.array([[ 1, -1, 0],
                            [-1,  1, 0],
@@ -268,10 +274,10 @@ class MuJoCoFloatingPlatform:
         while self.duration > self.data.time:
             state = self.getObs() # Updates the state of the simulation.
             # Get the actions from the controller
-            action = model.getAction(state)
+            self.actions = model.getAction(state)
             # Plays only once every self.inv_play_rate steps.
             for _ in range(self.inv_play_rate):
-                self.applyForces(action)
+                self.applyForces(self.actions)
                 mujoco.mj_step(self.model, self.data)
                 self.updateLoggers()
 
@@ -288,17 +294,17 @@ class MuJoCoFloatingPlatform:
         while i < max_steps:
             state = self.getObs() # Updates the state of the simulation.
             # Get the actions from the controller
-            action = model.getAction(state)
+            self.actions = model.getAction(state)
             # Plays only once every self.inv_play_rate steps.
             for _ in range(self.inv_play_rate):
-                self.applyForces(action)
+                self.applyForces(self.actions)
                 mujoco.mj_step(self.model, self.data)
                 self.updateLoggers()
             i += 1
         
         return self.logs
     
-    def plotSimulation(self, dpi:int = 120, width:int = 600, height:int = 800, save:bool = False, save_dir:str = "mujoco_experiment") -> None:
+    def plotSimulation(self, dpi:int = 120, width:int = 600, height:int = 800, save:bool = True, save_dir:str = "mujoco_experiment") -> None:
         """
         Plots the simulation."""
 

@@ -88,7 +88,7 @@ class TorqueDisturbance:
     def __init__(self, cfg: dict) -> None:
         self._rng = np.random.default_rng(seed=cfg["seed"])
         # Uneven floor generation
-        self._use_torque_disturbance = cfg['use_torque_diturbance']
+        self._use_torque_disturbance = cfg['use_torque_disturbance']
         self._use_sinusoidal_torque = cfg['use_sinusoidal_torque']
         self._max_torque = cfg['max_torque']
         self._min_torque = cfg['min_torque']

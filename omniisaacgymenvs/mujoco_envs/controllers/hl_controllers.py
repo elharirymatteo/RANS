@@ -49,7 +49,7 @@ class PoseController:
     def setTarget(self):
         position_goal = self.current_goal[:2]
         yaw = self.current_goal[2]
-        q = [0,0,np.sin(yaw/2),np.cos(yaw/2)]
+        q = [np.cos(yaw/2),0,0,np.sin(yaw/2)]
         orientation_goal = q
         self.model.setTarget(target_position=position_goal, target_heading=orientation_goal)
     
@@ -60,7 +60,6 @@ class PoseController:
                 self.current_goal = self.goals[1]
                 self.current_goal_controller[:2] = self.current_goal[:2]
                 self.goals = self.goals[1:]   
-                self.model.find_gains(r0=self.opti_states)    
             else:
                 self.goals = []
         self.setTarget()
@@ -75,14 +74,12 @@ class PositionController:
                        **kwargs) -> None:
         
         self.model = model
-        self.goals = np.array([goals_x, goals_y]).T
+        self.goals = np.array([goals_x, goals_y, [0]*len(goals_x)]).T
         self.current_goal = self.goals[0]
         self.distance_threshold = position_distance_threshold
 
-        self.obs_state = torch.zeros((1,10), dtype=torch.float32, device="cuda")
-
     def isGoalReached(self, state):
-        dist = np.linalg.norm(self.current_goal - state["position"])
+        dist = np.linalg.norm(self.current_goal[:2] - state["position"][:2])
         if dist < self.distance_threshold:
             return True
     
@@ -97,8 +94,7 @@ class PositionController:
         return len(self.goals) == 0
 
     def setTarget(self):
-        position_goal = self.current_goal[:2]
-        self.model.setTarget(target_position=position_goal)
+        self.model.setTarget(target_position=self.current_goal)
 
     def getAction(self, state, is_deterministic: bool = True):
         if self.isGoalReached(state):
@@ -110,7 +106,7 @@ class PositionController:
                 self.goals = []
 
         self.setTarget()
-        return self.model.getAction(self.obs_state, is_deterministic=is_deterministic)
+        return self.model.getAction(state, is_deterministic=is_deterministic)
 
 
 class TrajectoryTracker:
@@ -255,10 +251,10 @@ class HLControllerFactory:
         self.registered_controllers = {}
 
     def registerController(self, name, controller):
-        self.registerController["name"] = controller
+        self.registered_controllers[name] = controller
 
     def parseControllerConfiguration(self, cfg: Dict):
-        return cfg["hl_task"], cfg["hl_task"]["mode"]
+        return cfg["hl_task"], cfg["hl_task"]["name"]
 
     def __call__(self, cfg: Dict, model: Union[RLGamesModel, DiscreteController]):
         new_cfg, mode = self.parseControllerConfiguration(cfg)

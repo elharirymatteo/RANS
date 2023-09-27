@@ -39,7 +39,7 @@ use_rl: True
 # set default task and default training config based on task
 defaults:
   - task: virtual_floating_platform/MFP2D_Virtual_GoToXY
-  - train: virtual_floating_platform/MFP2D_PPOmulti_dict
+  - train: virtual_floating_platform/MFP2D_PPOmulti_dict_MLP
   - controller: Optimal_LQR_DAC
   - hl_task: GoToXY_Square
   - hydra/job_logging: disabled
