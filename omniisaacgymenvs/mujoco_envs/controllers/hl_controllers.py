@@ -260,10 +260,10 @@ class HLControllerFactory:
     def parseControllerConfiguration(self, cfg: Dict):
         return cfg["hl_task"], cfg["hl_task"]["mode"]
 
-    def __call__(self, cfg: Dict):
+    def __call__(self, cfg: Dict, model: Union[RLGamesModel, DiscreteController]):
         new_cfg, mode = self.parseControllerConfiguration(cfg)
         assert mode in list(self.registered_controllers.keys()), "Unknown hl_task mode."
-        return self.registered_controllers[mode](**new_cfg)
+        return self.registered_controllers[mode](model, **new_cfg)
 
 
 hlControllerFactory = HLControllerFactory()

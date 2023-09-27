@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Union, List, Tuple
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
@@ -8,12 +8,62 @@ import os
 
 from omniisaacgymenvs.mujoco_envs.environments.disturbances import NoisyActions, NoisyObservations, TorqueDisturbance, UnevenFloorDisturbance, RandomKillThrusters, RandomSpawn
 
+def parseEnvironmentConfig(cfg):
+    new_cfg = {}
+    new_cfg["disturbances"] = {}
+    new_cfg["disturbances"]['seed'] = cfg["seed"]
+    new_cfg["disturbances"]["use_uneven_floor"] = cfg["task"]["env"]["use_uneven_floor"]
+    new_cfg["disturbances"]["use_sinusoidal_floor"] = cfg["task"]["env"]["use_sinusoidal_floor"]
+    new_cfg["disturbances"]["floor_min_freq"] = cfg["task"]["env"]["floor_min_freq"]
+    new_cfg["disturbances"]["floor_max_freq"] = cfg["task"]["env"]["floor_max_freq"]
+    new_cfg["disturbances"]["floor_min_offset"] = cfg["task"]["env"]["floor_min_offset"]
+    new_cfg["disturbances"]["floor_max_offset"] = cfg["task"]["env"]["floor_max_offset"]
+    new_cfg["disturbances"]["min_floor_force"] = cfg["task"]["env"]["min_floor_force"]
+    new_cfg["disturbances"]["max_floor_force"] = cfg["task"]["env"]["max_floor_force"]
+
+    new_cfg["disturbances"]["use_torque_disturbances"] = cfg["task"]["env"]["use_torque_disturbances"]
+    new_cfg["disturbances"]["use_sinusoidal_torque"] = cfg["task"]["env"]["use_sinusoidal_torque"]
+    new_cfg["disturbances"]["min_torque"] = cfg["task"]["env"]["min_torque"]
+    new_cfg["disturbances"]["max_torque"] = cfg["task"]["env"]["max_torque"]
+
+    new_cfg["disturbances"]["add_noise_on_pos"] = cfg["task"]["env"]["add_noise_on_pos"]
+    new_cfg["disturbances"]["position_noise_min"] = cfg["task"]["env"]["position_noise_min"]
+    new_cfg["disturbances"]["position_noise_max"] = cfg["task"]["env"]["position_noise_max"]
+    new_cfg["disturbances"]["add_noise_on_vel"] = cfg["task"]["env"]["add_noise_on_vel"]
+    new_cfg["disturbances"]["velocity_noise_min"] = cfg["task"]["env"]["velocity_noise_min"]
+    new_cfg["disturbances"]["velocity_noise_max"] = cfg["task"]["env"]["velocity_noise_max"]
+    new_cfg["disturbances"]["add_noise_on_heading"] = cfg["task"]["env"]["add_noise_on_heading"]
+    new_cfg["disturbances"]["heading_noise_min"] = cfg["task"]["env"]["heading_noise_min"]
+    new_cfg["disturbances"]["heading_noise_max"] = cfg["task"]["env"]["heading_noise_max"]
+
+    new_cfg["disturbances"]["add_noise_on_act"] = cfg["task"]["env"]["add_noise_on_act"]
+    new_cfg["disturbances"]["min_action_noise"] = cfg["task"]["env"]["min_action_noise"]
+    new_cfg["disturbances"]["max_action_noise"] = cfg["task"]["env"]["max_action_noise"]
+
+    new_cfg["spawn_parameters"] = {}
+    new_cfg["spawn_parameters"]['seed'] = cfg["seed"]
+    new_cfg["spawn_parameters"]["max_spawn_dist"] = cfg["task"]["env"]["task_parameters"]["max_spawn_dist"]
+    new_cfg["spawn_parameters"]["min_spawn_dist"] = cfg["task"]["env"]["task_parameters"]["min_spawn_dist"]
+    new_cfg["spawn_parameters"]["kill_dist"] = cfg["task"]["env"]["task_parameters"]["kill_dist"]
+
+    new_cfg["step_time"] = cfg["task"]["sim"]["dt"]
+    new_cfg["duration"] = cfg["task"]["env"]["maxEpisodeLength"] * cfg["task"]["sim"]["dt"]
+    new_cfg["inv_play_rate"] = cfg["task"]["env"]["controlFrequencyInv"]
+    new_cfg["platform"] = cfg["task"]["env"]["platform"]
+    new_cfg["platform"]["seed"] = cfg["seed"]
+    return new_cfg
+
 class MuJoCoFloatingPlatform:
     """
     A class for the MuJoCo Floating Platform environment."""
 
-    def __init__(self, step_time:float = 0.02, duration:float = 60.0, inv_play_rate:int = 10,
-                 mass:float = 5.32, max_thrust:float = 1.0, radius:float = 0.31, cfg:dict=None) -> None:
+    def __init__(self, step_time:float = 0.02,
+                 duration:float = 60.0,
+                 inv_play_rate:int = 10,
+                 spawn_parameters: Dict[str, float] = None,
+                 platform: Dict[str, Union[bool,dict,float,str,int]] = None,
+                 disturbances: Dict[str, Union[bool, float]] = None,
+                 **kwargs) -> None:
         """
         Initializes the MuJoCo Floating Platform environment.
         step_time: The time between steps in the simulation.
@@ -24,16 +74,15 @@ class MuJoCoFloatingPlatform:
         """
 
         self.inv_play_rate = inv_play_rate
-        self.mass = mass
-        self.max_thrust = max_thrust
-        self.radius = radius
+        self.platform = platform
 
-        self.AN = NoisyActions(cfg)
-        self.ON = NoisyObservations(cfg)
-        self.TD = TorqueDisturbance(cfg)
-        self.UF = UnevenFloorDisturbance(cfg)
-        self.TK = RandomKillThrusters(cfg)
-        self.RS = RandomSpawn(cfg)
+        self.AN = NoisyActions(disturbances)
+        self.ON = NoisyObservations(disturbances)
+        self.TD = TorqueDisturbance(disturbances)
+        self.UF = UnevenFloorDisturbance(disturbances)
+
+        self.TK = RandomKillThrusters({"num_thrusters_to_kill": platform["randomization"]["max_thruster_kill"], "seed": platform["seed"]})
+        self.RS = RandomSpawn(spawn_parameters)
 
         self.createModel()
         self.initializeModel()

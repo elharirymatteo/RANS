@@ -23,7 +23,7 @@ class RandomKillThrusters:
 
     def __init__(self, cfg):
         self._rng = np.random.default_rng(seed=cfg['seed'])
-        self._num_thrusters_to_kill = cfg['disturbances']['num_thrusters_to_kill']
+        self._num_thrusters_to_kill = cfg['num_thrusters_to_kill']
         self.killed_thrusters_id = []
 
     def generate_thruster_kills(self):
@@ -38,14 +38,14 @@ class UnevenFloorDisturbance:
     def __init__(self, cfg: dict) -> None:
         # Uneven floor generation
         self._rng = np.random.default_rng(seed=cfg["seed"])
-        self._use_uneven_floor = cfg['disturbances']['use_uneven_floor']
-        self._use_sinusoidal_floor = cfg['disturbances']['use_sinusoidal_floor']
-        self._min_freq = cfg['disturbances']['floor_min_freq']
-        self._max_freq = cfg['disturbances']['floor_max_freq']
-        self._min_offset = cfg['disturbances']['floor_min_offset']
-        self._max_offset = cfg['disturbances']['floor_max_offset']
-        self._max_floor_force = cfg['disturbances']['max_floor_force'] 
-        self._min_floor_force = cfg['disturbances']['min_floor_force'] 
+        self._use_uneven_floor = cfg['use_uneven_floor']
+        self._use_sinusoidal_floor = cfg['use_sinusoidal_floor']
+        self._min_freq = cfg['floor_min_freq']
+        self._max_freq = cfg['floor_max_freq']
+        self._min_offset = cfg['floor_min_offset']
+        self._max_offset = cfg['floor_max_offset']
+        self._max_floor_force = cfg['max_floor_force'] 
+        self._min_floor_force = cfg['min_floor_force'] 
         self._max_floor_force = math.sqrt(self._max_floor_force**2 / 2)
         self._min_floor_force = math.sqrt(self._min_floor_force**2 / 2)
 
@@ -88,16 +88,16 @@ class TorqueDisturbance:
     def __init__(self, cfg: dict) -> None:
         self._rng = np.random.default_rng(seed=cfg["seed"])
         # Uneven floor generation
-        self._use_torque_disturbance = cfg['disturbances']['use_torque_diturbance']
-        self._use_sinusoidal_torque = cfg['disturbances']['use_sinusoidal_torque']
-        self._max_torque = cfg['disturbances']['max_torque']
-        self._min_torque = cfg['disturbances']['min_torque']
+        self._use_torque_disturbance = cfg['use_torque_diturbance']
+        self._use_sinusoidal_torque = cfg['use_sinusoidal_torque']
+        self._max_torque = cfg['max_torque']
+        self._min_torque = cfg['min_torque']
 
         # use the same min/max frequencies and offsets for the floor
-        self._min_freq = cfg['disturbances']['floor_min_freq']
-        self._max_freq = cfg['disturbances']['floor_max_freq']
-        self._min_offset = cfg['disturbances']['floor_min_offset']
-        self._max_offset = cfg['disturbances']['floor_max_offset']
+        self._min_freq = cfg['floor_min_freq']
+        self._max_freq = cfg['floor_max_freq']
+        self._min_offset = cfg['floor_min_offset']
+        self._max_offset = cfg['floor_max_offset']
 
         self._torque_forces = np.zeros(3, dtype=np.float32)
         self._torque_freq = 0
@@ -131,15 +131,15 @@ class NoisyObservations:
 
     def __init__(self, cfg: dict) -> None:
         self._rng = np.random.default_rng(seed=cfg['seed'])
-        self._add_noise_on_pos = cfg['disturbances']['add_noise_on_pos']
-        self._position_noise_min = cfg['disturbances']['position_noise_min']
-        self._position_noise_max = cfg['disturbances']['position_noise_max']
-        self._add_noise_on_vel = cfg['disturbances']['add_noise_on_vel']
-        self._velocity_noise_min = cfg['disturbances']['velocity_noise_min']
-        self._velocity_noise_max = cfg['disturbances']['velocity_noise_max']
-        self._add_noise_on_heading = cfg['disturbances']['add_noise_on_heading']
-        self._heading_noise_min = cfg['disturbances']['heading_noise_min']
-        self._heading_noise_max = cfg['disturbances']['heading_noise_max']
+        self._add_noise_on_pos = cfg['add_noise_on_pos']
+        self._position_noise_min = cfg['position_noise_min']
+        self._position_noise_max = cfg['position_noise_max']
+        self._add_noise_on_vel = cfg['add_noise_on_vel']
+        self._velocity_noise_min = cfg['velocity_noise_min']
+        self._velocity_noise_max = cfg['velocity_noise_max']
+        self._add_noise_on_heading = cfg['add_noise_on_heading']
+        self._heading_noise_min = cfg['heading_noise_min']
+        self._heading_noise_max = cfg['heading_noise_max']
     
     def add_noise_on_pos(self, pos: np.ndarray) -> np.ndarray:
         """
@@ -172,9 +172,9 @@ class NoisyActions:
 
     def __init__(self, cfg: dict) -> None:
         self._rng = np.random.default_rng(seed=cfg['seed'])
-        self._add_noise_on_act = cfg['disturbances']['add_noise_on_act']
-        self._min_action_noise = cfg['disturbances']['min_action_noise']
-        self._max_action_noise = cfg['disturbances']['max_action_noise']
+        self._add_noise_on_act = cfg['add_noise_on_act']
+        self._min_action_noise = cfg['min_action_noise']
+        self._max_action_noise = cfg['max_action_noise']
 
     def add_noise_on_act(self, act: np.ndarray) -> np.ndarray:
         """
