@@ -10,7 +10,7 @@ from omniisaacgymenvs.mujoco_envs.environments.mujoco_base_env import MuJoCoFloa
 def parseControllerConfig(cfg_dict: Dict, env:MuJoCoFloatingPlatform) -> Dict[str, Union[List[float], int, float, str, MuJoCoFloatingPlatform]]:
     config = {}
     config["target_position"] = [0,0,0]
-    config["target_orientation"] = [0,0,0]
+    config["target_orientation"] = [1,0,0,0]
     config["target_linear_velocity"] = [0,0,0]
     config["target_angular_velocity"] = [0,0,0]
     config["thruster_count"] = cfg_dict["task"]["env"]["platform"]["configuration"]["num_anchors"]*2
@@ -27,7 +27,7 @@ class DiscreteController:
     Discrete pose controller for the Floating Platform."""
 
     def __init__(self, target_position: List[float] = [0,0,0],
-                       target_orientation: List[float] = [0,0,0,1],
+                       target_orientation: List[float] = [1,0,0,0],
                        target_linear_velocity: List[float] = [0,0,0],
                        target_angular_velocity: List[float] = [0,0,0],
                        thruster_count: int = 8,
@@ -116,6 +116,7 @@ class DiscreteController:
                         target_angular_velocity: List[float] = None) -> None:
         """
         Sets the target position, orientation, and velocities."""
+
         if target_position is not None:
             self.target_position = np.array(target_position)
         if target_heading is not None:
@@ -370,8 +371,7 @@ class DiscreteController:
     def getAction(self, obs_state, is_deterministic=True):
         return self.update(*self.makeState4Controller(obs_state))
                   
-    def update(self, current_position: np.ndarray, current_orientation: np.ndarray, current_velocity: np.ndarray, current_angular_velocity:np.ndarray, disturbance:np.ndarray = None):
-        
+    def update(self, current_position: np.ndarray, current_orientation: np.ndarray, current_velocity: np.ndarray, current_angular_velocity:np.ndarray, disturbance:np.ndarray = None): 
         # Calculate errors
         position_error = self.target_position - current_position
         orientation_error = self.target_orientation - current_orientation        
