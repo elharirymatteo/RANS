@@ -19,7 +19,8 @@ def parseControllerConfig(cfg_dict: Dict, env:MuJoCoFloatingPlatform) -> Dict[st
     config["control_type"] = cfg_dict["controller"]["control_type"]
     config["Q"] = cfg_dict["controller"]["Q"]
     config["R"] = cfg_dict["controller"]["R"]
-    config["W"] = cfg_dict["controller"]["W"] 
+    config["W"] = cfg_dict["controller"]["W"]
+    return config
 
 class DiscreteController:
     """
@@ -54,11 +55,11 @@ class DiscreteController:
 
         # Control parameters
         # State cost matrix
-        self.Q = Q
+        self.Q = np.diag(Q)
         # Control cost matrix
-        self.R = R
+        self.R = np.diag(R)
         # Disturbance weight matrix
-        self.W = W
+        self.W = np.diag(W)
         self.findGains()
 
     def findGains(self,r0=None) -> None:
@@ -115,11 +116,14 @@ class DiscreteController:
                         target_angular_velocity: List[float] = None) -> None:
         """
         Sets the target position, orientation, and velocities."""
-
-        self.target_position = np.array(target_position)
-        self.target_orientation = np.array(target_heading)
-        self.target_linear_velocity = np.array(target_linear_velocity)
-        self.target_angular_velocity = np.array(target_angular_velocity)
+        if target_position is not None:
+            self.target_position = np.array(target_position)
+        if target_heading is not None:
+            self.target_orientation = np.array(target_heading)
+        if target_linear_velocity is not None:
+            self.target_linear_velocity = np.array(target_linear_velocity)
+        if target_angular_velocity is not None:
+            self.target_angular_velocity = np.array(target_angular_velocity)
 
     def computeLinearizedSystem(self, r0: np.ndarray = None) -> None:
         """
@@ -349,7 +353,7 @@ class DiscreteController:
         if self.control_type == 'H-inf':
             control_input = np.array(self.L @ self.state) + self.disturbance
         elif self.control_type == 'LQR':
-            self.find_gains(r0=self.opti_states)
+            self.findGains(r0=self.opti_states)
             control_input = np.array(self.L @ self.state) 
         else:
             raise ValueError("Invalid control type specified.")

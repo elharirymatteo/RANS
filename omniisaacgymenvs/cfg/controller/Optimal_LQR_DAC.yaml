@@ -7,5 +7,5 @@ R: [0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01]
 W: [0.1,0.1,0.1,0.1,0.1,0.1,0.1]
 
 make_planar_compatible: True
-
+control_type: LQR
 update_matrices_every_n_steps: 100

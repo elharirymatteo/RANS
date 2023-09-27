@@ -47,7 +47,7 @@ class PoseController:
         return len(self.goals) == 0
     
     def setTarget(self):
-        position_goal = self.current_goal[:2]
+        position_goal = self.current_goal
         yaw = self.current_goal[2]
         q = [np.cos(yaw/2),0,0,np.sin(yaw/2)]
         orientation_goal = q
@@ -58,7 +58,6 @@ class PoseController:
             print("Goal reached!")
             if len(self.goals) > 1:
                 self.current_goal = self.goals[1]
-                self.current_goal_controller[:2] = self.current_goal[:2]
                 self.goals = self.goals[1:]   
             else:
                 self.goals = []
