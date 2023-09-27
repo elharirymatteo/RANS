@@ -271,7 +271,8 @@ class MuJoCoFloatingPlatform:
 
         self.reset(initial_position=initial_position, initial_orientation=initial_orientation)
 
-        while self.duration > self.data.time:
+        done = False
+        while (self.duration > self.data.time) and (not done):
             state = self.getObs() # Updates the state of the simulation.
             # Get the actions from the controller
             self.actions = model.getAction(state)
@@ -280,6 +281,7 @@ class MuJoCoFloatingPlatform:
                 self.applyForces(self.actions)
                 mujoco.mj_step(self.model, self.data)
                 self.updateLoggers()
+            done = model.isDone()
 
         return self.logs
 
@@ -291,7 +293,8 @@ class MuJoCoFloatingPlatform:
 
         self.resetPosition(initial_position=initial_position, initial_orientation=initial_orientation) # Resets the position of the body.
         i = 0
-        while i < max_steps:
+        done = False
+        while (i < max_steps) and (not done):
             state = self.getObs() # Updates the state of the simulation.
             # Get the actions from the controller
             self.actions = model.getAction(state)
@@ -300,6 +303,7 @@ class MuJoCoFloatingPlatform:
                 self.applyForces(self.actions)
                 mujoco.mj_step(self.model, self.data)
                 self.updateLoggers()
+            done = model.isDone()
             i += 1
         
         return self.logs
