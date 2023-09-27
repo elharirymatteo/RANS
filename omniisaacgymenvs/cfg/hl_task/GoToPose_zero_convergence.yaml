@@ -1,7 +1,8 @@
-hl_task:
-  name: "pose"
-  run_batch: 1
-  goals_x: []
-  goals_y: []
-  goals_theta: []
-  save_dir: "mj_runs/pose_zero_convergence"
+name: "pose"
+run_batch: 1
+goals_x: []
+goals_y: []
+goals_theta: []
+position_distance_threshold: 0.03
+orientation_distance_threshold: 0.03
+save_dir: "mj_runs/pose_zero_convergence"
