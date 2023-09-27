@@ -25,13 +25,14 @@ def run(cfg: DictConfig):
     else:
         ll_controller = DiscreteController(**parseControllerConfig(cfg_dict, env))
 
+    dt = cfg_dict["task"]["sim"]["dt"]
     # Get the high-level controller
-    hl_controller = hlControllerFactory(cfg_dict, ll_controller)
+    hl_controller = hlControllerFactory(cfg_dict, ll_controller, dt)
     
-    logs = env.runLoop(hl_controller)
+    env.runLoop(hl_controller)
 
-    env.saveSimulationData()
-    env.plotSimulation()
+    hl_controller.saveSimulationData()
+    hl_controller.plotSimulation()
 
 if __name__ == '__main__':
     run()

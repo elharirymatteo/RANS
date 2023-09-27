@@ -97,7 +97,6 @@ class MuJoCoFloatingPlatform:
         self.initializeModel()
         self.setupPhysics(step_time, duration)
         self.initForceAnchors()
-        self.initializeLoggers()
 
         self.reset()
         self.csv_datas = []
@@ -107,7 +106,6 @@ class MuJoCoFloatingPlatform:
         Resets the simulation."""
 
         self.resetPosition(initial_position=initial_position, initial_orientation=initial_orientation)
-        self.initializeLoggers()
         self.UF.generate_floor()
         self.TD.generate_torque()
         self.TK.generate_thruster_kills()
@@ -129,19 +127,6 @@ class MuJoCoFloatingPlatform:
         self.model.opt.timestep = step_time
         self.model.opt.gravity = [0,0,0]
         self.duration = duration
-
-    def initializeLoggers(self) -> None:
-        """
-        Initializes the loggers for the simulation.
-        Allowing for the simulation to be replayed/plotted."""
-
-        self.logs = {}
-        self.logs["timevals"] = []
-        self.logs["angular_velocity"] = []
-        self.logs["linear_velocity"] = []
-        self.logs["position"] = []
-        self.logs["quaternion"] = []
-        self.logs["actions"] = []
 
     def createModel(self) -> None:
         """
@@ -249,17 +234,6 @@ class MuJoCoFloatingPlatform:
         td_forces = self.TD.get_torque_disturbance(self.data.qpos[:2])
         mujoco.mj_applyFT(self.model, self.data, uf_forces, td_forces, self.data.qpos[:3], self.body_id, self.data.qfrc_applied) # Apply the force.
 
-    def updateLoggers(self) -> None:
-        """
-        Updates the loggers with the current state of the simulation."""
-
-        self.logs["timevals"].append(self.data.time)
-        self.logs["angular_velocity"].append(self.data.qvel[3:6].copy())
-        self.logs["linear_velocity"].append(self.data.qvel[0:3].copy())
-        self.logs["position"].append(self.data.qpos[0:3].copy())
-        self.logs["quaternion"].append(np.roll(self.data.qpos[3:].copy(),-1))
-        self.logs["actions"].append(self.actions)
-
     def getObs(self) -> Dict[str, np.ndarray]:
         """
         returns an up to date observation buffer."""
@@ -288,113 +262,4 @@ class MuJoCoFloatingPlatform:
             for _ in range(self.inv_play_rate):
                 self.applyForces(self.actions)
                 mujoco.mj_step(self.model, self.data)
-                self.updateLoggers()
             done = model.isDone()
-
-        return self.logs
-
-    def runLoopForNSteps(self, model, initial_position: np.ndarray=[0,0,0], initial_orientation:np.ndarray=[1,0,0,0], max_steps=502) -> Dict[str, np.ndarray]:
-        """
-        Runs the simulation loop.
-        model: the agent.
-        xy: 2D position of the body."""
-
-        self.resetPosition(initial_position=initial_position, initial_orientation=initial_orientation) # Resets the position of the body.
-        i = 0
-        done = False
-        while (i < max_steps) and (not done):
-            state = self.getObs() # Updates the state of the simulation.
-            # Get the actions from the controller
-            self.actions = model.getAction(state)
-            # Plays only once every self.inv_play_rate steps.
-            for _ in range(self.inv_play_rate):
-                self.applyForces(self.actions)
-                mujoco.mj_step(self.model, self.data)
-                self.updateLoggers()
-            done = model.isDone()
-            i += 1
-        
-        return self.logs
-    
-    def plotSimulation(self, dpi:int = 120, width:int = 600, height:int = 800, save:bool = True, save_dir:str = "mujoco_experiment") -> None:
-        """
-        Plots the simulation."""
-
-        figsize = (width / dpi, height / dpi)
-
-        fig, ax = plt.subplots(2, 1, figsize=figsize, dpi=dpi)
-
-        ax[0].plot(self.logs["timevals"], self.logs["angular_velocity"])
-        ax[0].set_title('angular velocity')
-        ax[0].set_ylabel('radians / second')
-
-        ax[1].plot(self.logs["timevals"], self.logs["linear_velocity"])
-        ax[1].set_xlabel('time (seconds)')
-        ax[1].set_ylabel('meters / second')
-        _ = ax[1].set_title('linear_velocity')
-        if save:
-            try:
-                os.makedirs(save_dir, exist_ok=True)
-                fig.savefig(os.path.join(save_dir,"velocities.png"))
-            except Exception as e:
-                print("Saving failed: ", e)
-
-        fig, ax = plt.subplots(2, 1, figsize=figsize, dpi=dpi)
-        ax[0].plot(self.logs["timevals"], np.abs(self.logs["position"]))
-        ax[0].set_xlabel('time (seconds)')
-        ax[0].set_ylabel('meters')
-        _ = ax[0].set_title('position')
-        ax[0].set_yscale('log')
-
-
-        ax[1].plot(np.array(self.logs["position"])[:,0], np.array(self.logs["position"])[:,1])
-        ax[1].set_xlabel('meters')
-        ax[1].set_ylabel('meters')
-        _ = ax[1].set_title('x y coordinates')
-        plt.tight_layout()
-        if save:
-            try:
-                os.makedirs(save_dir, exist_ok=True)
-                fig.savefig(os.path.join(save_dir, "positions.png"))
-            except Exception as e:
-                print("Saving failed: ", e)
-
-    def saveSimulationData(self, save:bool = True, save_dir:str = "mujoco_experiment", suffix:str="") -> None:
-        """
-        Saves the simulation data."""
-
-        var_name = ["x","y","z","w"]
-        if save:
-            try:
-                os.makedirs(save_dir, exist_ok=True)
-                csv_data = pd.DataFrame()
-                for key in self.logs.keys():
-                    if len(self.logs[key]) != 0:
-                        if key == "actions":
-                            data = np.array(self.logs[key])
-                            for i in range(data.shape[1]):
-                                csv_data["t_"+str(i)] = data[:,i]
-                        else:
-                            data = np.array(self.logs[key])
-                            if len(data.shape) > 1:
-                                for i in range(data.shape[1]):
-                                    csv_data[var_name[i]+"_"+key] = data[:,i]
-                            else:
-                                csv_data[key] = data
-                csv_data.to_csv(os.path.join(save_dir, "exp_logs"+suffix+".csv"))
-                self.csv_datas.append(csv_data)
-
-            except Exception as e:
-                print("Saving failed: ", e)
-
-    
-    def plotBatch(self, dpi:int = 120, width:int = 600, height:int = 800, save:bool = False, save_dir:str = "mujoco_experiment") -> None:
-        figsize = (width / dpi, height / dpi)
-        fig = plt.figure(figsize=figsize)
-        for csv_data in self.csv_datas:
-            plt.plot(csv_data['x_position'], csv_data['y_position'])
-        plt.axis("equal")
-        plt.xlabel("meters")
-        plt.ylabel("meters")
-        plt.tight_layout()
-        fig.savefig(os.path.join(save_dir, "positions.png"))

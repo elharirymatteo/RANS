@@ -1,22 +1,147 @@
 from typing import List, Tuple, Dict, Union
+from matplotlib import pyplot as plt
+import pandas as pd
 import numpy as np
-import torch
+import os
 
 from omniisaacgymenvs.mujoco_envs.controllers.discrete_LQR_controller import DiscreteController
 from omniisaacgymenvs.mujoco_envs.controllers.RL_games_model_4_mujoco import RLGamesModel
 
-class PoseController:
+class BaseController:
+    def __init__(self,dt, save_dir):
+        self.save_dir = save_dir
+        self.dt = dt
+        self.time = 0
+
+        self.csv_datas = []
+        self.initializeLoggers()
+        
+    def initializeLoggers(self) -> None:
+        """
+        Initializes the loggers for the simulation.
+        Allowing for the simulation to be replayed/plotted."""
+
+        self.logs = {}
+        self.logs["timevals"] = []
+        self.logs["angular_velocity"] = []
+        self.logs["linear_velocity"] = []
+        self.logs["position"] = []
+        self.logs["quaternion"] = []
+        self.logs["actions"] = []
+
+    def updateLoggers(self, state: Dict[str, np.ndarray], action: np.ndarray) -> None:
+        self.logs["timevals"].append(self.time)
+        self.logs["position"].append(state["position"])
+        self.logs["quaternion"].append(state["quaternion"])
+        self.logs["angular_velocity"].append(state["angular_velocity"])
+        self.logs["linear_velocity"].append(state["linear_velocity"])
+        self.logs["actions"].append(action)
+        self.time += self.dt
+
+    def isDone(self) -> bool:
+        return False
+    
+    def getGoal(self) -> None:
+        raise NotImplementedError
+    
+    def setGoal(self) -> None:
+        raise NotImplementedError
+
+    def getAction(self, **kwargs):
+        raise NotImplementedError 
+
+    def plotSimulation(self, dpi:int = 120, width:int = 600, height:int = 800) -> None:
+        """
+        Plots the simulation."""
+
+        figsize = (width / dpi, height / dpi)
+
+        fig, ax = plt.subplots(2, 1, figsize=figsize, dpi=dpi)
+
+        ax[0].plot(self.logs["timevals"], self.logs["angular_velocity"])
+        ax[0].set_title('angular velocity')
+        ax[0].set_ylabel('radians / second')
+
+        ax[1].plot(self.logs["timevals"], self.logs["linear_velocity"])
+        ax[1].set_xlabel('time (seconds)')
+        ax[1].set_ylabel('meters / second')
+        _ = ax[1].set_title('linear_velocity')
+        try:
+            os.makedirs(self.save_dir, exist_ok=True)
+            fig.savefig(os.path.join(self.save_dir,"velocities.png"))
+        except Exception as e:
+            print("Saving failed: ", e)
+
+        fig, ax = plt.subplots(2, 1, figsize=figsize, dpi=dpi)
+        ax[0].plot(self.logs["timevals"], np.abs(self.logs["position"]))
+        ax[0].set_xlabel('time (seconds)')
+        ax[0].set_ylabel('meters')
+        _ = ax[0].set_title('position')
+        ax[0].set_yscale('log')
+
+
+        ax[1].plot(np.array(self.logs["position"])[:,0], np.array(self.logs["position"])[:,1])
+        ax[1].set_xlabel('meters')
+        ax[1].set_ylabel('meters')
+        _ = ax[1].set_title('x y coordinates')
+        plt.tight_layout()
+        try:
+            os.makedirs(self.save_dir, exist_ok=True)
+            fig.savefig(os.path.join(self.save_dir, "positions.png"))
+        except Exception as e:
+            print("Saving failed: ", e)
+
+    def saveSimulationData(self, suffix:str="") -> None:
+        """
+        Saves the simulation data."""
+
+        var_name = ["x","y","z","w"]
+        try:
+            os.makedirs(self.save_dir, exist_ok=True)
+            csv_data = pd.DataFrame()
+            for key in self.logs.keys():
+                if len(self.logs[key]) != 0:
+                    if key == "actions":
+                        data = np.array(self.logs[key])
+                        for i in range(data.shape[1]):
+                            csv_data["t_"+str(i)] = data[:,i]
+                    else:
+                        data = np.array(self.logs[key])
+                        if len(data.shape) > 1:
+                            for i in range(data.shape[1]):
+                                csv_data[var_name[i]+"_"+key] = data[:,i]
+                        else:
+                            csv_data[key] = data
+            csv_data.to_csv(os.path.join(self.save_dir, "exp_logs"+suffix+".csv"))
+            self.csv_datas.append(csv_data)
+
+        except Exception as e:
+            print("Saving failed: ", e)
+    
+    def plotBatch(self, dpi:int = 120, width:int = 600, height:int = 800) -> None:
+        figsize = (width / dpi, height / dpi)
+        fig = plt.figure(figsize=figsize)
+        for csv_data in self.csv_datas:
+            plt.plot(csv_data['x_position'], csv_data['y_position'])
+        plt.axis("equal")
+        plt.xlabel("meters")
+        plt.ylabel("meters")
+        plt.tight_layout()
+        fig.savefig(os.path.join(self.save_dir, "positions.png"))
+
+class PoseController(BaseController):
     """
     Controller for the pose of the robot."""
 
-    def __init__(self, model: Union[RLGamesModel, DiscreteController],
+    def __init__(self, dt:float, model: Union[RLGamesModel, DiscreteController],
                        goals_x: List[float],
                        goals_y: List[float],
                        goals_theta: List[float],
                        position_distance_threshold: float = 0.03,
                        orientation_distance_threshold: float = 0.03,
+                       save_dir:str = "mujoco_experiment",
                        **kwargs) -> None:
-
+        super().__init__(dt, save_dir)
         # Discrete controller
         self.model = model
         # Creates an array goals
@@ -30,6 +155,16 @@ class PoseController:
 
         self.position_distance_threshold = position_distance_threshold
         self.orientation_distance_threshold = orientation_distance_threshold
+
+    def initializeLoggers(self) -> None:
+        super().initializeLoggers()
+        self.logs["position_target"] = []
+        self.logs["heading_target"] = []
+
+    def updateLoggers(self, state, actions) -> None:
+        super().updateLoggers(state, actions)
+        self.logs["position_target"].append(self.current_goal[:2])
+        self.logs["heading_target"].append(self.current_goal[-1])
 
     def isGoalReached(self, state: Dict[str, np.ndarray]) -> bool:
         dist = np.linalg.norm(self.current_goal[:2] - state["position"][:2])
@@ -45,7 +180,7 @@ class PoseController:
 
     def isDone(self) -> bool:
         return len(self.goals) == 0
-    
+
     def setTarget(self):
         position_goal = self.current_goal
         yaw = self.current_goal[2]
@@ -62,20 +197,79 @@ class PoseController:
             else:
                 self.goals = []
         self.setTarget()
-        return self.model.getAction(state, is_deterministic=is_deterministic)
+        actions = self.model.getAction(state, is_deterministic=is_deterministic)
+        self.updateLoggers(state, actions)
+        return actions
+    
+    def plotSimulation(self, dpi:int = 90, width:int = 1000, height:int = 1000) -> None:
+        """
+        Plots the simulation."""
+
+        figsize = (width / dpi, height / dpi)
+
+        fig, ax = plt.subplots(2, 1, figsize=figsize, dpi=dpi)
+
+        ax[0].plot(self.logs["timevals"], self.logs["angular_velocity"])
+        ax[0].set_title('angular velocity')
+        ax[0].set_ylabel('radians / second')
+
+        ax[1].plot(self.logs["timevals"], self.logs["linear_velocity"], label="system velocities")
+        ax[1].legend()
+        ax[1].set_xlabel('time (seconds)')
+        ax[1].set_ylabel('meters / second')
+        _ = ax[1].set_title('linear_velocity')
+        try:
+            os.makedirs(self.save_dir, exist_ok=True)
+            fig.savefig(os.path.join(self.save_dir, "velocities.png"))
+        except Exception as e:
+            print("Saving failed: ", e)
+
+        fig, ax = plt.subplots(1, 1, figsize=figsize, dpi=dpi)
+        ax.scatter(np.array(self.logs["position_target"])[:,0], np.array(self.logs["position_target"])[:,1], label="position goals")
+        ax.plot(np.array(self.logs["position"])[:,0], np.array(self.logs["position"])[:,1], label="system position")
+        ax.legend()
+        ax.set_xlabel('meters')
+        ax.set_ylabel('meters')
+        ax.axis("equal")
+        _ = ax.set_title('x y coordinates')
+        plt.tight_layout()
+        try:
+            os.makedirs(self.save_dir, exist_ok=True)
+            fig.savefig(os.path.join(self.save_dir, "positions.png"))
+        except Exception as e:
+            print("Saving failed: ", e)
+        
+        fig, ax = plt.subplots(1, 1, figsize=figsize, dpi=dpi)
+        ax.plot(self.logs["timevals"], np.array(self.logs["actions"]), label="system action")
+        plt.tight_layout()
+        try:
+            os.makedirs(self.save_dir, exist_ok=True)
+            fig.savefig(os.path.join(self.save_dir, "actions.png"))
+        except Exception as e:
+            print("Saving failed: ", e)
 
 
-class PositionController:
-    def __init__(self, model: Union[RLGamesModel, DiscreteController],
+class PositionController(BaseController):
+    def __init__(self, dt:float, model: Union[RLGamesModel, DiscreteController],
                        goals_x: List[float],
                        goals_y: List[float],
                        position_distance_threshold: float = 0.03,
+                       save_dir: str = "mujoco_experiment",
                        **kwargs) -> None:
         
+        super().__init__(dt, save_dir)
         self.model = model
         self.goals = np.array([goals_x, goals_y, [0]*len(goals_x)]).T
         self.current_goal = self.goals[0]
         self.distance_threshold = position_distance_threshold
+
+    def initializeLoggers(self) -> None:
+        super().initializeLoggers()
+        self.logs["position_target"] = []
+
+    def updateLoggers(self, state, actions) -> None:
+        super().updateLoggers(state, actions)
+        self.logs["position_target"].append(self.current_goal[:2])
 
     def isGoalReached(self, state):
         dist = np.linalg.norm(self.current_goal[:2] - state["position"][:2])
@@ -105,7 +299,56 @@ class PositionController:
                 self.goals = []
 
         self.setTarget()
-        return self.model.getAction(state, is_deterministic=is_deterministic)
+        actions = self.model.getAction(state, is_deterministic=is_deterministic)
+        self.updateLoggers(state, actions)
+        return actions
+
+    def plotSimulation(self, dpi:int = 90, width:int = 1000, height:int = 1000) -> None:
+        """
+        Plots the simulation."""
+
+        figsize = (width / dpi, height / dpi)
+
+        fig, ax = plt.subplots(2, 1, figsize=figsize, dpi=dpi)
+
+        ax[0].plot(self.logs["timevals"], self.logs["angular_velocity"])
+        ax[0].set_title('angular velocity')
+        ax[0].set_ylabel('radians / second')
+
+        ax[1].plot(self.logs["timevals"], self.logs["linear_velocity"], label="system velocities")
+        ax[1].legend()
+        ax[1].set_xlabel('time (seconds)')
+        ax[1].set_ylabel('meters / second')
+        _ = ax[1].set_title('linear_velocity')
+        try:
+            os.makedirs(self.save_dir, exist_ok=True)
+            fig.savefig(os.path.join(self.save_dir, "velocities.png"))
+        except Exception as e:
+            print("Saving failed: ", e)
+
+        fig, ax = plt.subplots(1, 1, figsize=figsize, dpi=dpi)
+        ax.scatter(np.array(self.logs["position_target"])[:,0], np.array(self.logs["position_target"])[:,1], label="position goals")
+        ax.plot(np.array(self.logs["position"])[:,0], np.array(self.logs["position"])[:,1], label="system position")
+        ax.legend()
+        ax.set_xlabel('meters')
+        ax.set_ylabel('meters')
+        ax.axis("equal")
+        _ = ax.set_title('x y coordinates')
+        plt.tight_layout()
+        try:
+            os.makedirs(self.save_dir, exist_ok=True)
+            fig.savefig(os.path.join(self.save_dir, "positions.png"))
+        except Exception as e:
+            print("Saving failed: ", e)
+        
+        fig, ax = plt.subplots(1, 1, figsize=figsize, dpi=dpi)
+        ax.plot(self.logs["timevals"], np.array(self.logs["actions"]), label="system action")
+        plt.tight_layout()
+        try:
+            os.makedirs(self.save_dir, exist_ok=True)
+            fig.savefig(os.path.join(self.save_dir, "actions.png"))
+        except Exception as e:
+            print("Saving failed: ", e)
 
 
 class TrajectoryTracker:
@@ -193,8 +436,8 @@ class TrajectoryTracker:
         return velocity_vector
 
 
-class VelocityTracker:
-    def __init__(self, model: Union[RLGamesModel, DiscreteController],
+class VelocityTracker(BaseController):
+    def __init__(self, dt:float, model: Union[RLGamesModel, DiscreteController],
                        target_tracking_velocity:float = 0.25,
                        lookahead_dist: float = 0.15,
                        closed: bool = True,
@@ -206,8 +449,9 @@ class VelocityTracker:
                        end_radius: float = 2.0,
                        num_loops: int = 4,
                        trajectory_type: str = "circle",
+                       save_dir:str = "mujoco_experiment",
                        **kwargs):
-        
+        super().__init__(dt, save_dir)
         self.tracker = TrajectoryTracker(lookahead=lookahead_dist, closed=closed, offset=(x_offset, y_offset))
         if trajectory_type.lower() == "square":
             self.tracker.generateSquare(h=height)
@@ -221,6 +465,22 @@ class VelocityTracker:
         self.model = model
         self.target_tracking_velocity = target_tracking_velocity
         self.velocity_goal = [0,0,0]
+
+    def initializeLoggers(self) -> None:
+        """
+        Initializes the loggers."""
+
+        super().initializeLoggers()
+        self.logs["velocity_goal"] = []
+        self.logs["position_target"] = []
+
+    def updateLoggers(self, state, actions) -> None:
+        """
+        Updates the loggers."""
+
+        super().updateLoggers(state, actions)
+        self.logs["velocity_goal"].append(self.velocity_goal[:2])
+        self.logs["position_target"].append(self.getTargetPosition()) 
     
     def getGoal(self):
         return self.velocity_goal
@@ -242,8 +502,44 @@ class VelocityTracker:
         self.velocity_goal[0] = self.velocity_vector[0]*self.target_tracking_velocity
         self.velocity_goal[1] = self.velocity_vector[1]*self.target_tracking_velocity
         self.setTarget()
-        action = self.model.getAction(state, is_deterministic=is_deterministic)
-        return action
+        actions = self.model.getAction(state, is_deterministic=is_deterministic)
+        self.updateLoggers(state, actions)
+        return actions
+    
+    def plotSimulation(self, dpi:int = 135, width:int = 1000, height:int = 1000) -> None:
+        """
+        Plots the simulation."""
+
+        figsize = (width / dpi, height / dpi)
+
+        fig, ax = plt.subplots(1, 1, figsize=figsize, dpi=dpi)
+
+        ax.plot(self.logs["timevals"], self.logs["linear_velocity"], label="system velocities")
+        ax.plot(self.logs["timevals"], self.logs["velocity_goal"], label="target velocities")
+        ax.legend()
+        ax.set_xlabel('time (seconds)')
+        ax.set_ylabel('Linear velocities (m/s)')
+        _ = ax.set_title('Linear velocity tracking')
+        try:
+            os.makedirs(self.save_dir, exist_ok=True)
+            fig.savefig(os.path.join(self.save_dir,"velocities.png"))
+        except Exception as e:
+            print("Saving failed: ", e)
+
+        fig, ax = plt.subplots(1, 1, figsize=figsize, dpi=dpi)
+        ax.plot(np.array(self.logs["position_target"])[:,0], np.array(self.logs["position_target"])[:,1], label="trajectory")
+        ax.plot(np.array(self.logs["position"])[:,0], np.array(self.logs["position"])[:,1], label="system position")
+        ax.legend()
+        ax.set_xlabel('x (meters)')
+        ax.set_ylabel('y (meters)')
+        ax.axis("equal")
+        _ = ax.set_title('Trajectory in xy plane')
+        plt.tight_layout()
+        try:
+            os.makedirs(self.save_dir, exist_ok=True)
+            fig.savefig(os.path.join(self.save_dir, "positions.png"))
+        except Exception as e:
+            print("Saving failed: ", e)
 
 
 class HLControllerFactory:
@@ -256,10 +552,10 @@ class HLControllerFactory:
     def parseControllerConfiguration(self, cfg: Dict):
         return cfg["hl_task"], cfg["hl_task"]["name"]
 
-    def __call__(self, cfg: Dict, model: Union[RLGamesModel, DiscreteController]):
+    def __call__(self, cfg: Dict, model: Union[RLGamesModel, DiscreteController], dt:float):
         new_cfg, mode = self.parseControllerConfiguration(cfg)
         assert mode in list(self.registered_controllers.keys()), "Unknown hl_task mode."
-        return self.registered_controllers[mode](model, **new_cfg)
+        return self.registered_controllers[mode](dt, model, **new_cfg)
 
 
 hlControllerFactory = HLControllerFactory()
