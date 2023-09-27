@@ -12,6 +12,12 @@ from omniisaacgymenvs.mujoco_envs.controllers.hl_controllers import hlController
 
 @hydra.main(config_name="config_mujoco", config_path="../cfg")
 def run(cfg: DictConfig):
+    """"
+    Run the simulation.
+    
+    Args:
+        cfg (DictConfig): A dictionary containing the configuration of the simulation."""
+
     #print_dict(cfg)
     cfg_dict = omegaconf_to_dict(cfg)
 

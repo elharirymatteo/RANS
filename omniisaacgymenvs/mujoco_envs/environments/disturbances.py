@@ -1,14 +1,30 @@
+from typing import Dict, Tuple
 import numpy as np
 import math
 
 class RandomSpawn:
-    def __init__(self, cfg):
+    """
+    Randomly spawns the robot in the environment."""
+
+    def __init__(self, cfg: Dict[str,float]) -> None:
+        """
+        Initialize the random spawn strategy.
+        
+        Args:
+            cfg (dict): A dictionary containing the configuration of the random spawn disturbance."""
+        
         self._rng = np.random.default_rng(seed=cfg['seed'])
         self._max_spawn_dist = cfg["max_spawn_dist"]
         self._min_spawn_dist = cfg["min_spawn_dist"]
         self._kill_dist = cfg["kill_dist"]
 
-    def getInitialCondition(self):
+    def getInitialCondition(self) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Generates a random initial condition for the robot.
+        
+        Returns:
+            Tuple[np.ndarray, np.ndarray]: A tuple containing the initial position and orientation of the robot."""
+        
         theta = self._rng.uniform(-np.pi, np.pi, 1)
         r = self._rng.uniform(self._min_spawn_dist, self._max_spawn_dist)
         initial_position = [np.cos(theta) * r, np.sin(theta) * r]
@@ -21,12 +37,21 @@ class RandomKillThrusters:
     """
     Randomly kills thrusters."""
 
-    def __init__(self, cfg):
+    def __init__(self, cfg: Dict[str,float]) -> None:
+        """
+        Initialize the random kill thrusters strategy.
+        
+        Args:
+            cfg (dict): A dictionary containing the configuration of the random kill thrusters disturbance."""
+        
         self._rng = np.random.default_rng(seed=cfg['seed'])
         self._num_thrusters_to_kill = cfg['num_thrusters_to_kill']
         self.killed_thrusters_id = []
 
-    def generate_thruster_kills(self):
+    def generate_thruster_kills(self) -> None:
+        """
+        Generates the thrusters to kill."""
+
         self.killed_thrusters_id = self._rng.choice(8, self._num_thrusters_to_kill, replace=False) #[2,3]
         print("Killed thrusters: ", self.killed_thrusters_id)
 
@@ -35,8 +60,13 @@ class UnevenFloorDisturbance:
     """
     Creates disturbances on the platform by simulating an uneven floor."""
 
-    def __init__(self, cfg: dict) -> None:
-        # Uneven floor generation
+    def __init__(self, cfg: Dict[str,float]) -> None:
+        """
+        Initialize the uneven floor disturbance.
+        
+        Args:
+            cfg (Dict[str,float]): A dictionary containing the configuration of the uneven floor disturbance."""
+        
         self._rng = np.random.default_rng(seed=cfg["seed"])
         self._use_uneven_floor = cfg['use_uneven_floor']
         self._use_sinusoidal_floor = cfg['use_sinusoidal_floor']
@@ -58,6 +88,7 @@ class UnevenFloorDisturbance:
     def generate_floor(self) -> None:
         """
         Generates the uneven floor."""
+
         if self._use_uneven_floor:
             if self._use_sinusoidal_floor:
                 self._floor_x_freq   = self._rng.uniform(self._min_freq, self._max_freq, 1)
@@ -72,7 +103,14 @@ class UnevenFloorDisturbance:
 
     def get_floor_forces(self, root_pos: np.ndarray) -> np.ndarray:
         """
-        Computes the floor forces for the current state of the robot."""
+        Computes the floor forces for the current state of the robot.
+        
+        Args:
+            root_pos (np.ndarray): The position of the root of the robot.
+            
+        Returns:
+            np.ndarray: The floor forces."""
+
         if self._use_uneven_floor:
             if self._use_sinusoidal_floor:
                 self._floor_forces[0] = np.sin(root_pos[0] * self._floor_x_freq + self._floor_x_offset) * self._max_floor_force
@@ -85,7 +123,13 @@ class TorqueDisturbance:
     """
     Creates disturbances on the platform by simulating a torque applied to its center."""
 
-    def __init__(self, cfg: dict) -> None:
+    def __init__(self, cfg: Dict[str, float]) -> None:
+        """
+        Initialize the torque disturbance.
+        
+        Args:
+            cfg (Dict[str,float]): A dictionary containing the configuration of the torque disturbance."""
+        
         self._rng = np.random.default_rng(seed=cfg["seed"])
         # Uneven floor generation
         self._use_torque_disturbance = cfg['use_torque_disturbance']
@@ -106,6 +150,7 @@ class TorqueDisturbance:
     def generate_torque(self) -> None:
         """
         Generates the torque disturbance."""
+
         if self._use_torque_disturbance:
             if self._use_sinusoidal_torque:
                 #  use the same min/max frequencies and offsets for the floor
@@ -117,7 +162,14 @@ class TorqueDisturbance:
 
     def get_torque_disturbance(self, root_pos: np.ndarray) -> np.ndarray:
         """
-        Computes the torque for the current state of the robot."""
+        Computes the torque for the current state of the robot.
+        
+        Args:
+            root_pos (np.ndarray): The position of the root of the robot.
+        
+        Returns:
+            np.ndarray: The torque."""
+
         if self._use_torque_disturbance:
             if self._use_sinusoidal_torque:
                 self._torque_forces[2] = np.sin(root_pos * self._torque_freq + self._torque_offset) * self._max_torque
@@ -129,7 +181,13 @@ class NoisyObservations:
     """
     Adds noise to the observations of the robot."""
 
-    def __init__(self, cfg: dict) -> None:
+    def __init__(self, cfg: Dict[str,float]) -> None:
+        """
+        Initialize the noisy observations strategy.
+        
+        Args:
+            cfg (Dict[str,float]): A dictionary containing the configuration of the noisy observations disturbance."""
+        
         self._rng = np.random.default_rng(seed=cfg['seed'])
         self._add_noise_on_pos = cfg['add_noise_on_pos']
         self._position_noise_min = cfg['position_noise_min']
@@ -143,7 +201,13 @@ class NoisyObservations:
     
     def add_noise_on_pos(self, pos: np.ndarray) -> np.ndarray:
         """
-        Adds noise to the position of the robot."""
+        Adds noise to the position of the robot.
+        
+        Args:
+            pos (np.ndarray): The position of the robot.
+        
+        Returns:
+            np.ndarray: The position of the robot with noise added."""
 
         if self._add_noise_on_pos:
             pos += self._rng.uniform(self._position_noise_min, self._position_noise_max, pos.shape)
@@ -151,7 +215,13 @@ class NoisyObservations:
     
     def add_noise_on_vel(self, vel: np.ndarray) -> np.ndarray:
         """
-        Adds noise to the velocity of the robot."""
+        Adds noise to the velocity of the robot.
+        
+        Args:
+            vel (np.ndarray): The velocity of the robot.
+        
+        Returns:
+            np.ndarray: The velocity of the robot with noise added."""
 
         if self._add_noise_on_vel:
             vel += self._rng.uniform(self._velocity_noise_min, self._velocity_noise_max, vel.shape)
@@ -159,7 +229,13 @@ class NoisyObservations:
     
     def add_noise_on_heading(self, heading: np.ndarray) -> np.ndarray:
         """
-        Adds noise to the heading of the robot."""
+        Adds noise to the heading of the robot.
+        
+        Args:
+            heading (np.ndarray): The heading of the robot.
+            
+        Returns:
+            np.ndarray: The heading of the robot with noise added."""
 
         if self._add_noise_on_heading:
             heading += self._rng.uniform(self._heading_noise_min, self._heading_noise_max, heading.shape)
@@ -170,7 +246,13 @@ class NoisyActions:
     """
     Adds noise to the actions of the robot."""
 
-    def __init__(self, cfg: dict) -> None:
+    def __init__(self, cfg: Dict[str, float]) -> None:
+        """
+        Initialize the noisy actions strategy.
+        
+        Args:
+            cfg (Dict[str,float]): A dictionary containing the configuration of the noisy actions disturbance."""
+        
         self._rng = np.random.default_rng(seed=cfg['seed'])
         self._add_noise_on_act = cfg['add_noise_on_act']
         self._min_action_noise = cfg['min_action_noise']
@@ -178,7 +260,13 @@ class NoisyActions:
 
     def add_noise_on_act(self, act: np.ndarray) -> np.ndarray:
         """
-        Adds noise to the actions of the robot."""
+        Adds noise to the actions of the robot.
+        
+        Args:
+            act (np.ndarray): The actions of the robot.
+        
+        Returns:
+            np.ndarray: The actions of the robot with noise added."""
 
         if self._add_noise_on_act:
             act += self._rng.uniform(self._min_action_noise, self._max_action_noise, 1)

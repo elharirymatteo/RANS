@@ -8,6 +8,16 @@ from omniisaacgymenvs.mujoco_envs.environments.mujoco_base_env import MuJoCoFloa
 
 
 def parseControllerConfig(cfg_dict: Dict, env:MuJoCoFloatingPlatform) -> Dict[str, Union[List[float], int, float, str, MuJoCoFloatingPlatform]]:
+    """
+    Parse the controller configuration.
+    
+    Args:
+        cfg_dict (Dict): A dictionary containing the configuration.
+        env (MuJoCoFloatingPlatform): A MuJoCoFloatingPlatform object.
+        
+    Returns:
+        Dict[str, Union[List[float], int, float, str, MuJoCoFloatingPlatform]]: A dictionary containing the parsed configuration."""
+
     config = {}
     config["target_position"] = [0,0,0]
     config["target_orientation"] = [1,0,0,0]
@@ -38,7 +48,23 @@ class DiscreteController:
                        W: List[float] = [0.01,0.01,0.01,0.01,0.01,0.01,0.01],
                        R: List[float] = [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1],
                        **kwargs) -> None:
-
+        """
+        Initialize the discrete controller.
+        
+        Args:
+            target_position (List[float], optional): A list containing the target position. Defaults to [0,0,0].
+            target_orientation (List[float], optional): A list containing the target orientation. Defaults to [1,0,0,0].
+            target_linear_velocity (List[float], optional): A list containing the target linear velocity. Defaults to [0,0,0].
+            target_angular_velocity (List[float], optional): A list containing the target angular velocity. Defaults to [0,0,0].
+            thruster_count (int, optional): An integer containing the number of thrusters. Defaults to 8.
+            dt (float, optional): A float containing the time step. Defaults to 0.02.
+            Mod (MuJoCoFloatingPlatform, optional): A MuJoCoFloatingPlatform object. Used to compute the linearized system matrices. Defaults to None.
+            control_type (str, optional): A string containing the type of control. Either 'H-inf' or 'LQR'. Defaults to 'LQR'.
+            Q (List[float], optional): A list containing the state cost matrix. Defaults to [1,1,5,5,1,1,1].
+            W (List[float], optional): A list containing the disturbance weight matrix. Defaults to [0.01,0.01,0.01,0.01,0.01,0.01,0.01].
+            R (List[float], optional): A list containing the control cost matrix. Defaults to [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1].
+            **kwargs: Additional arguments."""
+        
         self.thruster_count = thruster_count
         self.thrusters = np.zeros(thruster_count)  # Initialize all thrusters to off
         self.dt = dt
@@ -63,6 +89,12 @@ class DiscreteController:
         self.findGains()
 
     def findGains(self,r0=None) -> None:
+        """
+        Find the gains for the controller.
+        
+        Args:
+            r0 (np.ndarray, optional): An array containing the initial state. Defaults to None."""
+        
         # Compute linearized system matrices A and B based on your system dynamics
         self.A, self.B = self.computeLinearizedSystem(r0)  # Compute linearized system matrices
         self.makePlanarCompatible()
@@ -75,10 +107,16 @@ class DiscreteController:
             raise ValueError("Invalid control type specified.")
 
     def computeLQRGains(self) -> None:
+        """
+        Compute the LQR gains."""
+
         self.P = solve_discrete_are(self.A, self.B, self.Q, self.R)
         self.L = np.linalg.inv(self.R + self.B.T @ self.P @ self.B) @ self.B.T @ self.P @ self.A
 
     def computeHInfinityGains(self) -> None:
+        """
+        Compute the H-infinity gains."""
+
         X = cp.Variable((self.A.shape[0], self.A.shape[0]), symmetric=True)
         gamma = cp.Parameter(nonneg=True)  # Define gamma as a parameter
 
@@ -115,7 +153,13 @@ class DiscreteController:
                         target_linear_velocity: List[float] = None,
                         target_angular_velocity: List[float] = None) -> None:
         """
-        Sets the target position, orientation, and velocities."""
+        Sets the target position, orientation, and velocities.
+        
+        Args:
+            target_position (List[float], optional): A list containing the target position. Defaults to None.
+            target_heading (List[float], optional): A list containing the target heading. Defaults to None.
+            target_linear_velocity (List[float], optional): A list containing the target linear velocity. Defaults to None.
+            target_angular_velocity (List[float], optional): A list containing the target angular velocity. Defaults to None."""
 
         if target_position is not None:
             self.target_position = np.array(target_position)
@@ -130,7 +174,10 @@ class DiscreteController:
         """
         Compute linearized system matrices A and B.
         With A the state transition matrix.
-        With B the control input matrix."""
+        With B the control input matrix.
+        
+        Args:
+            r0 (np.ndarray, optional): An array containing the initial state. Defaults to None."""
 
         if r0 is None:
             r0 = np.concatenate((self.FP.data.qpos[:3],self.FP.data.qvel[:3], self.FP.data.qpos[3:], self.FP.data.qvel[3:]),axis =None) 
@@ -177,7 +224,14 @@ class DiscreteController:
 
     def f_STM(self, r0:np.ndarray, t_int: float, model, data, body_id) -> None:
         """
-        Identify A matrix of linearized system through finite differencing."""
+        Identify A matrix of linearized system through finite differencing.
+        
+        Args:
+            r0 (np.ndarray): An array containing the initial state.
+            t_int (float): A float containing the time interval.
+            model: A MuJoCo model object.
+            data: A MuJoCo data object.
+            body_id: An integer containing the body id."""
 
         IC_temp0    = r0
         force       = [0.0,0.0,0.0]
@@ -232,7 +286,14 @@ class DiscreteController:
 
     def f_STM_analytical(self, r0:np.ndarray, t_int:float, model, data, body_id) -> None:
         """        
-        Identify A matrix of linearized system through finite differencing."""
+        Identify A matrix of linearized system through finite differencing.
+        
+        Args:
+            r0 (np.ndarray): An array containing the initial state.
+            t_int (float): A float containing the time interval.
+            model: A MuJoCo model object.
+            data: A MuJoCo data object.
+            body_id: An integer containing the body id."""
 
         IC_temp0    = r0
 
@@ -286,7 +347,15 @@ class DiscreteController:
 
     def f_B(self, r0: np.ndarray, t_int: float, model, data, body_id, number_thrust: int) -> None:
         """
-        Identify B matrix of linearized system through finite differencing."""
+        Identify B matrix of linearized system through finite differencing.
+        
+        Args:
+            r0 (np.ndarray): An array containing the initial state.
+            t_int (float): A float containing the time interval.
+            model: A MuJoCo model object.
+            data: A MuJoCo data object.
+            body_id: An integer containing the body id.
+            number_thrust (int): An integer containing the number of thrusters."""
 
         IC_temp0    = r0
         force       = [0.0,0.0,0.0]
@@ -350,6 +419,12 @@ class DiscreteController:
         return B
 
     def controlCost(self) -> np.ndarray:
+        """
+        Compute the control cost.
+        
+        Returns:
+            np.ndarray: An array containing the control cost."""
+
         # Cost function to be minimized for control input optimization
         if self.control_type == 'H-inf':
             control_input = np.array(self.L @ self.state) + self.disturbance
@@ -361,6 +436,15 @@ class DiscreteController:
         return control_input
     
     def makeState4Controller(self, state: Dict[str, np.ndarray]) -> List[np.ndarray]:
+        """
+        Make the state compatible with the controller.
+        
+        Args:
+            state (Dict[str, np.ndarray]): A dictionary containing the state.
+        
+        Returns:
+            List[np.ndarray]: A list containing the current position, current orientation, current linear velocity, and current angular velocity."""
+        
         current_position = state["position"]
         current_position[-1] = 0
         current_orientation = state["quaternion"]
@@ -368,10 +452,30 @@ class DiscreteController:
         current_angular_velocity = state["angular_velocity"]
         return current_position, current_orientation, current_linear_velocity, current_angular_velocity
 
-    def getAction(self, obs_state, is_deterministic=True):
+    def getAction(self, obs_state:Dict[str, np.ndarray], is_deterministic:bool =True) -> np.ndarray:
+        """
+        Get the action.
+        
+        Args:
+            obs_state (Dict[str, np.ndarray]): A dictionary containing the state.
+            is_deterministic (bool, optional): A boolean containing whether the action is deterministic. Defaults to True.
+        
+        Returns:
+            np.ndarray: An array containing the action.
+        """
         return self.update(*self.makeState4Controller(obs_state))
                   
-    def update(self, current_position: np.ndarray, current_orientation: np.ndarray, current_velocity: np.ndarray, current_angular_velocity:np.ndarray, disturbance:np.ndarray = None): 
+    def update(self, current_position: np.ndarray, current_orientation: np.ndarray, current_velocity: np.ndarray, current_angular_velocity:np.ndarray, disturbance:np.ndarray = None) -> None:
+        """
+        Update the controller.
+
+        Args:
+            current_position (np.ndarray): An array containing the current position.
+            current_orientation (np.ndarray): An array containing the current orientation.
+            current_velocity (np.ndarray): An array containing the current linear velocity.
+            current_angular_velocity (np.ndarray): An array containing the current angular velocity.
+            disturbance (np.ndarray, optional): An array containing the disturbance. Defaults to None."""      
+
         # Calculate errors
         position_error = self.target_position - current_position
         orientation_error = self.target_orientation - current_orientation        

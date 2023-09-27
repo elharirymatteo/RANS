@@ -8,8 +8,16 @@ import os
 
 from omniisaacgymenvs.mujoco_envs.environments.disturbances import NoisyActions, NoisyObservations, TorqueDisturbance, UnevenFloorDisturbance, RandomKillThrusters, RandomSpawn
 
-def parseEnvironmentConfig(cfg):
-    print(cfg)
+def parseEnvironmentConfig(cfg: Dict[str, Union[float, int, Dict]]) -> Dict[str, Union[float, int, Dict]]:
+    """
+    Parses the environment configuration from the config file.
+    
+    Args:
+        cfg (Dict[str, Union[float, int, Dict]]): The configuration dictionary.
+    
+    Returns:
+        Dict[str, Union[float, int, Dict]]: The parsed configuration dictionary."""
+
     new_cfg = {}
     new_cfg["disturbances"] = {}
     new_cfg["disturbances"]['seed'] = cfg["seed"]
@@ -75,12 +83,15 @@ class MuJoCoFloatingPlatform:
                  **kwargs) -> None:
         """
         Initializes the MuJoCo Floating Platform environment.
-        step_time: The time between steps in the simulation.
-        duration: The duration of the simulation.
-        inv_play_rate: The inverse of rate at which the controller will run.
         
-        With a step_time of 0.02, and inv_play_rate of 10, the agent will play every 0.2 seconds. (or 5Hz)
-        """
+        Args:
+            step_time (float, optional): The time between steps in the simulation (seconds). Defaults to 0.02.
+            duration (float, optional): The duration of the simulation (seconds). Defaults to 60.0.
+            inv_play_rate (int, optional): The inverse of the play rate. Defaults to 10.
+            spawn_parameters (Dict[str, float], optional): A dictionary containing the spawn parameters. Defaults to None.
+            platform (Dict[str, Union[bool,dict,float,str,int]], optional): A dictionary containing the platform parameters. Defaults to None.
+            disturbances (Dict[str, Union[bool, float]], optional): A dictionary containing the disturbances parameters. Defaults to None.
+            **kwargs: Additional arguments."""
 
         self.inv_play_rate = inv_play_rate
         self.platform = platform
@@ -101,9 +112,13 @@ class MuJoCoFloatingPlatform:
         self.reset()
         self.csv_datas = []
 
-    def reset(self, initial_position=[0,0,0], initial_orientation=[1,0,0,0]):
+    def reset(self, initial_position: List[float] = [0,0,0], initial_orientation: List[float] = [1,0,0,0]) -> None:
         """
-        Resets the simulation."""
+        Resets the simulation.
+        
+        Args:
+            initial_position (list, optional): The initial position of the body. Defaults to [0,0,0].
+            initial_orientation (list, optional): The initial orientation of the body. Defaults to [1,0,0,0]."""
 
         self.resetPosition(initial_position=initial_position, initial_orientation=initial_orientation)
         self.UF.generate_floor()
@@ -121,8 +136,10 @@ class MuJoCoFloatingPlatform:
     def setupPhysics(self, step_time: float, duration: float) -> None:
         """
         Sets up the physics parameters for the simulation.
-        step_time: The time between steps in the simulation (seconds).
-        duration: The duration of the simulation (seconds)."""
+        
+        Args:
+            step_time (float): The time between steps in the simulation (seconds).
+            duration (float): The duration of the simulation (seconds)."""
 
         self.model.opt.timestep = step_time
         self.model.opt.gravity = [0,0,0]
@@ -197,19 +214,26 @@ class MuJoCoFloatingPlatform:
                               [ 1, -1, 0],
                               [ 1, -1, 0]]) * 0.2192
 
-    def resetPosition(self, initial_position=[0,0], initial_orientation=[1,0,0,0]) -> None:
+    def resetPosition(self, initial_position: List[float] = [0,0], initial_orientation: List[float] = [1,0,0,0]) -> None:
         """
         Resets the position of the body and sets its velocity to 0.
-        Resets the timer as well."""
+        Resets the timer as well.
+        
+        Args:
+            initial_position (list, optional): The initial position of the body. Defaults to [0,0].
+            initial_orientation (list, optional): The initial orientation of the body. Defaults to [1,0,0,0]."""
 
         mujoco.mj_resetDataKeyframe(self.model, self.data, 0)
         self.data.qpos[:2] = initial_position[:2]
         self.data.qpos[3:7] = initial_orientation
         self.data.qvel = 0
 
-    def applyForces(self, action) -> None:
+    def applyForces(self, action: np.ndarray) -> None:
         """
-        Applies the forces to the body."""
+        Applies the forces to the body.
+        
+        Args:
+            action (np.ndarray): The actions to apply to the body."""
 
         self.data.qfrc_applied[...] = 0 # Clear applied forces.
         rmat = self.data.xmat[self.body_id].reshape(3,3) # Rotation matrix.
@@ -236,7 +260,10 @@ class MuJoCoFloatingPlatform:
 
     def getObs(self) -> Dict[str, np.ndarray]:
         """
-        returns an up to date observation buffer."""
+        returns an up to date observation buffer.
+        
+        Returns:
+            Dict[str, np.ndarray]: A dictionary containing the state of the simulation."""
 
         state = {}
         state["angular_velocity"] = self.ON.add_noise_on_vel(self.data.qvel[3:6].copy())
@@ -245,11 +272,14 @@ class MuJoCoFloatingPlatform:
         state["quaternion"] = self.data.qpos[3:].copy()
         return state
 
-    def runLoop(self, model, initial_position=[0,0], initial_orientation=[1,0,0,0]) -> Dict[str, np.ndarray]:
+    def runLoop(self, model, initial_position: List[float] = [0,0], initial_orientation: List[float] = [1,0,0,0]):
         """
         Runs the simulation loop.
-        model: the agent.
-        xy: 2D position of the body."""
+        
+        Args:
+            model (object): The model of the controller.
+            initial_position (list, optional): The initial position of the body. Defaults to [0,0].
+            initial_orientation (list, optional): The initial orientation of the body. Defaults to [1,0,0,0]."""        
 
         self.reset(initial_position=initial_position, initial_orientation=initial_orientation)
 
