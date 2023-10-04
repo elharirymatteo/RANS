@@ -6,12 +6,39 @@ This repo is an extension of the Isaac Gym Envs library present at https://githu
 
 The main additions to the Reinforcement Learning examples provided by Omniverse Isaac Gym are environments related to Space Robotics.
 
-Currently, we provide a Floating Platform aimed at simulating the robot present in the ZeroG Lab of the University of Luxembourg (SpaceR group).
+| 3DoF go to XY | 3DoF go to Pose | 6DoF go to XYZ |
+| :-: | :-: | :-: |
+| ![3Dof_GoToXY_v2](omniisaacgymenvs/demos/3Dof_GoToXY_v2.gif) | ![3Dof_GoToPose_v2](omniisaacgymenvs/demos/3Dof_GoToPose_v2.gif) | ![6Dof_GoToXYZ_v8](omniisaacgymenvs/demos/6Dof_GoToXYZ_v8.gif) |
 
-<img src="omniisaacgymenvs/demos/3Dof_GoToPose_v2.gif" width="1080" height="612"/>
-<img src="omniisaacgymenvs/demos/3Dof_GoToXY_v2.gif" width="1080" height="612"/>
-<img src="omniisaacgymenvs/demos/6Dof_GoToXYZ_v8.gif" width="1080" height="566"/>
+---
+## Task Description
 
+Currently we provide two primary environments, each tailored to simulate distinct robotic systems:
+
+1. **3 Degrees of Freedom (3DoF) Robot Simulation:**
+   The simulator replicates the behavior of the 3DoF robot situated in the ZeroG Lab of the University of Luxembourg (SpaceR group). The system is equipped with 8 thrusters.
+
+   In this environment, the following tasks are defined:
+   - **GoToXY:** Task for position control.
+   - **GoToPose-2D:** Task for position-attitude control.
+   - **TrackXYVelocity:** Agent learns to track linear velocities in the xy plane.
+   - **TrackXYOVelocity:** Agent learns to track both linear and angular velocities.
+
+2. **6 Degrees of Freedom (6DoF) Robot Simulation:**
+   The simulator emulates spacecraft maneuvers in space, featuring a 6DoF robot configuration with 16 thrusters.
+   
+   The tasks defined for this environment are:
+   - **GoToXYZ:** Task for precise spatial positioning.
+   - **GoToPose-3D:** Task for accurate spatial positioning and orientation.
+
+#### Thrusters Configuration
+The thrusters configuration for both 3DoF and 6DoF scenarios is depicted in the following images, showing the direction of forces applied by the thrusters mounted on the systems.
+
+| 3DoF Thrusters Configuration | 6DoF Thrusters Configuration |
+| :-: | :-: |
+| <img src="omniisaacgymenvs/images/config3Dof.png" width="200"/> | <img src="omniisaacgymenvs/images/config6Dof.png" width="200"/> |
+
+---
 ### Installation
 
 Follow the Isaac Sim [documentation](https://docs.omniverse.nvidia.com/app_isaacsim/app_isaacsim/install_basic.html) to install the latest Isaac Sim release. 
