@@ -4,7 +4,11 @@
 
 This repo is an extension of the Isaac Gym Envs library present at https://github.com/NVIDIA-Omniverse/OmniIsaacGymEnvs.
 
-The main additions to the Reinforcement Learning examples provided by Omniverse Isaac Gym are environments related to Space Robotics.
+The main additions to the Reinforcement Learning examples provided by Omniverse Isaac Gym are environments related to Space Robotics. 
+
+Firstly, we start by providing a 2D environmnet, which serves as a simpler version of a realistic spacecraft. The modelled 2D system can be tested with a real rigid structure floating on top of an extremely flat and smooth surface using air bearings. This system is a common solution is to emulate free-floating and free-flying satellite motion. This intermediate step is especially important for demonstrating the sim-to-real transfer of the DRL policies trained within Omniverse. 
+
+Secondly, we provide a full 3D environment to allow the simulation of free flying spacecrafts in space.
 
 | 3DoF go to XY | 3DoF go to Pose | 6DoF go to XYZ |
 | :-: | :-: | :-: |
@@ -32,14 +36,14 @@ Currently we provide two primary environments, each tailored to simulate distinc
    - **GoToPose-3D:** Task for accurate spatial positioning and orientation.
 
 #### Thrusters Configuration
-The thrusters configuration for both 3DoF and 6DoF scenarios is depicted in the following images, showing the direction of forces applied by the thrusters mounted on the systems.
+The default thrusters configuration for both 3DoF and 6DoF scenarios is depicted in the following images, showing the direction of forces applied by the thrusters mounted on the systems.
 
 | 3DoF Thrusters Configuration | 6DoF Thrusters Configuration |
 | :-: | :-: |
 | <img src="omniisaacgymenvs/images/config3Dof.png" width="200"/> | <img src="omniisaacgymenvs/images/config6Dof.png" width="200"/> |
 
 ---
-### Installation
+## Installation
 
 Follow the Isaac Sim [documentation](https://docs.omniverse.nvidia.com/app_isaacsim/app_isaacsim/install_basic.html) to install the latest Isaac Sim release. 
 
@@ -69,10 +73,17 @@ Install `omniisaacgymenvs` as a python module for `PYTHON_PATH`:
 PYTHON_PATH -m pip install -e .
 ```
 
+RL Games
+xxx
 
-### Running the examples
+
+## Running the examples
 
 *Note: All commands should be executed from `OmniIsaacGymEnvs/omniisaacgymenvs`.*
+
+<details>
+<summary><span style="font-size: 1.3em; font-weight: bold;">Training new agents</span></summary>
+
 
 To train your first policy, run:
 
@@ -102,8 +113,10 @@ PYTHON_PATH scripts/rlgames_train.py task=virtual_floating_platform/MFP2D_Virtua
 Some of the examples could take a few minutes to load because the startup time scales based on the number of environments. The startup time will continually
 be optimized in future releases.
 
+</details>
 
-### Loading trained models // Checkpoints
+<details>
+<summary><span style="font-size: 1.3em; font-weight: bold;">Loading trained models (or checkpoints)</span></summary>
 
 Checkpoints are saved in the folder `runs/EXPERIMENT_NAME/nn` where `EXPERIMENT_NAME` 
 defaults to the task name, but can also be overridden via the `experiment` argument.
@@ -125,6 +138,7 @@ PYTHON_PATH scripts/rlgames_train.py task=virtual_floating_platform/MFP2D_Virtua
 Note that if there are special characters such as `[` or `=` in the checkpoint names, 
 you will need to escape them and put quotes around the string. For example,
 `checkpoint="runs/Ant/nn/last_Antep\=501rew\[5981.31\].pth"`
+</details>
 
 ## Training Scripts
 
@@ -157,7 +171,8 @@ PYTHON_PATH scripts/rlgames_train_mt.py task=virtual_floating_platform/MFP2D_Vir
 This script uses the same RL Games PPO policy as the above, but runs the RL loop on a new thread. Communication between the RL thread and the main thread happens on threaded Queues. Simulation will start automatically, but the script will **not** exit when training terminates, except when running in headless mode. Simulation will stop when training completes or can be stopped by clicking on the Stop button in the UI. Training can be launched again by clicking on the Play button. Similarly, if running inference with `test=True checkpoint=<path/to/checkpoint>`, simulation will run until the Stop button is clicked, or the script will run indefinitely until the process is terminated.
 
 
-### Configuration and command line arguments
+<details>
+<summary><span style="font-size: 1.3em; font-weight: bold;">Configuration and command line arguments</span></summary>
 
 We use [Hydra](https://hydra.cc/docs/intro/) to manage the config.
  
@@ -190,6 +205,8 @@ The actual configs for `task` are in `omniisaacgymenvs/cfg/task/<TASK>.yaml` and
 In some places in the config you will find other variables referenced (for example,
  `num_actors: ${....task.env.numEnvs}`). Each `.` represents going one level up in the config hierarchy.
  This is documented fully [here](https://omegaconf.readthedocs.io/en/latest/usage.html#variable-interpolation).
+
+</details>
 
 ### Tensorboard
 
