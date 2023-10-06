@@ -6,8 +6,9 @@ omniisaacgymenvs.egg-info/
 checkpoints
 omniisaacgymenvs/wandb
 evaluations
+ros_lab_exp
+lab_tests
 *.mp4
-*.png
 *.npy
 *.csv
 *.zip
