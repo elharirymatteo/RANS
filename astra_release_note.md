@@ -6,8 +6,9 @@ This release corresponds to the version of the code used in the research paper t
 
 ## Introduction
 
-RANS (Reinforcement learning-based Autonomous Navigation for Spacecrafts) is designed to address the specific needs of RL-based spacecraft navigation. The primary aim of RANS is to bridge the gap between available simulation tools and the specialized requirements of spacecraft navigation using reinforcement learning.
+RANS (Reinforcement learning-based Autonomous Navigation for Spacecrafts) is designed to address the specific needs of RL-based spacecraft navigation. The primary aim of RANS is to bridge the gap between available simulation tools and the specialized requirements of spacecraft navigation using reinforcement learning. RANS offers a new alternative to design autonomous trajectories in 2D and 3D space.
 
+**Renders examples** of both 3DoF and 6DoF environments when the UI is enabled. The Floating platform or satellites are represented as either a sphere or a  cylinder, while the pin, and arrows indicate the goal the agent must reach.
  | 3DoF Go To XY | 3DoF Go To Pose |
  | :-: | :-: | 
  <img src="omniisaacgymenvs/images/3dof_gotoxy.png" width="400"/>| <img src="omniisaacgymenvs/images/3dof_pose.png" width="400"/>
