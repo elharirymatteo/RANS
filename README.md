@@ -1,4 +1,4 @@
-# RANS: Reinforcement Learning baaed Autonomous Navigating Systems
+# RANS: Reinforcement Learning Autonomous Navigating Systems
 
 ## About this repository
 
