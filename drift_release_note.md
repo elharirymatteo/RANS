@@ -1,5 +1,11 @@
 # DRIFT - Release Notes
 
+<font size=5>
+⚠️ 
+For the most up-to-date information and code, please refer to the <a href="https://github.com/elharirymatteo/RANS/tree/main"> main repository </a>
+</font>.
+
+
 ## Overview
 
 This release corresponds to the version of the code used in the research paper titled "DRIFT: Deep Reinforcement Learning for Intelligent Floating Platforms Trajectories". The problem formulation, simulation details, training procedure, and benchmarks discussed in the paper are based on this version.
@@ -67,7 +73,3 @@ Real-world validation experiments were conducted using the physical air bearings
 ![3Dof_GoToPose_v2](omniisaacgymenvs/demos/real_fp_gotopose.gif)|
 
 </details>
-
----
-
-⚠️ For the most up-to-date information and code, please refer to the [main repository](https://github.com/elharirymatteo/RANS/tree/main).
