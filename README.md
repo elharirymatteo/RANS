@@ -1,7 +1,7 @@
 # ASTRA - Release Notes
 
 
-<font size=5>
+<font size=10>
 ⚠️ 
 For the most up-to-date information and code, please refer to the <a href="https://github.com/elharirymatteo/RANS/tree/main"> main repository </a>
 </font>.
