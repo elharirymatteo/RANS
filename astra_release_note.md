@@ -6,7 +6,7 @@ This release corresponds to the version of the code used in the research paper t
 
 ## Introduction
 
-RANS (Reinforcement learning-based Aerospace Navigation Simulator) is designed to address the specific needs of RL-based spacecraft navigation. The primary aim of RANS is to bridge the gap between available simulation tools and the specialized requirements of spacecraft navigation using reinforcement learning.
+RANS (Reinforcement learning-based Autonomous Navigation for Spacecrafts) is designed to address the specific needs of RL-based spacecraft navigation. The primary aim of RANS is to bridge the gap between available simulation tools and the specialized requirements of spacecraft navigation using reinforcement learning.
 
  | 3DoF Go To XY | 3DoF Go To Pose |
  | :-: | :-: | 
