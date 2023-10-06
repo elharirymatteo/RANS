@@ -240,45 +240,45 @@ You can run (WandB)[https://wandb.ai/] with OmniIsaacGymEnvs by setting `wandb_a
 ```bash
 .
 ├── cfg
-│   ├── controller             # Optimal Controllers configurations
-│   ├── hl_task                # High-level task configurations
-│   ├── task                   # Task configurations
+│   ├── controller                     # Optimal Controllers configurations
+│   ├── hl_task                        # High-level task configurations
+│   ├── task                           # Task configurations
 │   │   └── virtual_floating_platform  # Virtual floating platform task configurations
-│   └── train                  # Training configurations
+│   └── train                          # Training configurations
 │       └── virtual_floating_platform  # Virtual floating platform training configurations
-├── checkpoints               # Checkpoints for saved models
-├── conf_runs                 # Configuration runs for training
-├── demos                     # Demonstration files (gifs)
+├── checkpoints                        # Checkpoints for saved models
+├── conf_runs                          # Configuration runs for training
+├── demos                              # Demonstration files (gifs)
 ├── envs
-│   └── BuoyancyPhysics       # Environment related to buoyancy physics
-├── images                    # Image files
+│   └── BuoyancyPhysics                # Environment related to buoyancy physics
+├── images                             # Image files
 ├── mujoco_envs
-│   ├── controllers           # Controllers for Mujoco environments
-│   ├── environments          # Mujoco environments
-│   └── legacy                # Legacy Mujoco environment files
-├── notebooks                 # Jupyter notebooks
+│   ├── controllers                    # Controllers for Mujoco environments
+│   ├── environments                   # Mujoco environments
+│   └── legacy                         # Legacy Mujoco environment files
+├── notebooks                          # Jupyter notebooks
 ├── robots
-│   ├── articulations         # Articulation-related files
-│   │   ├── utils            # Utilities for articulations
-│   │   └── views            # Articulation views
-│   └── usd                   # USD-related files
-├── ros                       # ROS-related files
-├── scripts                   # Utility scripts
-├── skrl                      # Reinforcement learning utilities
+│   ├── articulations                  # Articulation-related files
+│   │   ├── utils                      # Utilities for articulations
+│   │   └── views                      # Articulation views
+│   └── usd                            # USD-related files
+├── ros                                # ROS-related files
+├── scripts                            # Utility scripts
+├── skrl                               # Reinforcement learning utilities
 ├── tasks
-│   ├── base                  # Base task implementations
-│   ├── buoyancy              # Buoyancy-related tasks
-│   ├── factory               # Factory task configurations
-│   │   └── yaml             # YAML configurations for factory tasks
-│   ├── shared                # Shared task implementations
-│   ├── utils                 # Task utility functions
-│   └── virtual_floating_platform  # Task implementations for virtual floating platform
+│   ├── base                           # Base task implementations
+│   ├── buoyancy                       # Buoyancy-related tasks
+│   ├── factory                        # Factory task configurations
+│   │   └── yaml                       # YAML configurations for factory tasks
+│   ├── shared                         # Shared task implementations
+│   ├── utils                          # Task utility functions
+│   └── virtual_floating_platform      # Task implementations for virtual floating platform
 ├── utils
-│   ├── config_utils          # Configuration utilities
-│   ├── domain_randomization  # Domain randomization utilities
-│   ├── hydra_cfg             # Hydra configuration utilities
-│   ├── rlgames               # Utilities for rlgames
-│   ├── terrain_utils         # Terrain-related utilities
-│   └── usd_utils             # USD-related utilities
-└── videos                    # Video files
+│   ├── config_utils                   # Configuration utilities
+│   ├── domain_randomization           # Domain randomization utilities
+│   ├── hydra_cfg                      # Hydra configuration utilities
+│   ├── rlgames                        # Utilities for rlgames
+│   ├── terrain_utils                  # Terrain-related utilities
+│   └── usd_utils                      # USD-related utilities
+└── videos                             # Video files
 ```
