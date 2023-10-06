@@ -1,4 +1,4 @@
-# RANS an Omniverse Isaac Gym Overall for Micro-Gravity applications
+# RANS: Reinforcement Learning baaed Autonomous Navigating Systems
 
 ## About this repository
 
