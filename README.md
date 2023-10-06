@@ -2,11 +2,11 @@
 
 ## About this repository
 
-This repo is an extension of the Isaac Gym Envs library present at https://github.com/NVIDIA-Omniverse/OmniIsaacGymEnvs.
+This repo is an extension of the Isaac Gym Envs library present at https://github.com/NVIDIA-Omniverse/OmniIsaacGymEnvs. There, you can find further details and instructions regarding the default tasks (`AllegroHand`, `Ant`, `Anymal`, `AnymalTerrain`, `BallBalance`, `Cartpole`, `Crazyflie`, `FrankaCabinet`, `Humanoid`, `Ingenuity`, `Quadcopter`, `ShadowHand`, `ShadowHandOpenAI_FF`, `ShadowHandOpenAI_LSTM`).
 
-The main additions to the Reinforcement Learning examples provided by Omniverse Isaac Gym are environments related to Space Robotics. 
+The main additions to the Reinforcement Learning examples provided by Omniverse Isaac Gym are environments related to **Space Robotics**. 
 
-Firstly, we start by providing a 2D environmnet, which serves as a simpler version of a realistic spacecraft. The modelled 2D system can be tested with a real rigid structure floating on top of an extremely flat and smooth surface using air bearings. This system is a common solution is to emulate free-floating and free-flying satellite motion. This intermediate step is especially important for demonstrating the sim-to-real transfer of the DRL policies trained within Omniverse. 
+Firstly, we start by providing a 2D environmnet, which serves as a simpler version of a realistic spacecraft. The modelled 2D system can be tested with a real rigid structure floating on top of an extremely flat and smooth surface using air bearings. This system is a common solution to emulate free-floating and free-flying satellite motion. This intermediate step is especially important for demonstrating the sim-to-real transfer of the DRL policies trained within Omniverse. 
 
 Secondly, we provide a full 3D environment to allow the simulation of free flying spacecrafts in space.
 
@@ -49,6 +49,7 @@ Follow the Isaac Sim [documentation](https://docs.omniverse.nvidia.com/app_isaac
 
 *Examples in this repository rely on features from the most recent Isaac Sim release. Please make sure to update any existing Isaac Sim build to the latest release version, 2022.2.0, to ensure examples work as expected.*
 
+### OmniverseIsaacGymEnvs
 Once installed, this repository can be used as a python module, `omniisaacgymenvs`, with the python executable provided in Isaac Sim.
 
 To install `omniisaacgymenvs`, first clone this repository:
@@ -73,9 +74,18 @@ Install `omniisaacgymenvs` as a python module for `PYTHON_PATH`:
 PYTHON_PATH -m pip install -e .
 ```
 
-RL Games
-xxx
+### RL Games
 
+We use the [rl-games](https://pypi.org/project/rl-games/1.0.2/) library as a starting point to rework the PPO implementation for the agents we train.
+
+To install the appropriate version of rl-games, clone this repository:
+```bash
+git clone https://github.com/AntoineRichard/rl_games
+```
+Make sure to install the rl_gamers library under the OmniverseIsaacGym dependec:
+```
+PYTHON_PATH -m pip install rl_games .
+```
 
 ## Running the examples
 
@@ -144,6 +154,8 @@ you will need to escape them and put quotes around the string. For example,
 
 All scripts provided in `omniisaacgymenvs/scripts` can be launched directly with `PYTHON_PATH`.
 
+<details>
+<summary><span style="font-size: 1.3em; font-weight: bold;">Random policy</span></summary>
 To test out a task without RL in the loop, run the random policy script with:
 
 ```bash
@@ -151,8 +163,10 @@ PYTHON_PATH scripts/random_policy.py task=virtual_floating_platform/MFP2D_Virtua
 ```
 
 This script will sample random actions from the action space and apply these actions to your task without running any RL policies. Simulation should start automatically after launching the script, and will run indefinitely until terminated.
+</details>
 
-
+<details>
+<summary><span style="font-size: 1.3em; font-weight: bold;">Train on single GPU</span></summary>
 To run a simple form of PPO from `rl_games`, use the single-threaded training script:
 
 ```bash
@@ -160,8 +174,10 @@ PYTHON_PATH scripts/rlgames_train.py task=virtual_floating_platform/MFP2D_Virtua
 ```
 
 This script creates an instance of the PPO runner in `rl_games` and automatically launches training and simulation. Once training completes (the total number of iterations have been reached), the script will exit. If running inference with `test=True checkpoint=<path/to/checkpoint>`, the script will run indefinitely until terminated. Note that this script will have limitations on interaction with the UI.
+</details>
 
-
+<details>
+<summary><span style="font-size: 1.3em; font-weight: bold;">Train on multiple GPUs</span></summary>
 Lastly, we provide a multi-threaded training script that executes the RL policy on a separate thread than the main thread used for simulation and rendering:
 
 ```bash
@@ -169,7 +185,7 @@ PYTHON_PATH scripts/rlgames_train_mt.py task=virtual_floating_platform/MFP2D_Vir
 ```
 
 This script uses the same RL Games PPO policy as the above, but runs the RL loop on a new thread. Communication between the RL thread and the main thread happens on threaded Queues. Simulation will start automatically, but the script will **not** exit when training terminates, except when running in headless mode. Simulation will stop when training completes or can be stopped by clicking on the Stop button in the UI. Training can be launched again by clicking on the Play button. Similarly, if running inference with `test=True checkpoint=<path/to/checkpoint>`, simulation will run until the Stop button is clicked, or the script will run indefinitely until the process is terminated.
-
+</details>
 
 <details>
 <summary><span style="font-size: 1.3em; font-weight: bold;">Configuration and command line arguments</span></summary>
@@ -178,7 +194,7 @@ We use [Hydra](https://hydra.cc/docs/intro/) to manage the config.
  
 Common arguments for the training scripts are:
 
-* `task=TASK` - Selects which task to use. Any of `AllegroHand`, `Ant`, `Anymal`, `AnymalTerrain`, `BallBalance`, `Cartpole`, `Crazyflie`, `FrankaCabinet`, `Humanoid`, `Ingenuity`, `Quadcopter`, `ShadowHand`, `ShadowHandOpenAI_FF`, `ShadowHandOpenAI_LSTM` (these correspond to the config for each environment in the folder `omniisaacgymenvs/cfg/task`)
+* `task=TASK` - Selects which task to use. Any of `MFP2D_Virtual_GoToXY`, `MFP2D_Virtual_GoToPose`, `MFP2D_Virtual_TrackXYVelocity`, `MFP2D_Virtual_TrackXYOVelocity`, `MFP3D_Virtual_GoToXYZ`, `MFP3D_Virtual_GoToPose`, (these correspond to the config for each environment in the folder `omniisaacgymenvs/cfg/task/virtual_floating_platform`)
 * `train=TRAIN` - Selects which training config to use. Will automatically default to the correct config for the environment (ie. `<TASK>PPO`).
 * `num_envs=NUM_ENVS` - Selects the number of environments to use (overriding the default number of environments set in the task config).
 * `seed=SEED` - Sets a seed value for randomization, and overrides the default seed in the task config
@@ -219,17 +235,50 @@ PYTHON_PATH -m tensorboard.main --logdir runs/EXPERIMENT_NAME/summaries
 
 You can run (WandB)[https://wandb.ai/] with OmniIsaacGymEnvs by setting `wandb_activate=True` flag from the command line. You can set the group, name, entity, and project for the run by setting the `wandb_group`, `wandb_name`, `wandb_entity` and `wandb_project` arguments. Make sure you have WandB installed in the Isaac Sim Python executable with `PYTHON_PATH -m pip install wandb` before activating.
 
+## Directory Structure
 
-## Tasks
-
-Source code for tasks can be found in `omniisaacgymenvs/tasks`. 
-
-Each task follows the frameworks provided in `omni.isaac.core` and `omni.isaac.gym` in Isaac Sim.
-
-Refer to [docs/framework.md](docs/framework.md) for how to create your own tasks.
-
-Full details on each of the tasks available can be found in the [RL examples documentation](docs/rl_examples.md).
-
-## A note about Force Sensors
-
-Force sensors are supported in Isaac Sim and OIGE via the `ArticulationView` class. Sensor readings can be retrieved using `get_force_sensor_forces()` API, as shown in the Ant/Humanoid Locomotion task, as well as in the Ball Balance task. Please note that there is currently a known bug regarding force sensors in Omniverse Physics. Transforms of force sensors (i.e. their local poses) are set in the actor space of the Articulation instead of the body space, which is the expected behaviour. We will be fixing this in the coming release.
+```bash
+.
+├── cfg
+│   ├── controller             # Optimal Controllers configurations
+│   ├── hl_task                # High-level task configurations
+│   ├── task                   # Task configurations
+│   │   └── virtual_floating_platform  # Virtual floating platform task configurations
+│   └── train                  # Training configurations
+│       └── virtual_floating_platform  # Virtual floating platform training configurations
+├── checkpoints               # Checkpoints for saved models
+├── conf_runs                 # Configuration runs for training
+├── demos                     # Demonstration files (gifs)
+├── envs
+│   └── BuoyancyPhysics       # Environment related to buoyancy physics
+├── images                    # Image files
+├── mujoco_envs
+│   ├── controllers           # Controllers for Mujoco environments
+│   ├── environments          # Mujoco environments
+│   └── legacy                # Legacy Mujoco environment files
+├── notebooks                 # Jupyter notebooks
+├── robots
+│   ├── articulations         # Articulation-related files
+│   │   ├── utils            # Utilities for articulations
+│   │   └── views            # Articulation views
+│   └── usd                   # USD-related files
+├── ros                       # ROS-related files
+├── scripts                   # Utility scripts
+├── skrl                      # Reinforcement learning utilities
+├── tasks
+│   ├── base                  # Base task implementations
+│   ├── buoyancy              # Buoyancy-related tasks
+│   ├── factory               # Factory task configurations
+│   │   └── yaml             # YAML configurations for factory tasks
+│   ├── shared                # Shared task implementations
+│   ├── utils                 # Task utility functions
+│   └── virtual_floating_platform  # Task implementations for virtual floating platform
+├── utils
+│   ├── config_utils          # Configuration utilities
+│   ├── domain_randomization  # Domain randomization utilities
+│   ├── hydra_cfg             # Hydra configuration utilities
+│   ├── rlgames               # Utilities for rlgames
+│   ├── terrain_utils         # Terrain-related utilities
+│   └── usd_utils             # USD-related utilities
+└── videos                    # Video files
+```
