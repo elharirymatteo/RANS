@@ -70,4 +70,4 @@ Real-world validation experiments were conducted using the physical air bearings
 
 ---
 
-For the most up-to-date information and code, please refer to the [main repository](https://github.com/elharirymatteo/RANS/tree/main).
+⚠️ For the most up-to-date information and code, please refer to the [main repository](https://github.com/elharirymatteo/RANS/tree/main).
