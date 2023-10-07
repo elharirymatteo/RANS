@@ -57,7 +57,6 @@ An infinite horizon discrete-time LQR controller is implemented to compare with 
 
 </details>
 
-<details>
 <summary><span style="font-size: 1.2em; font-weight: bold;">Laboratory Experiment Setup</span></summary>
 Real-world validation experiments were conducted using the physical air bearings platform located in the ZeroG Laboratory at the University of Luxembourg. Details about the laboratory setup and experimental procedures can be found in the paper.
 
@@ -69,4 +68,3 @@ Real-world validation experiments were conducted using the physical air bearings
  | :-: | 
 ![3Dof_GoToPose_v2](omniisaacgymenvs/demos/real_fp_gotopose.gif)|
 
-</details>
