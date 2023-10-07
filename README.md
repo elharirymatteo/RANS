@@ -15,9 +15,6 @@ This release corresponds to the version of the code used in the research paper t
 
 The problem is formulated as a sequential decision-making task to control a floating platform's maneuvers within a 2D space. The state space, actions, and task-specific observations are defined as per the equations and tables provided in the paper.
 
-| 3DoF Thrusters Configuration | 6DoF Thrusters Configuration |
-| :-: | :-: |
-| <img src="omniisaacgymenvs/images/config3Dof.png" width="200"/> | <img src="omniisaacgymenvs/images/config6Dof.png" width="200"/> |
 </details>
 
 <details>
