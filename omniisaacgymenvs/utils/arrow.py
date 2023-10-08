@@ -1,11 +1,13 @@
-# Copyright (c) 2021, NVIDIA CORPORATION.  All rights reserved.
-#
-# NVIDIA CORPORATION and its licensors retain all intellectual property
-# and proprietary rights in and to this software, related documentation
-# and any modifications thereto.  Any use, reproduction, disclosure or
-# distribution of this software and related documentation without an express
-# license agreement from NVIDIA CORPORATION is strictly prohibited.
-#
+__author__ = "Antoine Richard, Matteo El Hariry"
+__copyright__ = (
+    "Copyright 2023, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
+)
+__license__ = "GPL"
+__version__ = "1.0.0"
+__maintainer__ = "Antoine Richard"
+__email__ = "antoine.richard@uni.lu"
+__status__ = "development"
+
 from typing import Optional, Sequence
 import numpy as np
 from omni.isaac.core.materials.visual_material import VisualMaterial
@@ -24,21 +26,21 @@ from omniisaacgymenvs.utils.shape_utils import Arrow
 class VisualArrow(XFormPrim, Arrow):
     """_summary_
 
-        Args:
-            prim_path (str): _description_
-            name (str, optional): _description_. Defaults to "visual_arrow".
-            position (Optional[Sequence[float]], optional): _description_. Defaults to None.
-            translation (Optional[Sequence[float]], optional): _description_. Defaults to None.
-            orientation (Optional[Sequence[float]], optional): _description_. Defaults to None.
-            scale (Optional[Sequence[float]], optional): _description_. Defaults to None.
-            visible (Optional[bool], optional): _description_. Defaults to True.
-            color (Optional[np.ndarray], optional): _description_. Defaults to None.
-            radius (Optional[float], optional): _description_. Defaults to None.
-            visual_material (Optional[VisualMaterial], optional): _description_. Defaults to None.
+    Args:
+        prim_path (str): _description_
+        name (str, optional): _description_. Defaults to "visual_arrow".
+        position (Optional[Sequence[float]], optional): _description_. Defaults to None.
+        translation (Optional[Sequence[float]], optional): _description_. Defaults to None.
+        orientation (Optional[Sequence[float]], optional): _description_. Defaults to None.
+        scale (Optional[Sequence[float]], optional): _description_. Defaults to None.
+        visible (Optional[bool], optional): _description_. Defaults to True.
+        color (Optional[np.ndarray], optional): _description_. Defaults to None.
+        radius (Optional[float], optional): _description_. Defaults to None.
+        visual_material (Optional[VisualMaterial], optional): _description_. Defaults to None.
 
-        Raises:
-            Exception: _description_
-        """
+    Raises:
+        Exception: _description_
+    """
 
     def __init__(
         self,
@@ -64,7 +66,8 @@ class VisualArrow(XFormPrim, Arrow):
             if color is None:
                 color = np.array([0.5, 0.5, 0.5])
             visual_prim_path = find_unique_string_name(
-                initial_name="/World/Looks/visual_material", is_unique_fn=lambda x: not is_prim_path_valid(x)
+                initial_name="/World/Looks/visual_material",
+                is_unique_fn=lambda x: not is_prim_path_valid(x),
             )
             visual_material = PreviewSurface(prim_path=visual_prim_path, color=color)
         XFormPrim.__init__(
@@ -78,7 +81,16 @@ class VisualArrow(XFormPrim, Arrow):
             visible=visible,
         )
         VisualArrow.apply_visual_material(self, visual_material)
-        Arrow.__init__(self, prim_path, body_radius, body_length, poll_radius, poll_length, head_radius, head_length)
+        Arrow.__init__(
+            self,
+            prim_path,
+            body_radius,
+            body_length,
+            poll_radius,
+            poll_length,
+            head_radius,
+            head_length,
+        )
         self.setBodyRadius(body_radius)
         self.setBodyLength(body_length)
         self.setPollRadius(poll_radius)
@@ -88,22 +100,23 @@ class VisualArrow(XFormPrim, Arrow):
         self.updateExtent()
         return
 
+
 class FixedArrow(VisualArrow):
     """_summary_
 
-        Args:
-            prim_path (str): _description_
-            name (str, optional): _description_. Defaults to "fixed_sphere".
-            position (Optional[np.ndarray], optional): _description_. Defaults to None.
-            translation (Optional[np.ndarray], optional): _description_. Defaults to None.
-            orientation (Optional[np.ndarray], optional): _description_. Defaults to None.
-            scale (Optional[np.ndarray], optional): _description_. Defaults to None.
-            visible (Optional[bool], optional): _description_. Defaults to None.
-            color (Optional[np.ndarray], optional): _description_. Defaults to None.
-            radius (Optional[np.ndarray], optional): _description_. Defaults to None.
-            visual_material (Optional[VisualMaterial], optional): _description_. Defaults to None.
-            physics_material (Optional[PhysicsMaterial], optional): _description_. Defaults to None.
-        """
+    Args:
+        prim_path (str): _description_
+        name (str, optional): _description_. Defaults to "fixed_sphere".
+        position (Optional[np.ndarray], optional): _description_. Defaults to None.
+        translation (Optional[np.ndarray], optional): _description_. Defaults to None.
+        orientation (Optional[np.ndarray], optional): _description_. Defaults to None.
+        scale (Optional[np.ndarray], optional): _description_. Defaults to None.
+        visible (Optional[bool], optional): _description_. Defaults to None.
+        color (Optional[np.ndarray], optional): _description_. Defaults to None.
+        radius (Optional[np.ndarray], optional): _description_. Defaults to None.
+        visual_material (Optional[VisualMaterial], optional): _description_. Defaults to None.
+        physics_material (Optional[PhysicsMaterial], optional): _description_. Defaults to None.
+    """
 
     def __init__(
         self,
@@ -150,16 +163,16 @@ class FixedArrow(VisualArrow):
             scale=scale,
             visible=visible,
             color=color,
-            body_radius = body_radius,
-            body_length = body_length,
-            poll_radius = poll_radius,
-            poll_length = poll_length,
-            head_radius = head_radius,
-            head_length = head_length,
+            body_radius=body_radius,
+            body_length=body_length,
+            poll_radius=poll_radius,
+            poll_length=poll_length,
+            head_radius=head_radius,
+            head_length=head_length,
             visual_material=visual_material,
         )
-        #XFormPrim.set_collision_enabled(self, True)
-        #if physics_material is not None:
+        # XFormPrim.set_collision_enabled(self, True)
+        # if physics_material is not None:
         #    FixedArrow.apply_physics_material(self, physics_material)
         return
 
@@ -167,23 +180,23 @@ class FixedArrow(VisualArrow):
 class DynamicArrow(RigidPrim, FixedArrow):
     """_summary_
 
-        Args:
-            prim_path (str): _description_
-            name (str, optional): _description_. Defaults to "dynamic_sphere".
-            position (Optional[np.ndarray], optional): _description_. Defaults to None.
-            translation (Optional[np.ndarray], optional): _description_. Defaults to None.
-            orientation (Optional[np.ndarray], optional): _description_. Defaults to None.
-            scale (Optional[np.ndarray], optional): _description_. Defaults to None.
-            visible (Optional[bool], optional): _description_. Defaults to None.
-            color (Optional[np.ndarray], optional): _description_. Defaults to None.
-            radius (Optional[np.ndarray], optional): _description_. Defaults to None.
-            visual_material (Optional[VisualMaterial], optional): _description_. Defaults to None.
-            physics_material (Optional[PhysicsMaterial], optional): _description_. Defaults to None.
-            mass (Optional[float], optional): _description_. Defaults to None.
-            density (Optional[float], optional): _description_. Defaults to None.
-            linear_velocity (Optional[Sequence[float]], optional): _description_. Defaults to None.
-            angular_velocity (Optional[Sequence[float]], optional): _description_. Defaults to None.
-        """
+    Args:
+        prim_path (str): _description_
+        name (str, optional): _description_. Defaults to "dynamic_sphere".
+        position (Optional[np.ndarray], optional): _description_. Defaults to None.
+        translation (Optional[np.ndarray], optional): _description_. Defaults to None.
+        orientation (Optional[np.ndarray], optional): _description_. Defaults to None.
+        scale (Optional[np.ndarray], optional): _description_. Defaults to None.
+        visible (Optional[bool], optional): _description_. Defaults to None.
+        color (Optional[np.ndarray], optional): _description_. Defaults to None.
+        radius (Optional[np.ndarray], optional): _description_. Defaults to None.
+        visual_material (Optional[VisualMaterial], optional): _description_. Defaults to None.
+        physics_material (Optional[PhysicsMaterial], optional): _description_. Defaults to None.
+        mass (Optional[float], optional): _description_. Defaults to None.
+        density (Optional[float], optional): _description_. Defaults to None.
+        linear_velocity (Optional[Sequence[float]], optional): _description_. Defaults to None.
+        angular_velocity (Optional[Sequence[float]], optional): _description_. Defaults to None.
+    """
 
     def __init__(
         self,
@@ -221,12 +234,12 @@ class DynamicArrow(RigidPrim, FixedArrow):
             scale=scale,
             visible=visible,
             color=color,
-            body_radius = body_radius,
-            body_length = body_length,
-            poll_radius = poll_radius,
-            poll_length = poll_length,
-            head_radius = head_radius,
-            head_length = head_length,
+            body_radius=body_radius,
+            body_length=body_length,
+            poll_radius=poll_radius,
+            poll_length=poll_length,
+            head_radius=head_radius,
+            head_length=head_length,
             visual_material=visual_material,
             physics_material=physics_material,
         )
