@@ -247,7 +247,7 @@ If you use the current repository in your work, we suggest citing the following 
       archivePrefix={arXiv},
       primaryClass={cs.RO}
 }
-
+```
 
 ## Directory Structure
 
