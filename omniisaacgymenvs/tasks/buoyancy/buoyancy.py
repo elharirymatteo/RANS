@@ -99,7 +99,7 @@ class BuoyancyTask(RLTask):
         self.box_high=self._task_cfg["buoy"]["box_high"]
         self.box_volume=self.box_width*self.box_large*self.box_high
         self.box_mass=self._task_cfg["buoy"]["mass"]
-        self.half_box_size=self.box_high/2
+        self.half_boxes_size=self.box_high/2
 
         #damping constants
         self.squared_drag_coefficients = self._task_cfg["dynamics"]["damping"]["squared_drag_coefficients"]
@@ -133,12 +133,13 @@ class BuoyancyTask(RLTask):
         self.add_stats(['normed_linear_vel', 'normed_angular_vel', 'actions_sum'])
 
         #buoyancy
-        self._box_position = torch.tensor([0, 0., self.box_high/2])
+        self._boxes_position = torch.tensor([0, 0., self.box_high/2])
 
         #positions constants
         self.left_thruster_position = torch.tensor(self._task_cfg["box"]["left_thruster_position"])
         self.right_thruster_position = torch.tensor(self._task_cfg["box"]["right_thruster_position"])
-        self.thrusters_position = torch.tensor(self.left_thruster_position + self.right_thruster_position)
+        # add the thruster positions in one tensor
+        self.thrusters_position = torch.concat([self.left_thruster_position, self.right_thruster_position], dim=0)
         print("thrusters_position", self.thrusters_position)
         #others positions constants that need to be GPU 
         self.box_initial_pos = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
@@ -221,28 +222,29 @@ class BuoyancyTask(RLTask):
         """
         Sets up the USD scene inside Omniverse for the task."""
 
-        self.get_box()
+        self.get_boxes()
         self.get_buoyancy()
         self.get_target()
         RLTask.set_up_scene(self, scene)
 
-        root_path = "/World/envs/.*/Box" 
-        self._box = BoxThrustersView(prim_paths_expr=root_path, name="box_thrusters_view")
+        root_path = "/World/envs/.*/box" 
+        self._boxes = BoxThrustersView(prim_paths_expr=root_path, name="box_thrusters_view")
 
-        scene.add(self._box)
-        scene.add(self._box.base)
-        scene.add(self._box.thrusters)
+        scene.add(self._boxes)
+        scene.add(self._boxes.base)
+        scene.add(self._boxes.thrusters)
 
         # Add arrows to scene if task is go to pose
         scene, self._marker = self.task.add_visual_marker_to_scene(scene)
         return
 
-    def get_box(self):
+    def get_boxes(self):
         """add to stage the usd file"""
-        box_thrusters = BoxThrusters(prim_path=self.default_zero_env_path + "/Box", name="box_thrusters",
-                            translation=self._box_position)
+        box_thrusters = BoxThrusters(prim_path=self.default_zero_env_path + "/box", name="box_thrusters",
+                            translation=self._boxes_position)
         self._sim_config.apply_articulation_settings("box_thrusters", get_prim_at_path(box_thrusters.prim_path),
                                                         self._sim_config.parse_actor_config("box_thrusters"))  
+        print(box_thrusters)
     def get_buoyancy(self):
         """create physics"""
         self.buoyancy_physics=BuoyantObject(self.num_envs, self._device, self.water_density, self.gravity, self.box_width/2, self.box_large/2, self.average_buoyancy_force_value, self.amplify_torque)
@@ -260,11 +262,11 @@ class BuoyancyTask(RLTask):
         Updates the state of the system."""
 
         # Collects the position and orientation of the platform
-        self.root_pos, self.root_quats = self._box.get_world_poses(clone=True)
+        self.root_pos, self.root_quats = self._boxes.get_world_poses(clone=True)
         # Remove the offset from the different environments
         root_positions = self.root_pos - self._env_pos
         # Collects the velocity of the platform
-        self.root_velocities = self._box.get_velocities(clone=True)
+        self.root_velocities = self._boxes.get_velocities(clone=True)
         root_velocities = self.root_velocities.clone().to(self._device)
         # Cast quaternion to Yaw
         siny_cosp = 2 * (self.root_quats[:,0] * self.root_quats[:,3] + self.root_quats[:,1] * self.root_quats[:,2])
@@ -282,7 +284,7 @@ class BuoyancyTask(RLTask):
         self.get_euler_angles(self.root_quats) #rpy roll pitch yaws
 
         #body underwater
-        self.high_submerged[:]=torch.clamp(self.half_box_size-self.root_pos[:,2], 0, self.box_high)
+        self.high_submerged[:]=torch.clamp(self.half_boxes_size-self.root_pos[:,2], 0, self.box_high)
         self.submerged_volume[:]= torch.clamp(self.high_submerged * self.box_width * self.box_large, 0, self.box_volume)
         self.box_is_under_water = torch.where(self.high_submerged[:] > 0,1.0,0.0 ).unsqueeze(0)
 
@@ -324,7 +326,7 @@ class BuoyancyTask(RLTask):
         self.obs_buf["masks"] =  torch.zeros((self.num_envs, 2), device=self._device, dtype=torch.long)
 
         observations = {
-            self._box.name: {
+            self._boxes.name: {
                "obs_buf": self.obs_buf
             }
         }
@@ -388,7 +390,7 @@ class BuoyancyTask(RLTask):
         
         #self.thruster_debugging_counter+=1
 
-        self._box.apply_forces_and_torques_at_pos(forces=self.archimedes[:,:3] + self.drag[:,:3] , torques=self.archimedes[:,3:] + self.drag[:,3:], is_global=False)
+        self._boxes.apply_forces_and_torques_at_pos(forces=self.archimedes[:,:3] + self.drag[:,:3] , torques=self.archimedes[:,3:] + self.drag[:,3:], is_global=False)
         self._thrusters.apply_forces_and_torques_at_pos(self.thrusters, positions=self.thrusters_position,  is_global=False)
     
     
@@ -397,10 +399,10 @@ class BuoyancyTask(RLTask):
         This function implements the logic to be performed after a reset."""
 
         # implement any logic required for simulation on-start here
-        self.root_pos, self.root_rot = self._box.get_world_poses(clone=True)
-        self.root_velocities = self._box.get_velocities(clone=True)
-        #self.dof_pos = self._box.get_joint_positions()
-        #self.dof_vel = self._box.get_joint_velocities()
+        self.root_pos, self.root_rot = self._boxes.get_world_poses(clone=True)
+        self.root_velocities = self._boxes.get_velocities(clone=True)
+        #self.dof_pos = self._boxes.get_joint_positions()
+        #self.dof_vel = self._boxes.get_joint_velocities()
     
         self.initial_root_pos, self.initial_root_rot = self.root_pos.clone().to(self._device), self.root_rot.clone().to(self._device)
         self.initial_pin_pos = self._env_pos
@@ -444,10 +446,10 @@ class BuoyancyTask(RLTask):
         root_velocities[env_ids] = 0
 
         # apply resets
-        #self._box.set_joint_positions(self.dof_pos[env_ids], indices=env_ids)
-        #self._box.set_joint_velocities(self.dof_vel[env_ids], indices=env_ids)
-        self._box.set_world_poses(root_pos[env_ids], root_rot[env_ids], indices=env_ids)
-        self._box.set_velocities(root_velocities[env_ids], indices=env_ids)
+        #self._boxes.set_joint_positions(self.dof_pos[env_ids], indices=env_ids)
+        #self._boxes.set_joint_velocities(self.dof_vel[env_ids], indices=env_ids)
+        self._boxes.set_world_poses(root_pos[env_ids], root_rot[env_ids], indices=env_ids)
+        self._boxes.set_velocities(root_velocities[env_ids], indices=env_ids)
 
     def reset_idx(self, env_ids: torch.Tensor) -> None:
         """
@@ -461,17 +463,17 @@ class BuoyancyTask(RLTask):
         # Randomizes the starting position of the platform within a disk around the target
         root_pos, root_rot = self.task.get_spawns(env_ids, self.initial_root_pos.clone().to(self._device), self.initial_root_rot.clone().to(self._device))
         # Resets the states of the joints
-        #self.dof_pos[env_ids, :] = torch.zeros((num_resets, self._box.num_dof), device=self._device)
+        #self.dof_pos[env_ids, :] = torch.zeros((num_resets, self._boxes.num_dof), device=self._device)
         #self.dof_vel[env_ids, :] = 0
         # Sets the velocities to 0
         root_velocities = self.root_velocities.clone().to(self._device)
         root_velocities[env_ids] = 0
 
         # apply resets
-        #self._box.set_joint_positions(self.dof_pos[env_ids], indices=env_ids)
-        #self._box.set_joint_velocities(self.dof_vel[env_ids], indices=env_ids)
-        self._box.set_world_poses(root_pos[env_ids], root_rot[env_ids], indices=env_ids)
-        self._box.set_velocities(root_velocities[env_ids], indices=env_ids)
+        #self._boxes.set_joint_positions(self.dof_pos[env_ids], indices=env_ids)
+        #self._boxes.set_joint_velocities(self.dof_vel[env_ids], indices=env_ids)
+        self._boxes.set_world_poses(root_pos[env_ids], root_rot[env_ids], indices=env_ids)
+        self._boxes.set_velocities(root_velocities[env_ids], indices=env_ids)
 
         # bookkeeping
         self.reset_buf[env_ids] = 0
