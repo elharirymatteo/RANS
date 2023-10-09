@@ -141,7 +141,6 @@ class BuoyancyTask(RLTask):
         # add the thruster positions in one tensor
         self.thrusters_position = torch.concat([self.left_thruster_position, self.right_thruster_position], dim=0).repeat(self._num_envs)
 
-        print("thrusters_position", self.thrusters_position)
         #others positions constants that need to be GPU 
         self.box_initial_pos = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
         self.box_initial_rot = torch.zeros((self._num_envs, 4), device=self._device, dtype=torch.float32)
