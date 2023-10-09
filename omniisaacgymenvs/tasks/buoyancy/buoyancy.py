@@ -226,16 +226,23 @@ class BuoyancyTask(RLTask):
         self.get_target()
         RLTask.set_up_scene(self, scene)
 
-        root_path = "/World/envs/.*/box" 
+        root_path = "/World/envs/.*/Box" 
         self._box = BoxThrustersView(prim_paths_expr=root_path, name="box_thrusters_view")
 
-        scene.add(self._box.body)
+        scene.add(self._box)
+        scene.add(self._box.base)
         scene.add(self._box.thrusters)
 
         # Add arrows to scene if task is go to pose
         scene, self._marker = self.task.add_visual_marker_to_scene(scene)
         return
 
+    def get_box(self):
+        """add to stage the usd file"""
+        box_thrusters = BoxThrusters(prim_path=self.default_zero_env_path + "/Box", name="box_thrusters",
+                            translation=self._box_position)
+        self._sim_config.apply_articulation_settings("box_thrusters", get_prim_at_path(box_thrusters.prim_path),
+                                                        self._sim_config.parse_actor_config("box_thrusters"))  
     def get_buoyancy(self):
         """create physics"""
         self.buoyancy_physics=BuoyantObject(self.num_envs, self._device, self.water_density, self.gravity, self.box_width/2, self.box_large/2, self.average_buoyancy_force_value, self.amplify_torque)
@@ -247,12 +254,6 @@ class BuoyancyTask(RLTask):
             Adds the visualization target to the scene."""
             self.task.generate_target(self.default_zero_env_path, self._default_marker_position)
 
-    def get_box(self):
-        """add to stage the usd file"""
-        box_thrusters = BoxThrusters(prim_path=self.default_zero_env_path + "/box", name="box_thrusters",
-                            translation=self._box_position)
-        self._sim_config.apply_articulation_settings("box_thrusters", get_prim_at_path(box_thrusters.prim_path),
-                                                        self._sim_config.parse_actor_config("box_thrusters"))  
     
     def update_state(self) -> None:
         """

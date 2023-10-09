@@ -44,5 +44,5 @@ class BoxThrustersView(ArticulationView):
             prim_paths_expr=prim_paths_expr,
             name=name,
         )
-        self.box = RigidPrimView(prim_paths_expr="/World/envs/.*/box/body", name="box_view")
-        self.thrusters = RigidPrimView(prim_paths_expr=f"/World/envs/.*/box/*_thruster", name="thrusters")
+        self.base = RigidPrimView(prim_paths_expr="/World/envs/.*/Box/body", name="box_view", reset_xform_properties=False)
+        self.thrusters = RigidPrimView(prim_paths_expr=f"/World/envs/.*/Box/*_thruster", name="thrusters", reset_xform_properties=False)
