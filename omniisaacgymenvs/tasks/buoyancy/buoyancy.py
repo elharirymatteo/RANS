@@ -139,7 +139,8 @@ class BuoyancyTask(RLTask):
         self.left_thruster_position = torch.tensor(self._task_cfg["box"]["left_thruster_position"])
         self.right_thruster_position = torch.tensor(self._task_cfg["box"]["right_thruster_position"])
         # add the thruster positions in one tensor
-        self.thrusters_position = torch.concat([self.left_thruster_position, self.right_thruster_position], dim=0)
+        self.thrusters_position = torch.concat([self.left_thruster_position, self.right_thruster_position], dim=0).repeat(self._num_envs)
+
         print("thrusters_position", self.thrusters_position)
         #others positions constants that need to be GPU 
         self.box_initial_pos = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
@@ -244,7 +245,6 @@ class BuoyancyTask(RLTask):
                             translation=self._boxes_position)
         self._sim_config.apply_articulation_settings("box_thrusters", get_prim_at_path(box_thrusters.prim_path),
                                                         self._sim_config.parse_actor_config("box_thrusters"))  
-        print(box_thrusters)
     def get_buoyancy(self):
         """create physics"""
         self.buoyancy_physics=BuoyantObject(self.num_envs, self._device, self.water_density, self.gravity, self.box_width/2, self.box_large/2, self.average_buoyancy_force_value, self.amplify_torque)
@@ -389,9 +389,8 @@ class BuoyancyTask(RLTask):
         self.thrusters[:,:] *= self.box_is_under_water.mT
         
         #self.thruster_debugging_counter+=1
-
-        self._boxes.apply_forces_and_torques_at_pos(forces=self.archimedes[:,:3] + self.drag[:,:3] , torques=self.archimedes[:,3:] + self.drag[:,3:], is_global=False)
-        self._thrusters.apply_forces_and_torques_at_pos(self.thrusters, positions=self.thrusters_position,  is_global=False)
+        self._boxes.base.apply_forces_and_torques_at_pos(forces=self.archimedes[:,:3] + self.drag[:,:3] , torques=self.archimedes[:,3:] + self.drag[:,3:], is_global=False)
+        self._boxes.thrusters.apply_forces_and_torques_at_pos(self.thrusters, positions=self.thrusters_position,  is_global=False)
     
     
     def post_reset(self):
