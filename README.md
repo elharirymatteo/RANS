@@ -239,14 +239,13 @@ You can run (WandB)[https://wandb.ai/] with OmniIsaacGymEnvs by setting `wandb_a
 If you use the current repository in your work, we suggest citing the following papers:
 
 ```bibtex
-@misc{elhariry2023drift,
-      title={DRIFT: Deep Reinforcement Learning for Intelligent Floating Platforms Trajectories}, 
-      author={Matteo El-Hariry and Antoine Richard and Vivek Muralidharan and Baris Can Yalcin and Matthieu Geist and Miguel Olivares-Mendez},
-      year={2023},
-      eprint={2310.04266},
-      archivePrefix={arXiv},
-      primaryClass={cs.RO}
+@article{el2023drift,
+  title={DRIFT: Deep Reinforcement Learning for Intelligent Floating Platforms Trajectories},
+  author={El-Hariry, Matteo and Richard, Antoine and Muralidharan, Vivek and Yalcin, Baris Can and Geist, Matthieu and Olivares-Mendez, Miguel},
+  journal={arXiv preprint arXiv:2310.04266},
+  year={2023}
 }
+
 @article{el2023rans,
   title={RANS: Highly-Parallelised Simulator for Reinforcement Learning based Autonomous Navigating Spacecrafts},
   author={El-Hariry, Matteo and Richard, Antoine and Olivares-Mendez, Miguel},
