@@ -7,7 +7,7 @@ EPS = 1e-6   # small constant to avoid divisions by 0 and log(0)
 
 def quat_to_mat(quat: torch.Tensor) -> torch.Tensor:
     w, x, y, z = torch.unbind(quat, -1)
-    two_s = 2.0 / (quat * quat).sum(-1)
+    two_s = 2.0 / ((quat * quat).sum(-1) + EPS)
     R = torch.stack(
         (
             1 - two_s * (y * y + z * z),
