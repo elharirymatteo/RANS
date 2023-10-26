@@ -235,6 +235,25 @@ PYTHON_PATH -m tensorboard.main --logdir runs/EXPERIMENT_NAME/summaries
 
 You can run (WandB)[https://wandb.ai/] with OmniIsaacGymEnvs by setting `wandb_activate=True` flag from the command line. You can set the group, name, entity, and project for the run by setting the `wandb_group`, `wandb_name`, `wandb_entity` and `wandb_project` arguments. Make sure you have WandB installed in the Isaac Sim Python executable with `PYTHON_PATH -m pip install wandb` before activating.
 
+## Citation 
+If you use the current repository in your work, we suggest citing the following papers:
+
+```bibtex
+@article{el2023drift,
+  title={DRIFT: Deep Reinforcement Learning for Intelligent Floating Platforms Trajectories},
+  author={El-Hariry, Matteo and Richard, Antoine and Muralidharan, Vivek and Yalcin, Baris Can and Geist, Matthieu and Olivares-Mendez, Miguel},
+  journal={arXiv preprint arXiv:2310.04266},
+  year={2023}
+}
+
+@article{el2023rans,
+  title={RANS: Highly-Parallelised Simulator for Reinforcement Learning based Autonomous Navigating Spacecrafts},
+  author={El-Hariry, Matteo and Richard, Antoine and Olivares-Mendez, Miguel},
+  journal={arXiv preprint arXiv:2310.07393},
+  year={2023}
+}
+```
+
 ## Directory Structure
 
 ```bash

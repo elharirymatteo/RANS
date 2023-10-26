@@ -1,6 +1,23 @@
-from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_core import Core, parse_data_dict
-from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_rewards import GoToXYReward
-from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_parameters import GoToXYParameters
+__author__ = "Antoine Richard, Matteo El Hariry"
+__copyright__ = (
+    "Copyright 2023, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
+)
+__license__ = "GPL"
+__version__ = "1.0.0"
+__maintainer__ = "Antoine Richard"
+__email__ = "antoine.richard@uni.lu"
+__status__ = "development"
+
+from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_core import (
+    Core,
+    parse_data_dict,
+)
+from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_rewards import (
+    GoToXYReward,
+)
+from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_parameters import (
+    GoToXYParameters,
+)
 from omniisaacgymenvs.utils.pin import VisualPin
 
 from omni.isaac.core.prims import XFormPrimView
@@ -8,28 +25,41 @@ from omni.isaac.core.prims import XFormPrimView
 import math
 import torch
 
-EPS = 1e-6   # small constant to avoid divisions by 0 and log(0)
+EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
+
 
 class GoToXYTask(Core):
     """
     Implements the GoToXY task. The robot has to reach a target position."""
 
-    def __init__(self, task_param: GoToXYParameters, reward_param: GoToXYReward, num_envs: int, device: str) -> None:
+    def __init__(
+        self,
+        task_param: GoToXYParameters,
+        reward_param: GoToXYReward,
+        num_envs: int,
+        device: str,
+    ) -> None:
         super(GoToXYTask, self).__init__(num_envs, device)
         # Task and reward parameters
         self._task_parameters = parse_data_dict(GoToXYParameters(), task_param)
         self._reward_parameters = parse_data_dict(GoToXYReward(), reward_param)
 
         # Buffers
-        self._goal_reached = torch.zeros((self._num_envs), device=self._device, dtype=torch.int32)
-        self._target_positions = torch.zeros((self._num_envs, 2), device=self._device, dtype=torch.float32)
-        self._task_label = self._task_label * 0 
+        self._goal_reached = torch.zeros(
+            (self._num_envs), device=self._device, dtype=torch.int32
+        )
+        self._target_positions = torch.zeros(
+            (self._num_envs, 2), device=self._device, dtype=torch.float32
+        )
+        self._task_label = self._task_label * 0
 
-    def create_stats(self, stats:dict) -> dict:
+    def create_stats(self, stats: dict) -> dict:
         """
         Creates a dictionary to store the training statistics for the task."""
 
-        torch_zeros = lambda: torch.zeros(self._num_envs, dtype=torch.float, device=self._device, requires_grad=False)
+        torch_zeros = lambda: torch.zeros(
+            self._num_envs, dtype=torch.float, device=self._device, requires_grad=False
+        )
 
         if not "position_reward" in stats.keys():
             stats["position_reward"] = torch_zeros()
@@ -46,39 +76,53 @@ class GoToXYTask(Core):
         Computes the observation tensor from the current state of the robot."""
 
         self._position_error = self._target_positions - current_state["position"]
-        self._task_data[:,:2] = self._position_error
+        self._task_data[:, :2] = self._position_error
         return self.update_observation_tensor(current_state)
 
-    def compute_reward(self, current_state: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
+    def compute_reward(
+        self, current_state: torch.Tensor, actions: torch.Tensor
+    ) -> torch.Tensor:
         """
         Computes the reward for the current state of the robot."""
 
         # position error
         self.position_dist = torch.sqrt(torch.square(self._position_error).sum(-1))
 
-        self.boundary_dist = self.position_dist - self._task_parameters.kill_dist 
-        self.boundary_penalty = - torch.exp( - self.boundary_dist / 0.25) * self._task_parameters.boundary_cost
+        self.boundary_dist = self.position_dist - self._task_parameters.kill_dist
+        self.boundary_penalty = (
+            -torch.exp(-self.boundary_dist / 0.25) * self._task_parameters.boundary_cost
+        )
 
         # Checks if the goal is reached
-        goal_is_reached = (self.position_dist < self._task_parameters.position_tolerance).int()
-        self._goal_reached *= goal_is_reached # if not set the value to 0
-        self._goal_reached += goal_is_reached # if it is add 1
+        goal_is_reached = (
+            self.position_dist < self._task_parameters.position_tolerance
+        ).int()
+        self._goal_reached *= goal_is_reached  # if not set the value to 0
+        self._goal_reached += goal_is_reached  # if it is add 1
 
         # Rewards
-        self.position_reward = self._reward_parameters.compute_reward(current_state, actions, self.position_dist)
+        self.position_reward = self._reward_parameters.compute_reward(
+            current_state, actions, self.position_dist
+        )
 
         return self.position_reward
-    
+
     def update_kills(self) -> torch.Tensor:
         """
         Updates if the platforms should be killed or not."""
 
         die = torch.zeros_like(self._goal_reached, dtype=torch.long)
         ones = torch.ones_like(self._goal_reached, dtype=torch.long)
-        die = torch.where(self.position_dist > self._task_parameters.kill_dist, ones, die)
-        die = torch.where(self._goal_reached > self._task_parameters.kill_after_n_steps_in_tolerance, ones, die)
+        die = torch.where(
+            self.position_dist > self._task_parameters.kill_dist, ones, die
+        )
+        die = torch.where(
+            self._goal_reached > self._task_parameters.kill_after_n_steps_in_tolerance,
+            ones,
+            die,
+        )
         return die
-    
+
     def update_statistics(self, stats: dict) -> dict:
         """
         Updates the training statistics."""
@@ -95,16 +139,32 @@ class GoToXYTask(Core):
 
         self._goal_reached[env_ids] = 0
 
-    def get_goals(self, env_ids: torch.Tensor, targets_position: torch.Tensor, targets_orientation: torch.Tensor) -> list:
+    def get_goals(
+        self,
+        env_ids: torch.Tensor,
+        targets_position: torch.Tensor,
+        targets_orientation: torch.Tensor,
+    ) -> list:
         """
         Generates a random goal for the task."""
 
         num_goals = len(env_ids)
-        self._target_positions[env_ids] = torch.rand((num_goals, 2), device=self._device)*self._task_parameters.goal_random_position*2 - self._task_parameters.goal_random_position
-        targets_position[env_ids,:2] += self._target_positions[env_ids]
+        self._target_positions[env_ids] = (
+            torch.rand((num_goals, 2), device=self._device)
+            * self._task_parameters.goal_random_position
+            * 2
+            - self._task_parameters.goal_random_position
+        )
+        targets_position[env_ids, :2] += self._target_positions[env_ids]
         return targets_position, targets_orientation
-    
-    def get_spawns(self, env_ids: torch.Tensor, initial_position: torch.Tensor, initial_orientation: torch.Tensor, step: int=0) -> list:
+
+    def get_spawns(
+        self,
+        env_ids: torch.Tensor,
+        initial_position: torch.Tensor,
+        initial_orientation: torch.Tensor,
+        step: int = 0,
+    ) -> list:
         """
         Generates spawning positions for the robots following a curriculum."""
 
@@ -120,9 +180,26 @@ class GoToXYTask(Core):
                 rmax = self._task_parameters.max_spawn_dist
                 rmin = self._task_parameters.min_spawn_dist
             else:
-                r = (step - self._task_parameters.spawn_curriculum_warmup) / (self._task_parameters.spawn_curriculum_end - self._task_parameters.spawn_curriculum_warmup)
-                rmax = r * (self._task_parameters.max_spawn_dist - self._task_parameters.spawn_curriculum_max_dist) + self._task_parameters.spawn_curriculum_max_dist
-                rmin = r * (self._task_parameters.min_spawn_dist - self._task_parameters.spawn_curriculum_min_dist) + self._task_parameters.spawn_curriculum_min_dist
+                r = (step - self._task_parameters.spawn_curriculum_warmup) / (
+                    self._task_parameters.spawn_curriculum_end
+                    - self._task_parameters.spawn_curriculum_warmup
+                )
+                rmax = (
+                    r
+                    * (
+                        self._task_parameters.max_spawn_dist
+                        - self._task_parameters.spawn_curriculum_max_dist
+                    )
+                    + self._task_parameters.spawn_curriculum_max_dist
+                )
+                rmin = (
+                    r
+                    * (
+                        self._task_parameters.min_spawn_dist
+                        - self._task_parameters.spawn_curriculum_min_dist
+                    )
+                    + self._task_parameters.spawn_curriculum_min_dist
+                )
         else:
             rmax = self._task_parameters.max_spawn_dist
             rmin = self._task_parameters.min_spawn_dist
@@ -130,14 +207,18 @@ class GoToXYTask(Core):
         # Randomizes the starting position of the platform
         r = torch.rand((num_resets,), device=self._device) * (rmax - rmin) + rmin
         theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
-        initial_position[env_ids, 0] += (r)*torch.cos(theta) + self._target_positions[env_ids, 0]
-        initial_position[env_ids, 1] += (r)*torch.sin(theta) + self._target_positions[env_ids, 1]
+        initial_position[env_ids, 0] += (r) * torch.cos(theta) + self._target_positions[
+            env_ids, 0
+        ]
+        initial_position[env_ids, 1] += (r) * torch.sin(theta) + self._target_positions[
+            env_ids, 1
+        ]
         initial_position[env_ids, 2] += 0
 
         # Randomizes the heading of the platform
         random_orient = torch.rand(num_resets, device=self._device) * math.pi
-        initial_orientation[env_ids, 0] = torch.cos(random_orient*0.5)
-        initial_orientation[env_ids, 3] = torch.sin(random_orient*0.5)
+        initial_orientation[env_ids, 0] = torch.cos(random_orient * 0.5)
+        initial_orientation[env_ids, 3] = torch.sin(random_orient * 0.5)
         return initial_position, initial_orientation
 
     def generate_target(self, path, position):
@@ -153,12 +234,13 @@ class GoToXYTask(Core):
             prim_path=path + "/pin",
             translation=position,
             name="target_0",
-            ball_radius = ball_radius,
-            poll_radius = poll_radius,
-            poll_length = poll_length,
-            color=color)
-        
-    def add_visual_marker_to_scene(self, scene): 
+            ball_radius=ball_radius,
+            poll_radius=poll_radius,
+            poll_length=poll_length,
+            color=color,
+        )
+
+    def add_visual_marker_to_scene(self, scene):
         """
         Adds the visual marker to the scene."""
 
