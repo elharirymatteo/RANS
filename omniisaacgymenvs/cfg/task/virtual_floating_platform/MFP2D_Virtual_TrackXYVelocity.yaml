@@ -19,39 +19,56 @@ env:
   clipObservations: {state: 5.0}
   clipActions: 1.0
 
-  split_thrust: False
+  split_thrust: True
 
-  # Uneven floor generation
-  use_uneven_floor: False
-  use_sinusoidal_floor: False
-  floor_min_freq: 0.25
-  floor_max_freq: 3
-  floor_min_offset: -6
-  floor_max_offset: 6
-  max_floor_force: 0.5
-  min_floor_force: 0.25
+  disturbances:
+    # Uneven floor generation
+    forces:
+      use_uneven_floor: False
+      use_sinusoidal_floor: False
+      floor_min_freq: 0.25
+      floor_max_freq: 3
+      floor_min_offset: -6
+      floor_max_offset: 6
+      max_floor_force: 0.5
+      min_floor_force: 0.25
 
-  # Torque disturbance generation
-  use_torque_disturbance: False
-  use_sinusoidal_torque: False
-  max_torque: 0.1 # Nm , 30% of max torque of thruster
-  min_torque: 0.0
+    torques:
+      # Torque disturbance generation
+      use_torque_disturbance: False
+      use_sinusoidal_torque: False
+      floor_min_freq: 0.25
+      floor_max_freq: 3
+      floor_min_offset: -6
+      floor_max_offset: 6
+      max_torque: 0.1 # Nm , 30% of max torque of thruster
+      min_torque: 0.0
 
-  # Add noisy observations
-  add_noise_on_pos: False 
-  position_noise_min: -0.01 
-  position_noise_max:  0.01
-  add_noise_on_vel: False
-  velocity_noise_min: -0.01
-  velocity_noise_max:  0.01
-  add_noise_on_heading: False
-  heading_noise_min: -0.025
-  heading_noise_max:  0.025
+    observations:
+      # Add noisy observations
+      add_noise_on_pos: False 
+      position_noise_min: -0.01 
+      position_noise_max:  0.01
+      add_noise_on_vel: False
+      velocity_noise_min: -0.01
+      velocity_noise_max:  0.01
+      add_noise_on_heading: False
+      heading_noise_min: -0.025
+      heading_noise_max:  0.025
 
-  # Add noisy actions
-  add_noise_on_act: False
-  min_action_noise: -0.05
-  max_action_noise:  0.05
+    actions:
+      # Add noisy actions
+      add_noise_on_act: False
+      min_action_noise: -0.05
+      max_action_noise:  0.05
+
+    mass:
+      # Add mass disturbances
+      add_mass_disturbances: False
+      min_mass: 4.0
+      max_mass: 6.0
+      CoM_max_displacement: 0.25
+      base_mass: ${...platform.core.mass}
 
   task_parameters: 
     name: TrackXYVelocity
@@ -124,8 +141,8 @@ sim:
     worker_thread_count: ${....num_threads}
     solver_type: ${....solver_type}
     use_gpu: ${eq:${....sim_device},"gpu"} # set to False to run on CPU
-    solver_position_iteration_count: 40
-    solver_velocity_iteration_count: 20
+    solver_position_iteration_count: 6
+    solver_velocity_iteration_count: 1
     contact_offset: 0.02
     rest_offset: 0.001
     bounce_threshold_velocity: 0.2
@@ -154,8 +171,8 @@ sim:
     enable_gyroscopic_forces: True
     # also in stage params
     # per-actor
-    solver_position_iteration_count: 40
-    solver_velocity_iteration_count: 20
+    solver_position_iteration_count: 6
+    solver_velocity_iteration_count: 1
     sleep_threshold: 0.005
     stabilization_threshold: 0.001
     # per-body
