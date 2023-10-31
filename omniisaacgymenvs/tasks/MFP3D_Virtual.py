@@ -34,6 +34,7 @@ from omniisaacgymenvs.tasks.virtual_floating_platform.MFP3D_disturbances import 
     TorqueDisturbance,
     NoisyObservations,
     NoisyActions,
+    MassDistributionDisturbances,
 )
 
 from omniisaacgymenvs.tasks.MFP2D_Virtual import MFP2DVirtual
@@ -81,10 +82,23 @@ class MFP3DVirtual(MFP2DVirtual):
         self.split_thrust = self._task_cfg["env"]["split_thrust"]
 
         # Domain randomization and adaptation
-        self.UF = UnevenFloorDisturbance(self._task_cfg, self._num_envs, self._device)
-        self.TD = TorqueDisturbance(self._task_cfg, self._num_envs, self._device)
-        self.ON = NoisyObservations(self._task_cfg)
-        self.AN = NoisyActions(self._task_cfg)
+        self.UF = UnevenFloorDisturbance(
+            self._task_cfg["env"]["disturbances"]["forces"],
+            self._num_envs,
+            self._device,
+        )
+        self.TD = TorqueDisturbance(
+            self._task_cfg["env"]["disturbances"]["torques"],
+            self._num_envs,
+            self._device,
+        )
+        self.ON = NoisyObservations(
+            self._task_cfg["env"]["disturbances"]["observations"]
+        )
+        self.AN = NoisyActions(self._task_cfg["env"]["disturbances"]["actions"])
+        self.MDD = MassDistributionDisturbances(
+            self._task_cfg["env"]["disturbances"]["mass"], self.num_envs, self._device
+        )
         # Collects the platform parameters
         self.dt = self._task_cfg["sim"]["dt"]
         # Collects the task parameters

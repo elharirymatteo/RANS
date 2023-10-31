@@ -33,6 +33,7 @@ from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_disturbances import 
     TorqueDisturbance,
     NoisyObservations,
     NoisyActions,
+    MassDistributionDisturbances,
 )
 
 from omni.isaac.core.utils.torch.rotations import *
@@ -80,10 +81,23 @@ class MFP2DVirtual(RLTask):
         self.split_thrust = self._task_cfg["env"]["split_thrust"]
 
         # Domain randomization and adaptation
-        self.UF = UnevenFloorDisturbance(self._task_cfg, self._num_envs, self._device)
-        self.TD = TorqueDisturbance(self._task_cfg, self._num_envs, self._device)
-        self.ON = NoisyObservations(self._task_cfg)
-        self.AN = NoisyActions(self._task_cfg)
+        self.UF = UnevenFloorDisturbance(
+            self._task_cfg["env"]["disturbances"]["forces"],
+            self._num_envs,
+            self._device,
+        )
+        self.TD = TorqueDisturbance(
+            self._task_cfg["env"]["disturbances"]["torques"],
+            self._num_envs,
+            self._device,
+        )
+        self.ON = NoisyObservations(
+            self._task_cfg["env"]["disturbances"]["observations"]
+        )
+        self.AN = NoisyActions(self._task_cfg["env"]["disturbances"]["actions"])
+        self.MDD = MassDistributionDisturbances(
+            self._task_cfg["env"]["disturbances"]["mass"], self.num_envs, self._device
+        )
         # Collects the platform parameters
         self.dt = self._task_cfg["sim"]["dt"]
         # Collects the task parameters
@@ -160,7 +174,7 @@ class MFP2DVirtual(RLTask):
         Adds training statistics to be recorded during training.
 
         Args:
-            names: list of names of the statistics to be recorded."""
+            names (List[str]): list of names of the statistics to be recorded."""
 
         for name in names:
             torch_zeros = lambda: torch.zeros(
@@ -214,13 +228,13 @@ class MFP2DVirtual(RLTask):
         Sets up the USD scene inside Omniverse for the task.
 
         Args:
-            scene: the USD scene to be set up."""
+            scene (Usd.Stage): the USD scene to be set up."""
 
         # Add the floating platform, and the marker
         self.get_floating_platform()
         self.get_target()
 
-        RLTask.set_up_scene(self, scene)
+        RLTask.set_up_scene(self, scene, replicate_physics=False)
 
         # Collects the interactive elements in the scene
         root_path = "/World/envs/.*/Modular_floating_platform"
@@ -237,7 +251,7 @@ class MFP2DVirtual(RLTask):
         # Add arrows to scene if task is go to pose
         scene, self._marker = self.task.add_visual_marker_to_scene(scene)
         return
-
+    
     def get_floating_platform(self):
         """
         Adds the floating platform to the scene."""
@@ -257,6 +271,7 @@ class MFP2DVirtual(RLTask):
     def get_target(self) -> None:
         """
         Adds the visualization target to the scene."""
+
         self.task.generate_target(
             self.default_zero_env_path, self._default_marker_position
         )
@@ -321,7 +336,7 @@ class MFP2DVirtual(RLTask):
         This function implements the logic to be performed before physics steps.
 
         Args:
-            actions: the actions to be applied to the platform."""
+            actions (torch.Tensor): the actions to be applied to the platform."""
 
         # If is not playing skip
         if not self._env._world.is_playing():
@@ -416,7 +431,8 @@ class MFP2DVirtual(RLTask):
         Sets the targets for the task.
 
         Args:
-            env_ids: the indices of the environments for which to set the targets."""
+            env_ids (torch.Tensor): the indices of the environments for which to set the targets.
+        """
 
         num_sets = len(env_ids)
         env_long = env_ids.long()
@@ -441,9 +457,9 @@ class MFP2DVirtual(RLTask):
         TODO: Impose more iniiial conditions, such as linear and angular velocity.
 
         Args:
-            env_ids: the indices of the environments for which to set the pose.
-            positions: the positions of the platform.
-            heading: the heading of the platform."""
+            env_ids (torch.Tensor): the indices of the environments for which to set the pose.
+            positions (torch.Tensor): the positions of the platform.
+            heading (torch.Tensor): the heading of the platform."""
 
         num_resets = len(env_ids)
         # Resets the counter of steps for which the goal was reached
@@ -476,7 +492,7 @@ class MFP2DVirtual(RLTask):
         Resets the environments with the given indices.
 
         Args:
-            env_ids: the indices of the environments to be reset."""
+            env_ids (torch.Tensor): the indices of the environments to be reset."""
 
         num_resets = len(env_ids)
         # Resets the counter of steps for which the goal was reached
@@ -484,6 +500,8 @@ class MFP2DVirtual(RLTask):
         self.virtual_platform.randomize_thruster_state(env_ids, num_resets)
         self.UF.generate_floor(env_ids, num_resets)
         self.TD.generate_torque(env_ids, num_resets)
+        self.MDD.randomize_masses(env_ids, num_resets)
+        self.MDD.set_masses(self._platforms.base, env_ids)
         # Randomizes the starting position of the platform within a disk around the target
         root_pos, root_rot = self.task.get_spawns(
             env_ids, self.initial_root_pos.clone(), self.initial_root_rot.clone()
