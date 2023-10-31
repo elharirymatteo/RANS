@@ -23,6 +23,43 @@ from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_disturbances import 
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_disturbances import (
     NoisyObservations as NoisyObservations2D,
 )
+from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_disturbances import (
+    MassDistributionDisturbances as MassDistributionDisturbances2D,
+)
+
+
+class MassDistributionDisturbances(MassDistributionDisturbances2D):
+    def __init__(self, task_cfg: dict, num_envs: int, device: str) -> None:
+        super(MassDistributionDisturbances2D, self).__init__(task_cfg, num_envs, device)
+
+    def randomize_masses(self, env_ids: torch.Tensor, num_resets: int) -> None:
+        """
+        Randomizes the masses of the platforms.
+
+        Args:
+            env_ids (torch.Tensor): The ids of the environments to reset.
+            num_resets (int): The number of resets to perform."""
+
+        self.platforms_mass[env_ids] = (
+            torch.rand(num_resets, dtype=torch.float32, device=self._device)
+            * (self._max_mass - self._min_mass)
+            + self._min_mass
+        )
+        r = (
+            torch.rand((num_resets), dtype=torch.float32, device=self._device)
+            * self._CoM_max_displacement
+        )
+        theta = (
+            torch.rand((num_resets), dtype=torch.float32, device=self._device)
+            * math.pi
+            * 2
+        )
+        phi = (
+            torch.rand((num_resets), dtype=torch.float32, device=self._device) * math.pi
+        )
+        self.platforms_CoM[env_ids, 0] = torch.cos(theta) * r
+        self.platforms_CoM[env_ids, 1] = torch.sin(theta) * r
+        self.platforms_CoM[env_ids, 2] = torch.cos(phi) * r
 
 
 class UnevenFloorDisturbance(UnevenFloorDisturbance2D):
@@ -30,6 +67,12 @@ class UnevenFloorDisturbance(UnevenFloorDisturbance2D):
     Creates disturbances on the platform by simulating an uneven floor."""
 
     def __init__(self, task_cfg: dict, num_envs: int, device: str) -> None:
+        """
+        Args:
+            task_cfg (dict): The task configuration.
+            num_envs (int): The number of environments to create.
+            device (str): The device to use for the computation."""
+
         super(UnevenFloorDisturbance, self).__init__(task_cfg, num_envs, device)
         self._max_floor_force = math.sqrt((self._max_floor_force**2) / 3)
         self._min_floor_force = math.sqrt((self._min_floor_force**2) / 3)
@@ -66,7 +109,11 @@ class UnevenFloorDisturbance(UnevenFloorDisturbance2D):
 
     def generate_floor(self, env_ids: torch.Tensor, num_resets: int) -> None:
         """
-        Generates the uneven floor."""
+        Generates the uneven floor.
+
+        Args:
+            env_ids (torch.Tensor): The ids of the environments to reset.
+            num_resets (int): The number of resets to perform."""
 
         if self._use_sinusoidal_floor:
             self._floor_x_freq[env_ids] = (
@@ -118,9 +165,12 @@ class UnevenFloorDisturbance(UnevenFloorDisturbance2D):
             self.floor_forces[env_ids, 1] = torch.sin(theta) * r
             self.floor_forces[env_ids, 2] = torch.cos(phi) * r
 
-    def get_floor_forces(self, root_pos: torch.Tensor) -> None:
+    def get_floor_forces(self, root_pos: torch.Tensor) -> torch.Tensor:
         """
-        Computes the floor forces for the current state of the robot."""
+        Computes the floor forces for the current state of the robot.
+
+        Args:
+            root_pos (torch.Tensor): The position of the root of the robot."""
 
         if self._use_sinusoidal_floor:
             self.floor_forces[:, 0] = (
@@ -181,7 +231,11 @@ class TorqueDisturbance(TorqueDisturbance2D):
 
     def generate_torque(self, env_ids: torch.Tensor, num_resets: int) -> None:
         """
-        Generates the torque disturbance."""
+        Generates the torque disturbance.
+
+        Args:
+            env_ids (torch.Tensor): The ids of the environments to reset.
+            num_resets (int): The number of resets to perform."""
 
         if self._use_sinusoidal_torque:
             #  use the same min/max frequencies and offsets for the floor
@@ -234,9 +288,15 @@ class TorqueDisturbance(TorqueDisturbance2D):
             self.torque_forces[env_ids, 1] = torch.sin(theta) * r
             self.torque_forces[env_ids, 2] = torch.cos(phi) * r
 
-    def get_torque_disturbance(self, root_pos: torch.Tensor) -> None:
+    def get_torque_disturbance(self, root_pos: torch.Tensor) -> torch.Tensor:
         """
-        Computes the torque forces for the current state of the robot."""
+        Computes the torque forces for the current state of the robot.
+
+        Args:
+            root_pos (torch.Tensor): The position of the root of the robot.
+
+        Returns:
+            torch.Tensor: The torque forces to apply to the robot."""
 
         if self._use_sinusoidal_torque:
             self.torque_forces[:, 0] = (
@@ -260,6 +320,10 @@ class NoisyObservations(NoisyObservations2D):
     Adds noise to the observations of the robot."""
 
     def __init__(self, task_cfg: dict) -> None:
+        """
+        Args:
+            task_cfg (dict): The task configuration."""
+
         super(NoisyObservations, self).__init__(task_cfg)
 
 
@@ -268,4 +332,8 @@ class NoisyActions(NoisyActions2D):
     Adds noise to the actions of the robot."""
 
     def __init__(self, task_cfg: dict) -> None:
+        """
+        Args:
+            task_cfg (dict): The task configuration."""
+
         super(NoisyActions, self).__init__(task_cfg)
