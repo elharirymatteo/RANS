@@ -30,7 +30,7 @@ from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_disturbances import 
 
 class MassDistributionDisturbances(MassDistributionDisturbances2D):
     def __init__(self, task_cfg: dict, num_envs: int, device: str) -> None:
-        super(MassDistributionDisturbances2D, self).__init__(task_cfg, num_envs, device)
+        super(MassDistributionDisturbances, self).__init__(task_cfg, num_envs, device)
 
     def randomize_masses(self, env_ids: torch.Tensor, num_resets: int) -> None:
         """
@@ -44,7 +44,7 @@ class MassDistributionDisturbances(MassDistributionDisturbances2D):
             torch.rand(num_resets, dtype=torch.float32, device=self._device)
             * (self._max_mass - self._min_mass)
             + self._min_mass
-        )
+        ).unsqueeze(1)
         r = (
             torch.rand((num_resets), dtype=torch.float32, device=self._device)
             * self._CoM_max_displacement
