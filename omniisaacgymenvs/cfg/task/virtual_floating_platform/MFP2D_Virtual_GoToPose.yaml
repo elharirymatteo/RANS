@@ -85,8 +85,8 @@ env:
     heading_reward_mode: exponential
     position_exponential_reward_coeff: 0.25
     heading_exponential_reward_coeff: 0.25
-    position_scale: 1.0
-    heading_scale: 1.0
+    position_scale: 0.666
+    heading_scale: 0.333
 
   platform:
     randomization:
