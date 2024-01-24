@@ -98,7 +98,7 @@ PYTHON_PATH -m pip install rl_games .
 To train your first policy, run:
 
 ```bash
-PYTHON_PATH scripts/rlgames_train.py task=virtual_floating_platform/MFP2D_Virtual_GoToXY train=virtual_floating_platform/MFP2D_PPOmulti_dict_MLP
+PYTHON_PATH scripts/rlgames_train_mfp.py task=virtual_floating_platform/MFP2D_Virtual_GoToXY train=virtual_floating_platform/MFP2D_PPOmulti_dict_MLP
 ```
 
 You should see an Isaac Sim window pop up. Once Isaac Sim initialization completes, the FloatingPlatform scene will be constructed and simulation will start running automatically. The process will terminate once training finishes.
@@ -107,7 +107,7 @@ You should see an Isaac Sim window pop up. Once Isaac Sim initialization complet
 Here's another example - GoToPose - using the multi-threaded training script:
 
 ```bash
-PYTHON_PATH scripts/rlgames_train_mt.py task=virtual_floating_platform/MFP2D_Virtual_GoToPose train=virtual_floating_platform/MFP2D_PPOmulti_dict_MLP
+PYTHON_PATH scripts/rlgames_train_mfp.py task=virtual_floating_platform/MFP2D_Virtual_GoToPose train=virtual_floating_platform/MFP2D_PPOmulti_dict_MLP
 ```
 
 Note that by default, we show a Viewport window with rendering, which slows down training. You can choose to close the Viewport window during training for better performance. The Viewport window can be re-enabled by selecting `Window > Viewport` from the top menu bar.
@@ -115,7 +115,7 @@ Note that by default, we show a Viewport window with rendering, which slows down
 To achieve maximum performance, you can launch training in `headless` mode as follows:
 
 ```bash
-PYTHON_PATH scripts/rlgames_train.py task=virtual_floating_platform/MFP2D_Virtual_GoToPose train=virtual_floating_platform/MFP2D_PPOmulti_dict_MLP headless=True
+PYTHON_PATH scripts/rlgames_train_mfp.py task=virtual_floating_platform/MFP2D_Virtual_GoToPose train=virtual_floating_platform/MFP2D_PPOmulti_dict_MLP headless=True
 ```
 
 #### A Note on the Startup Time of the Simulation
@@ -134,7 +134,7 @@ defaults to the task name, but can also be overridden via the `experiment` argum
 To load a trained checkpoint and continue training, use the `checkpoint` argument:
 
 ```bash
-PYTHON_PATH scripts/rlgames_train.py task=virtual_floating_platform/MFP2D_Virtual_GoToPose train=virtual_floating_platform/MFP2D_PPOmulti_dict_MLP checkpoint=runs/MFP2D_Virtual_GoToPose/nn/MFP2D_Virtual_GoToPose.pth
+PYTHON_PATH scripts/rlgames_train_mfp.py task=virtual_floating_platform/MFP2D_Virtual_GoToPose train=virtual_floating_platform/MFP2D_PPOmulti_dict_MLP checkpoint=runs/MFP2D_Virtual_GoToPose/nn/MFP2D_Virtual_GoToPose.pth
 ```
 
 To load a trained checkpoint and only perform inference (no training), pass `test=True` 
@@ -142,7 +142,7 @@ as an argument, along with the checkpoint name. To avoid rendering overhead, you
 also want to run with fewer environments using `num_envs=64`:
 
 ```bash
-PYTHON_PATH scripts/rlgames_train.py task=virtual_floating_platform/MFP2D_Virtual_GoToPose train=virtual_floating_platform/MFP2D_PPOmulti_dict_MLP checkpoint=runs/MFP2D_Virtual_GoToPose/nn/MFP2D_Virtual_GoToPose.pth test=True num_envs=64
+PYTHON_PATH scripts/rlgames_train_mfp.py task=virtual_floating_platform/MFP2D_Virtual_GoToPose train=virtual_floating_platform/MFP2D_PPOmulti_dict_MLP checkpoint=runs/MFP2D_Virtual_GoToPose/nn/MFP2D_Virtual_GoToPose.pth test=True num_envs=64
 ```
 
 Note that if there are special characters such as `[` or `=` in the checkpoint names, 
@@ -170,7 +170,7 @@ This script will sample random actions from the action space and apply these act
 To run a simple form of PPO from `rl_games`, use the single-threaded training script:
 
 ```bash
-PYTHON_PATH scripts/rlgames_train.py task=virtual_floating_platform/MFP2D_Virtual_GoToXY
+PYTHON_PATH scripts/rlgames_train_mfp.py task=virtual_floating_platform/MFP2D_Virtual_GoToXY
 ```
 
 This script creates an instance of the PPO runner in `rl_games` and automatically launches training and simulation. Once training completes (the total number of iterations have been reached), the script will exit. If running inference with `test=True checkpoint=<path/to/checkpoint>`, the script will run indefinitely until terminated. Note that this script will have limitations on interaction with the UI.
@@ -181,7 +181,7 @@ This script creates an instance of the PPO runner in `rl_games` and automaticall
 Lastly, we provide a multi-threaded training script that executes the RL policy on a separate thread than the main thread used for simulation and rendering:
 
 ```bash
-PYTHON_PATH scripts/rlgames_train_mt.py task=virtual_floating_platform/MFP2D_Virtual_GoToXY
+PYTHON_PATH scripts/rlgames_train_mfp.py task=virtual_floating_platform/MFP2D_Virtual_GoToXY
 ```
 
 This script uses the same RL Games PPO policy as the above, but runs the RL loop on a new thread. Communication between the RL thread and the main thread happens on threaded Queues. Simulation will start automatically, but the script will **not** exit when training terminates, except when running in headless mode. Simulation will stop when training completes or can be stopped by clicking on the Stop button in the UI. Training can be launched again by clicking on the Play button. Similarly, if running inference with `test=True checkpoint=<path/to/checkpoint>`, simulation will run until the Stop button is clicked, or the script will run indefinitely until the process is terminated.
