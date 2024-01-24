@@ -16,8 +16,8 @@ from omniisaacgymenvs.robots.articulations.views.mfp2d_virtual_thrusters_view im
     ModularFloatingPlatformView,
 )
 
-from omniisaacgymenvs.robots.sensors.exteroceptive.rs_sensor import sensor_factory
-from omniisaacgymenvs.robots.sensors.exteroceptive.sensor import RLSensors
+from omniisaacgymenvs.robots.sensors.proprioceptive.imu import IMU
+from omniisaacgymenvs.robots.sensors.proprioceptive.Type import *
 
 from omniisaacgymenvs.utils.pin import VisualPin
 from omniisaacgymenvs.utils.arrow import VisualArrow
@@ -56,7 +56,7 @@ from dataclasses import dataclass
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
 
-class MFP2DVirtual_RGBD(RLTask):
+class MFP2DVirtual_IMU(RLTask):
     """
     The main class used to run tasks on the floating platform.
     Unlike other class in this repo, this class can be used to run different tasks.
@@ -237,7 +237,6 @@ class MFP2DVirtual_RGBD(RLTask):
         # Add the floating platform, and the marker
         self.get_floating_platform()
         self.get_target()
-        self.get_sensor()
 
         RLTask.set_up_scene(self, scene, replicate_physics=False)
 
@@ -246,12 +245,13 @@ class MFP2DVirtual_RGBD(RLTask):
         self._platforms = ModularFloatingPlatformView(
             prim_paths_expr=root_path, name="modular_floating_platform_view"
         )
+
         # Add views to scene
         scene.add(self._platforms)
         scene.add(self._platforms.base)
         scene.add(self._platforms.thrusters)
 
-        self.collect_sensors()
+        self.get_imu()
 
         # Add arrows to scene if task is go to pose
         scene, self._marker = self.task.add_visual_marker_to_scene(scene)
@@ -280,30 +280,16 @@ class MFP2DVirtual_RGBD(RLTask):
         self.task.generate_target(
             self.default_zero_env_path, self._default_marker_position
         )
-
-    def get_sensor(self) -> None: 
-        """
-        attach USD camera module to body.
-        """
-        self.sensor = sensor_factory.get(self._task_cfg["env"]["sensors"]["geom"]["module_name"])(
-            self._task_cfg["env"]["sensors"]
+    
+    def get_imu(self) -> None:
+        imu_t = IMU_T(
+            dt = self.dt, 
+            body_to_sensor_frame=self._task_cfg["env"]["sensors"]["imu"]["body_to_sensor_frame"], 
+            sensor_frame_to_optical_frame=self._task_cfg["env"]["sensors"]["imu"]["sensor_frame_to_optical_frame"], 
+            gyro_param=Gyroscope_T(**self._task_cfg["env"]["sensors"]["imu"]["gyro_param"]),
+            accel_param=Accelometer_T(**self._task_cfg["env"]["sensors"]["imu"]["accel_param"]),
         )
-        self.sensor.attach_to_base(self.default_zero_env_path + "/Modular_floating_platform/core/body")
-        self.sensor.initialize()
-
-    def collect_sensors(self):
-        """
-        collect USD sensor and make RLSensor associated with each prim.
-        """
-        active_sensors = []
-        for i in range(self._num_envs):
-            for sensor_type in self._task_cfg["env"]["sensors"]["sensor"].keys():
-                sensor_path = self._task_cfg["env"]["sensors"]["sensor"][sensor_type]["prim_path"].split("/")
-                sensor_path[2] = f"env_{i}"
-                self._task_cfg["env"]["sensors"]["sensor"][sensor_type]["prim_path"] = "/".join(sensor_path)
-            rl_sensor = RLSensors(self._task_cfg["env"]["sensors"]["sensor"])
-            active_sensors.append(rl_sensor)
-        self.active_sensors = active_sensors
+        self.imu = IMU(imu_t)
 
     def update_state(self) -> None:
         """
@@ -340,6 +326,18 @@ class MFP2DVirtual_RGBD(RLTask):
             "linear_velocity": root_velocities[:, :2],
             "angular_velocity": root_velocities[:, -1],
         }
+        self._update_imu_state(self.root_pos.to(torch.float32), 
+                               self.root_quats.to(torch.float32), 
+                               self.root_velocities[:, :3].to(torch.float32), 
+                               self.root_velocities[:, 3:].to(torch.float32)
+                               )
+    
+    def _update_imu_state(self, position, orientation, linear_velocity, angular_velocity):
+        root_state = State(position=position, 
+                           orientation=orientation, 
+                           linear_velocity=linear_velocity, 
+                           angular_velocity=angular_velocity)
+        self.imu.update(root_state)
 
     def get_observations(self) -> Dict[str, torch.Tensor]:
         """
@@ -347,6 +345,7 @@ class MFP2DVirtual_RGBD(RLTask):
 
         Returns:
             observations: a dictionary containing the observations of the task."""
+
         # implement logic to retrieve observation states
         self.update_state()
         # Get the state
@@ -355,24 +354,12 @@ class MFP2DVirtual_RGBD(RLTask):
         self.obs_buf["transforms"] = self.virtual_platform.current_transforms
         # Get the action masks
         self.obs_buf["masks"] = self.virtual_platform.action_masks
-        # Get the sensor data
-        rgb_obs, depth_obs = self.get_rgbd_data()
-        print(f"{rgb_obs.dtype}, {rgb_obs.shape}")
-        print(f"{depth_obs.dtype}, {depth_obs.shape}")
+        # Get IMU observation
+        self.imu_obs = self.imu.state
+        print(self.imu_obs)
 
         observations = {self._platforms.name: {"obs_buf": self.obs_buf}}
         return observations
-    
-    def get_rgbd_data(self):
-        """
-        return batched sensor data (RGBD)
-        rgb: (batch_size, 3, height, width)
-        depth: (batch_size, 1, height, width)
-        """
-        rs_obs = [sensor.get_observation() for sensor in self.active_sensors]
-        rgb = torch.stack([ob["rgb"] for ob in rs_obs])
-        depth = torch.stack([ob["depth"] for ob in rs_obs])
-        return rgb, depth
 
     def pre_physics_step(self, actions: torch.Tensor) -> None:
         """

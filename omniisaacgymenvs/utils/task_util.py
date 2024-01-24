@@ -46,6 +46,7 @@ def initialize_task(config, env, init_sim=True):
     from omniisaacgymenvs.tasks.crazyflie import CrazyflieTask
     from omniisaacgymenvs.tasks.MFP2D_Virtual import MFP2DVirtual
     from omniisaacgymenvs.tasks.MFP2D_Virtual_RGBD import MFP2DVirtual_RGBD
+    from omniisaacgymenvs.tasks.MFP2D_Virtual_IMU import MFP2DVirtual_IMU
     from omniisaacgymenvs.tasks.MFP3D_Virtual import MFP3DVirtual
 
     # Mappings from strings to environments
@@ -68,6 +69,7 @@ def initialize_task(config, env, init_sim=True):
         "MFP2DVirtual":MFP2DVirtual,
         "MFP3DVirtual":MFP3DVirtual,
         "MFP2DVirtual_RGBD":MFP2DVirtual_RGBD,
+        "MFP2DVirtual_IMU": MFP2DVirtual_IMU
     }
 
     cfg = sim_config.config
