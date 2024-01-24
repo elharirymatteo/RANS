@@ -64,10 +64,10 @@ params:
     gamma: 0.99
     tau: 0.95
     learning_rate: 1e-4
-    lr_schedule: adaptive
+    lr_schedule: transformer
     min_lr: 0
     base_lr: 3e-4
-    warmup_steps: 10
+    warmup_steps: 15
     warmup_factor: 0.1
     kl_threshold: 0.016
     score_to_win: 20000
