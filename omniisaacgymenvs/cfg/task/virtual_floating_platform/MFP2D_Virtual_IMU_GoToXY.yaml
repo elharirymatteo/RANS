@@ -2,7 +2,7 @@
 name: MFP2DVirtual_IMU
 
 physics_engine: ${..physics_engine}
-experiment: MFP2DVirtual_RGBD_GoToXY
+experiment: MFP2D_Virtual_IMU_GoToXY
 
 env_path: /World/envs/env_0/Modular_floating_platform
 
