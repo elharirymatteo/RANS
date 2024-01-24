@@ -288,6 +288,7 @@ class MFP2DVirtual_IMU(RLTask):
             sensor_frame_to_optical_frame=self._task_cfg["env"]["sensors"]["imu"]["sensor_frame_to_optical_frame"], 
             gyro_param=Gyroscope_T(**self._task_cfg["env"]["sensors"]["imu"]["gyro_param"]),
             accel_param=Accelometer_T(**self._task_cfg["env"]["sensors"]["imu"]["accel_param"]),
+            gravity_vector=self._task_cfg["env"]["sensors"]["imu"]["gravity_vector"],
         )
         self.imu = IMU(imu_t)
 
@@ -355,8 +356,7 @@ class MFP2DVirtual_IMU(RLTask):
         # Get the action masks
         self.obs_buf["masks"] = self.virtual_platform.action_masks
         # Get IMU observation
-        self.imu_obs = self.imu.state
-        print(self.imu_obs)
+        self.imu_obs = torch.cat([self.imu.state.linear_acceleration, self.imu.state.angular_velocity], dim=1)
 
         observations = {self._platforms.name: {"obs_buf": self.obs_buf}}
         return observations

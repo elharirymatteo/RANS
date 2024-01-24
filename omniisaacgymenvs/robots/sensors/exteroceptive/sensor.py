@@ -8,7 +8,7 @@ import numpy as np
 import cv2
 import torch
 
-from omniisaacgymenvs.robots.sensors.writer import writer_factory
+from omniisaacgymenvs.robots.sensors.exteroceptive.writer import writer_factory
 
 class RLCamera:
     def __init__(self, prim_path:str, sensor_param:dict):

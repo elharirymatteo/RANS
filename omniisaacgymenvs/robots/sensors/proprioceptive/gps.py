@@ -1,6 +1,6 @@
 import numpy as numpy
-from base_sensor import BaseSensor
-from Type import *
+from omniisaacgymenvs.robots.sensors.proprioceptive.base_sensor import BaseSensor
+from omniisaacgymenvs.robots.sensors.proprioceptive.Type import *
 
 class GPS(BaseSensor):
     """

@@ -77,10 +77,11 @@ class State:
         """
         transform from inertial frame to body frame.
         """
-        transform = torch.zeros(self.position.shape[0], 4, 4)
-        rot_np = self.orientation.numpy()
+        transform = torch.zeros(self.position.shape[0], 4, 4).to(self.orientation.device)
+        rot_np = self.orientation.cpu().numpy()
         # TODO: find how to use only pytorch to convert quat to mat
-        rotation = torch.from_numpy(np.stack([quaternion.as_rotation_matrix(np.quaternion(*rot_np[i])) for i in range(rot_np.shape[0])])).to(torch.float32)
+        rotation = torch.from_numpy(
+            np.stack([quaternion.as_rotation_matrix(np.quaternion(*rot_np[i])) for i in range(rot_np.shape[0])])).to(self.orientation.device).to(torch.float32)
         translation = self.position
         transform[:, :3, :3] = rotation.transpose(1, 2)
         transform[:, :3, 3] = - 1 * torch.bmm(rotation.transpose(1, 2), translation[:, :, None]).squeeze()

@@ -1,6 +1,6 @@
 import numpy as np
-from Type import *
 from dataclasses import asdict
+from omniisaacgymenvs.robots.sensors.proprioceptive.Type import *
 
 
 class BaseSensor:
