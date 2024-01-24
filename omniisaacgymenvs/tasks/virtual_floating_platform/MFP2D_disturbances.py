@@ -13,6 +13,7 @@ import math
 import torch
 import omni
 from typing import Tuple
+from pxr import Gf, UsdPhysics
 
 
 class MassDistributionDisturbances:
@@ -94,7 +95,13 @@ class MassDistributionDisturbances:
             idx (torch.Tensor): The ids of the environments to reset."""
         if self._add_mass_disturbances:
             body.set_masses(self.platforms_mass[idx, 0], indices=idx)
-            body.set_coms(self.platforms_CoM[idx], indices=idx)
+            for id in idx.tolist():
+                rb = body._prims[id]
+                massAPI = UsdPhysics.MassAPI(rb)
+                massAPI.GetCenterOfMassAttr().Set(
+                    Gf.Vec3d(*self.platforms_CoM[idx].cpu().numpy().tolist())
+                )
+            # body.set_coms(self.platforms_CoM[idx], indices=idx)
 
 
 class UnevenFloorDisturbance:
