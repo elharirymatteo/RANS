@@ -2,6 +2,7 @@ import omni
 
 from typing import List, Tuple
 from pxr import Gf, UsdPhysics, UsdGeom, UsdShade, Sdf, Usd
+import numpy as np
 
 # ==================================================================================================
 # Utils for Xform manipulation
