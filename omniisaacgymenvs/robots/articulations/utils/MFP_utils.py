@@ -597,3 +597,267 @@ def createRevoluteJoint(
     joint.CreateLocalRot1Attr().Set(Gf.Quatf(1, 0, 0, 0))
     joint.CreateAxisAttr(axis)
     return joint
+
+
+def createPrismaticJoint(
+    stage: Usd.Stage,
+    path: str,
+    body_path1: str,
+    body_path2: str,
+    axis: str = "Z",
+    enable_drive: bool = False,
+) -> UsdPhysics.PrismaticJoint:
+    """
+    Creates a prismatic joint between two bodies.
+
+    Args:
+        stage (Usd.Stage): The stage to create the revolute joint.
+        path (str): The path of the revolute joint.
+        body_path1 (str): The path of the first body.
+        body_path2 (str): The path of the second body.
+        axis (str): The axis of rotation.
+        enable_drive (bool): Enable or disable the drive.
+
+    Returns:
+        UsdPhysics.PrismaticJoint: The prismatic joint.
+    """
+
+    # Create revolute joint
+    joint = UsdPhysics.PrismaticJoint.Define(stage, path)
+    # Set body targets
+    joint.CreateBody0Rel().SetTargets([body_path1])
+    joint.CreateBody1Rel().SetTargets([body_path2])
+
+    # Get from the simulation the position/orientation of the bodies
+    body_1_prim = stage.GetPrimAtPath(body_path1)
+    body_2_prim = stage.GetPrimAtPath(body_path2)
+    xform_body_1 = UsdGeom.Xformable(body_1_prim)
+    xform_body_2 = UsdGeom.Xformable(body_2_prim)
+    transform_body_1 = xform_body_1.ComputeLocalToWorldTransform(0.0)
+    transform_body_2 = xform_body_2.ComputeLocalToWorldTransform(0.0)
+    t12 = np.matmul(np.linalg.inv(transform_body_1), transform_body_2)
+    translate_body_12 = Gf.Vec3f([t12[3][0], t12[3][1], t12[3][2]])
+    Q_body_12 = Gf.Transform(Gf.Matrix4d(t12.tolist())).GetRotation().GetQuat()
+
+    # Set the transform between the bodies inside the joint
+    joint.CreateLocalPos0Attr().Set(translate_body_12)
+    joint.CreateLocalPos1Attr().Set(Gf.Vec3d([0, 0, 0]))
+    joint.CreateLocalRot0Attr().Set(Gf.Quatf(Q_body_12))
+    joint.CreateLocalRot1Attr().Set(Gf.Quatf(1, 0, 0, 0))
+    joint.CreateAxisAttr(axis)
+    return joint
+
+
+def createP3Joint(
+    stage: Usd.Stage,
+    path: str,
+    body_path1: str,
+    body_path2: str,
+    damping: float = 1e3,
+    stiffness: float = 1e6,
+    articulation_root: str = None,
+    enable_drive: bool = False,
+) -> Tuple[
+    UsdPhysics.PrismaticJoint, UsdPhysics.PrismaticJoint, UsdPhysics.PrismaticJoint
+]:
+    """
+    Creates 3 Prismatic joints between two bodies. One for each axis (X,Y,Z).
+    To create this joint, it needs to add two dummy bodies, to do this it
+    needs to create them at the same position as the 1st body, and then
+    apply a RigidBodyAPI and a MassAPI to them. The addition of these bodies is
+    automated, and can fail to recover the position of the 1st body correctly.
+
+    Args:
+        stage (Usd.Stage): The stage to create the prismatic joint.
+        path (str): The path of the prismatic joint.
+        body_path1 (str): The path of the first body.
+        body_path2 (str): The path of the second body.
+        damping (float): The damping of the drive.
+        stiffness (float): The stiffness of the drive.
+        articulation_root (str): The path of the articulation root.
+        enable_drive (bool): Enable or disable the drive.
+
+    Returns:
+        Tuple[UsdPhysics.PrismaticJoint, UsdPhysics.PrismaticJoint, UsdPhysics.PrismaticJoint]: The prismatic joints.
+    """
+
+    # Get the position/orientation of the two bodies
+    body_1_prim = stage.GetPrimAtPath(body_path1)
+    body_2_prim = stage.GetPrimAtPath(body_path2)
+    if articulation_root is not None:
+        root_prim = stage.GetPrimAtPath(articulation_root)
+        transform_body_1 = getTransform(body_1_prim, root_prim)
+        transform_body_2 = getTransform(body_2_prim, root_prim)
+    else:
+        xform_body_1 = UsdGeom.Xformable(body_1_prim)
+        xform_body_2 = UsdGeom.Xformable(body_2_prim)
+        transform_body_1 = xform_body_1.ComputeLocalToWorldTransform(0.0)
+        transform_body_2 = xform_body_2.ComputeLocalToWorldTransform(0.0)
+
+    translate_body_1 = Gf.Vec3f(
+        [transform_body_1[3][0], transform_body_1[3][1], transform_body_1[3][2]]
+    )
+    Q_body_1d = Gf.Transform(transform_body_1).GetRotation().GetQuat()
+
+    # Generates dummy bodies for the joints at the position of the 1st body
+    xaxis_body_path, xaxis_body_prim = createXform(stage, path + "/x_axis_body")
+    yaxis_body_path, yaxis_body_prim = createXform(stage, path + "/y_axis_body")
+    setTranslate(xaxis_body_prim, translate_body_1)
+    setTranslate(yaxis_body_prim, translate_body_1)
+    setOrient(xaxis_body_prim, Q_body_1d)
+    setOrient(yaxis_body_prim, Q_body_1d)
+    applyRigidBody(xaxis_body_prim)
+    applyRigidBody(yaxis_body_prim)
+    applyMass(xaxis_body_prim, 0.0000001)
+    applyMass(yaxis_body_prim, 0.0000001)
+
+    # Create the 3 prismatic joints
+    xaxis_joint = createPrismaticJoint(
+        stage, path + "/x_axis_joint", body_path1, xaxis_body_path, "X"
+    )
+    yaxis_joint = createPrismaticJoint(
+        stage, path + "/y_axis_joint", xaxis_body_path, yaxis_body_path, "Y"
+    )
+    zaxis_joint = createPrismaticJoint(
+        stage, path + "/z_axis_joint", yaxis_body_path, body_path2, "Z"
+    )
+
+    # Get the delta transform between the 1st and 2nd body
+    t12 = np.matmul(np.linalg.inv(transform_body_1), transform_body_2)
+    translate_body_12 = Gf.Vec3f([t12[3][0], t12[3][1], t12[3][2]])
+    Q_body_12 = Gf.Transform(Gf.Matrix4d(t12.tolist())).GetRotation().GetQuat()
+
+    # Set the transform between the bodies inside the joints
+    xaxis_joint.CreateLocalPos0Attr().Set(Gf.Vec3f([0, 0, 0]))
+    yaxis_joint.CreateLocalPos0Attr().Set(Gf.Vec3f([0, 0, 0]))
+    zaxis_joint.CreateLocalPos0Attr().Set(translate_body_12)
+    xaxis_joint.CreateLocalRot0Attr().Set(Gf.Quatf(1, 0, 0, 0))
+    yaxis_joint.CreateLocalRot0Attr().Set(Gf.Quatf(1, 0, 0, 0))
+    zaxis_joint.CreateLocalRot0Attr().Set(Gf.Quatf(Q_body_12))
+
+    xaxis_joint.CreateLocalPos1Attr().Set(Gf.Vec3f([0, 0, 0]))
+    yaxis_joint.CreateLocalPos1Attr().Set(Gf.Vec3f([0, 0, 0]))
+    zaxis_joint.CreateLocalPos1Attr().Set(Gf.Vec3f([0, 0, 0]))
+    xaxis_joint.CreateLocalRot1Attr().Set(Gf.Quatf(1, 0, 0, 0))
+    yaxis_joint.CreateLocalRot1Attr().Set(Gf.Quatf(1, 0, 0, 0))
+    zaxis_joint.CreateLocalRot1Attr().Set(Gf.Quatf(1, 0, 0, 0))
+
+    # Add drives to the joints
+    if enable_drive:
+        xaxis_drive = createDrive(
+            stage.GetPrimAtPath(path + "/x_axis_joint"),
+            token="linear",
+            damping=damping,
+            stiffness=stiffness,
+        )
+        yaxis_drive = createDrive(
+            stage.GetPrimAtPath(path + "/y_axis_joint"),
+            token="linear",
+            damping=damping,
+            stiffness=stiffness,
+        )
+        zaxis_drive = createDrive(
+            stage.GetPrimAtPath(path + "/z_axis_joint"),
+            token="linear",
+            damping=damping,
+            stiffness=stiffness,
+        )
+    return (xaxis_joint, yaxis_joint, zaxis_joint)
+
+
+def createP2Joint(
+    stage: Usd.Stage,
+    path: str,
+    body_path1: str,
+    body_path2: str,
+    damping: float = 1e3,
+    stiffness: float = 1e6,
+    articulation_root: str = None,
+    enable_drive: bool = False,
+) -> Tuple[UsdPhysics.PrismaticJoint, UsdPhysics.PrismaticJoint]:
+    """
+    Creates 2 Prismatic joints between two bodies. One for each axis (X,Y).
+    To create this joint, it needs to add one dummy body, to do this it
+    needs to create it at the same position as the 1st body, and then
+    apply a RigidBodyAPI and a MassAPI to it. The addition of these bodies is
+    automated, and can fail to recover the position of the 1st body correctly.
+
+    Args:
+        stage (Usd.Stage): The stage to create the prismatic joint.
+        path (str): The path of the prismatic joint.
+        body_path1 (str): The path of the first body.
+        body_path2 (str): The path of the second body.
+        damping (float): The damping of the drive.
+        stiffness (float): The stiffness of the drive.
+        articulation_root (str): The path of the articulation root.
+        enable_drive (bool): Enable or disable the drive.
+
+    Returns:
+        Tuple[UsdPhysics.PrismaticJoint, UsdPhysics.PrismaticJoint]: The prismatic joints.
+    """
+
+    # Get the position/orientation of the two bodies
+    body_1_prim = stage.GetPrimAtPath(body_path1)
+    body_2_prim = stage.GetPrimAtPath(body_path2)
+    if articulation_root is not None:
+        root_prim = stage.GetPrimAtPath(articulation_root)
+        transform_body_1 = getTransform(body_1_prim, root_prim)
+        transform_body_2 = getTransform(body_2_prim, root_prim)
+    else:
+        xform_body_1 = UsdGeom.Xformable(body_1_prim)
+        xform_body_2 = UsdGeom.Xformable(body_2_prim)
+        transform_body_1 = xform_body_1.ComputeLocalToWorldTransform(0.0)
+        transform_body_2 = xform_body_2.ComputeLocalToWorldTransform(0.0)
+
+    translate_body_1 = Gf.Vec3f(
+        [transform_body_1[3][0], transform_body_1[3][1], transform_body_1[3][2]]
+    )
+    Q_body_1d = Gf.Transform(transform_body_1).GetRotation().GetQuat()
+
+    # Generates dummy body for the joints at the position of the 1st body
+    xaxis_body_path, xaxis_body_prim = createXform(stage, path + "/x_axis_body")
+    setTranslate(xaxis_body_prim, translate_body_1)
+    setOrient(xaxis_body_prim, Q_body_1d)
+    applyRigidBody(xaxis_body_prim)
+    applyMass(xaxis_body_prim, 0.0000001)
+
+    # Create the 3 prismatic joints
+    xaxis_joint = createPrismaticJoint(
+        stage, path + "/x_axis_joint", body_path1, xaxis_body_path, "X"
+    )
+    yaxis_joint = createPrismaticJoint(
+        stage, path + "/y_axis_joint", xaxis_body_path, body_path2, "Y"
+    )
+
+    # Get the delta transform between the 1st and 2nd body
+    t12 = np.matmul(np.linalg.inv(transform_body_1), transform_body_2)
+    translate_body_12 = Gf.Vec3f([t12[3][0], t12[3][1], t12[3][2]])
+    Q_body_12 = Gf.Transform(Gf.Matrix4d(t12.tolist())).GetRotation().GetQuat()
+
+    # Set the transform between the bodies inside the joints
+    xaxis_joint.CreateLocalPos0Attr().Set(Gf.Vec3f([0, 0, 0]))
+    yaxis_joint.CreateLocalPos0Attr().Set(translate_body_12)
+    xaxis_joint.CreateLocalRot0Attr().Set(Gf.Quatf(1, 0, 0, 0))
+    yaxis_joint.CreateLocalRot0Attr().Set(Gf.Quatf(Q_body_12))
+
+    xaxis_joint.CreateLocalPos1Attr().Set(Gf.Vec3f([0, 0, 0]))
+    yaxis_joint.CreateLocalPos1Attr().Set(Gf.Vec3f([0, 0, 0]))
+    xaxis_joint.CreateLocalRot1Attr().Set(Gf.Quatf(1, 0, 0, 0))
+    yaxis_joint.CreateLocalRot1Attr().Set(Gf.Quatf(1, 0, 0, 0))
+
+    # Add drives to the joints
+    if enable_drive:
+        xaxis_drive = createDrive(
+            stage.GetPrimAtPath(path + "/x_axis_joint"),
+            token="linear",
+            damping=damping,
+            stiffness=stiffness,
+        )
+        yaxis_drive = createDrive(
+            stage.GetPrimAtPath(path + "/y_axis_joint"),
+            token="linear",
+            damping=damping,
+            stiffness=stiffness,
+        )
+
+    return (xaxis_joint, yaxis_joint)
