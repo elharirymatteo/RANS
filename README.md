@@ -45,9 +45,9 @@ The default thrusters configuration for both 3DoF and 6DoF scenarios is depicted
 ---
 ## Installation
 
-Follow the Isaac Sim [documentation](https://docs.omniverse.nvidia.com/app_isaacsim/app_isaacsim/install_basic.html) to install the latest Isaac Sim release. 
+Follow the Isaac Sim [documentation](https://docs.omniverse.nvidia.com/isaacsim/latest/installation/install_workstation.html) to install the latest Isaac Sim release. 
 
-*Examples in this repository rely on features from the most recent Isaac Sim release. Please make sure to update any existing Isaac Sim build to the latest release version, 2022.2.0, to ensure examples work as expected.*
+*Examples in this repository rely on features from the most recent Isaac Sim release. Please make sure to update any existing Isaac Sim build to the latest release version, 2023.1.1, to ensure examples work as expected.*
 
 ### OmniverseIsaacGymEnvs
 Once installed, this repository can be used as a python module, `omniisaacgymenvs`, with the python executable provided in Isaac Sim.
@@ -58,7 +58,7 @@ To install `omniisaacgymenvs`, first clone this repository:
 git clone https://github.com/elharirymatteo/RANS.git
 ```
 
-Once cloned, locate the [python executable in Isaac Sim](https://docs.omniverse.nvidia.com/app_isaacsim/app_isaacsim/install_python.html). By default, this should be `python.sh`. We will refer to this path as `PYTHON_PATH`.
+Once cloned, locate the [python executable in Isaac Sim](https://docs.omniverse.nvidia.com/isaacsim/latest/installation/install_python.html). By default, this should be `python.sh`. We will refer to this path as `PYTHON_PATH`.
 
 To set a `PYTHON_PATH` variable in the terminal that links to the python executable, we can run a command that resembles the following. Make sure to update the paths to your local path.
 
@@ -112,7 +112,7 @@ PYTHON_PATH scripts/rlgames_train_mfp.py task=virtual_floating_platform/MFP2D_Vi
 
 Note that by default, we show a Viewport window with rendering, which slows down training. You can choose to close the Viewport window during training for better performance. The Viewport window can be re-enabled by selecting `Window > Viewport` from the top menu bar.
 
-To achieve maximum performance, you can launch training in `headless` mode as follows:
+To achieve maximum performance, launch training in `headless` mode as follows:
 
 ```bash
 PYTHON_PATH scripts/rlgames_train_mfp.py task=virtual_floating_platform/MFP2D_Virtual_GoToPose train=virtual_floating_platform/MFP2D_PPOmulti_dict_MLP headless=True
@@ -123,6 +123,18 @@ PYTHON_PATH scripts/rlgames_train_mfp.py task=virtual_floating_platform/MFP2D_Vi
 Some of the examples could take a few minutes to load because the startup time scales based on the number of environments. The startup time will continually
 be optimized in future releases.
 
+### Extension Workflow
+
+The extension workflow provides a simple user interface for creating and launching RL tasks. To launch Isaac Sim for the extension workflow, run:
+
+```bash
+./<isaac_sim_root>/isaac-sim.gym.sh --ext-folder </parent/directory/to/OIGE>
+```
+
+Note: `isaac_sim_root` should be located in the same directory as `python.sh`.
+
+The UI window can be activated from `Isaac Examples > RL Examples` by navigating the top menu bar.
+For more details on the extension workflow, please refer to the [documentation](docs/framework/extension_workflow.md).
 </details>
 
 <details>
@@ -207,6 +219,8 @@ Common arguments for the training scripts are:
 * `headless=HEADLESS` - Whether to run in headless mode.
 * `experiment=EXPERIMENT` - Sets the name of the experiment.
 * `max_iterations=MAX_ITERATIONS` - Sets how many iterations to run for. Reasonable defaults are provided for the provided environments.
+* `warp=WARP` - If set to True, launch the task implemented with Warp backend (Note: not all tasks have a Warp implementation).
+* `kit_app=KIT_APP` - Specifies the absolute path to the kit app file to be used.
 
 Hydra also allows setting variables inside config files directly as command line arguments. As an example, to set the minibatch size for a rl_games training run, you can use `train.params.config.minibatch_size=64`. Similarly, variables in task configs can also be set. For example, `task.env.episodeLength=100`.
 
