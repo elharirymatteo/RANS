@@ -1,6 +1,5 @@
 import numpy as np
 import torch
-import quaternion
 import dataclasses
 from typing import List
 
@@ -8,6 +7,10 @@ from typing import List
 
 @dataclasses.dataclass
 class Gyroscope_T:
+    """
+    Gyroscope typing class.
+    """
+
     noise_density: float = 0.0003393695767766752
     random_walk: float = 3.878509448876288e-05
     bias_correlation_time: float = 1.0e3
@@ -16,6 +19,10 @@ class Gyroscope_T:
 
 @dataclasses.dataclass
 class Accelometer_T:
+    """
+    Accelometer typing class.
+    """
+
     noise_density: float = 0.004
     random_walk: float = 0.006
     bias_correlation_time: float = 300.0
@@ -24,11 +31,13 @@ class Accelometer_T:
 @dataclasses.dataclass
 class Sensor_T:
     """
-    sensor typing
-    dt: physics time resolution
-    inertial_to_sensor_frame: transform from inertial frame (ENU) to sensor frame (FLU)
-    sensor_frame_to_optical_frame: transform from sensor frame (FLU) to sensor optical optical frame (OPENCV)
+    Sensor typing class.
+    Args:
+        dt (float): physics time resolution
+        inertial_to_sensor_frame (List[float]): transform from inertial frame (ENU) to sensor frame (FLU)
+        sensor_frame_to_optical_frame (List[float]): transform from sensor frame (FLU) to sensor optical optical frame (OPENCV)
     """
+
     dt: float = 0.01
     body_to_sensor_frame: List[float] = dataclasses.field(default_factory=list)
     sensor_frame_to_optical_frame: List[float] = dataclasses.field(default_factory=list)
@@ -40,6 +49,9 @@ class Sensor_T:
 
 @dataclasses.dataclass
 class IMU_T(Sensor_T):
+    """
+    IMU typing class."""
+
     gyro_param: Gyroscope_T = Gyroscope_T()
     accel_param: Accelometer_T = Accelometer_T()
     gravity_vector: List[float] = dataclasses.field(default_factory=list)
@@ -51,6 +63,11 @@ class IMU_T(Sensor_T):
 
 @dataclasses.dataclass
 class GPS_T(Sensor_T):
+    """
+    GPS typing class.
+    Not implemented yet.
+    """
+
     def __post_init__(self):
         super().__post_init__()
 
@@ -61,6 +78,7 @@ class State:
     """
     state information of any rigid body (to be simulated) respective to inertial frame.
     """
+
     position: torch.float32
     orientation: torch.float32
     linear_velocity: torch.float32
@@ -71,30 +89,56 @@ class State:
         assert len(self.orientation.shape) == 2, f"need to be batched tensor."
         assert len(self.linear_velocity.shape) == 2, f"need to be batched tensor."
         assert len(self.angular_velocity.shape) == 2, f"need to be batched tensor."
+    
+    @staticmethod
+    def quat_to_mat(quat: torch.Tensor) -> torch.Tensor:
+        """
+        Convert batched quaternion to batched rotation matrix."""
+        EPS = 1e-5
+        w, x, y, z = torch.unbind(quat, -1)
+        two_s = 2.0 / ((quat * quat).sum(-1) + EPS)
+        R = torch.stack(
+        (
+        1 - two_s * (y * y + z * z),
+        two_s * (x * y - z * w),
+        two_s * (x * z + y * w),
+        two_s * (x * y + z * w),
+        1 - two_s * (x * x + z * z),
+        two_s * (y * z - x * w),
+        two_s * (x * z - y * w),
+        two_s * (y * z + x * w),
+        1 - two_s * (x * x + y * y),
+        ),
+        -1,
+        )
+        return R.reshape(quat.shape[:-1] + (3, 3))
 
     @property
-    def body_transform(self):
+    def body_transform(self) -> torch.float32:
         """
-        transform from inertial frame to body frame.
+        Return transform from inertial frame to body frame.
+        T[:, :3, :3] = orientation.T
+        T[:, :3, 3] = - orientation.T @ position
+        Returns:
+            transform (torch.float32): transform matrix from inertial frame to body frame.
         """
         transform = torch.zeros(self.position.shape[0], 4, 4).to(self.orientation.device)
-        rot_np = self.orientation.cpu().numpy()
-        # TODO: find how to use only pytorch to convert quat to mat
-        rotation = torch.from_numpy(
-            np.stack([quaternion.as_rotation_matrix(np.quaternion(*rot_np[i])) for i in range(rot_np.shape[0])])).to(self.orientation.device).to(torch.float32)
-        translation = self.position
-        transform[:, :3, :3] = rotation.transpose(1, 2)
-        transform[:, :3, 3] = - 1 * torch.bmm(rotation.transpose(1, 2), translation[:, :, None]).squeeze()
+        orientation = self.quat_to_mat(self.orientation)
+        transform[:, :3, :3] = orientation.transpose(1, 2)
+        transform[:, :3, 3] = - 1 * torch.bmm(orientation.transpose(1, 2), self.position[:, :, None]).squeeze()
         return transform
 
 @dataclasses.dataclass
 class ImuState:
     """
-    accel and gyro values of body relative to optical frame
+    IMU state typing class.
     """
     angular_velocity: torch.float32 = torch.zeros(3)
     linear_acceleration: torch.float32 = torch.zeros(3)
 
-    def update(self, angular_velocity, linear_acceleration):
+    def update(self, angular_velocity, linear_acceleration) -> None:
+        """
+        Update internal attribute from arguments.
+        """
         self.angular_velocity = angular_velocity
         self.linear_acceleration = linear_acceleration

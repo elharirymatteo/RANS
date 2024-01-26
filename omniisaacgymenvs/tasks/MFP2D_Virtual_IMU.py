@@ -282,6 +282,8 @@ class MFP2DVirtual_IMU(RLTask):
         )
     
     def get_imu(self) -> None:
+        """
+        Adds the IMU to the scene."""
         imu_t = IMU_T(
             dt = self.dt, 
             body_to_sensor_frame=self._task_cfg["env"]["sensors"]["imu"]["body_to_sensor_frame"], 
@@ -327,13 +329,16 @@ class MFP2DVirtual_IMU(RLTask):
             "linear_velocity": root_velocities[:, :2],
             "angular_velocity": root_velocities[:, -1],
         }
+        # Update the IMU state accordingly to the platform state
         self._update_imu_state(self.root_pos.to(torch.float32), 
                                self.root_quats.to(torch.float32), 
                                self.root_velocities[:, :3].to(torch.float32), 
                                self.root_velocities[:, 3:].to(torch.float32)
                                )
     
-    def _update_imu_state(self, position, orientation, linear_velocity, angular_velocity):
+    def _update_imu_state(self, position, orientation, linear_velocity, angular_velocity) -> None:
+        """
+        Updates the state of the IMU accordingly to the platform state."""
         root_state = State(position=position, 
                            orientation=orientation, 
                            linear_velocity=linear_velocity, 

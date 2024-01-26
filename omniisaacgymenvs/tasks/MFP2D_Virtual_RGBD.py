@@ -16,8 +16,8 @@ from omniisaacgymenvs.robots.articulations.views.mfp2d_virtual_thrusters_view im
     ModularFloatingPlatformView,
 )
 
-from omniisaacgymenvs.robots.sensors.exteroceptive.rs_sensor import sensor_factory
-from omniisaacgymenvs.robots.sensors.exteroceptive.sensor import RLSensors
+from omniisaacgymenvs.robots.sensors.exteroceptive.camera_module_generator import sensor_module_factory
+from omniisaacgymenvs.robots.sensors.exteroceptive.camera import camera_factory
 
 from omniisaacgymenvs.utils.pin import VisualPin
 from omniisaacgymenvs.utils.arrow import VisualArrow
@@ -251,8 +251,7 @@ class MFP2DVirtual_RGBD(RLTask):
         scene.add(self._platforms.base)
         scene.add(self._platforms.thrusters)
 
-        self.collect_sensors()
-
+        self.collect_camera()
         # Add arrows to scene if task is go to pose
         scene, self._marker = self.task.add_visual_marker_to_scene(scene)
         return
@@ -281,27 +280,25 @@ class MFP2DVirtual_RGBD(RLTask):
             self.default_zero_env_path, self._default_marker_position
         )
 
-    def get_sensor(self) -> None: 
+    def get_sensor(self) -> None:
         """
-        attach USD camera module to body.
-        """
-        self.sensor = sensor_factory.get(self._task_cfg["env"]["sensors"]["geom"]["module_name"])(
-            self._task_cfg["env"]["sensors"]
+        Add sensor module to the scene."""
+        self.sensor = sensor_module_factory.get(self._task_cfg["env"]["sensors"]["camera"]["strcuture"]["module_name"])(
+            self._task_cfg["env"]["sensors"]["camera"]
         )
         self.sensor.attach_to_base(self.default_zero_env_path + "/Modular_floating_platform/core/body")
         self.sensor.initialize()
 
-    def collect_sensors(self):
+    def collect_camera(self) -> None:
         """
-        collect USD sensor and make RLSensor associated with each prim.
-        """
+        Collect active cameras to generate synthetic images in batch."""
         active_sensors = []
         for i in range(self._num_envs):
-            for sensor_type in self._task_cfg["env"]["sensors"]["sensor"].keys():
-                sensor_path = self._task_cfg["env"]["sensors"]["sensor"][sensor_type]["prim_path"].split("/")
+            for sensor_type in self._task_cfg["env"]["sensors"]["camera"]["sim"].keys():
+                sensor_path = self._task_cfg["env"]["sensors"]["camera"]["sim"][sensor_type]["prim_path"].split("/")
                 sensor_path[2] = f"env_{i}"
-                self._task_cfg["env"]["sensors"]["sensor"][sensor_type]["prim_path"] = "/".join(sensor_path)
-            rl_sensor = RLSensors(self._task_cfg["env"]["sensors"]["sensor"])
+                self._task_cfg["env"]["sensors"]["camera"]["sim"][sensor_type]["prim_path"] = "/".join(sensor_path)
+            rl_sensor = camera_factory(self._task_cfg["env"]["sensors"]["camera"]["sim"])
             active_sensors.append(rl_sensor)
         self.active_sensors = active_sensors
 
@@ -357,17 +354,16 @@ class MFP2DVirtual_RGBD(RLTask):
         self.obs_buf["masks"] = self.virtual_platform.action_masks
         # Get the sensor data
         rgb_obs, depth_obs = self.get_rgbd_data()
-        print(f"{rgb_obs.dtype}, {rgb_obs.shape}")
-        print(f"{depth_obs.dtype}, {depth_obs.shape}")
 
         observations = {self._platforms.name: {"obs_buf": self.obs_buf}}
         return observations
     
-    def get_rgbd_data(self):
+    def get_rgbd_data(self) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        return batched sensor data (RGBD)
-        rgb: (batch_size, 3, height, width)
-        depth: (batch_size, 1, height, width)
+        return batched sensor data.
+        Returns:
+            rgb (torch.Tensor): batched rgb data
+            depth (torch.Tensor): batched depth data
         """
         rs_obs = [sensor.get_observation() for sensor in self.active_sensors]
         rgb = torch.stack([ob["rgb"] for ob in rs_obs])

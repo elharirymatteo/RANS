@@ -131,31 +131,32 @@ env:
       save_path: "config.png"
   
   sensors:
-    geom:
-      module_name: "D455"
-      articulation_root:
-        prim_path: "${.....env_path}/${..module_name}"
-        pose: [0.3, 0, 0, 0, 0, -90]
-      sensor_base:
-        prim_name: "camera_link"
-        usd_path: "robots/usd/${..module_name}.usd"
-      links: ["camera_color_frame", "camera_color_optical_frame"]
-      joints: [
-                ["camera_link", "camera_color_frame", "rigid", [0.011, 0, 0, 0, 0, 0]], 
-                ["camera_link", "camera_color_optical_frame", "rigid", [0.011, 0, 0, -90, 0, 0]],
-              ]
-    sensor:
-      RLCamera:
-        prim_path: "${.....env_path}/${...geom.module_name}/camera_color_optical_frame/Camera"
-        rotation: [180, 0, 0]
-        params:
-          focalLength: 1.93
-          focusDistance: 50.0
-          clippingRange: [0.6, 100.0]
-          resolution: [1280, 720]
-          frequency: 20
-          horizontalAperture: 3.60
-          verticalAperture: 2.70
+    camera:
+      structure:
+        module_name: "D455"
+        root_prim:
+          prim_path: "${......env_path}/${..module_name}"
+          pose: [0.3, 0, 0, 0, 0, -90]
+        sensor_base:
+          prim_name: "camera_link"
+          usd_path: "robots/usd/${..module_name}.usd"
+        links: ["camera_color_frame", "camera_color_optical_frame"]
+        joints: [
+                  ["camera_link", "camera_color_frame", "rigid", [0.011, 0, 0, 0, 0, 0]], 
+                  ["camera_link", "camera_color_optical_frame", "rigid", [0.011, 0, 0, -90, 0, 0]],
+                ]
+      sim:
+        RLCamera:
+          prim_path: "${......env_path}/${...structure.module_name}/camera_color_optical_frame/Camera"
+          rotation: [180, 0, 0]
+          params:
+            focalLength: 1.93
+            focusDistance: 50.0
+            clippingRange: [0.6, 100.0]
+            resolution: [1280, 720]
+            frequency: 20
+            horizontalAperture: 3.60
+            verticalAperture: 2.70
 
 sim:
   dt: 0.02
