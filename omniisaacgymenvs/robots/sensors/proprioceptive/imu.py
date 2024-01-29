@@ -1,15 +1,20 @@
 import numpy as numpy
 import torch
-from omniisaacgymenvs.robots.sensors.proprioceptive.base_sensor import BaseSensor
+from omniisaacgymenvs.robots.sensors.proprioceptive.base_sensor import BaseSensorInterface
 from omniisaacgymenvs.robots.sensors.proprioceptive.Type import *
 
 
-class IMU(BaseSensor):
+class IMUInterface(BaseSensorInterface):
     """
-    IMU sensor class to simulate accelometer and gyroscope based on pegasus simulator 
+    IMU sensor class to simulate accelometer and gyroscope based on pegasus simulator. 
     (https://github.com/PegasusSimulator/PegasusSimulator)
+    The way it works is that it takes the state information, directly published from physics engine, 
+    and then add imu noise (white noise and time diffusing random walk) to state info. 
     """
-    def __init__(self, sensor_cfg: IMU_T, device="cuda:0"):
+    def __init__(self, sensor_cfg: IMU_T):
+        """
+        Args:
+            sensor_cfg (IMU_T): imu sensor configuration."""
         super().__init__(sensor_cfg)
         self.gravity_vector = self.sensor_cfg["gravity_vector"]
         self._gyroscope_bias = torch.zeros(3, 1)
@@ -40,18 +45,18 @@ class IMU(BaseSensor):
     def update(self, state: State):
         """
         gyroscope and accelerometer simulation (https://ieeexplore.ieee.org/document/7487628)
-        NOTE that accelerometer measures inertial acceleration (thus, negative of body acceleration)
-        gyroscope = angular_velocity + white noise + random walk
-        accelerometer = -1 * (acceleration + white noise + random walk)
+        gyroscope = angular_velocity + white noise + random walk.
+        accelerometer = -1 * (acceleration + white noise + random walk).
+        NOTE that accelerometer measures inertial acceleration. Thus, the reading is the negative of body acceleration.
         """
         device = state.angular_velocity.device
         
         # gyroscope term
         tau_g = self._gyroscope_bias_correlation_time
-        sigma_g_d = 1 / np.sqrt(self.dt) * self._gyroscope_noise_density
+        sigma_g_d = 1 / torch.sqrt(torch.tensor(self.dt)) * self._gyroscope_noise_density
         sigma_b_g = self._gyroscope_random_walk
-        sigma_b_g_d = np.sqrt(-sigma_b_g * sigma_b_g * tau_g / 2.0 * (np.exp(-2.0 * self.dt / tau_g) - 1.0))
-        phi_g_d = np.exp(-1.0/tau_g * self.dt)
+        sigma_b_g_d = torch.sqrt(-sigma_b_g * sigma_b_g * tau_g / 2.0 * (torch.exp(torch.tensor(-2.0 * self.dt / tau_g)) - 1.0))
+        phi_g_d = torch.exp(torch.tensor(-1.0/tau_g * self.dt))
         angular_velocity = torch.bmm(state.body_transform[:, :3, :3], state.angular_velocity[:, :, None]).squeeze()
         for i in range(3):
             self._gyroscope_bias[i] = phi_g_d * self._gyroscope_bias[i] + sigma_b_g_d * torch.randn(1)
@@ -61,10 +66,10 @@ class IMU(BaseSensor):
         if self._prev_linear_velocity is None:
             self._prev_linear_velocity = torch.zeros_like(state.linear_velocity).to(device)
         tau_a = self._accelerometer_bias_correlation_time
-        sigma_a_d = 1.0 / np.sqrt(self.dt) * self._accelerometer_noise_density
+        sigma_a_d = 1.0 / torch.sqrt(torch.tensor(self.dt)) * self._accelerometer_noise_density
         sigma_b_a = self._accelerometer_random_walk
-        sigma_b_a_d = np.sqrt(-sigma_b_a * sigma_b_a * tau_a / 2.0 * (np.exp(-2.0 * self.dt / tau_a) - 1.0))
-        phi_a_d = np.exp(-1.0 / tau_a * self.dt)
+        sigma_b_a_d = torch.sqrt(-sigma_b_a * sigma_b_a * tau_a / 2.0 * (torch.exp(torch.tensor(-2.0 * self.dt / tau_a)) - 1.0))
+        phi_a_d = torch.exp(torch.tensor(-1.0 / tau_a * self.dt))
         linear_acceleration_inertial = (state.linear_velocity - self._prev_linear_velocity) / self.dt + self.gravity_vector.to(device)
         self._prev_linear_velocity = state.linear_velocity
         linear_acceleration = torch.bmm(state.body_transform[:, :3, :3], linear_acceleration_inertial[:, :, None]).squeeze()
@@ -74,7 +79,7 @@ class IMU(BaseSensor):
                 linear_acceleration[:, i] + sigma_a_d * torch.randn(1).to(device)
                 ) #+ self._accelerometer_bias[i]
         
-        # transform to optical frame
+        # transform accel/gyro from body frame to sensor optical frame
         angular_velocity = torch.bmm(self.sensor_frame_to_optical_frame[None, :3, :3].expand(angular_velocity.shape[0], 3, 3).to(device), 
                                      torch.bmm(
                                          self.body_to_sensor_frame[None, :3, :3].expand(angular_velocity.shape[0], 3, 3).to(device), angular_velocity[:, :, None]
@@ -116,7 +121,7 @@ if __name__ == "__main__":
         accel_param=Accelometer_T(**ACCEL_PARAM),
         gyro_param=Gyroscope_T(**GYRO_PARAM),
         )
-    imu = IMU(imu_t)
+    imu = IMUInterface(imu_t)
 
     while True:
         N = 16

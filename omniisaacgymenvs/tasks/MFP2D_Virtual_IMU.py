@@ -16,7 +16,7 @@ from omniisaacgymenvs.robots.articulations.views.mfp2d_virtual_thrusters_view im
     ModularFloatingPlatformView,
 )
 
-from omniisaacgymenvs.robots.sensors.proprioceptive.imu import IMU
+from omniisaacgymenvs.robots.sensors.proprioceptive.imu import IMUInterface
 from omniisaacgymenvs.robots.sensors.proprioceptive.Type import *
 
 from omniisaacgymenvs.utils.pin import VisualPin
@@ -292,7 +292,7 @@ class MFP2DVirtual_IMU(RLTask):
             accel_param=Accelometer_T(**self._task_cfg["env"]["sensors"]["imu"]["accel_param"]),
             gravity_vector=self._task_cfg["env"]["sensors"]["imu"]["gravity_vector"],
         )
-        self.imu = IMU(imu_t)
+        self.imu = IMUInterface(imu_t)
 
     def update_state(self) -> None:
         """

@@ -1,8 +1,8 @@
 import numpy as numpy
-from omniisaacgymenvs.robots.sensors.proprioceptive.base_sensor import BaseSensor
+from omniisaacgymenvs.robots.sensors.proprioceptive.base_sensor import BaseSensorInterface
 from omniisaacgymenvs.robots.sensors.proprioceptive.Type import *
 
-class GPS(BaseSensor):
+class GPSInterface(BaseSensorInterface):
     """
     GPS sensor class to simulate GPS based on pegasus simulator 
     (https://github.com/PegasusSimulator/PegasusSimulator)

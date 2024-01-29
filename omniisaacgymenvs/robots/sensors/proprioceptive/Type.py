@@ -50,7 +50,14 @@ class Sensor_T:
 @dataclasses.dataclass
 class IMU_T(Sensor_T):
     """
-    IMU typing class."""
+    IMU typing class.
+    Args:
+        dt (float): physics time resolution
+        inertial_to_sensor_frame (List[float]): transform from inertial frame (ENU) to sensor frame (FLU)
+        sensor_frame_to_optical_frame (List[float]): transform from sensor frame (FLU) to sensor optical optical frame (OPENCV)
+        gravity_vector (List[float]): gravity vector in inertial frame
+        accel_param (Accelometer_T): accelometer parameter
+        gyro_param (Gyroscope_T): gyroscope parameter"""
 
     gyro_param: Gyroscope_T = Gyroscope_T()
     accel_param: Accelometer_T = Accelometer_T()
@@ -66,6 +73,10 @@ class GPS_T(Sensor_T):
     """
     GPS typing class.
     Not implemented yet.
+    Args:
+        dt (float): physics time resolution
+        inertial_to_sensor_frame (List[float]): transform from inertial frame (ENU) to sensor frame (FLU)
+        sensor_frame_to_optical_frame (List[float]): transform from sensor frame (FLU) to sensor optical optical frame (OPENCV)
     """
 
     def __post_init__(self):
@@ -76,7 +87,12 @@ class GPS_T(Sensor_T):
 @dataclasses.dataclass
 class State:
     """
-    state information of any rigid body (to be simulated) respective to inertial frame.
+    State typing class of any rigid body (to be simulated) respective to inertial frame.
+    Args:
+        position (torch.float32): position of the body in inertial frame.
+        orientation (torch.float32): orientation of the body in inertial frame.
+        linear_velocity (torch.float32): linear velocity of the body in inertial frame.
+        angular_velocity (torch.float32): angular velocity of the body in inertial frame.
     """
 
     position: torch.float32
@@ -93,7 +109,9 @@ class State:
     @staticmethod
     def quat_to_mat(quat: torch.Tensor) -> torch.Tensor:
         """
-        Convert batched quaternion to batched rotation matrix."""
+        Convert batched quaternion to batched rotation matrix.
+        Args:
+            quat (torch.Tensor): batched quaternion.(..., 4)"""
         EPS = 1e-5
         w, x, y, z = torch.unbind(quat, -1)
         two_s = 2.0 / ((quat * quat).sum(-1) + EPS)
@@ -116,7 +134,7 @@ class State:
     @property
     def body_transform(self) -> torch.float32:
         """
-        Return transform from inertial frame to body frame.
+        Return transform from inertial frame to body frame(= inverse of body pose).
         T[:, :3, :3] = orientation.T
         T[:, :3, 3] = - orientation.T @ position
         Returns:
@@ -131,7 +149,10 @@ class State:
 @dataclasses.dataclass
 class ImuState:
     """
-    IMU state typing class.
+    IMU state typing class. 
+    Args:
+        angular_velocity (torch.float32): angular velocity of the body in body frame.
+        linear_acceleration (torch.float32): linear acceleration of the body in body frame.
     """
     angular_velocity: torch.float32 = torch.zeros(3)
     linear_acceleration: torch.float32 = torch.zeros(3)
@@ -139,6 +160,9 @@ class ImuState:
     def update(self, angular_velocity, linear_acceleration) -> None:
         """
         Update internal attribute from arguments.
+        Args:
+            angular_velocity (torch.float32): angular velocity of the body in body frame.
+            linear_acceleration (torch.float32): linear acceleration of the body in body frame.
         """
         self.angular_velocity = angular_velocity
         self.linear_acceleration = linear_acceleration

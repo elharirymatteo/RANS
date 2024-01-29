@@ -3,7 +3,7 @@ from dataclasses import asdict
 from omniisaacgymenvs.robots.sensors.proprioceptive.Type import *
 
 
-class BaseSensor:
+class BaseSensorInterface:
     """
     Base sensor class
     """
