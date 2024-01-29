@@ -89,6 +89,12 @@ class IMUInterface(BaseSensorInterface):
                                          self.body_to_sensor_frame[None, :3, :3].expand(linear_acceleration.shape[0], 3, 3).to(device), linear_acceleration[:, :, None]
                                          )).squeeze()
         self._sensor_state.update(angular_velocity, -1*linear_acceleration)
+    
+    @property
+    def state(self):
+        """
+        return sensor state."""
+        return self._sensor_state
 
 if __name__ == "__main__":
     ## comes from yaml parsed by hydra ##########

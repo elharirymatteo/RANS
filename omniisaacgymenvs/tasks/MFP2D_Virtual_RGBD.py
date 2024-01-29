@@ -157,6 +157,18 @@ class MFP2DVirtual_RGBD(RLTask):
                 ),
                 "transforms": spaces.Box(low=-1, high=1, shape=(self._max_actions, 5)),
                 "masks": spaces.Box(low=0, high=1, shape=(self._max_actions,)),
+                "image": spaces.Box(
+                    np.ones((
+                            4, 
+                            self._task_cfg["env"]["sensors"]["camera"]["sim"]["RLCamera"]["params"]["resolution"][-1], 
+                            self._task_cfg["env"]["sensors"]["camera"]["sim"]["RLCamera"]["params"]["resolution"][0], 
+                            )) * -np.Inf,
+                    np.ones((
+                            4, 
+                            self._task_cfg["env"]["sensors"]["camera"]["sim"]["RLCamera"]["params"]["resolution"][-1], 
+                            self._task_cfg["env"]["sensors"]["camera"]["sim"]["RLCamera"]["params"]["resolution"][0], 
+                            )) * np.Inf,
+                ),
             }
         )
 
@@ -210,6 +222,16 @@ class MFP2DVirtual_RGBD(RLTask):
                 (self._num_envs, self._max_actions),
                 device=self._device,
                 dtype=torch.float,
+            ),
+            "image": torch.zeros(
+                (
+                    self._num_envs,
+                    4,
+                    self._task_cfg["env"]["sensors"]["camera"]["sim"]["RLCamera"]["params"]["resolution"][-1], 
+                    self._task_cfg["env"]["sensors"]["camera"]["sim"]["RLCamera"]["params"]["resolution"][0], 
+                ),
+                device = self._device,
+                dtype = torch.float,
             ),
         }
 
@@ -354,6 +376,9 @@ class MFP2DVirtual_RGBD(RLTask):
         self.obs_buf["masks"] = self.virtual_platform.action_masks
         # Get the sensor data
         rgb_obs, depth_obs = self.get_rgbd_data()
+        self.obs_buf["image"] = torch.cat([rgb_obs, depth_obs], dim=1) # RGB + Depth -> RGBD
+        # debug view
+        print(torch.cat([rgb_obs, depth_obs], dim=1).shape)
 
         observations = {self._platforms.name: {"obs_buf": self.obs_buf}}
         return observations

@@ -29,4 +29,7 @@ class BaseSensorInterface:
 
     @property
     def state(self):
-        return self._sensor_state
+        """
+        return sensor state
+        """
+        raise NotImplementedError

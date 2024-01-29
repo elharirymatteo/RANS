@@ -157,6 +157,7 @@ class MFP2DVirtual_IMU(RLTask):
                 ),
                 "transforms": spaces.Box(low=-1, high=1, shape=(self._max_actions, 5)),
                 "masks": spaces.Box(low=0, high=1, shape=(self._max_actions,)),
+                "imu": spaces.Box(np.ones(6) * -np.Inf, np.ones(6) * np.Inf),
             }
         )
 
@@ -210,6 +211,9 @@ class MFP2DVirtual_IMU(RLTask):
                 (self._num_envs, self._max_actions),
                 device=self._device,
                 dtype=torch.float,
+            ),
+            "imu": torch.zeros(
+                (self._num_envs, 6), device=self._device, dtype=torch.float
             ),
         }
 
@@ -284,15 +288,16 @@ class MFP2DVirtual_IMU(RLTask):
     def get_imu(self) -> None:
         """
         Adds the IMU to the scene."""
-        imu_t = IMU_T(
+        self.imu = IMUInterface(
+            IMU_T(
             dt = self.dt, 
             body_to_sensor_frame=self._task_cfg["env"]["sensors"]["imu"]["body_to_sensor_frame"], 
             sensor_frame_to_optical_frame=self._task_cfg["env"]["sensors"]["imu"]["sensor_frame_to_optical_frame"], 
             gyro_param=Gyroscope_T(**self._task_cfg["env"]["sensors"]["imu"]["gyro_param"]),
             accel_param=Accelometer_T(**self._task_cfg["env"]["sensors"]["imu"]["accel_param"]),
             gravity_vector=self._task_cfg["env"]["sensors"]["imu"]["gravity_vector"],
-        )
-        self.imu = IMUInterface(imu_t)
+                )
+            )
 
     def update_state(self) -> None:
         """
@@ -361,7 +366,9 @@ class MFP2DVirtual_IMU(RLTask):
         # Get the action masks
         self.obs_buf["masks"] = self.virtual_platform.action_masks
         # Get IMU observation
-        self.imu_obs = torch.cat([self.imu.state.linear_acceleration, self.imu.state.angular_velocity], dim=1)
+        self.obs_buf["imu"] = self.imu.state.unite_imu
+        # debug view
+        print(self.imu.state.unite_imu.shape)
 
         observations = {self._platforms.name: {"obs_buf": self.obs_buf}}
         return observations

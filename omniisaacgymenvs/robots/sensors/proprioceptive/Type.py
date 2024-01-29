@@ -166,3 +166,30 @@ class ImuState:
         """
         self.angular_velocity = angular_velocity
         self.linear_acceleration = linear_acceleration
+    
+    @property
+    def angular_velocity(self) -> torch.float32:
+        """
+        Return angular velocity of the body in body frame.
+        Returns:
+            angular_velocity (torch.float32): angular velocity of the body in body frame.
+        """
+        return self._angular_velocity
+    
+    @property
+    def linear_acceleration(self) -> torch.float32:
+        """
+        Return linear acceleration of the body in body frame.
+        Returns:
+            linear_acceleration (torch.float32): linear acceleration of the body in body frame.
+        """
+        return self._linear_acceleration
+    
+    @property
+    def unite_imu(self) -> torch.float32:
+        """
+        Return IMU state as a single tensor.
+        Returns:
+            imu (torch.float32): IMU state as a single tensor.
+        """
+        return torch.cat([self.angular_velocity, self.linear_acceleration], dim=1)
