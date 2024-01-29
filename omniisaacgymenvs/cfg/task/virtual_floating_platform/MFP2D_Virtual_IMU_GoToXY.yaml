@@ -152,8 +152,7 @@ env:
         random_walk: 3.878509448876288e-05
         bias_correlation_time: 1000.0
         turn_on_bias_sigma: 0.008726646259971648
-      gravity_vector:
-        ${....sim.gravity}
+      gravity_vector: ${....sim.gravity}
 
 sim:
   dt: 0.02

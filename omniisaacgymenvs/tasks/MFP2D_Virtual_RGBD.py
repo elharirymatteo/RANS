@@ -316,11 +316,11 @@ class MFP2DVirtual_RGBD(RLTask):
         Collect active cameras to generate synthetic images in batch."""
         active_sensors = []
         for i in range(self._num_envs):
-            for sensor_type in self._task_cfg["env"]["sensors"]["camera"]["sim"].keys():
-                sensor_path = self._task_cfg["env"]["sensors"]["camera"]["sim"][sensor_type]["prim_path"].split("/")
-                sensor_path[2] = f"env_{i}"
-                self._task_cfg["env"]["sensors"]["camera"]["sim"][sensor_type]["prim_path"] = "/".join(sensor_path)
-            rl_sensor = camera_factory(self._task_cfg["env"]["sensors"]["camera"]["sim"])
+            sensor_path = self._task_cfg["env"]["sensors"]["camera"]["sim"]["RLCamera"]["prim_path"].split("/")
+            sensor_path[2] = f"env_{i}"
+            self._task_cfg["env"]["sensors"]["camera"]["sim"]["RLCamera"]["prim_path"] = "/".join(sensor_path)
+            rl_sensor = camera_factory.get("RLCamera")(self._task_cfg["env"]["sensors"]["camera"]["sim"]["RLCamera"]["prim_path"], 
+                                                            self._task_cfg["env"]["sensors"]["camera"]["sim"]["RLCamera"]["params"])
             active_sensors.append(rl_sensor)
         self.active_sensors = active_sensors
 

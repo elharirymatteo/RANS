@@ -30,7 +30,7 @@ class RGBInterface(BaseCameraInterface):
         Args:
             data (Any): rgb data from rep.annotator.get_data()"""
         rgb_image = np.frombuffer(data, dtype=np.uint8).reshape(*data.shape, -1)
-        rgb_image = np.squeeze(rgb_image)[:, :, :3].transpose((2, 1, 0))
+        rgb_image = np.squeeze(rgb_image)[:, :, :3].transpose((2, 0, 1))
         rgb_image = (rgb_image/255.0).astype(np.float32)
         return torch.from_numpy(rgb_image)
 
@@ -42,7 +42,7 @@ class DepthInterface(BaseCameraInterface):
         Get depth data from the sensor in torch tensor.
         Args:
             data (Any): depth data from rep.annotator.get_data()"""
-        depth_image = np.frombuffer(data, dtype=np.float32).reshape(*data.shape, -1).transpose((2, 1, 0))
+        depth_image = np.frombuffer(data, dtype=np.float32).reshape(*data.shape, -1).transpose((2, 0, 1))
         return torch.from_numpy(depth_image)
 
 class SemanticSegmentationInterface(BaseCameraInterface):
