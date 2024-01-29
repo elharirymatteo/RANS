@@ -283,7 +283,7 @@ class MFP2DVirtual_RGBD(RLTask):
     def get_sensor(self) -> None:
         """
         Add sensor module to the scene."""
-        self.sensor = sensor_module_factory.get(self._task_cfg["env"]["sensors"]["camera"]["strcuture"]["module_name"])(
+        self.sensor = sensor_module_factory.get(self._task_cfg["env"]["sensors"]["camera"]["structure"]["module_name"])(
             self._task_cfg["env"]["sensors"]["camera"]
         )
         self.sensor.attach_to_base(self.default_zero_env_path + "/Modular_floating_platform/core/body")
