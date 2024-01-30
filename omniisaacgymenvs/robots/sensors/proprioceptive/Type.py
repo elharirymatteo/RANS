@@ -1,3 +1,13 @@
+__author__ = "Antoine Richard, Matteo El Hariry, Junnosuke Kamohara"
+__copyright__ = (
+    "Copyright 2023, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
+)
+__license__ = "GPL"
+__version__ = "1.0.0"
+__maintainer__ = "Antoine Richard"
+__email__ = "antoine.richard@uni.lu"
+__status__ = "development"
+
 import numpy as np
 import torch
 import dataclasses
@@ -158,7 +168,7 @@ class ImuState:
     angular_velocity: torch.float32 = torch.zeros(1, 3)
     linear_acceleration: torch.float32 = torch.zeros(1, 3)
 
-    def update(self, angular_velocity, linear_acceleration) -> None:
+    def update(self, angular_velocity:torch.float32, linear_acceleration:torch.float32) -> None:
         """
         Update internal attribute from arguments.
         Args:
@@ -167,6 +177,13 @@ class ImuState:
         """
         self.angular_velocity = angular_velocity
         self.linear_acceleration = linear_acceleration
+    
+    def reset(self, num_envs:int) -> None:
+        """
+        Reset internal attribute to zero.
+        """
+        self.angular_velocity = torch.zeros(num_envs, 3)
+        self.linear_acceleration = torch.zeros(num_envs, 3)
     
     @property
     def unite_imu(self) -> torch.float32:

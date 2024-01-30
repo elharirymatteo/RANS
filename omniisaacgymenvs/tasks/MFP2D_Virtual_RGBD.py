@@ -1,4 +1,4 @@
-__author__ = "Antoine Richard, Matteo El Hariry"
+__author__ = "Antoine Richard, Matteo El Hariry, Junnosuke Kamohara"
 __copyright__ = (
     "Copyright 2023, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
 )
@@ -377,8 +377,6 @@ class MFP2DVirtual_RGBD(RLTask):
         # Get the sensor data
         rgb_obs, depth_obs = self.get_rgbd_data()
         self.obs_buf["image"] = torch.cat([rgb_obs, depth_obs], dim=1) # RGB + Depth -> RGBD
-        # debug view
-        print(torch.cat([rgb_obs, depth_obs], dim=1).shape)
 
         observations = {self._platforms.name: {"obs_buf": self.obs_buf}}
         return observations

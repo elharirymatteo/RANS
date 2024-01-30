@@ -1,3 +1,13 @@
+__author__ = "Antoine Richard, Matteo El Hariry, Junnosuke Kamohara"
+__copyright__ = (
+    "Copyright 2023, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
+)
+__license__ = "GPL"
+__version__ = "1.0.0"
+__maintainer__ = "Antoine Richard"
+__email__ = "antoine.richard@uni.lu"
+__status__ = "development"
+
 import numpy as numpy
 import torch
 from omniisaacgymenvs.robots.sensors.proprioceptive.base_sensor import BaseSensorInterface
@@ -10,7 +20,7 @@ class IMUInterface(BaseSensorInterface):
     (https://github.com/PegasusSimulator/PegasusSimulator)
     The way it works is that it takes the state information, directly published from physics engine, 
     and then add imu noise (white noise and time diffusing random walk) to state info. 
-    Since it is "inteface", you do not need to call initialize, reset method as seen in omn.isaac.sensor.IMUSensor.
+    Since it is "inteface", you do not need to call initialize method as seen in omn.isaac.sensor.IMUSensor.
     """
     def __init__(self, sensor_cfg: IMU_T):
         """
@@ -90,6 +100,11 @@ class IMUInterface(BaseSensorInterface):
                                          )).squeeze()
         self._sensor_state.update(angular_velocity, -1*linear_acceleration)
     
+    def reset(self, num_envs: int):
+        """
+        reset sensor state."""
+        self._sensor_state.reset(num_envs=num_envs)
+
     @property
     def state(self):
         """

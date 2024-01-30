@@ -1,4 +1,4 @@
-__author__ = "Antoine Richard, Matteo El Hariry"
+__author__ = "Antoine Richard, Matteo El Hariry, Junnosuke Kamohara"
 __copyright__ = (
     "Copyright 2023, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
 )
@@ -367,8 +367,6 @@ class MFP2DVirtual_IMU(RLTask):
         self.obs_buf["masks"] = self.virtual_platform.action_masks
         # Get IMU observation
         self.obs_buf["imu"] = self.imu.state.unite_imu
-        # debug view
-        print(self.imu.state.unite_imu.shape)
 
         observations = {self._platforms.name: {"obs_buf": self.obs_buf}}
         return observations
@@ -467,6 +465,7 @@ class MFP2DVirtual_IMU(RLTask):
         )
 
         self.set_targets(self.all_indices)
+        self.imu.reset(self._num_envs)
 
     def set_targets(self, env_ids: torch.Tensor):
         """
