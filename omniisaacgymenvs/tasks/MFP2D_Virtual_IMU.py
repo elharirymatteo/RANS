@@ -563,6 +563,7 @@ class MFP2DVirtual_IMU(RLTask):
             root_pos[env_ids], root_rot[env_ids], indices=env_ids
         )
         self._platforms.set_velocities(root_velocities[env_ids], indices=env_ids)
+        self.imu.reset_idx(env_ids)
 
         # bookkeeping
         self.reset_buf[env_ids] = 0

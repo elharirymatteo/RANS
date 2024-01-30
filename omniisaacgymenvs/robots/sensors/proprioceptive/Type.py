@@ -185,6 +185,13 @@ class ImuState:
         self.angular_velocity = torch.zeros(num_envs, 3)
         self.linear_acceleration = torch.zeros(num_envs, 3)
     
+    def reset_idx(self, env_ids:torch.Tensor) -> None:
+        """
+        Reset internal attribute of specified env to zero.
+        """
+        self.angular_velocity[env_ids] = 0
+        self.linear_acceleration[env_ids] = 0
+    
     @property
     def unite_imu(self) -> torch.float32:
         """

@@ -73,8 +73,7 @@ class IMUInterface(BaseSensorInterface):
             angular_velocity[:, i] = angular_velocity[:, i] + sigma_g_d * torch.randn(1).to(device) + self._gyroscope_bias[i].to(device)
         
         # accelerometer term
-        if self._prev_linear_velocity is None:
-            self._prev_linear_velocity = torch.zeros_like(state.linear_velocity).to(device)
+        self._prev_linear_velocity.to(device)
         tau_a = self._accelerometer_bias_correlation_time
         sigma_a_d = 1.0 / torch.sqrt(torch.tensor(self.dt)) * self._accelerometer_noise_density
         sigma_b_a = self._accelerometer_random_walk
@@ -104,6 +103,13 @@ class IMUInterface(BaseSensorInterface):
         """
         reset sensor state."""
         self._sensor_state.reset(num_envs=num_envs)
+        self._prev_linear_velocity = torch.zeros(num_envs, 3, dtype=torch.float32)
+    
+    def reset_idx(self, env_ids: torch.Tensor):
+        """
+        reset sensor state."""
+        self._sensor_state.reset_idx(env_ids=env_ids)
+        self._prev_linear_velocity[env_ids] = 0
 
     @property
     def state(self):
