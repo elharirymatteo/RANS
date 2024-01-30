@@ -40,8 +40,8 @@ class BaseController:
         self.dt = dt
         self.time = 0
 
-        self.csv_datas = []
         self.initializeLoggers()
+        self.csv_datas = []
 
     def initializeLoggers(self) -> None:
         """
@@ -155,7 +155,8 @@ class BaseController:
         Args:
             suffix (str, optional): Suffix to add to the file name. Defaults to ""."""
 
-        var_name = ["x", "y", "z", "w"]
+        xyz = ["x", "y", "z"]
+        wxyz = ["w", "x", "y", "z"]
         try:
             os.makedirs(self.save_dir, exist_ok=True)
             csv_data = pd.DataFrame()
@@ -168,6 +169,10 @@ class BaseController:
                     else:
                         data = np.array(self.logs[key])
                         if len(data.shape) > 1:
+                            if data.shape[1] == 4:
+                                var_name = wxyz
+                            else:
+                                var_name = xyz
                             for i in range(data.shape[1]):
                                 csv_data[var_name[i] + "_" + key] = data[:, i]
                         else:
@@ -318,7 +323,10 @@ class PoseController(BaseController):
         )
 
     def getAction(
-        self, state: Dict[str, np.ndarray], is_deterministic: bool = True
+        self,
+        state: Dict[str, np.ndarray],
+        is_deterministic: bool = True,
+        mute: bool = False,
     ) -> np.ndarray:
         """
         Gets the action from the controller.
@@ -326,19 +334,23 @@ class PoseController(BaseController):
         Args:
             state (Dict[str, np.ndarray]): State of the system.
             is_deterministic (bool, optional): Whether the action is deterministic or not. Defaults to True.
+            mute (bool, optional): Whether to print the goal reached or not. Defaults to False.
 
         Returns:
             np.ndarray: Action taken by the controller."""
 
         if self.isGoalReached(state):
-            print("Goal reached!")
+            if not mute:
+                print("Goal reached!")
             if len(self.goals) > 1:
                 self.current_goal = self.goals[1]
                 self.goals = self.goals[1:]
             else:
                 self.goals = []
         self.setTarget()
-        actions = self.model.getAction(state, is_deterministic=is_deterministic)
+        actions = self.model.getAction(
+            state, is_deterministic=is_deterministic, mute=mute
+        )
         self.updateLoggers(state, actions)
         return actions
 
@@ -503,19 +515,23 @@ class PositionController(BaseController):
 
         self.model.setTarget(target_position=self.current_goal)
 
-    def getAction(self, state, is_deterministic: bool = True) -> np.ndarray:
+    def getAction(
+        self, state, is_deterministic: bool = True, mute: bool = False
+    ) -> np.ndarray:
         """
         Gets the action from the controller.
 
         Args:
             state (Dict[str, np.ndarray]): State of the system.
             is_deterministic (bool, optional): Whether the action is deterministic or not. Defaults to True.
+            mute (bool, optional): Whether to print the goal reached or not. Defaults to False.
 
         Returns:
             np.ndarray: Action taken by the controller."""
 
         if self.isGoalReached(state):
-            print("Goal reached!")
+            if not mute:
+                print("Goal reached!")
             if len(self.goals) > 1:
                 self.current_goal = self.goals[1]
                 self.goals = self.goals[1:]
@@ -897,7 +913,10 @@ class VelocityTracker(BaseController):
         self.model.setTarget(target_linear_velocity=self.velocity_goal)
 
     def getAction(
-        self, state: Dict[str, np.ndarray], is_deterministic: bool = True
+        self,
+        state: Dict[str, np.ndarray],
+        is_deterministic: bool = True,
+        mute: bool = False,
     ) -> np.ndarray:
         """
         Gets the action from the controller.
@@ -905,13 +924,16 @@ class VelocityTracker(BaseController):
         Args:
             state (Dict[str, np.ndarray]): State of the system.
             is_deterministic (bool, optional): Whether the action is deterministic or not. Defaults to True.
+            mute (bool, optional): Whether to print the goal reached or not. Defaults to False.
         """
 
         self.velocity_vector = self.tracker.getVelocityVector(state["position"][:2])
         self.velocity_goal[0] = self.velocity_vector[0] * self.target_tracking_velocity
         self.velocity_goal[1] = self.velocity_vector[1] * self.target_tracking_velocity
         self.setTarget()
-        actions = self.model.getAction(state, is_deterministic=is_deterministic)
+        actions = self.model.getAction(
+            state, is_deterministic=is_deterministic, mute=mute
+        )
         self.updateLoggers(state, actions)
         return actions
 

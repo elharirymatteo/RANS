@@ -69,7 +69,7 @@ class RandomKillThrusters:
         self.killed_thrusters_id = self._rng.choice(
             8, self._num_thrusters_to_kill, replace=False
         )  # [2,3]
-        print("Killed thrusters: ", self.killed_thrusters_id)
+        # print("Killed thrusters: ", self.killed_thrusters_id)
 
 
 class UnevenFloorDisturbance:
