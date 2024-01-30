@@ -402,11 +402,11 @@ class VirtualPlatform:
         Visualizes the thruster configuration."""
 
         from matplotlib import pyplot as plt
-        from matplotlib import cm
+        import matplotlib
         import numpy as np
 
         # Creates a list of color
-        cmap = cm.get_cmap("hsv")
+        cmap = matplotlib.colormaps["hsv"]
         colors = []
         for i in range(self._max_thrusters):
             colors.append(cmap(i / self._max_thrusters))

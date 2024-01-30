@@ -95,9 +95,9 @@ class MFP2DVirtual(RLTask):
             self._task_cfg["env"]["disturbances"]["observations"]
         )
         self.AN = NoisyActions(self._task_cfg["env"]["disturbances"]["actions"])
-        self.MDD = MassDistributionDisturbances(
-            self._task_cfg["env"]["disturbances"]["mass"], self.num_envs, self._device
-        )
+        # self.MDD = MassDistributionDisturbances(
+        #    self._task_cfg["env"]["disturbances"]["mass"], self.num_envs, self._device
+        # )
         # Collects the platform parameters
         self.dt = self._task_cfg["sim"]["dt"]
         # Collects the task parameters
@@ -377,6 +377,8 @@ class MFP2DVirtual(RLTask):
             )
         else:
             self.positions, self.forces = self.virtual_platform.project_forces(thrusts)
+
+        # self.force_on_plane()
         return
 
     def apply_forces(self) -> None:
@@ -447,6 +449,30 @@ class MFP2DVirtual(RLTask):
                 indices=env_long,
             )
 
+    # def force_on_plane(self) -> None:
+    #    """
+    #    Forces the platform to stay on the ground.
+    #    """
+
+    #    position, quat = self._platforms.get_world_poses()  # self.root_pos.clone()
+    #    # quat = #self.root_quats.clone()
+    #    # makes the platform parallel to the ground
+    #    quat[:, 0] = 0
+    #    quat[:, 1] = 0
+    #    # Kill Z position
+    #    position[:, 2] = 0
+
+    #    velocity = self._platforms.get_velocities()  # self.root_velocities.clone()
+    #    # Kill Z velocity
+    #    velocity[:, 2] = 0
+    #    # Kill roll and pitch velocity
+    #    velocity[:, 3] = 0
+    #    velocity[:, 4] = 0
+
+    #    # apply resets
+    #    self._platforms.set_world_poses(position, quat, indices=self.all_indices)
+    #    self._platforms.set_velocities(velocity, indices=self.all_indices)
+
     def set_to_pose(
         self, env_ids: torch.Tensor, positions: torch.Tensor, heading: torch.Tensor
     ) -> None:
@@ -495,11 +521,12 @@ class MFP2DVirtual(RLTask):
         num_resets = len(env_ids)
         # Resets the counter of steps for which the goal was reached
         self.task.reset(env_ids)
+        self.set_targets(env_ids)
         self.virtual_platform.randomize_thruster_state(env_ids, num_resets)
         self.UF.generate_floor(env_ids, num_resets)
         self.TD.generate_torque(env_ids, num_resets)
-        self.MDD.randomize_masses(env_ids, num_resets)
-        self.MDD.set_masses(self._platforms.base, env_ids)
+        # self.MDD.randomize_masses(env_ids, num_resets)
+        # self.MDD.set_masses(self._platforms.base, env_ids)
         # Randomizes the starting position of the platform within a disk around the target
         root_pos, root_rot = self.task.get_spawns(
             env_ids, self.initial_root_pos.clone(), self.initial_root_rot.clone()
