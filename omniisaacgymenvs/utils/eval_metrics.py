@@ -13,6 +13,36 @@ import pandas as pd
 import numpy as np
 
 
+def compute_average_linear_velocity(ep_data: dict) -> float:
+    """Compute the average linear velocity of the agent.
+
+    Args:
+        ep_data (dict): Dictionary containing the data of an episode.
+    Returns:
+        float: Average linear velocity of the agent."""
+    return np.mean(np.linalg.norm(ep_data["obs"][:, :, 2:4], axis=2))
+
+
+def compute_average_angular_velocity(ep_data: dict) -> float:
+    """Compute the average angular velocity of the agent.
+
+    Args:
+        ep_data (dict): Dictionary containing the data of an episode.
+    Returns:
+        float: Average angular velocity of the agent."""
+    return np.mean(np.abs(ep_data["obs"][:, :, 4]))
+
+
+def compute_average_action_count(ep_data: dict) -> float:
+    """Compute the average number of actions taken by the agent.
+
+    Args:
+        ep_data (dict): Dictionary containing the data of an episode.
+    Returns:
+        float: Average number of actions taken by the agent."""
+    return np.mean(np.sum(ep_data["act"] != 0, axis=2))
+
+
 def build_distance_dataframe(distances: np.ndarray, threshold: float) -> list:
     distances_df = pd.DataFrame(
         distances, columns=[f"Ep_{i}" for i in range(distances.shape[1])]
@@ -89,18 +119,20 @@ def get_GoToPose_success_rate_new(
     avg_h005 = np.mean([heading < np.pi * 5 / 180])
     avg_h002 = np.mean([heading < np.pi * 2 / 180])
     avg_h001 = np.mean([heading < np.pi * 1 / 180])
-    print(
-        "percentage of time spent under (5cm, 2cm, 1cm):",
-        avg_p005 * 100,
-        avg_p002 * 100,
-        avg_p001 * 100,
-    )
-    print(
-        "percentage of time spent under (5deg, 2deg, 1deg):",
-        avg_h005 * 100,
-        avg_h002 * 100,
-        avg_h001 * 100,
-    )
+
+    if print_intermediate:
+        print(
+            "percentage of time spent under (5cm, 2cm, 1cm):",
+            avg_p005 * 100,
+            avg_p002 * 100,
+            avg_p001 * 100,
+        )
+        print(
+            "percentage of time spent under (5deg, 2deg, 1deg):",
+            avg_h005 * 100,
+            avg_h002 * 100,
+            avg_h001 * 100,
+        )
     success_rate_df = pd.DataFrame(
         {
             "PT5": [avg_p005],
