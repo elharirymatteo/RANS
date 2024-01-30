@@ -73,7 +73,7 @@ class IMUInterface(BaseSensorInterface):
             angular_velocity[:, i] = angular_velocity[:, i] + sigma_g_d * torch.randn(1).to(device) + self._gyroscope_bias[i].to(device)
         
         # accelerometer term
-        self._prev_linear_velocity.to(device)
+        self._prev_linear_velocity = self._prev_linear_velocity.to(device)
         tau_a = self._accelerometer_bias_correlation_time
         sigma_a_d = 1.0 / torch.sqrt(torch.tensor(self.dt)) * self._accelerometer_noise_density
         sigma_b_a = self._accelerometer_random_walk
