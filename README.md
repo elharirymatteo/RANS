@@ -82,9 +82,11 @@ To install the appropriate version of rl-games, clone this repository:
 ```bash
 git clone https://github.com/AntoineRichard/rl_games
 ```
-Make sure to install the rl_gamers library under the OmniverseIsaacGym dependec:
+Make sure to install the rl_gamers library under the OmniverseIsaacGym dependecy:
 ```
-PYTHON_PATH -m pip install rl_games .
+cd rl_games
+PYTHON_PATH -m pip install --upgrade pip
+PYTHON_PATH -m pip install -e .
 ```
 
 ## Running the examples
