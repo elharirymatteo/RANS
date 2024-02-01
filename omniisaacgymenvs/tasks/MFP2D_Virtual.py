@@ -77,6 +77,8 @@ class MFP2DVirtual(RLTask):
         self._device = self._cfg["sim_device"]
         self.step = 0
 
+        self.enable_watchdog = True
+
         # Split the maximum amount of thrust across all thrusters.
         self.split_thrust = self._task_cfg["env"]["split_thrust"]
 
@@ -287,6 +289,10 @@ class MFP2DVirtual(RLTask):
         # Collects the velocity of the platform
         self.root_velocities = self._platforms.get_velocities(clone=True)
         root_velocities = self.root_velocities.clone()
+
+        if self.enable_watchdog:
+            self.watchdog()
+
         # Cast quaternion to Yaw
         siny_cosp = 2 * (
             self.root_quats[:, 0] * self.root_quats[:, 3]
@@ -447,6 +453,34 @@ class MFP2DVirtual(RLTask):
                 target_positions[env_long],
                 target_orientation[env_long],
                 indices=env_long,
+            )
+
+    def watchdog(self):
+        z = self.root_pos[:, 2]
+        qxy = self.root_quats[:, 1:3]
+        vz = self.root_velocities[:, 2]
+        vrxy = self.root_velocities[:, 3:5]
+
+        z_infractions = torch.sum(torch.abs(z) > 0.1)
+        qxy_infractions = torch.sum(torch.abs(qxy) > 0.05)
+        vel_infractions = torch.sum(torch.abs(vz) > 0.1)
+        ang_vel_infractions = torch.sum(torch.abs(vrxy) > 0.1)
+
+        if z_infractions:
+            print(
+                f"{z_infractions} platforms are flying too high. Consider aborting training."
+            )
+        if qxy_infractions:
+            print(
+                f"{z_infractions} platforms have their roll and pitch axes tilted. Consider aborting training."
+            )
+        if vel_infractions:
+            print(
+                f"{vel_infractions} platforms have a velocity on the z axis. Consider aborting training."
+            )
+        if ang_vel_infractions:
+            print(
+                f"{ang_vel_infractions} platforms have a velocity on their roll and pitch axes. Consider aborting training."
             )
 
     # def force_on_plane(self) -> None:
