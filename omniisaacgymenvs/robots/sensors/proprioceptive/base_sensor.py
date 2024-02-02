@@ -36,6 +36,12 @@ class BaseSensorInterface:
         state is the state of the rigid body to be simulated
         """
         raise NotImplementedError
+    
+    def reset_idx(self, env_ids:torch.Tensor) -> None:
+        """
+        reset sensor state of specified env.
+        """
+        raise NotImplementedError
 
     @property
     def state(self):

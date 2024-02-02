@@ -178,13 +178,6 @@ class ImuState:
         self.angular_velocity = angular_velocity
         self.linear_acceleration = linear_acceleration
     
-    def reset(self, num_envs:int) -> None:
-        """
-        Reset internal attribute to zero.
-        """
-        self.angular_velocity = torch.zeros(num_envs, 3)
-        self.linear_acceleration = torch.zeros(num_envs, 3)
-    
     def reset_idx(self, env_ids:torch.Tensor) -> None:
         """
         Reset internal attribute of specified env to zero.

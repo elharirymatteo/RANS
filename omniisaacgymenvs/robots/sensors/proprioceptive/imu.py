@@ -22,7 +22,7 @@ class IMUInterface(BaseSensorInterface):
     and then add imu noise (white noise and time diffusing random walk) to state info. 
     Since it is "inteface", you do not need to call initialize method as seen in omn.isaac.sensor.IMUSensor.
     """
-    def __init__(self, sensor_cfg: IMU_T):
+    def __init__(self, sensor_cfg: IMU_T, num_envs: int = 1):
         """
         Args:
             sensor_cfg (IMU_T): imu sensor configuration."""
@@ -48,8 +48,9 @@ class IMUInterface(BaseSensorInterface):
         self._accelerometer_turn_on_bias_sigma = self.sensor_cfg["accel_param"][
             "turn_on_bias_sigma"
         ]
-        self._prev_linear_velocity = None
-        self._sensor_state = ImuState()
+        self._prev_linear_velocity = torch.zeros(num_envs, 3).to(torch.float32)
+        self._sensor_state = ImuState(angular_velocity=torch.zeros(num_envs, 3).to(torch.float32),
+                                      linear_acceleration=torch.zeros(num_envs, 3).to(torch.float32))
 
     
     def update(self, state: State):
@@ -99,17 +100,12 @@ class IMUInterface(BaseSensorInterface):
                                          )).squeeze()
         self._sensor_state.update(angular_velocity, -1*linear_acceleration)
     
-    def reset(self, num_envs: int):
-        """
-        reset sensor state."""
-        self._sensor_state.reset(num_envs=num_envs)
-        self._prev_linear_velocity = torch.zeros(num_envs, 3, dtype=torch.float32)
-    
     def reset_idx(self, env_ids: torch.Tensor):
         """
-        reset sensor state."""
-        self._sensor_state.reset_idx(env_ids=env_ids)
-        self._prev_linear_velocity[env_ids] = 0
+        reset sensor state of specified env."""
+        env_long = env_ids.long()
+        self._sensor_state.reset_idx(env_ids=env_long)
+        self._prev_linear_velocity[env_long] = 0
 
     @property
     def state(self):

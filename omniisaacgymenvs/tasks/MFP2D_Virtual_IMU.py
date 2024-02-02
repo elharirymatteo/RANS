@@ -295,8 +295,8 @@ class MFP2DVirtual_IMU(RLTask):
             sensor_frame_to_optical_frame=self._task_cfg["env"]["sensors"]["imu"]["sensor_frame_to_optical_frame"], 
             gyro_param=Gyroscope_T(**self._task_cfg["env"]["sensors"]["imu"]["gyro_param"]),
             accel_param=Accelometer_T(**self._task_cfg["env"]["sensors"]["imu"]["accel_param"]),
-            gravity_vector=self._task_cfg["env"]["sensors"]["imu"]["gravity_vector"],
-                )
+            gravity_vector=self._task_cfg["env"]["sensors"]["imu"]["gravity_vector"]), 
+            num_envs=self._num_envs
             )
 
     def update_state(self) -> None:
@@ -465,7 +465,7 @@ class MFP2DVirtual_IMU(RLTask):
         )
 
         self.set_targets(self.all_indices)
-        self.imu.reset(self._num_envs)
+        self.imu.reset_idx(self.all_indices)
 
     def set_targets(self, env_ids: torch.Tensor):
         """
@@ -527,6 +527,7 @@ class MFP2DVirtual_IMU(RLTask):
             root_pos[env_ids], root_rot[env_ids], indices=env_ids
         )
         self._platforms.set_velocities(root_velocities[env_ids], indices=env_ids)
+        self.imu.reset_idx(env_ids)
 
     def reset_idx(self, env_ids: torch.Tensor) -> None:
         """

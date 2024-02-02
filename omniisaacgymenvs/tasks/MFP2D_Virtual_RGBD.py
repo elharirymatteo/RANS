@@ -9,14 +9,16 @@ __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
 from omniisaacgymenvs.tasks.base.rl_task import RLTask
-from omniisaacgymenvs.robots.articulations.MFP2D_virtual_thrusters import (
-    ModularFloatingPlatform,
+# from omniisaacgymenvs.robots.articulations.MFP2D_virtual_thrusters import (
+#     ModularFloatingPlatform,
+# )
+from omniisaacgymenvs.robots.articulations.MFP2D_virtual_thrusters_camera import (
+    ModularFloatingPlatformWithCamera,
 )
 from omniisaacgymenvs.robots.articulations.views.mfp2d_virtual_thrusters_view import (
     ModularFloatingPlatformView,
 )
 
-from omniisaacgymenvs.robots.sensors.exteroceptive.camera_module_generator import sensor_module_factory
 from omniisaacgymenvs.robots.sensors.exteroceptive.camera import camera_factory
 
 from omniisaacgymenvs.utils.pin import VisualPin
@@ -160,13 +162,13 @@ class MFP2DVirtual_RGBD(RLTask):
                 "image": spaces.Box(
                     np.ones((
                             4, 
-                            self._task_cfg["env"]["sensors"]["camera"]["sim"]["RLCamera"]["params"]["resolution"][-1], 
-                            self._task_cfg["env"]["sensors"]["camera"]["sim"]["RLCamera"]["params"]["resolution"][0], 
+                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["params"]["resolution"][-1], 
+                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["params"]["resolution"][0], 
                             )) * -np.Inf,
                     np.ones((
                             4, 
-                            self._task_cfg["env"]["sensors"]["camera"]["sim"]["RLCamera"]["params"]["resolution"][-1], 
-                            self._task_cfg["env"]["sensors"]["camera"]["sim"]["RLCamera"]["params"]["resolution"][0], 
+                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["params"]["resolution"][-1], 
+                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["params"]["resolution"][0], 
                             )) * np.Inf,
                 ),
             }
@@ -227,8 +229,8 @@ class MFP2DVirtual_RGBD(RLTask):
                 (
                     self._num_envs,
                     4,
-                    self._task_cfg["env"]["sensors"]["camera"]["sim"]["RLCamera"]["params"]["resolution"][-1], 
-                    self._task_cfg["env"]["sensors"]["camera"]["sim"]["RLCamera"]["params"]["resolution"][0], 
+                    self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["params"]["resolution"][-1], 
+                    self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["params"]["resolution"][0], 
                 ),
                 device = self._device,
                 dtype = torch.float,
@@ -259,7 +261,6 @@ class MFP2DVirtual_RGBD(RLTask):
         # Add the floating platform, and the marker
         self.get_floating_platform()
         self.get_target()
-        self.get_sensor()
 
         RLTask.set_up_scene(self, scene, replicate_physics=False)
 
@@ -282,7 +283,7 @@ class MFP2DVirtual_RGBD(RLTask):
         """
         Adds the floating platform to the scene."""
 
-        fp = ModularFloatingPlatform(
+        fp = ModularFloatingPlatformWithCamera(
             prim_path=self.default_zero_env_path + "/Modular_floating_platform",
             name="modular_floating_platform",
             translation=self._fp_position,
@@ -302,25 +303,15 @@ class MFP2DVirtual_RGBD(RLTask):
             self.default_zero_env_path, self._default_marker_position
         )
 
-    def get_sensor(self) -> None:
-        """
-        Add sensor module to the scene."""
-        self.sensor = sensor_module_factory.get(self._task_cfg["env"]["sensors"]["camera"]["structure"]["module_name"])(
-            self._task_cfg["env"]["sensors"]["camera"]
-        )
-        self.sensor.attach_to_base(self.default_zero_env_path + "/Modular_floating_platform/core/body")
-        self.sensor.initialize()
-
     def collect_camera(self) -> None:
         """
         Collect active cameras to generate synthetic images in batch."""
         active_sensors = []
         for i in range(self._num_envs):
-            sensor_path = self._task_cfg["env"]["sensors"]["camera"]["sim"]["RLCamera"]["prim_path"].split("/")
+            sensor_path = self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["prim_path"].split("/")
             sensor_path[2] = f"env_{i}"
-            self._task_cfg["env"]["sensors"]["camera"]["sim"]["RLCamera"]["prim_path"] = "/".join(sensor_path)
-            rl_sensor = camera_factory.get("RLCamera")(self._task_cfg["env"]["sensors"]["camera"]["sim"]["RLCamera"]["prim_path"], 
-                                                            self._task_cfg["env"]["sensors"]["camera"]["sim"]["RLCamera"]["params"])
+            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["prim_path"] = "/".join(sensor_path)
+            rl_sensor = camera_factory.get("RLCamera")(self._task_cfg["env"]["sensors"]["camera"]["RLCamera"])
             active_sensors.append(rl_sensor)
         self.active_sensors = active_sensors
 

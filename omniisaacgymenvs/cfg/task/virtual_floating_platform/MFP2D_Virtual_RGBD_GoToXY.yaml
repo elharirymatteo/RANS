@@ -129,34 +129,44 @@ env:
       thrust_force: 1.0
       visualize: False
       save_path: "config.png"
-  
-  sensors:
+
     camera:
       structure:
         module_name: "D455"
         root_prim:
-          prim_path: "${......env_path}/${..module_name}"
-          pose: [0.3, 0, 0, 0, 0, -90]
+          prim_path: "${......env_path}/core/body/${..module_name}"
+          pose: [0.3, 0, 0, 0, 0, -90] #[x, y, z, roll, pitch, yaw]
         sensor_base:
           prim_name: "camera_link"
           usd_path: "robots/usd/${..module_name}.usd"
-        links: ["camera_color_frame", "camera_color_optical_frame"]
-        joints: [
-                  ["camera_link", "camera_color_frame", "rigid", [0.011, 0, 0, 0, 0, 0]], 
-                  ["camera_link", "camera_color_optical_frame", "rigid", [0.011, 0, 0, -90, 0, 0]],
-                ]
-      sim:
-        RLCamera:
-          prim_path: "${......env_path}/${...structure.module_name}/camera_color_optical_frame/Camera"
+        # [link_name, relative transform from its parent prim]
+        links: [
+          ["camera_color_frame", [0.011, 0, 0, 0, 0, 0]], 
+          ["camera_color_optical_frame", [0.011, 0, 0, -90, 0, 0]],
+        ]
+        camera_sensor:
+          prim_path: "${......env_path}/core/body/${..module_name}/camera_color_optical_frame/Camera"
           rotation: [180, 0, 0]
           params:
             focalLength: 1.93
             focusDistance: 50.0
             clippingRange: [0.6, 100.0]
-            resolution: [1280, 720] # [width, height]
-            frequency: 20
+            resolution: [600, 400] # [width, height]
             horizontalAperture: 3.60
             verticalAperture: 2.70
+  
+  sensors:
+    camera:
+      RLCamera:
+        prim_path: "${.....env_path}/core/body/${....platform.camera.structure.module_name}/camera_color_optical_frame/Camera"
+        is_override: True
+        params:
+          resolution: [600, 400] # [width, height]
+          focalLength: 1.93
+          focusDistance: 50.0
+          clippingRange: [0.6, 100.0]
+          horizontalAperture: 3.60
+          verticalAperture: 2.70
 
 sim:
   dt: 0.02
