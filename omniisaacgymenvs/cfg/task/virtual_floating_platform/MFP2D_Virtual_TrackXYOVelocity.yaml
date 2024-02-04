@@ -69,6 +69,7 @@ env:
       max_mass: 6.0
       CoM_max_displacement: 0.25
       base_mass: ${...platform.core.mass}
+      base_CoM: ${...platform.core.CoM}
 
   task_parameters: 
     name: TrackXYOVelocity

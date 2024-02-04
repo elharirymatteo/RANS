@@ -77,6 +77,8 @@ class MFP2DVirtual(RLTask):
         self._device = self._cfg["sim_device"]
         self.step = 0
 
+        self.enable_watchdog = True
+
         # Split the maximum amount of thrust across all thrusters.
         self.split_thrust = self._task_cfg["env"]["split_thrust"]
 
@@ -96,7 +98,9 @@ class MFP2DVirtual(RLTask):
         )
         self.AN = NoisyActions(self._task_cfg["env"]["disturbances"]["actions"])
         self.MDD = MassDistributionDisturbances(
-            self._task_cfg["env"]["disturbances"]["mass"], self.num_envs, self._device
+            self._task_cfg["env"]["disturbances"]["mass"],
+            self.num_envs,
+            self._device,
         )
         # Collects the platform parameters
         self.dt = self._task_cfg["sim"]["dt"]
@@ -153,6 +157,9 @@ class MFP2DVirtual(RLTask):
                 ),
                 "transforms": spaces.Box(low=-1, high=1, shape=(self._max_actions, 5)),
                 "masks": spaces.Box(low=0, high=1, shape=(self._max_actions,)),
+                "masses": spaces.Box(
+                    low=-np.inf, high=np.inf, shape=(self._num_envs, 3)
+                ),
             }
         )
 
@@ -245,6 +252,7 @@ class MFP2DVirtual(RLTask):
         # Add views to scene
         scene.add(self._platforms)
         scene.add(self._platforms.base)
+        scene.add(self._platforms.CoM)
 
         scene.add(self._platforms.thrusters)
 
@@ -256,7 +264,7 @@ class MFP2DVirtual(RLTask):
         """
         Adds the floating platform to the scene."""
 
-        fp = ModularFloatingPlatform(
+        self._fp = ModularFloatingPlatform(
             prim_path=self.default_zero_env_path + "/Modular_floating_platform",
             name="modular_floating_platform",
             translation=self._fp_position,
@@ -264,7 +272,7 @@ class MFP2DVirtual(RLTask):
         )
         self._sim_config.apply_articulation_settings(
             "modular_floating_platform",
-            get_prim_at_path(fp.prim_path),
+            get_prim_at_path(self._fp.prim_path),
             self._sim_config.parse_actor_config("modular_floating_platform"),
         )
 
@@ -287,6 +295,10 @@ class MFP2DVirtual(RLTask):
         # Collects the velocity of the platform
         self.root_velocities = self._platforms.get_velocities(clone=True)
         root_velocities = self.root_velocities.clone()
+
+        if self.enable_watchdog:
+            self.watchdog()
+
         # Cast quaternion to Yaw
         siny_cosp = 2 * (
             self.root_quats[:, 0] * self.root_quats[:, 3]
@@ -327,6 +339,8 @@ class MFP2DVirtual(RLTask):
         self.obs_buf["transforms"] = self.virtual_platform.current_transforms
         # Get the action masks
         self.obs_buf["masks"] = self.virtual_platform.action_masks
+        # Get the Masses
+        self.obs_buf["masses"] = self.MDD.get_masses()
 
         observations = {self._platforms.name: {"obs_buf": self.obs_buf}}
         return observations
@@ -377,6 +391,8 @@ class MFP2DVirtual(RLTask):
             )
         else:
             self.positions, self.forces = self.virtual_platform.project_forces(thrusts)
+
+        # self.force_on_plane()
         return
 
     def apply_forces(self) -> None:
@@ -404,7 +420,10 @@ class MFP2DVirtual(RLTask):
         self.root_velocities = self._platforms.get_velocities()
         self.dof_pos = self._platforms.get_joint_positions()
         self.dof_vel = self._platforms.get_joint_velocities()
-
+        # Get the indices for the CoM shifter.
+        self._CoM_x_index = self._platforms.get_dof_index(self._fp.joints["x_axis"])
+        self._CoM_y_index = self._platforms.get_dof_index(self._fp.joints["y_axis"])
+        # Set initial conditions
         self.initial_root_pos, self.initial_root_rot = (
             self.root_pos.clone(),
             self.root_rot.clone(),
@@ -447,6 +466,34 @@ class MFP2DVirtual(RLTask):
                 indices=env_long,
             )
 
+    def watchdog(self):
+        z = self.root_pos[:, 2]
+        qxy = self.root_quats[:, 1:3]
+        vz = self.root_velocities[:, 2]
+        vrxy = self.root_velocities[:, 3:5]
+
+        z_infractions = torch.sum(torch.abs(z - 0.5) > 0.1)
+        qxy_infractions = torch.sum(torch.abs(qxy) > 0.05)
+        vel_infractions = torch.sum(torch.abs(vz) > 0.1)
+        ang_vel_infractions = torch.sum(torch.abs(vrxy) > 0.1)
+
+        if z_infractions:
+            print(
+                f"{z_infractions} platforms are flying too high. Consider aborting training."
+            )
+        if qxy_infractions:
+            print(
+                f"{z_infractions} platforms have their roll and pitch axes tilted. Consider aborting training."
+            )
+        if vel_infractions:
+            print(
+                f"{vel_infractions} platforms have a velocity on the z axis. Consider aborting training."
+            )
+        if ang_vel_infractions:
+            print(
+                f"{ang_vel_infractions} platforms have a velocity on their roll and pitch axes. Consider aborting training."
+            )
+
     def set_to_pose(
         self, env_ids: torch.Tensor, positions: torch.Tensor, heading: torch.Tensor
     ) -> None:
@@ -457,7 +504,8 @@ class MFP2DVirtual(RLTask):
         Args:
             env_ids (torch.Tensor): the indices of the environments for which to set the pose.
             positions (torch.Tensor): the positions of the platform.
-            heading (torch.Tensor): the heading of the platform."""
+            heading (torch.Tensor): the heading of the platform.
+        """
 
         num_resets = len(env_ids)
         # Resets the counter of steps for which the goal was reached
@@ -468,18 +516,23 @@ class MFP2DVirtual(RLTask):
         root_pos[env_ids, :2] = positions
         root_rot = torch.zeros_like(self.root_rot)
         root_rot[env_ids, :] = heading
-        # Resets the states of the joints
-        self.dof_pos[env_ids, :] = torch.zeros(
-            (num_resets, self._platforms.num_dof), device=self._device
+
+        # Resets the states of the joints & applies CoM shift
+        self.MDD.randomize_masses(env_ids, num_resets)
+        self.MDD.set_masses(
+            self._platforms,
+            self._platforms.CoM,
+            env_ids,
+            (self._CoM_x_index, self._CoM_y_index),
         )
         self.dof_vel[env_ids, :] = 0
+        self._platforms.set_joint_velocities(self.dof_vel[env_ids], indices=env_ids)
+
         # Sets the velocities to 0
         root_velocities = self.root_velocities.clone()
         root_velocities[env_ids] = 0
 
         # apply resets
-        self._platforms.set_joint_positions(self.dof_pos[env_ids], indices=env_ids)
-        self._platforms.set_joint_velocities(self.dof_vel[env_ids], indices=env_ids)
         self._platforms.set_world_poses(
             root_pos[env_ids], root_rot[env_ids], indices=env_ids
         )
@@ -490,32 +543,40 @@ class MFP2DVirtual(RLTask):
         Resets the environments with the given indices.
 
         Args:
-            env_ids (torch.Tensor): the indices of the environments to be reset."""
+            env_ids (torch.Tensor): the indices of the environments to be reset.
+        """
 
         num_resets = len(env_ids)
         # Resets the counter of steps for which the goal was reached
         self.task.reset(env_ids)
+        self.set_targets(env_ids)
         self.virtual_platform.randomize_thruster_state(env_ids, num_resets)
         self.UF.generate_floor(env_ids, num_resets)
         self.TD.generate_torque(env_ids, num_resets)
         self.MDD.randomize_masses(env_ids, num_resets)
-        self.MDD.set_masses(self._platforms.base, env_ids)
         # Randomizes the starting position of the platform within a disk around the target
         root_pos, root_rot = self.task.get_spawns(
             env_ids, self.initial_root_pos.clone(), self.initial_root_rot.clone()
         )
-        # Resets the states of the joints
-        self.dof_pos[env_ids, :] = torch.zeros(
+
+        # Resets the states of the joints & applies CoM shift
+        self.MDD.set_masses(
+            self._platforms,
+            self._platforms.CoM,
+            env_ids,
+            (self._CoM_x_index, self._CoM_y_index),
+        )
+        dof_vel = torch.zeros(
             (num_resets, self._platforms.num_dof), device=self._device
         )
         self.dof_vel[env_ids, :] = 0
+
         # Sets the velocities to 0
         root_velocities = self.root_velocities.clone()
         root_velocities[env_ids] = 0
 
         # apply resets
-        self._platforms.set_joint_positions(self.dof_pos[env_ids], indices=env_ids)
-        self._platforms.set_joint_velocities(self.dof_vel[env_ids], indices=env_ids)
+        self._platforms.set_joint_velocities(dof_vel, indices=env_ids)
         self._platforms.set_world_poses(
             root_pos[env_ids], root_rot[env_ids], indices=env_ids
         )

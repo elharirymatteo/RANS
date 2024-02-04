@@ -1,11 +1,11 @@
-from typing import Optional
-
 from omni.isaac.core.robots.robot import Robot
 
+from typing import Optional, List, Tuple
+import dataclasses
 import numpy as np
 import torch
 import carb
-import dataclasses
+import os
 
 import omni
 import math
@@ -26,6 +26,14 @@ class CreatePlatform:
     Creates a floating platform with a core body and a set of thrusters."""
 
     def __init__(self, path: str, cfg: dict) -> None:
+        """
+        Creates a floating platform with a core body and a set of thrusters.
+
+        Args:
+            path (str): The path to the platform.
+            cfg (dict): The configuration file.
+        """
+
         self.platform_path = path
         self.joints_path = "joints"
         self.materials_path = "materials"
@@ -36,7 +44,11 @@ class CreatePlatform:
 
     def read_cfg(self, cfg: dict) -> None:
         """
-        Reads the configuration file and sets the parameters for the platform."""
+        Reads the configuration file and sets the parameters for the platform.
+
+        Args:
+            cfg (dict): The configuration file.
+        """
 
         if "core" in cfg.keys():
             if "shape" in cfg["core"].keys():
@@ -84,7 +96,8 @@ class CreatePlatform:
 
     def build(self) -> None:
         """
-        Builds the platform."""
+        Builds the platform.
+        """
 
         # Creates articulation root and the Xforms to store materials/joints.
         self.platform_path, self.platform_prim = createArticulation(
@@ -106,15 +119,8 @@ class CreatePlatform:
                 self.platform_path + "/core",
                 "body",
                 self.core_radius,
-                self.core_CoM,
-                self.core_mass,
-            )
-            dummy_path = self.createRigidSphere(
-                self.platform_path + "/dummy",
-                "dummy_body",
-                0.00001,
-                self.core_CoM,
-                0.00001,
+                Gf.Vec3d(0, 0, 0),
+                1e-4,
             )
         elif self.core_shape == "cylinder":
             self.core_path = self.createRigidCylinder(
@@ -122,23 +128,20 @@ class CreatePlatform:
                 "body",
                 self.core_radius,
                 self.core_height,
-                self.core_CoM,
-                self.core_mass,
+                Gf.Vec3d(0, 0, 0),
+                1e-4,
             )
-            dummy_path = self.createRigidCylinder(
-                self.platform_path + "/dummy",
-                "dummy_body",
-                0.00001,
-                0.00001,
-                self.core_CoM,
-                0.00001,
-            )
+        self.createMovableCoM(
+            self.platform_path + "/movable_CoM",
+            "CoM",
+            self.core_radius / 2,
+            self.core_CoM,
+            self.core_mass,
+        )
         self.createArrowXform(self.core_path + "/arrow")
         self.createPositionMarkerXform(self.core_path + "/marker")
-        # Adds a dummy body with a joint & drive so that Isaac stays chill.
-        createRevoluteJoint(
-            self.stage, self.joints_path + "/dummy_link", self.core_path, dummy_path
-        )
+
+        # Adds virtual anchors for the thrusters
         for i in range(self.num_virtual_thrusters):
             self.createVirtualThruster(
                 self.platform_path + "/v_thruster_" + str(i),
@@ -148,9 +151,59 @@ class CreatePlatform:
                 Gf.Vec3d([0, 0, 0]),
             )
 
+    def createMovableCoM(
+        self, path: str, name: str, radius: float, CoM: Gf.Vec3d, mass: float
+    ) -> None:
+        """
+        Creates a movable Center of Mass (CoM).
+
+        Args:
+            path (str): The path to the movable CoM.
+            name (str): The name of the sphere used as CoM.
+            radius (float): The radius of the sphere used as CoM.
+            CoM (Gf.Vec3d): The resting position of the center of mass.
+            mass (float): The mass of the Floating Platform.
+
+        Returns:
+            str: The path to the movable CoM.
+        """
+
+        # Create Xform
+        CoM_path, CoM_prim = createXform(self.stage, path)
+        # Add shapes
+        cylinder_path = CoM_path + "/" + name
+        cylinder_path, cylinder_geom = createCylinder(
+            self.stage, CoM_path + "/" + name, radius, radius, self.refinement
+        )
+        cylinder_prim = self.stage.GetPrimAtPath(cylinder_geom.GetPath())
+        applyRigidBody(cylinder_prim)
+        # Sets the collider
+        applyCollider(cylinder_prim)
+        # Sets the mass and CoM
+        applyMass(cylinder_prim, mass, Gf.Vec3d(0, 0, 0))
+
+        # Add dual prismatic joint
+        CoM_path, CoM_prim = createXform(
+            self.stage, os.path.join(self.joints_path, "/CoM_joints")
+        )
+        createP2Joint(
+            self.stage,
+            os.path.join(self.joints_path, "CoM_joints"),
+            self.core_path,
+            cylinder_path,
+            damping=1e6,
+            stiffness=1e12,
+            enable_drive=True,
+        )
+
+        self.CoM_x_axis = os.path.join("x_axis_joint")
+        self.CoM_y_axis = os.path.join("y_axis_joint")
+        return cylinder_path
+
     def createBasicColors(self) -> None:
         """
-        Creates a set of basic colors."""
+        Creates a set of basic colors.
+        """
 
         self.colors = {}
         self.colors["red"] = createColor(
@@ -177,7 +230,11 @@ class CreatePlatform:
 
     def createArrowXform(self, path: str) -> None:
         """
-        Creates an Xform to store the arrow indicating the platform heading."""
+        Creates an Xform to store the arrow indicating the platform heading.
+
+        Args:
+            path (str): The path to the arrow.
+        """
 
         self.arrow_path, self.arrow_prim = createXform(self.stage, path)
         createArrow(
@@ -206,7 +263,18 @@ class CreatePlatform:
     ) -> str:
         """
         Creates a rigid sphere. The sphere is a RigidBody, a Collider, and has a mass and CoM.
-        It is used to create the main body of the platform."""
+        It is used to create the main body of the platform.
+
+        Args:
+            path (str): The path to the sphere.
+            name (str): The name of the sphere.
+            radius (float): The radius of the sphere.
+            CoM (list): The center of mass of the sphere.
+            mass (float): The mass of the sphere.
+
+        Returns:
+            str: The path to the sphere.
+        """
 
         # Creates an Xform to store the core body
         path, prim = createXform(self.stage, path)
@@ -228,7 +296,19 @@ class CreatePlatform:
     ) -> str:
         """
         Creates a rigid cylinder. The cylinder is a RigidBody, a Collider, and has a mass and CoM.
-        It is used to create the main body of the platform."""
+        It is used to create the main body of the platform.
+
+        Args:
+            path (str): The path to the cylinder.
+            name (str): The name of the cylinder.
+            radius (float): The radius of the cylinder.
+            height (float): The height of the cylinder.
+            CoM (list): The center of mass of the cylinder.
+            mass (float): The mass of the cylinder.
+
+        Returns:
+            str: The path to the cylinder.
+        """
 
         # Creates an Xform to store the core body
         path, prim = createXform(self.stage, path)
@@ -250,7 +330,18 @@ class CreatePlatform:
     ) -> str:
         """
         Creates a virtual thruster. The thruster is a RigidBody, a Collider, and has a mass and CoM.
-        It is used to create the thrusters of the platform."""
+        It is used to create the thrusters of the platform.
+
+        Args:
+            path (str): The path to the thruster.
+            joint_path (str): The path to the joint.
+            parent_path (str): The path to the parent.
+            thruster_mass (float): The mass of the thruster.
+            thruster_CoM (list): The center of mass of the thruster.
+
+        Returns:
+            str: The path to the thruster.
+        """
 
         # Create Xform
         thruster_path, thruster_prim = createXform(self.stage, path)
@@ -277,7 +368,18 @@ class ModularFloatingPlatform(Robot):
         orientation: Optional[np.ndarray] = None,
         scale: Optional[np.array] = None,
     ) -> None:
-        """[summary]"""
+        """
+        Creates a modular floating platform.
+
+        Args:
+            prim_path (str): The path to the platform.
+            cfg (dict): The configuration file.
+            name (str, optional): The name of the platform. Defaults to 'modular_floating_platform'.
+            usd_path (str, optional): The path to the USD file. Defaults to None.
+            translation (np.ndarray, optional): The translation of the platform. Defaults to None.
+            orientation (np.ndarray, optional): The orientation of the platform. Defaults to None.
+            scale (np.array, optional): The scale of the platform. Defaults to None.
+        """
 
         self._usd_path = usd_path
         self._name = name
@@ -292,3 +394,5 @@ class ModularFloatingPlatform(Robot):
             orientation=orientation,
             scale=scale,
         )
+
+        self.joints = {"x_axis": fp.CoM_x_axis, "y_axis": fp.CoM_y_axis}
