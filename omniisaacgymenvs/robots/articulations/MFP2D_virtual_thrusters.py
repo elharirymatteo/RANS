@@ -163,35 +163,42 @@ class CreatePlatform:
             radius (float): The radius of the sphere used as CoM.
             CoM (Gf.Vec3d): The resting position of the center of mass.
             mass (float): The mass of the Floating Platform.
+
+        Returns:
+            str: The path to the movable CoM.
         """
 
         # Create Xform
         CoM_path, CoM_prim = createXform(self.stage, path)
         # Add shapes
-        sphere_path = CoM_path + "/" + name
-        sphere_path, sphere_geom = createSphere(
-            self.stage, CoM_path + "/" + name, radius, self.refinement
+        cylinder_path = CoM_path + "/" + name
+        cylinder_path, cylinder_geom = createCylinder(
+            self.stage, CoM_path + "/" + name, radius, radius, self.refinement
         )
-        sphere_prim = self.stage.GetPrimAtPath(sphere_geom.GetPath())
-        applyRigidBody(sphere_prim)
+        cylinder_prim = self.stage.GetPrimAtPath(cylinder_geom.GetPath())
+        applyRigidBody(cylinder_prim)
         # Sets the collider
-        applyCollider(sphere_prim)
+        applyCollider(cylinder_prim)
         # Sets the mass and CoM
-        applyMass(sphere_prim, mass, Gf.Vec3d(0, 0, 0))
+        applyMass(cylinder_prim, mass, Gf.Vec3d(0, 0, 0))
 
         # Add dual prismatic joint
-        CoM_path, CoM_prim = createXform(self.stage, "CoM_joints")
+        CoM_path, CoM_prim = createXform(
+            self.stage, os.path.join(self.joints_path, "/CoM_joints")
+        )
         createP2Joint(
-            self.stage, self.joints_path + "/CoM_joints", self.core_path, sphere_path
+            self.stage,
+            os.path.join(self.joints_path, "CoM_joints"),
+            self.core_path,
+            cylinder_path,
+            damping=1e6,
+            stiffness=1e12,
+            enable_drive=True,
         )
 
-        self.CoM_x_axis = os.path.join(
-            path, self.joints_path, "CoM_joints", "x_axis_joint"
-        )
-        self.CoM_y_axis = os.path.join(
-            path, self.joints_path, "CoM_joints", "y_axis_joint"
-        )
-        return sphere_path
+        self.CoM_x_axis = os.path.join("x_axis_joint")
+        self.CoM_y_axis = os.path.join("y_axis_joint")
+        return cylinder_path
 
     def createBasicColors(self) -> None:
         """
@@ -387,3 +394,5 @@ class ModularFloatingPlatform(Robot):
             orientation=orientation,
             scale=scale,
         )
+
+        self.joints = {"x_axis": fp.CoM_x_axis, "y_axis": fp.CoM_y_axis}
