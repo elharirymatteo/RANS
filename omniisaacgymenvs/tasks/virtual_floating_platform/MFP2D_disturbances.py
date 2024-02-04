@@ -31,7 +31,7 @@ class MassDistributionDisturbances:
         self._min_mass = task_cfg["min_mass"]
         self._max_mass = task_cfg["max_mass"]
         self._base_mass = task_cfg["base_mass"]
-        print(self._base_mass)
+        self._base_CoM = task_cfg["base_CoM"]
         self._CoM_max_displacement = task_cfg["CoM_max_displacement"]
         self._num_envs = num_envs
         self._device = device
@@ -47,8 +47,10 @@ class MassDistributionDisturbances:
             * self._base_mass
         )
         self.platforms_CoM = torch.zeros(
-            (self._num_envs, 3), device=self._device, dtype=torch.float32
+            (self._num_envs, 2), device=self._device, dtype=torch.float32
         )
+        self.platforms_CoM[:, 0] = self._base_CoM[0]
+        self.platforms_CoM[:, 1] = self._base_CoM[1]
 
     def randomize_masses(self, env_ids: torch.Tensor, num_resets: int) -> None:
         """
@@ -72,36 +74,62 @@ class MassDistributionDisturbances:
                 * math.pi
                 * 2
             )
-            self.platforms_CoM[env_ids, 0] = torch.cos(theta) * r
-            self.platforms_CoM[env_ids, 1] = torch.sin(theta) * r
+            self.platforms_CoM[env_ids, 0] = self._base_CoM[0] + torch.cos(theta) * r
+            self.platforms_CoM[env_ids, 1] = self._base_CoM[1] + torch.sin(theta) * r
 
-    def get_masses(self) -> Tuple[torch.Tensor, torch.Tensor]:
+    def get_masses(self) -> torch.Tensor:
         """
         Returns the masses and CoM of the platforms.
 
         Returns:
-            Tuple(torch.Tensor, torch.Tensor): The masses and CoM of the platforms."""
+            torch.Tensor[?:3]: The masses and CoM of the platforms. [mass, CoM_x, CoM_y].
+        """
 
-        return (self.platforms_mass, self.platforms_CoM)
+        return torch.cat((self.platforms_mass, self.platforms_CoM), dim=1)
+
+    def set_coms(
+        self,
+        body: omni.isaac.core.prims.XFormPrimView,
+        idx: torch.Tensor,
+        joints_idx: Tuple[int, int],
+    ) -> None:
+        """
+        Sets the CoM of the platforms.
+
+        Args:
+            body (omni.isaac.core.XFormPrimView): The rigid bodies containing the prismatic joints controlling the position of the CoMs.
+            idx (torch.Tensor): The ids of the environments to reset.
+            joints_idx (Tuple[int, int]): The ids of the x and y joints respectively.
+        """
+
+        joints_position = torch.zeros(
+            (len(idx), 2), device=self._device, dtype=torch.float32
+        )
+        joints_position[:, joints_idx[0]] = self.platforms_CoM[idx, 0]
+        joints_position[:, joints_idx[1]] = self.platforms_CoM[idx, 1]
+        if self._add_mass_disturbances:
+            body.set_joint_positions(joints_position, indices=idx)
 
     def set_masses(
-        self, body: omni.isaac.core.prims.XFormPrimView, idx: torch.Tensor
+        self,
+        articulation_body: omni.isaac.core.prims.XFormPrimView,
+        mass_body: omni.isaac.core.prims.XFormPrimView,
+        idx: torch.Tensor,
+        joints_idx: Tuple[int, int],
     ) -> None:
         """
         Sets the masses and CoM of the platforms.
 
         Args:
-            body (omni.isaac.core.XFormPrimView): The rigid bodies.
-            idx (torch.Tensor): The ids of the environments to reset."""
+            articulation_body (omni.isaac.core.XFormPrimView): The rigid bodies containing the prismatic joints controlling the position of the CoMs.
+            mass_body (omni.isaac.core.XFormPrimView): The rigid bodies containing the movable mass.
+            idx (torch.Tensor): The ids of the environments to reset.
+            joints_idx (Tuple[int, int]): The ids of the x and y joints respectively.
+        """
+
         if self._add_mass_disturbances:
-            body.set_masses(self.platforms_mass[idx, 0], indices=idx)
-            for id in idx.tolist():
-                rb = body._prims[id]
-                massAPI = UsdPhysics.MassAPI(rb)
-                massAPI.GetCenterOfMassAttr().Set(
-                    Gf.Vec3d(*self.platforms_CoM[idx].cpu().numpy().tolist())
-                )
-            # body.set_coms(self.platforms_CoM[idx], indices=idx)
+            mass_body.set_masses(self.platforms_mass[idx, 0], indices=idx)
+        self.set_coms(articulation_body, idx, joints_idx)
 
 
 class UnevenFloorDisturbance:
