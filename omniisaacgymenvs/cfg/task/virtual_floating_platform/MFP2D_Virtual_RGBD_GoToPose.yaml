@@ -5,6 +5,7 @@ physics_engine: ${..physics_engine}
 experiment: MFP2D_Virtual_RGBD_GoToPose
 
 env_path: /World/envs/env_0/Modular_floating_platform
+lab_path: /World/envs/env_0/ZeroG_Lab
 
 # if given, will override the device setting in gym. 
 env:
@@ -74,15 +75,15 @@ env:
       base_mass: ${...platform.core.mass}
 
   task_parameters:
-    name: GoToPose
+    name: GoToDockPose
     position_tolerance: 0.01
     kill_after_n_steps_in_tolerance: 50 # 10seconds
-    max_spawn_dist: 6.0
-    min_spawn_dist: 0.5
+    max_spawn_dist: 1.0
+    min_spawn_dist: 0.2
     kill_dist: 8.0
 
   reward_parameters:
-    name: GoToPose
+    name: GoToDockPose
     position_reward_mode: exponential
     heading_reward_mode: exponential
     position_exponential_reward_coeff: 0.25
@@ -176,6 +177,7 @@ sim:
   use_gpu_pipeline: ${eq:${...pipeline},"gpu"}
   gravity: [0.0, 0.0, 0.0]
   add_ground_plane: False
+  add_lab: True
   add_distant_light: True
   use_flatcache: True
   enable_scene_query_support: False

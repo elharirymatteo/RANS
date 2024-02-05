@@ -5,6 +5,7 @@ physics_engine: ${..physics_engine}
 experiment: MFP2DVirtual_RGBD_GoToXY
 
 env_path: /World/envs/env_0/Modular_floating_platform
+lab_path: /World/envs/env_0/ZeroG_Lab
 
 # if given, will override the device setting in gym. 
 env:
@@ -74,16 +75,16 @@ env:
       base_mass: ${...platform.core.mass}
 
   task_parameters: 
-    name: GoToXY
+    name: GoToDockXY
     position_tolerance: 0.01
     kill_after_n_steps_in_tolerance: 50 # 10seconds
-    max_spawn_dist: 4.5
-    min_spawn_dist: 0.5
+    max_spawn_dist: 1.0
+    min_spawn_dist: 0.2
     kill_dist: 8.0
     boundary_cost: 25
 
   reward_parameters:
-    name: GoToXY
+    name: GoToDockXY
     reward_mode: exponential
     exponential_reward_coeff: 0.25
 
@@ -150,7 +151,7 @@ env:
           params:
             focalLength: 1.93
             focusDistance: 50.0
-            clippingRange: [0.6, 100.0]
+            clippingRange: [0.01, 20.0]
             resolution: [600, 400] # [width, height]
             horizontalAperture: 3.60
             verticalAperture: 2.70
@@ -164,7 +165,7 @@ env:
           resolution: [600, 400] # [width, height]
           focalLength: 1.93
           focusDistance: 50.0
-          clippingRange: [0.6, 100.0]
+          clippingRange: [0.01, 20.0]
           horizontalAperture: 3.60
           verticalAperture: 2.70
 
@@ -173,6 +174,7 @@ sim:
   use_gpu_pipeline: ${eq:${...pipeline},"gpu"}
   gravity: [0.0, 0.0, 0.0]
   add_ground_plane: False
+  add_lab: True
   add_distant_light: True
   use_flatcache: True
   enable_scene_query_support: False

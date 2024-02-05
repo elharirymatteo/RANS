@@ -9,6 +9,7 @@ __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
 from omniisaacgymenvs.tasks.base.rl_task import RLTask
+from omniisaacgymenvs.tasks.base.rl_task_lab import RLTaskLab
 # from omniisaacgymenvs.robots.articulations.MFP2D_virtual_thrusters import (
 #     ModularFloatingPlatform,
 # )
@@ -18,6 +19,8 @@ from omniisaacgymenvs.robots.articulations.MFP2D_virtual_thrusters_camera import
 from omniisaacgymenvs.robots.articulations.views.mfp2d_virtual_thrusters_view import (
     ModularFloatingPlatformView,
 )
+
+from omniisaacgymenvs.robots.articulations.utils.MFP_utils import applyCollider
 
 from omniisaacgymenvs.robots.sensors.exteroceptive.camera import camera_factory
 
@@ -44,6 +47,7 @@ from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_disturbances import 
 
 from omni.isaac.core.utils.torch.rotations import *
 from omni.isaac.core.utils.prims import get_prim_at_path
+from omni.isaac.core.utils.stage import add_reference_to_stage
 
 from typing import Dict, List, Tuple
 
@@ -54,6 +58,7 @@ import math
 import torch
 from gym import spaces
 from dataclasses import dataclass
+import os
 
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
@@ -123,8 +128,8 @@ class MFP2DVirtual_RGBD(RLTask):
         # Instantiate the action and observations spaces
         self.set_action_and_observation_spaces()
         # Sets the initial positions of the target and platform
-        self._fp_position = torch.tensor([0, 0.0, 0.5])
-        self._default_marker_position = torch.tensor([0, 0, 1.0])
+        self._fp_position = torch.tensor([0, 0, 0.5])
+        self._default_marker_position = torch.tensor([0, 0, 0.25])
         self._marker = None
         # Preallocate tensors
         self.actions = torch.zeros(
@@ -261,6 +266,7 @@ class MFP2DVirtual_RGBD(RLTask):
         # Add the floating platform, and the marker
         self.get_floating_platform()
         self.get_target()
+        self.get_zero_g_lab()
 
         RLTask.set_up_scene(self, scene, replicate_physics=False)
 
@@ -303,13 +309,23 @@ class MFP2DVirtual_RGBD(RLTask):
             self.default_zero_env_path, self._default_marker_position
         )
 
+    def get_zero_g_lab(self) -> None:
+        """
+        Adds the Zero-G-lab to the scene."""
+        #TODO: should usd path be retrieved from cfg?
+        usd_path = os.path.join(os.getcwd(), "robots/usd/zero_g_lab_simple.usd")
+        lab_prim = add_reference_to_stage(usd_path, self._task_cfg["lab_path"])
+        # setRotateXYZ(lab_prim, (0, 0, 90))
+
     def collect_camera(self) -> None:
         """
         Collect active cameras to generate synthetic images in batch."""
         active_sensors = []
+        active_camera_source_path = self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["prim_path"]
         for i in range(self._num_envs):
-            sensor_path = self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["prim_path"].split("/")
-            sensor_path[2] = f"env_{i}"
+            #TODO: use regex to handle multiple cameras
+            sensor_path = active_camera_source_path.split("/")
+            sensor_path[3] = f"env_{i}"
             self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["prim_path"] = "/".join(sensor_path)
             rl_sensor = camera_factory.get("RLCamera")(self._task_cfg["env"]["sensors"]["camera"]["RLCamera"])
             active_sensors.append(rl_sensor)

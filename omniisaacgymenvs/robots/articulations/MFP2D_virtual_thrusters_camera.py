@@ -96,8 +96,9 @@ class CreatePlatform:
         elif self.core_shape == "cylinder":
             self.core_path = self.createRigidCylinder(self.platform_path + "/core", "body", self.core_radius, self.core_height, self.core_CoM, self.core_mass)
             dummy_path = self.createRigidCylinder(self.platform_path + "/dummy", "dummy_body", 0.00001, 0.00001, self.core_CoM, 0.00001)
-        self.createArrowXform(self.core_path+"/arrow")
-        self.createPositionMarkerXform(self.core_path+"/marker")
+        # disable arrow and marker to avoid blocking camera fov.
+        # self.createArrowXform(self.core_path+"/arrow")
+        # self.createPositionMarkerXform(self.core_path+"/marker")
         # Adds a dummy body with a joint & drive so that Isaac stays chill.
         createRevoluteJoint(self.stage, self.joints_path+"/dummy_link", self.core_path, dummy_path)
         for i in range(self.num_virtual_thrusters):
@@ -147,7 +148,7 @@ class CreatePlatform:
         sphere_prim = self.stage.GetPrimAtPath(sphere_geom.GetPath())
         applyRigidBody(sphere_prim)
         # Sets the collider
-        applyCollider(sphere_prim)
+        applyCollider(sphere_prim, True)
         # Sets the mass and CoM
         applyMass(sphere_prim, mass, CoM)
         return sphere_path
@@ -165,7 +166,7 @@ class CreatePlatform:
         sphere_prim = self.stage.GetPrimAtPath(sphere_geom.GetPath())
         applyRigidBody(sphere_prim)
         # Sets the collider
-        applyCollider(sphere_prim)
+        applyCollider(sphere_prim, True)
         # Sets the mass and CoM
         applyMass(sphere_prim, mass, CoM)
         return sphere_path
