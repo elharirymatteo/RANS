@@ -9,7 +9,6 @@ __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
 from omniisaacgymenvs.tasks.base.rl_task import RLTask
-from omniisaacgymenvs.tasks.base.rl_task_lab import RLTaskLab
 # from omniisaacgymenvs.robots.articulations.MFP2D_virtual_thrusters import (
 #     ModularFloatingPlatform,
 # )
@@ -19,8 +18,6 @@ from omniisaacgymenvs.robots.articulations.MFP2D_virtual_thrusters_camera import
 from omniisaacgymenvs.robots.articulations.views.mfp2d_virtual_thrusters_view import (
     ModularFloatingPlatformView,
 )
-
-from omniisaacgymenvs.robots.articulations.utils.MFP_utils import applyCollider
 
 from omniisaacgymenvs.robots.sensors.exteroceptive.camera import camera_factory
 
@@ -63,7 +60,7 @@ import os
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
 
-class MFP2DVirtual_RGBD(RLTask):
+class MFP2DVirtual_Dock(RLTask):
     """
     The main class used to run tasks on the floating platform.
     Unlike other class in this repo, this class can be used to run different tasks.
@@ -314,8 +311,7 @@ class MFP2DVirtual_RGBD(RLTask):
         Adds the Zero-G-lab to the scene."""
         #TODO: should usd path be retrieved from cfg?
         usd_path = os.path.join(os.getcwd(), "robots/usd/zero_g_lab_simple.usd")
-        lab_prim = add_reference_to_stage(usd_path, self._task_cfg["lab_path"])
-        # setRotateXYZ(lab_prim, (0, 0, 90))
+        add_reference_to_stage(usd_path, self._task_cfg["lab_path"])
 
     def collect_camera(self) -> None:
         """
@@ -323,7 +319,7 @@ class MFP2DVirtual_RGBD(RLTask):
         active_sensors = []
         active_camera_source_path = self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["prim_path"]
         for i in range(self._num_envs):
-            #TODO: use regex to handle multiple cameras
+            #TODO: make code cleaner.
             sensor_path = active_camera_source_path.split("/")
             sensor_path[3] = f"env_{i}"
             self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["prim_path"] = "/".join(sensor_path)

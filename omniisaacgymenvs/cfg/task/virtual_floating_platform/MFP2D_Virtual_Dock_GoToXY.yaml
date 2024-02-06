@@ -1,5 +1,5 @@
 # used to create the object
-name: MFP2DVirtual_RGBD
+name: MFP2DVirtual_Dock
 
 physics_engine: ${..physics_engine}
 experiment: MFP2DVirtual_RGBD_GoToXY

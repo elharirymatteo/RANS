@@ -226,12 +226,11 @@ class GoToDockXYTask(Core):
     def generate_target(self, path, position)->None:
         """
         Generate a docking station where the FP will dock to."""
-        # TODO: make tensor compatible.
-        position = Gf.Vec3d(*position.cpu().numpy().tolist())
         Dock(
-            prim_path=path + "/dock",
-            usd_path=os.path.join(os.getcwd(), "robots/usd/docking_station.usd"),
+            prim_path=path+"/dock", 
+            name="dock",
             position=position,
+            usd_path=os.path.join(os.getcwd(), "robots/usd/docking_station.usd"),
         )
 
 
