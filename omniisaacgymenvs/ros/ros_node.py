@@ -41,9 +41,9 @@ class RLPlayerNode:
         platform = cfg["task"]["env"]["platform"]
         disturbances = cfg["task"]["env"]["disturbances"]
         self.play_rate = 1 / (
-            cfg["task"]["env"]["controlFrequencyInv"]
-            * cfg["task"]["env"]["controlFrequencyInv"]
+            cfg["task"]["env"]["controlFrequencyInv"] * cfg["task"]["sim"]["dt"]
         )
+
         self.run_time = cfg["task"]["env"]["maxEpisodeLength"] / self.play_rate
 
         self.AN = NoisyActions(disturbances["actions"])
@@ -180,7 +180,7 @@ class RLPlayerNode:
         """
         self.state = self.getObs()
         self.action = self.hl_controller.getAction(self.state)
-        self.action = self.action * self.TK.killed_mask
+        # self.action = self.action * self.TK.killed_mask
         action = self.remap_actions(self.action)
         lifting_active = 1
         action.insert(0, lifting_active)
