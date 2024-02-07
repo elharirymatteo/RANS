@@ -72,8 +72,9 @@ def run(cfg: DictConfig):
 
     node = RLPlayerNode(
         hl_controller,
-        platform=cfg_dict["task"]["env"]["platform"],
-        disturbances=cfg_dict["task"]["env"]["disturbances"],
+        cfg=cfg_dict,
+        # platform=cfg_dict["task"]["env"]["platform"],
+        # disturbances=cfg_dict["task"]["env"]["disturbances"],
         debug=True,
     )
     # Run the node.
