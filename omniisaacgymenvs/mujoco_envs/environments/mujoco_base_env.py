@@ -41,53 +41,81 @@ def parseEnvironmentConfig(
     new_cfg = {}
     new_cfg["disturbances"] = {}
     new_cfg["disturbances"]["seed"] = cfg["seed"]
-    new_cfg["disturbances"]["use_uneven_floor"] = cfg["task"]["env"]["use_uneven_floor"]
+    new_cfg["disturbances"]["use_uneven_floor"] = cfg["task"]["env"]["disturbances"][
+        "forces"
+    ]["use_uneven_floor"]
     new_cfg["disturbances"]["use_sinusoidal_floor"] = cfg["task"]["env"][
-        "use_sinusoidal_floor"
-    ]
-    new_cfg["disturbances"]["floor_min_freq"] = cfg["task"]["env"]["floor_min_freq"]
-    new_cfg["disturbances"]["floor_max_freq"] = cfg["task"]["env"]["floor_max_freq"]
-    new_cfg["disturbances"]["floor_min_offset"] = cfg["task"]["env"]["floor_min_offset"]
-    new_cfg["disturbances"]["floor_max_offset"] = cfg["task"]["env"]["floor_max_offset"]
-    new_cfg["disturbances"]["min_floor_force"] = cfg["task"]["env"]["min_floor_force"]
-    new_cfg["disturbances"]["max_floor_force"] = cfg["task"]["env"]["max_floor_force"]
+        "disturbances"
+    ]["forces"]["use_sinusoidal_floor"]
+    new_cfg["disturbances"]["floor_min_freq"] = cfg["task"]["env"]["disturbances"][
+        "forces"
+    ]["floor_min_freq"]
+    new_cfg["disturbances"]["floor_max_freq"] = cfg["task"]["env"]["disturbances"][
+        "forces"
+    ]["floor_max_freq"]
+    new_cfg["disturbances"]["floor_min_offset"] = cfg["task"]["env"]["disturbances"][
+        "forces"
+    ]["floor_min_offset"]
+    new_cfg["disturbances"]["floor_max_offset"] = cfg["task"]["env"]["disturbances"][
+        "forces"
+    ]["floor_max_offset"]
+    new_cfg["disturbances"]["min_floor_force"] = cfg["task"]["env"]["disturbances"][
+        "forces"
+    ]["min_floor_force"]
+    new_cfg["disturbances"]["max_floor_force"] = cfg["task"]["env"]["disturbances"][
+        "forces"
+    ]["max_floor_force"]
 
     new_cfg["disturbances"]["use_torque_disturbance"] = cfg["task"]["env"][
-        "use_torque_disturbance"
-    ]
+        "disturbances"
+    ]["torques"]["use_torque_disturbance"]
     new_cfg["disturbances"]["use_sinusoidal_torque"] = cfg["task"]["env"][
-        "use_sinusoidal_torque"
-    ]
-    new_cfg["disturbances"]["min_torque"] = cfg["task"]["env"]["min_torque"]
-    new_cfg["disturbances"]["max_torque"] = cfg["task"]["env"]["max_torque"]
+        "disturbances"
+    ]["torques"]["use_sinusoidal_torque"]
+    new_cfg["disturbances"]["min_torque"] = cfg["task"]["env"]["disturbances"][
+        "torques"
+    ]["min_torque"]
+    new_cfg["disturbances"]["max_torque"] = cfg["task"]["env"]["disturbances"][
+        "torques"
+    ]["max_torque"]
 
-    new_cfg["disturbances"]["add_noise_on_pos"] = cfg["task"]["env"]["add_noise_on_pos"]
-    new_cfg["disturbances"]["position_noise_min"] = cfg["task"]["env"][
-        "position_noise_min"
-    ]
-    new_cfg["disturbances"]["position_noise_max"] = cfg["task"]["env"][
-        "position_noise_max"
-    ]
-    new_cfg["disturbances"]["add_noise_on_vel"] = cfg["task"]["env"]["add_noise_on_vel"]
-    new_cfg["disturbances"]["velocity_noise_min"] = cfg["task"]["env"][
-        "velocity_noise_min"
-    ]
-    new_cfg["disturbances"]["velocity_noise_max"] = cfg["task"]["env"][
-        "velocity_noise_max"
-    ]
+    new_cfg["disturbances"]["add_noise_on_pos"] = cfg["task"]["env"]["disturbances"][
+        "observations"
+    ]["add_noise_on_pos"]
+    new_cfg["disturbances"]["position_noise_min"] = cfg["task"]["env"]["disturbances"][
+        "observations"
+    ]["position_noise_min"]
+    new_cfg["disturbances"]["position_noise_max"] = cfg["task"]["env"]["disturbances"][
+        "observations"
+    ]["position_noise_max"]
+    new_cfg["disturbances"]["add_noise_on_vel"] = cfg["task"]["env"]["disturbances"][
+        "observations"
+    ]["add_noise_on_vel"]
+    new_cfg["disturbances"]["velocity_noise_min"] = cfg["task"]["env"]["disturbances"][
+        "observations"
+    ]["velocity_noise_min"]
+    new_cfg["disturbances"]["velocity_noise_max"] = cfg["task"]["env"]["disturbances"][
+        "observations"
+    ]["velocity_noise_max"]
     new_cfg["disturbances"]["add_noise_on_heading"] = cfg["task"]["env"][
-        "add_noise_on_heading"
-    ]
-    new_cfg["disturbances"]["heading_noise_min"] = cfg["task"]["env"][
-        "heading_noise_min"
-    ]
-    new_cfg["disturbances"]["heading_noise_max"] = cfg["task"]["env"][
-        "heading_noise_max"
-    ]
+        "disturbances"
+    ]["observations"]["add_noise_on_heading"]
+    new_cfg["disturbances"]["heading_noise_min"] = cfg["task"]["env"]["disturbances"][
+        "observations"
+    ]["heading_noise_min"]
+    new_cfg["disturbances"]["heading_noise_max"] = cfg["task"]["env"]["disturbances"][
+        "observations"
+    ]["heading_noise_max"]
 
-    new_cfg["disturbances"]["add_noise_on_act"] = cfg["task"]["env"]["add_noise_on_act"]
-    new_cfg["disturbances"]["min_action_noise"] = cfg["task"]["env"]["min_action_noise"]
-    new_cfg["disturbances"]["max_action_noise"] = cfg["task"]["env"]["max_action_noise"]
+    new_cfg["disturbances"]["add_noise_on_act"] = cfg["task"]["env"]["disturbances"][
+        "actions"
+    ]["add_noise_on_act"]
+    new_cfg["disturbances"]["min_action_noise"] = cfg["task"]["env"]["disturbances"][
+        "actions"
+    ]["min_action_noise"]
+    new_cfg["disturbances"]["max_action_noise"] = cfg["task"]["env"]["disturbances"][
+        "actions"
+    ]["max_action_noise"]
 
     new_cfg["spawn_parameters"] = {}
     new_cfg["spawn_parameters"]["seed"] = cfg["seed"]
@@ -115,6 +143,9 @@ def parseEnvironmentConfig(
     new_cfg["inv_play_rate"] = cfg["task"]["env"]["controlFrequencyInv"]
     new_cfg["platform"] = cfg["task"]["env"]["platform"]
     new_cfg["platform"]["seed"] = cfg["seed"]
+
+    new_cfg["run_batch"] = cfg["hl_task"]["run_batch"]
+    new_cfg["max_episode_length"] = cfg["task"]["env"]["maxEpisodeLength"]
     return new_cfg
 
 
@@ -130,6 +161,8 @@ class MuJoCoFloatingPlatform:
         spawn_parameters: Dict[str, float] = None,
         platform: Dict[str, Union[bool, dict, float, str, int]] = None,
         disturbances: Dict[str, Union[bool, float]] = None,
+        run_batch: int = 1,
+        max_episode_length: int = 500,
         **kwargs
     ) -> None:
         """
@@ -146,6 +179,8 @@ class MuJoCoFloatingPlatform:
 
         self.inv_play_rate = inv_play_rate
         self.platform = platform
+        self.run_batch = run_batch
+        self.max_episode_length = max_episode_length
 
         self.AN = NoisyActions(disturbances)
         self.ON = NoisyObservations(disturbances)
@@ -181,7 +216,7 @@ class MuJoCoFloatingPlatform:
             initial_position (list, optional): The initial position of the body. Defaults to [0,0,0].
             initial_orientation (list, optional): The initial orientation of the body. Defaults to [1,0,0,0].
         """
-
+        self.initializeModel()
         self.resetPosition(
             initial_position=initial_position, initial_orientation=initial_orientation
         )
@@ -395,11 +430,20 @@ class MuJoCoFloatingPlatform:
             initial_orientation (list, optional): The initial orientation of the body. Defaults to [1,0,0,0].
         """
 
+        print(self.run_batch)
+
+        if self.run_batch > 1:
+            self.run_batch_evaluation(model)
+        else:
+            self.run_single_evaluation(model, initial_position, initial_orientation)
+
+    def run_single_evaluation(self, model, initial_position, initial_orientation):
         self.reset(
             initial_position=initial_position, initial_orientation=initial_orientation
         )
 
         done = False
+
         while (self.duration > self.data.time) and (not done):
             state = self.getObs()  # Updates the state of the simulation.
             # Get the actions from the controller
@@ -409,3 +453,40 @@ class MuJoCoFloatingPlatform:
                 self.applyForces(self.actions)
                 mujoco.mj_step(self.model, self.data)
             done = model.isDone()
+
+        model.saveSimulationData()
+        model.plotSimulation()
+
+    def run_batch_evaluation(self, model):
+        """
+        Runs the simulation loop.
+
+        Args:
+            model (object): The model of the controller.
+        """
+
+        print("Running the simulations.")
+        for i in range(self.run_batch):
+            # Runs the simulation
+            print("Running simulation " + str(i) + " of " + str(self.run_batch) + ".")
+            initial_position, initial_orientation = self.RS.getInitialCondition()
+            self.reset(
+                initial_position=initial_position,
+                initial_orientation=initial_orientation,
+            )
+            model.initializeLoggers()
+            step = 0
+            while self.max_episode_length > step:
+                state = self.getObs()  # Updates the state of the simulation.
+                # Get the actions from the controller
+                self.actions = model.getAction(state, mute=True)
+                # Plays only once every self.inv_play_rate steps.
+                for _ in range(self.inv_play_rate):
+                    self.applyForces(self.actions)
+                    mujoco.mj_step(self.model, self.data)
+                step += 1
+
+            # Saves the simulation data
+            model.saveSimulationData(suffix=str(i))
+
+        model.plotBatch()

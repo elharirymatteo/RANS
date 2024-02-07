@@ -60,9 +60,6 @@ def run(cfg: DictConfig):
 
     env.runLoop(hl_controller)
 
-    hl_controller.saveSimulationData()
-    hl_controller.plotSimulation()
-
 
 if __name__ == "__main__":
     run()

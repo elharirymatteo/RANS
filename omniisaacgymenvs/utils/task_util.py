@@ -62,6 +62,8 @@ def import_tasks():
 
     from omniisaacgymenvs.tasks.crazyflie import CrazyflieTask
     from omniisaacgymenvs.tasks.MFP2D_Virtual import MFP2DVirtual
+    from omniisaacgymenvs.tasks.MFP2D_Virtual_RGBD import MFP2DVirtual_RGBD
+    from omniisaacgymenvs.tasks.MFP2D_Virtual_IMU import MFP2DVirtual_IMU
     from omniisaacgymenvs.tasks.MFP3D_Virtual import MFP3DVirtual
 
     # Mappings from strings to environments
@@ -85,8 +87,15 @@ def import_tasks():
         "ShadowHand": ShadowHandTask,
         "ShadowHandOpenAI_FF": ShadowHandTask,
         "ShadowHandOpenAI_LSTM": ShadowHandTask,
+<<<<<<< HEAD
         "MFP2DVirtual": MFP2DVirtual,
         "MFP3DVirtual": MFP3DVirtual,
+=======
+        "MFP2DVirtual":MFP2DVirtual,
+        "MFP3DVirtual":MFP3DVirtual,
+        "MFP2DVirtual_RGBD":MFP2DVirtual_RGBD,
+        "MFP2DVirtual_IMU": MFP2DVirtual_IMU
+>>>>>>> e37ae1f841c01f3b1621d565a353d9207394e937
     }
 
     task_map_warp = {
