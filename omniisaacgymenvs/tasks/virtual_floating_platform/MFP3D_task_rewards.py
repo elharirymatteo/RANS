@@ -94,7 +94,7 @@ class GoToPoseReward:
         elif self.position_reward_mode.lower() == "square":
             position_reward = 1.0 / (1.0 + position_error) * self.position_scale
         elif self.position_reward_mode.lower() == "exponential":
-            position_reward = torch.exp(-position_error / 0.25) * self.position_scale
+            position_reward = torch.exp(-position_error / self.position_exponential_reward_coeff) * self.position_scale
         else:
             raise ValueError("Unknown reward type.")
 
@@ -103,7 +103,7 @@ class GoToPoseReward:
         elif self.heading_reward_mode.lower() == "square":
             heading_reward = 1.0 / (1.0 + heading_error) * self.heading_scale
         elif self.heading_reward_mode.lower() == "exponential":
-            heading_reward = torch.exp(-heading_error / 0.25) * self.heading_scale
+            heading_reward = torch.exp(-heading_error / self.heading_exponential_reward_coeff) * self.heading_scale
         else:
             raise ValueError("Unknown reward type.")
         return position_reward, heading_reward
@@ -190,7 +190,7 @@ class TrackXYOVelocityReward:
         elif self.linear_reward_mode.lower() == "square":
             linear_reward = 1.0 / (1.0 + linear_velocity_error) * self.linear_scale
         elif self.linear_reward_mode.lower() == "exponential":
-            linear_reward = torch.exp(-linear_velocity_error / 0.25) * self.linear_scale
+            linear_reward = torch.exp(-linear_velocity_error / self.linear_exponential_reward_coeff) * self.linear_scale
         else:
             raise ValueError("Unknown reward type.")
 
@@ -200,7 +200,7 @@ class TrackXYOVelocityReward:
             angular_reward = 1.0 / (1.0 + angular_velocity_error) * self.angular_scale
         elif self.angular_reward_mode.lower() == "exponential":
             angular_reward = (
-                torch.exp(-angular_velocity_error / 0.25) * self.angular_scale
+                torch.exp(-angular_velocity_error / self.angular_exponential_reward_coeff) * self.angular_scale
             )
         else:
             raise ValueError("Unknown reward type.")
