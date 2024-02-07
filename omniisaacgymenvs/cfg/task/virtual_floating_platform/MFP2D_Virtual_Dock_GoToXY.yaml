@@ -152,7 +152,6 @@ env:
             focalLength: 1.93
             focusDistance: 50.0
             clippingRange: [0.01, 20.0]
-            resolution: [600, 400] # [width, height]
             horizontalAperture: 3.60
             verticalAperture: 2.70
   
@@ -160,9 +159,9 @@ env:
     camera:
       RLCamera:
         prim_path: "${.....env_path}/core/body/${....platform.camera.structure.module_name}/camera_color_optical_frame/Camera"
+        resolution: [300, 200] # [width, height]
         is_override: True
         params:
-          resolution: [600, 400] # [width, height]
           focalLength: 1.93
           focusDistance: 50.0
           clippingRange: [0.01, 20.0]

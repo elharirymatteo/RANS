@@ -161,16 +161,28 @@ class MFP2DVirtual_Dock(RLTask):
                 ),
                 "transforms": spaces.Box(low=-1, high=1, shape=(self._max_actions, 5)),
                 "masks": spaces.Box(low=0, high=1, shape=(self._max_actions,)),
-                "image": spaces.Box(
+                "rgb": spaces.Box(
                     np.ones((
-                            4, 
-                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["params"]["resolution"][-1], 
-                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["params"]["resolution"][0], 
+                            3, 
+                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][-1], 
+                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][0], 
                             )) * -np.Inf,
                     np.ones((
-                            4, 
-                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["params"]["resolution"][-1], 
-                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["params"]["resolution"][0], 
+                            3, 
+                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][-1], 
+                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][0], 
+                            )) * np.Inf,
+                ),
+                "depth": spaces.Box(
+                    np.ones((
+                            1, 
+                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][-1], 
+                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][0], 
+                            )) * -np.Inf,
+                    np.ones((
+                            1, 
+                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][-1], 
+                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][0], 
                             )) * np.Inf,
                 ),
             }
@@ -227,12 +239,22 @@ class MFP2DVirtual_Dock(RLTask):
                 device=self._device,
                 dtype=torch.float,
             ),
-            "image": torch.zeros(
+            "rgb": torch.zeros(
                 (
                     self._num_envs,
-                    4,
-                    self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["params"]["resolution"][-1], 
-                    self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["params"]["resolution"][0], 
+                    3,
+                    self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][-1], 
+                    self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][0], 
+                ),
+                device = self._device,
+                dtype = torch.float,
+            ),
+            "depth": torch.zeros(
+                (
+                    self._num_envs,
+                    1,
+                    self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][-1], 
+                    self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][0], 
                 ),
                 device = self._device,
                 dtype = torch.float,
@@ -377,9 +399,10 @@ class MFP2DVirtual_Dock(RLTask):
         self.obs_buf["transforms"] = self.virtual_platform.current_transforms
         # Get the action masks
         self.obs_buf["masks"] = self.virtual_platform.action_masks
-        # Get the sensor data
+        # Get the camera data
         rgb_obs, depth_obs = self.get_rgbd_data()
-        self.obs_buf["image"] = torch.cat([rgb_obs, depth_obs], dim=1) # RGB + Depth -> RGBD
+        self.obs_buf["rgb"] = rgb_obs
+        self.obs_buf["depth"] = depth_obs
 
         observations = {self._platforms.name: {"obs_buf": self.obs_buf}}
         return observations
@@ -505,7 +528,7 @@ class MFP2DVirtual_Dock(RLTask):
         target_positions, target_orientation = self.task.get_goals(
             env_long, self.initial_pin_pos.clone(), self.initial_pin_rot.clone()
         )
-        target_positions[env_long, 2] = torch.ones(num_sets, device=self._device) * 2.0
+        target_positions[env_long, 2] = torch.ones(num_sets, device=self._device) * 0.25
         # Apply the new goals
         if self._marker:
             self._marker.set_world_poses(

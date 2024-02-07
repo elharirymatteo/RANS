@@ -45,6 +45,4 @@ class Dock(XFormPrim):
         """
         Load a dock station prim and apply physics."""
         add_reference_to_stage(self.usd_path, self.prim_path)
-        prim = get_prim_at_path(self.prim_path)
-        applyCollider(prim, True)
-        applyRigidBody(prim)
+        applyRigidBody(self.prim)
