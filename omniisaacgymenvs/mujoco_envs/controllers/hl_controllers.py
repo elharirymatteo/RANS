@@ -56,7 +56,9 @@ class BaseController:
         self.logs["quaternion"] = []
         self.logs["actions"] = []
 
-    def updateLoggers(self, state: Dict[str, np.ndarray], action: np.ndarray) -> None:
+    def updateLoggers(
+        self, state: Dict[str, np.ndarray], action: np.ndarray, time: float = None
+    ) -> None:
         """
         Updates the loggers for the simulation.
 
@@ -70,7 +72,10 @@ class BaseController:
         self.logs["angular_velocity"].append(state["angular_velocity"])
         self.logs["linear_velocity"].append(state["linear_velocity"])
         self.logs["actions"].append(action)
-        self.time += self.dt
+        if time is not None:
+            self.time = time
+        else:
+            self.time += self.dt
 
     def isDone(self) -> bool:
         """
@@ -256,7 +261,7 @@ class PoseController(BaseController):
         self.logs["position_target"] = []
         self.logs["heading_target"] = []
 
-    def updateLoggers(self, state, actions) -> None:
+    def updateLoggers(self, state, actions, time: float = None) -> None:
         """
         Updates the loggers.
 
@@ -264,7 +269,7 @@ class PoseController(BaseController):
             state (Dict[str, np.ndarray]): State of the system.
             actions (np.ndarray): Action taken by the controller."""
 
-        super().updateLoggers(state, actions)
+        super().updateLoggers(state, actions, time=time)
         self.logs["position_target"].append(self.current_goal[:2])
         self.logs["heading_target"].append(self.current_goal[-1])
 
@@ -459,7 +464,7 @@ class PositionController(BaseController):
         super().initializeLoggers()
         self.logs["position_target"] = []
 
-    def updateLoggers(self, state, actions) -> None:
+    def updateLoggers(self, state, actions, time: float) -> None:
         """
         Updates the loggers.
 
@@ -467,7 +472,7 @@ class PositionController(BaseController):
             state (Dict[str, np.ndarray]): State of the system.
             actions (np.ndarray): Action taken by the controller."""
 
-        super().updateLoggers(state, actions)
+        super().updateLoggers(state, actions, time=time)
         self.logs["position_target"].append(self.current_goal[:2])
 
     def isGoalReached(self, state: Dict[str, np.ndarray]) -> bool:
@@ -858,7 +863,7 @@ class VelocityTracker(BaseController):
         self.logs["velocity_goal"] = []
         self.logs["position_target"] = []
 
-    def updateLoggers(self, state, actions) -> None:
+    def updateLoggers(self, state, actions, time=None) -> None:
         """
         Updates the loggers.
 
@@ -866,7 +871,7 @@ class VelocityTracker(BaseController):
             state (Dict[str, np.ndarray]): State of the system.
             actions (np.ndarray): Action taken by the controller."""
 
-        super().updateLoggers(state, actions)
+        super().updateLoggers(state, actions, time=time)
         self.logs["velocity_goal"].append(self.velocity_goal[:2])
         self.logs["position_target"].append(self.getTargetPosition())
 

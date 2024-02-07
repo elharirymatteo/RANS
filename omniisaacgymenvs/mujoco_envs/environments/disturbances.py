@@ -58,9 +58,10 @@ class RandomKillThrusters:
             cfg (dict): A dictionary containing the configuration of the random kill thrusters disturbance.
         """
 
-        self._rng = np.random.default_rng(seed=cfg["seed"])
+        self._rng = np.random.default_rng(seed=42)  # cfg["seed"])
         self._num_thrusters_to_kill = cfg["num_thrusters_to_kill"]
         self.killed_thrusters_id = []
+        self.killed_mask = np.ones([8])
 
     def generate_thruster_kills(self) -> None:
         """
@@ -68,7 +69,8 @@ class RandomKillThrusters:
 
         self.killed_thrusters_id = self._rng.choice(
             8, self._num_thrusters_to_kill, replace=False
-        )  # [2,3]
+        )
+        self.killed_mask[self.killed_thrusters_id] = 0
         # print("Killed thrusters: ", self.killed_thrusters_id)
 
 
@@ -229,7 +231,7 @@ class NoisyObservations:
             cfg (Dict[str,float]): A dictionary containing the configuration of the noisy observations disturbance.
         """
 
-        self._rng = np.random.default_rng(seed=cfg["seed"])
+        self._rng = np.random.default_rng(seed=42)  # cfg["seed"])
         self._add_noise_on_pos = cfg["add_noise_on_pos"]
         self._position_noise_min = cfg["position_noise_min"]
         self._position_noise_max = cfg["position_noise_max"]
@@ -301,7 +303,7 @@ class NoisyActions:
             cfg (Dict[str,float]): A dictionary containing the configuration of the noisy actions disturbance.
         """
 
-        self._rng = np.random.default_rng(seed=cfg["seed"])
+        self._rng = np.random.default_rng(seed=42)  # seed=cfg["seed"])
         self._add_noise_on_act = cfg["add_noise_on_act"]
         self._min_action_noise = cfg["min_action_noise"]
         self._max_action_noise = cfg["max_action_noise"]
