@@ -44,6 +44,7 @@ from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_disturbances import 
 
 from omni.isaac.core.utils.torch.rotations import *
 from omni.isaac.core.utils.prims import get_prim_at_path
+from omni.isaac.core.utils.stage import add_reference_to_stage
 
 from typing import Dict, List, Tuple
 
@@ -54,11 +55,12 @@ import math
 import torch
 from gym import spaces
 from dataclasses import dataclass
+import os
 
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
 
-class MFP2DVirtual_RGBD(RLTask):
+class MFP2DVirtual_Dock_RGBD(RLTask):
     """
     The main class used to run tasks on the floating platform.
     Unlike other class in this repo, this class can be used to run different tasks.
@@ -123,8 +125,8 @@ class MFP2DVirtual_RGBD(RLTask):
         # Instantiate the action and observations spaces
         self.set_action_and_observation_spaces()
         # Sets the initial positions of the target and platform
-        self._fp_position = torch.tensor([0, 0.0, 0.5])
-        self._default_marker_position = torch.tensor([0, 0, 1.0])
+        self._fp_position = torch.tensor([0, 0, 0.5])
+        self._default_marker_position = torch.tensor([0, 0, 0.25])
         self._marker = None
         # Preallocate tensors
         self.actions = torch.zeros(
@@ -159,16 +161,28 @@ class MFP2DVirtual_RGBD(RLTask):
                 ),
                 "transforms": spaces.Box(low=-1, high=1, shape=(self._max_actions, 5)),
                 "masks": spaces.Box(low=0, high=1, shape=(self._max_actions,)),
-                "image": spaces.Box(
+                "rgb": spaces.Box(
                     np.ones((
-                            4, 
-                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["params"]["resolution"][-1], 
-                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["params"]["resolution"][0], 
+                            3, 
+                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][-1], 
+                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][0], 
                             )) * -np.Inf,
                     np.ones((
-                            4, 
-                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["params"]["resolution"][-1], 
-                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["params"]["resolution"][0], 
+                            3, 
+                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][-1], 
+                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][0], 
+                            )) * np.Inf,
+                ),
+                "depth": spaces.Box(
+                    np.ones((
+                            1, 
+                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][-1], 
+                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][0], 
+                            )) * -np.Inf,
+                    np.ones((
+                            1, 
+                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][-1], 
+                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][0], 
                             )) * np.Inf,
                 ),
             }
@@ -225,12 +239,22 @@ class MFP2DVirtual_RGBD(RLTask):
                 device=self._device,
                 dtype=torch.float,
             ),
-            "image": torch.zeros(
+            "rgb": torch.zeros(
                 (
                     self._num_envs,
-                    4,
-                    self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["params"]["resolution"][-1], 
-                    self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["params"]["resolution"][0], 
+                    3,
+                    self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][-1], 
+                    self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][0], 
+                ),
+                device = self._device,
+                dtype = torch.float,
+            ),
+            "depth": torch.zeros(
+                (
+                    self._num_envs,
+                    1,
+                    self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][-1], 
+                    self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][0], 
                 ),
                 device = self._device,
                 dtype = torch.float,
@@ -261,6 +285,7 @@ class MFP2DVirtual_RGBD(RLTask):
         # Add the floating platform, and the marker
         self.get_floating_platform()
         self.get_target()
+        self.get_zero_g_lab()
 
         RLTask.set_up_scene(self, scene, replicate_physics=False)
 
@@ -303,13 +328,22 @@ class MFP2DVirtual_RGBD(RLTask):
             self.default_zero_env_path, self._default_marker_position
         )
 
+    def get_zero_g_lab(self) -> None:
+        """
+        Adds the Zero-G-lab to the scene."""
+        #TODO: should usd path be retrieved from cfg?
+        usd_path = os.path.join(os.getcwd(), "robots/usd/zero_g_lab_simple.usd")
+        add_reference_to_stage(usd_path, self._task_cfg["lab_path"])
+
     def collect_camera(self) -> None:
         """
         Collect active cameras to generate synthetic images in batch."""
         active_sensors = []
+        active_camera_source_path = self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["prim_path"]
         for i in range(self._num_envs):
-            sensor_path = self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["prim_path"].split("/")
-            sensor_path[2] = f"env_{i}"
+            #TODO: make code cleaner.
+            sensor_path = active_camera_source_path.split("/")
+            sensor_path[3] = f"env_{i}"
             self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["prim_path"] = "/".join(sensor_path)
             rl_sensor = camera_factory.get("RLCamera")(self._task_cfg["env"]["sensors"]["camera"]["RLCamera"])
             active_sensors.append(rl_sensor)
@@ -365,9 +399,10 @@ class MFP2DVirtual_RGBD(RLTask):
         self.obs_buf["transforms"] = self.virtual_platform.current_transforms
         # Get the action masks
         self.obs_buf["masks"] = self.virtual_platform.action_masks
-        # Get the sensor data
+        # Get the camera data
         rgb_obs, depth_obs = self.get_rgbd_data()
-        self.obs_buf["image"] = torch.cat([rgb_obs, depth_obs], dim=1) # RGB + Depth -> RGBD
+        self.obs_buf["rgb"] = rgb_obs
+        self.obs_buf["depth"] = depth_obs
 
         observations = {self._platforms.name: {"obs_buf": self.obs_buf}}
         return observations
@@ -493,7 +528,7 @@ class MFP2DVirtual_RGBD(RLTask):
         target_positions, target_orientation = self.task.get_goals(
             env_long, self.initial_pin_pos.clone(), self.initial_pin_rot.clone()
         )
-        target_positions[env_long, 2] = torch.ones(num_sets, device=self._device) * 2.0
+        target_positions[env_long, 2] = torch.ones(num_sets, device=self._device) * 0.25
         # Apply the new goals
         if self._marker:
             self._marker.set_world_poses(

@@ -19,6 +19,13 @@ from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_track_xyo_velocity i
     TrackXYOVelocityTask,
 )
 
+from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_go_to_dock_xy import (
+    GoToDockXYTask,
+)
+
+from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_go_to_dock_pose import (
+    GoToDockPoseTask,
+)
 
 class TaskFactory:
     """
@@ -51,3 +58,5 @@ task_factory.register("GoToPose", GoToPoseTask)
 task_factory.register("TrackXYVelocity", TrackXYVelocityTask)
 task_factory.register("TrackXYOVelocity", TrackXYOVelocityTask)
 # task_factory.register("TrackXYVelocityHeading", TrackXYVelocityHeadingTask)
+task_factory.register("GoToDockXY", GoToDockXYTask)
+task_factory.register("GoToDockPose", GoToDockPoseTask)
