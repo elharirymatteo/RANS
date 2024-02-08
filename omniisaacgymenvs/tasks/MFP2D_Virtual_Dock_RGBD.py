@@ -60,7 +60,7 @@ import os
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
 
-class MFP2DVirtual_Dock(RLTask):
+class MFP2DVirtual_Dock_RGBD(RLTask):
     """
     The main class used to run tasks on the floating platform.
     Unlike other class in this repo, this class can be used to run different tasks.

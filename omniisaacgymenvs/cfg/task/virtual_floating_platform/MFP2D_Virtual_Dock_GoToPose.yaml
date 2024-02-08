@@ -1,8 +1,8 @@
 # used to create the object
-name: MFP2DVirtual_Dock
+name: MFP2DVirtual_Dock_RGBD
 
 physics_engine: ${..physics_engine}
-experiment: MFP2D_Virtual_RGBD_GoToPose
+experiment: MFP2D_Virtual_Dock_RGBD_GoToPose
 
 env_path: /World/envs/env_0/Modular_floating_platform
 lab_path: /World/envs/env_0/ZeroG_Lab
