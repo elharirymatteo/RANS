@@ -9,6 +9,7 @@ __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
 from omniisaacgymenvs.tasks.base.rl_task import RLTask
+
 # from omniisaacgymenvs.robots.articulations.MFP2D_virtual_thrusters import (
 #     ModularFloatingPlatform,
 # )
@@ -162,28 +163,56 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
                 "transforms": spaces.Box(low=-1, high=1, shape=(self._max_actions, 5)),
                 "masks": spaces.Box(low=0, high=1, shape=(self._max_actions,)),
                 "rgb": spaces.Box(
-                    np.ones((
-                            3, 
-                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][-1], 
-                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][0], 
-                            )) * -np.Inf,
-                    np.ones((
-                            3, 
-                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][-1], 
-                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][0], 
-                            )) * np.Inf,
+                    np.ones(
+                        (
+                            3,
+                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"][
+                                "resolution"
+                            ][-1],
+                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"][
+                                "resolution"
+                            ][0],
+                        )
+                    )
+                    * -np.Inf,
+                    np.ones(
+                        (
+                            3,
+                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"][
+                                "resolution"
+                            ][-1],
+                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"][
+                                "resolution"
+                            ][0],
+                        )
+                    )
+                    * np.Inf,
                 ),
                 "depth": spaces.Box(
-                    np.ones((
-                            1, 
-                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][-1], 
-                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][0], 
-                            )) * -np.Inf,
-                    np.ones((
-                            1, 
-                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][-1], 
-                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][0], 
-                            )) * np.Inf,
+                    np.ones(
+                        (
+                            1,
+                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"][
+                                "resolution"
+                            ][-1],
+                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"][
+                                "resolution"
+                            ][0],
+                        )
+                    )
+                    * -np.Inf,
+                    np.ones(
+                        (
+                            1,
+                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"][
+                                "resolution"
+                            ][-1],
+                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"][
+                                "resolution"
+                            ][0],
+                        )
+                    )
+                    * np.Inf,
                 ),
             }
         )
@@ -243,21 +272,29 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
                 (
                     self._num_envs,
                     3,
-                    self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][-1], 
-                    self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][0], 
+                    self._task_cfg["env"]["sensors"]["camera"]["RLCamera"][
+                        "resolution"
+                    ][-1],
+                    self._task_cfg["env"]["sensors"]["camera"]["RLCamera"][
+                        "resolution"
+                    ][0],
                 ),
-                device = self._device,
-                dtype = torch.float,
+                device=self._device,
+                dtype=torch.float,
             ),
             "depth": torch.zeros(
                 (
                     self._num_envs,
                     1,
-                    self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][-1], 
-                    self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["resolution"][0], 
+                    self._task_cfg["env"]["sensors"]["camera"]["RLCamera"][
+                        "resolution"
+                    ][-1],
+                    self._task_cfg["env"]["sensors"]["camera"]["RLCamera"][
+                        "resolution"
+                    ][0],
                 ),
-                device = self._device,
-                dtype = torch.float,
+                device=self._device,
+                dtype=torch.float,
             ),
         }
 
@@ -303,12 +340,12 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         # Add arrows to scene if task is go to pose
         scene, self._marker = self.task.add_visual_marker_to_scene(scene)
         return
-    
+
     def get_floating_platform(self):
         """
         Adds the floating platform to the scene."""
 
-        fp = ModularFloatingPlatformWithCamera(
+        self._fp = ModularFloatingPlatformWithCamera(
             prim_path=self.default_zero_env_path + "/Modular_floating_platform",
             name="modular_floating_platform",
             translation=self._fp_position,
@@ -316,7 +353,7 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         )
         self._sim_config.apply_articulation_settings(
             "modular_floating_platform",
-            get_prim_at_path(fp.prim_path),
+            get_prim_at_path(self._fp.prim_path),
             self._sim_config.parse_actor_config("modular_floating_platform"),
         )
 
@@ -331,7 +368,7 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
     def get_zero_g_lab(self) -> None:
         """
         Adds the Zero-G-lab to the scene."""
-        #TODO: should usd path be retrieved from cfg?
+        # TODO: should usd path be retrieved from cfg?
         usd_path = os.path.join(os.getcwd(), "robots/usd/zero_g_lab_simple.usd")
         add_reference_to_stage(usd_path, self._task_cfg["lab_path"])
 
@@ -339,13 +376,19 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         """
         Collect active cameras to generate synthetic images in batch."""
         active_sensors = []
-        active_camera_source_path = self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["prim_path"]
+        active_camera_source_path = self._task_cfg["env"]["sensors"]["camera"][
+            "RLCamera"
+        ]["prim_path"]
         for i in range(self._num_envs):
-            #TODO: make code cleaner.
+            # TODO: make code cleaner.
             sensor_path = active_camera_source_path.split("/")
             sensor_path[3] = f"env_{i}"
-            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["prim_path"] = "/".join(sensor_path)
-            rl_sensor = camera_factory.get("RLCamera")(self._task_cfg["env"]["sensors"]["camera"]["RLCamera"])
+            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["prim_path"] = (
+                "/".join(sensor_path)
+            )
+            rl_sensor = camera_factory.get("RLCamera")(
+                self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]
+            )
             active_sensors.append(rl_sensor)
         self.active_sensors = active_sensors
 
@@ -354,11 +397,13 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         Updates the state of the system."""
 
         # Collects the position and orientation of the platform
-        self.root_pos, self.root_quats = self._platforms.get_world_poses(clone=True)
+        self.root_pos, self.root_quats = self._platforms.base.get_world_poses(
+            clone=True
+        )
         # Remove the offset from the different environments
         root_positions = self.root_pos - self._env_pos
         # Collects the velocity of the platform
-        self.root_velocities = self._platforms.get_velocities(clone=True)
+        self.root_velocities = self._platforms.base.get_velocities(clone=True)
         root_velocities = self.root_velocities.clone()
         # Cast quaternion to Yaw
         siny_cosp = 2 * (
@@ -406,7 +451,7 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
 
         observations = {self._platforms.name: {"obs_buf": self.obs_buf}}
         return observations
-    
+
     def get_rgbd_data(self) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         return batched sensor data.
@@ -490,10 +535,14 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         This function implements the logic to be performed after a reset."""
 
         # implement any logic required for simulation on-start here
-        self.root_pos, self.root_rot = self._platforms.get_world_poses()
-        self.root_velocities = self._platforms.get_velocities()
+        self.root_pos, self.root_rot = self._platforms.base.get_world_poses()
+        self.root_velocities = self._platforms.base.get_velocities()
         self.dof_pos = self._platforms.get_joint_positions()
         self.dof_vel = self._platforms.get_joint_velocities()
+
+        self._x_index = self._platforms.get_dof_index(self._fp.joints["x_tr_axis"])
+        self._y_index = self._platforms.get_dof_index(self._fp.joints["y_tr_axis"])
+        self._z_index = self._platforms.get_dof_index(self._fp.joints["z_rv_axis"])
 
         self.initial_root_pos, self.initial_root_rot = (
             self.root_pos.clone(),
@@ -553,27 +602,32 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         # Resets the counter of steps for which the goal was reached
         self.task.reset(env_ids)
         self.virtual_platform.randomize_thruster_state(env_ids, num_resets)
-        # Randomizes the starting position of the platform within a disk around the target
+
+        # Randomizes the starting position of the platform
         root_pos = torch.zeros_like(self.root_pos)
         root_pos[env_ids, :2] = positions
         root_rot = torch.zeros_like(self.root_rot)
         root_rot[env_ids, :] = heading
+        siny_cosp = 2 * root_rot[:, 0] * root_rot[:, 3]
+        cosy_cosp = 1 - 2 * (root_rot[:, 3] * root_rot[:, 3])
+        h = torch.arctan2(siny_cosp, cosy_cosp)
+
         # Resets the states of the joints
         self.dof_pos[env_ids, :] = torch.zeros(
             (num_resets, self._platforms.num_dof), device=self._device
         )
         self.dof_vel[env_ids, :] = 0
-        # Sets the velocities to 0
-        root_velocities = self.root_velocities.clone()
-        root_velocities[env_ids] = 0
 
         # apply resets
+        self.dof_pos[env_ids, self._x_index] = (
+            root_pos[env_ids, 0] - self.initial_root_pos[env_ids, 0]
+        )
+        self.dof_pos[env_ids, self._y_index] = (
+            root_pos[env_ids, 1] - self.initial_root_pos[env_ids, 1]
+        )
+        self.dof_pos[env_ids, self._z_index] = h[env_ids]
         self._platforms.set_joint_positions(self.dof_pos[env_ids], indices=env_ids)
         self._platforms.set_joint_velocities(self.dof_vel[env_ids], indices=env_ids)
-        self._platforms.set_world_poses(
-            root_pos[env_ids], root_rot[env_ids], indices=env_ids
-        )
-        self._platforms.set_velocities(root_velocities[env_ids], indices=env_ids)
 
     def reset_idx(self, env_ids: torch.Tensor) -> None:
         """
@@ -590,26 +644,31 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         self.TD.generate_torque(env_ids, num_resets)
         self.MDD.randomize_masses(env_ids, num_resets)
         self.MDD.set_masses(self._platforms.base, env_ids)
-        # Randomizes the starting position of the platform within a disk around the target
+
+        # Randomizes the starting position of the platform
         root_pos, root_rot = self.task.get_spawns(
             env_ids, self.initial_root_pos.clone(), self.initial_root_rot.clone()
         )
+        siny_cosp = 2 * root_rot[:, 0] * root_rot[:, 3]
+        cosy_cosp = 1 - 2 * (root_rot[:, 3] * root_rot[:, 3])
+        h = torch.arctan2(siny_cosp, cosy_cosp)
+
         # Resets the states of the joints
         self.dof_pos[env_ids, :] = torch.zeros(
             (num_resets, self._platforms.num_dof), device=self._device
         )
         self.dof_vel[env_ids, :] = 0
-        # Sets the velocities to 0
-        root_velocities = self.root_velocities.clone()
-        root_velocities[env_ids] = 0
 
         # apply resets
+        self.dof_pos[env_ids, self._x_index] = (
+            root_pos[env_ids, 0] - self.initial_root_pos[env_ids, 0]
+        )
+        self.dof_pos[env_ids, self._y_index] = (
+            root_pos[env_ids, 1] - self.initial_root_pos[env_ids, 1]
+        )
+        self.dof_pos[env_ids, self._z_index] = h[env_ids]
         self._platforms.set_joint_positions(self.dof_pos[env_ids], indices=env_ids)
         self._platforms.set_joint_velocities(self.dof_vel[env_ids], indices=env_ids)
-        self._platforms.set_world_poses(
-            root_pos[env_ids], root_rot[env_ids], indices=env_ids
-        )
-        self._platforms.set_velocities(root_velocities[env_ids], indices=env_ids)
 
         # bookkeeping
         self.reset_buf[env_ids] = 0
