@@ -37,7 +37,7 @@ class RLCamera:
         
         self.render_product = rep.create.render_product(
             self.prim_path, 
-            resolution=[*self.sensor_param["resolution"]])
+            resolution=[*sensor_cfg["resolution"]])
         self.annotators = {}
         self.camera_interfaces = {}
         self.enable_rgb()
