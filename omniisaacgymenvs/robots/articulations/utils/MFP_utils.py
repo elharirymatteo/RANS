@@ -862,3 +862,50 @@ def createP2Joint(
         )
 
     return (xaxis_joint, yaxis_joint)
+
+
+def create3DOFJoint(
+    stage: Usd.Stage,
+    path: str,
+    body_path1: str,
+    body_path2: str,
+) -> UsdPhysics.FixedJoint:
+    """
+    Creates a D6 joint with limits between two bodies to constrain motionin in 2D plane.
+
+    Args:
+        stage (Usd.Stage): The stage to create the fixed joint.
+        path (str): The path of the fixed joint.
+        body_path1 (str): The path of the first body.
+        body_path2 (str): The path of the second body.
+
+    Returns:
+        UsdPhysics.FixedJoint: The fixed joint.
+    """
+
+    # Create fixed joint
+    joint = UsdPhysics.Joint.Define(stage, path)
+    # Set body targets
+    joint.CreateBody0Rel().SetTargets([body_path1])
+    joint.CreateBody1Rel().SetTargets([body_path2])
+    # Get from the simulation the position/orientation of the bodies
+    translate = Gf.Vec3d(
+        stage.GetPrimAtPath(body_path2).GetAttribute("xformOp:translate").Get()
+    )
+    Q = stage.GetPrimAtPath(body_path2).GetAttribute("xformOp:orient").Get()
+    quat0 = Gf.Quatf(
+        Q.GetReal(), Q.GetImaginary()[0], Q.GetImaginary()[1], Q.GetImaginary()[2]
+    )
+    # Set the transform between the bodies inside the joint
+    joint.CreateLocalPos0Attr().Set(translate)
+    joint.CreateLocalPos1Attr().Set(Gf.Vec3d([0, 0, 0]))
+    joint.CreateLocalRot0Attr().Set(quat0)
+    joint.CreateLocalRot1Attr().Set(Gf.Quatf(1, 0, 0, 0))
+
+    d6prim = stage.GetPrimAtPath(path)
+    for dof in ["transX", "transY", "transZ", "rotX", "rotY", "rotZ"]:
+        if dof in ["transZ", "rotX", "rotY"]:
+            limitAPI = UsdPhysics.LimitAPI.Apply(d6prim, dof)
+            limitAPI.CreateLowAttr(1.0)
+            limitAPI.CreateHighAttr(-1.0)
+    return joint
