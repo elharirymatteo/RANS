@@ -211,11 +211,15 @@ def createDrive(
     """
     Creates a DriveAPI on a joint.
 
+    List of allowed tokens:
+     "transX", "transY", "transZ", "linear"
+     "rotX", "rotY", "rotZ", "angular"
+
     Args:
         joint (Usd.Prim): The joint to apply the DriveAPI.
-        token (str): The type of the drive.
-        damping (float): The damping of the drive.
-        stiffness (float): The stiffness of the drive.
+        token (str, optional): The type of the drive.
+        damping (float, optional): The damping of the drive.
+        stiffness (float, optional): The stiffness of the drive.
 
     Returns:
         UsdPhysics.DriveAPI: The DriveAPI.
@@ -237,11 +241,15 @@ def createLimit(
     """
     Creates a LimitAPI on a joint.
 
+    List of allowed tokens:
+     "transX", "transY", "transZ", "linear"
+     "rotX", "rotY", "rotZ", "angular"
+
     Args:
         joint (Usd.Prim): The joint to apply the LimitAPI.
-        token (str): The type of the limit.
-        low (float): The lower limit of the joint.
-        high (float): The upper limit of the joint.
+        token (str, optional): The type of the limit.
+        low (float, optional): The lower limit of the joint.
+        high (float, optional): The upper limit of the joint.
 
     Returns:
         UsdPhysics.LimitAPI: The LimitAPI.
@@ -513,8 +521,8 @@ def createArticulation(
 def createFixedJoint(
     stage: Usd.Stage,
     path: str,
-    body_path1: str,
-    body_path2: str,
+    body_path1: str = None,
+    body_path2: str = None,
 ) -> UsdPhysics.FixedJoint:
     """
     Creates a fixed joint between two bodies.
@@ -522,8 +530,8 @@ def createFixedJoint(
     Args:
         stage (Usd.Stage): The stage to create the fixed joint.
         path (str): The path of the fixed joint.
-        body_path1 (str): The path of the first body.
-        body_path2 (str): The path of the second body.
+        body_path1 (str, optional): The path of the first body.
+        body_path2 (str, optional): The path of the second body.
 
     Returns:
         UsdPhysics.FixedJoint: The fixed joint.
@@ -532,29 +540,43 @@ def createFixedJoint(
     # Create fixed joint
     joint = UsdPhysics.FixedJoint.Define(stage, path)
     # Set body targets
-    joint.CreateBody0Rel().SetTargets([body_path1])
-    joint.CreateBody1Rel().SetTargets([body_path2])
-    # Get from the simulation the position/orientation of the bodies
-    translate = Gf.Vec3d(
-        stage.GetPrimAtPath(body_path2).GetAttribute("xformOp:translate").Get()
-    )
-    Q = stage.GetPrimAtPath(body_path2).GetAttribute("xformOp:orient").Get()
-    quat0 = Gf.Quatf(
-        Q.GetReal(), Q.GetImaginary()[0], Q.GetImaginary()[1], Q.GetImaginary()[2]
-    )
-    # Set the transform between the bodies inside the joint
-    joint.CreateLocalPos0Attr().Set(translate)
-    joint.CreateLocalPos1Attr().Set(Gf.Vec3d([0, 0, 0]))
-    joint.CreateLocalRot0Attr().Set(quat0)
-    joint.CreateLocalRot1Attr().Set(Gf.Quatf(1, 0, 0, 0))
+    if body_path1 is not None:
+        joint.CreateBody0Rel().SetTargets([body_path1])
+    if body_path2 is not None:
+        joint.CreateBody1Rel().SetTargets([body_path2])
+
+    if (body_path1 is not None) and (body_path2 is not None):
+        # Get from the simulation the position/orientation of the bodies
+        body_1_prim = stage.GetPrimAtPath(body_path1)
+        body_2_prim = stage.GetPrimAtPath(body_path2)
+        xform_body_1 = UsdGeom.Xformable(body_1_prim)
+        xform_body_2 = UsdGeom.Xformable(body_2_prim)
+        transform_body_1 = xform_body_1.ComputeLocalToWorldTransform(0.0)
+        transform_body_2 = xform_body_2.ComputeLocalToWorldTransform(0.0)
+        t12 = np.matmul(np.linalg.inv(transform_body_1), transform_body_2)
+        translate_body_12 = Gf.Vec3f([t12[3][0], t12[3][1], t12[3][2]])
+        Q_body_12 = Gf.Transform(Gf.Matrix4d(t12.tolist())).GetRotation().GetQuat()
+
+        # Set the transform between the bodies inside the joint
+        joint.CreateLocalPos0Attr().Set(translate_body_12)
+        joint.CreateLocalPos1Attr().Set(Gf.Vec3d([0, 0, 0]))
+        joint.CreateLocalRot0Attr().Set(Gf.Quatf(Q_body_12))
+        joint.CreateLocalRot1Attr().Set(Gf.Quatf(1, 0, 0, 0))
+    else:
+        # Set the transform between the bodies inside the joint
+        joint.CreateLocalPos0Attr().Set(Gf.Vec3d([0, 0, 0]))
+        joint.CreateLocalPos1Attr().Set(Gf.Vec3d([0, 0, 0]))
+        joint.CreateLocalRot0Attr().Set(Gf.Quatf(1, 0, 0, 0))
+        joint.CreateLocalRot1Attr().Set(Gf.Quatf(1, 0, 0, 0))
+
     return joint
 
 
 def createRevoluteJoint(
     stage: Usd.Stage,
     path: str,
-    body_path1: str,
-    body_path2: str,
+    body_path1: str = None,
+    body_path2: str = None,
     axis="Z",
     enable_drive: bool = False,
 ) -> UsdPhysics.RevoluteJoint:
@@ -564,10 +586,10 @@ def createRevoluteJoint(
     Args:
         stage (Usd.Stage): The stage to create the revolute joint.
         path (str): The path of the revolute joint.
-        body_path1 (str): The path of the first body.
-        body_path2 (str): The path of the second body.
-        axis (str): The axis of rotation.
-        enable_drive (bool): Enable or disable the drive.
+        body_path1 (str, optional): The path of the first body.
+        body_path2 (str, optional): The path of the second body.
+        axis (str, optional): The axis of rotation.
+        enable_drive (bool, optional): Enable or disable the drive.
 
     Returns:
         UsdPhysics.RevoluteJoint: The revolute joint.
@@ -577,25 +599,34 @@ def createRevoluteJoint(
     joint = UsdPhysics.RevoluteJoint.Define(stage, path)
 
     # Set body targets
-    joint.CreateBody0Rel().SetTargets([body_path1])
-    joint.CreateBody1Rel().SetTargets([body_path2])
+    if not body_path1 is None:
+        joint.CreateBody0Rel().SetTargets([body_path1])
+    if not body_path2 is None:
+        joint.CreateBody1Rel().SetTargets([body_path2])
 
-    # Get from the simulation the position/orientation of the bodies
-    body_1_prim = stage.GetPrimAtPath(body_path1)
-    body_2_prim = stage.GetPrimAtPath(body_path2)
-    xform_body_1 = UsdGeom.Xformable(body_1_prim)
-    xform_body_2 = UsdGeom.Xformable(body_2_prim)
-    transform_body_1 = xform_body_1.ComputeLocalToWorldTransform(0.0)
-    transform_body_2 = xform_body_2.ComputeLocalToWorldTransform(0.0)
-    t12 = np.matmul(np.linalg.inv(transform_body_1), transform_body_2)
-    translate_body_12 = Gf.Vec3f([t12[3][0], t12[3][1], t12[3][2]])
-    Q_body_12 = Gf.Transform(Gf.Matrix4d(t12.tolist())).GetRotation().GetQuat()
+    if (body_path1 is not None) and (body_path2 is not None):
+        # Get from the simulation the position/orientation of the bodies
+        body_1_prim = stage.GetPrimAtPath(body_path1)
+        body_2_prim = stage.GetPrimAtPath(body_path2)
+        xform_body_1 = UsdGeom.Xformable(body_1_prim)
+        xform_body_2 = UsdGeom.Xformable(body_2_prim)
+        transform_body_1 = xform_body_1.ComputeLocalToWorldTransform(0.0)
+        transform_body_2 = xform_body_2.ComputeLocalToWorldTransform(0.0)
+        t12 = np.matmul(np.linalg.inv(transform_body_1), transform_body_2)
+        translate_body_12 = Gf.Vec3f([t12[3][0], t12[3][1], t12[3][2]])
+        Q_body_12 = Gf.Transform(Gf.Matrix4d(t12.tolist())).GetRotation().GetQuat()
 
-    # Set the transform between the bodies inside the joint
-    joint.CreateLocalPos0Attr().Set(translate_body_12)
-    joint.CreateLocalPos1Attr().Set(Gf.Vec3d([0, 0, 0]))
-    joint.CreateLocalRot0Attr().Set(Gf.Quatf(Q_body_12))
-    joint.CreateLocalRot1Attr().Set(Gf.Quatf(1, 0, 0, 0))
+        # Set the transform between the bodies inside the joint
+        joint.CreateLocalPos0Attr().Set(translate_body_12)
+        joint.CreateLocalPos1Attr().Set(Gf.Vec3d([0, 0, 0]))
+        joint.CreateLocalRot0Attr().Set(Gf.Quatf(Q_body_12))
+        joint.CreateLocalRot1Attr().Set(Gf.Quatf(1, 0, 0, 0))
+    else:
+        # Set the transform between the bodies inside the joint
+        joint.CreateLocalPos0Attr().Set(Gf.Vec3d([0, 0, 0]))
+        joint.CreateLocalPos1Attr().Set(Gf.Vec3d([0, 0, 0]))
+        joint.CreateLocalRot0Attr().Set(Gf.Quatf(1, 0, 0, 0))
+        joint.CreateLocalRot1Attr().Set(Gf.Quatf(1, 0, 0, 0))
     joint.CreateAxisAttr(axis)
     return joint
 
@@ -603,8 +634,8 @@ def createRevoluteJoint(
 def createPrismaticJoint(
     stage: Usd.Stage,
     path: str,
-    body_path1: str,
-    body_path2: str,
+    body_path1: str = None,
+    body_path2: str = None,
     axis: str = "Z",
     enable_drive: bool = False,
 ) -> UsdPhysics.PrismaticJoint:
@@ -614,10 +645,10 @@ def createPrismaticJoint(
     Args:
         stage (Usd.Stage): The stage to create the revolute joint.
         path (str): The path of the revolute joint.
-        body_path1 (str): The path of the first body.
-        body_path2 (str): The path of the second body.
-        axis (str): The axis of rotation.
-        enable_drive (bool): Enable or disable the drive.
+        body_path1 (str, optional): The path of the first body.
+        body_path2 (str, optional): The path of the second body.
+        axis (str, optional): The axis of rotation.
+        enable_drive (bool, optional): Enable or disable the drive.
 
     Returns:
         UsdPhysics.PrismaticJoint: The prismatic joint.
@@ -626,26 +657,37 @@ def createPrismaticJoint(
     # Create revolute joint
     joint = UsdPhysics.PrismaticJoint.Define(stage, path)
     # Set body targets
-    joint.CreateBody0Rel().SetTargets([body_path1])
-    joint.CreateBody1Rel().SetTargets([body_path2])
+    if body_path1 is not None:
+        joint.CreateBody0Rel().SetTargets([body_path1])
+    if body_path2 is not None:
+        joint.CreateBody1Rel().SetTargets([body_path2])
 
-    # Get from the simulation the position/orientation of the bodies
-    body_1_prim = stage.GetPrimAtPath(body_path1)
-    body_2_prim = stage.GetPrimAtPath(body_path2)
-    xform_body_1 = UsdGeom.Xformable(body_1_prim)
-    xform_body_2 = UsdGeom.Xformable(body_2_prim)
-    transform_body_1 = xform_body_1.ComputeLocalToWorldTransform(0.0)
-    transform_body_2 = xform_body_2.ComputeLocalToWorldTransform(0.0)
-    t12 = np.matmul(np.linalg.inv(transform_body_1), transform_body_2)
-    translate_body_12 = Gf.Vec3f([t12[3][0], t12[3][1], t12[3][2]])
-    Q_body_12 = Gf.Transform(Gf.Matrix4d(t12.tolist())).GetRotation().GetQuat()
+    if (body_path1 is not None) and (body_path2 is not None):
+        # Get from the simulation the position/orientation of the bodies
+        body_1_prim = stage.GetPrimAtPath(body_path1)
+        body_2_prim = stage.GetPrimAtPath(body_path2)
+        xform_body_1 = UsdGeom.Xformable(body_1_prim)
+        xform_body_2 = UsdGeom.Xformable(body_2_prim)
+        transform_body_1 = xform_body_1.ComputeLocalToWorldTransform(0.0)
+        transform_body_2 = xform_body_2.ComputeLocalToWorldTransform(0.0)
+        t12 = np.matmul(np.linalg.inv(transform_body_1), transform_body_2)
+        translate_body_12 = Gf.Vec3f([t12[3][0], t12[3][1], t12[3][2]])
+        Q_body_12 = Gf.Transform(Gf.Matrix4d(t12.tolist())).GetRotation().GetQuat()
 
-    # Set the transform between the bodies inside the joint
-    joint.CreateLocalPos0Attr().Set(translate_body_12)
-    joint.CreateLocalPos1Attr().Set(Gf.Vec3d([0, 0, 0]))
-    joint.CreateLocalRot0Attr().Set(Gf.Quatf(Q_body_12))
-    joint.CreateLocalRot1Attr().Set(Gf.Quatf(1, 0, 0, 0))
-    joint.CreateAxisAttr(axis)
+        # Set the transform between the bodies inside the joint
+        joint.CreateLocalPos0Attr().Set(translate_body_12)
+        joint.CreateLocalPos1Attr().Set(Gf.Vec3d([0, 0, 0]))
+        joint.CreateLocalRot0Attr().Set(Gf.Quatf(Q_body_12))
+        joint.CreateLocalRot1Attr().Set(Gf.Quatf(1, 0, 0, 0))
+        joint.CreateAxisAttr(axis)
+    else:
+        # Set the transform between the bodies inside the joint
+        joint.CreateLocalPos0Attr().Set(Gf.Vec3d([0, 0, 0]))
+        joint.CreateLocalPos1Attr().Set(Gf.Vec3d([0, 0, 0]))
+        joint.CreateLocalRot0Attr().Set(Gf.Quatf(1, 0, 0, 0))
+        joint.CreateLocalRot1Attr().Set(Gf.Quatf(1, 0, 0, 0))
+        joint.CreateAxisAttr(axis)
+
     return joint
 
 
@@ -673,10 +715,10 @@ def createP3Joint(
         path (str): The path of the prismatic joint.
         body_path1 (str): The path of the first body.
         body_path2 (str): The path of the second body.
-        damping (float): The damping of the drive.
-        stiffness (float): The stiffness of the drive.
-        articulation_root (str): The path of the articulation root.
-        enable_drive (bool): Enable or disable the drive.
+        damping (float, optional): The damping of the drive.
+        stiffness (float, optional): The stiffness of the drive.
+        articulation_root (str, optional): The path of the articulation root.
+        enable_drive (bool, optional): Enable or disable the drive.
 
     Returns:
         Tuple[UsdPhysics.PrismaticJoint, UsdPhysics.PrismaticJoint, UsdPhysics.PrismaticJoint]: The prismatic joints.
@@ -788,10 +830,10 @@ def createP2Joint(
         path (str): The path of the prismatic joint.
         body_path1 (str): The path of the first body.
         body_path2 (str): The path of the second body.
-        damping (float): The damping of the drive.
-        stiffness (float): The stiffness of the drive.
-        articulation_root (str): The path of the articulation root.
-        enable_drive (bool): Enable or disable the drive.
+        damping (float, optional): The damping of the drive.
+        stiffness (float, optional): The stiffness of the drive.
+        articulation_root (str, optional): The path of the articulation root.
+        enable_drive (bool, optional): Enable or disable the drive.
 
     Returns:
         Tuple[UsdPhysics.PrismaticJoint, UsdPhysics.PrismaticJoint]: The prismatic joints.
