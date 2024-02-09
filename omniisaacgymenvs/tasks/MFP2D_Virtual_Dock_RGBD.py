@@ -22,6 +22,8 @@ from omniisaacgymenvs.robots.articulations.views.mfp2d_virtual_thrusters_view im
 
 from omniisaacgymenvs.robots.sensors.exteroceptive.camera import camera_factory
 
+from omniisaacgymenvs.robots.articulations.utils.MFP_utils import applyCollider
+
 from omniisaacgymenvs.utils.pin import VisualPin
 from omniisaacgymenvs.utils.arrow import VisualArrow
 
@@ -57,6 +59,7 @@ import torch
 from gym import spaces
 from dataclasses import dataclass
 import os
+import cv2
 
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
@@ -368,9 +371,9 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
     def get_zero_g_lab(self) -> None:
         """
         Adds the Zero-G-lab to the scene."""
-        # TODO: should usd path be retrieved from cfg?
-        usd_path = os.path.join(os.getcwd(), "robots/usd/zero_g_lab_simple.usd")
-        add_reference_to_stage(usd_path, self._task_cfg["lab_path"])
+        usd_path = os.path.join(os.getcwd(), "robots/usd/zero_g_lab.usd")
+        prim = add_reference_to_stage(usd_path, self._task_cfg["lab_path"])
+        applyCollider(prim, True)
 
     def collect_camera(self) -> None:
         """
@@ -447,6 +450,8 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         # Get the camera data
         rgb_obs, depth_obs = self.get_rgbd_data()
         self.obs_buf["rgb"] = rgb_obs
+        np.save("rgb.npy", rgb_obs.cpu().numpy().transpose(0, 2, 3, 1))
+        np.save("depth.npy", depth_obs.squeeze().cpu().numpy())
         self.obs_buf["depth"] = depth_obs
 
         observations = {self._platforms.name: {"obs_buf": self.obs_buf}}

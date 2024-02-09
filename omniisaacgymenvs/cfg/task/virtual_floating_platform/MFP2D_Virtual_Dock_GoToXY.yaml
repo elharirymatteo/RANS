@@ -78,8 +78,11 @@ env:
     name: GoToDockXY
     position_tolerance: 0.01
     kill_after_n_steps_in_tolerance: 50 # 10seconds
-    max_spawn_dist: 1.0
-    min_spawn_dist: 0.2
+    max_spawn_dist: 1.2
+    min_spawn_dist: 0.8
+    spawn_curriculum_max_dist: 1.0
+    spawn_curriculum_min_dist: 0.6
+    goal_random_position: 0.2
     kill_dist: 8.0
     boundary_cost: 25
 
@@ -174,7 +177,7 @@ sim:
   gravity: [0.0, 0.0, 0.0]
   add_ground_plane: False
   add_lab: True
-  add_distant_light: True
+  add_distant_light: False
   use_flatcache: True
   enable_scene_query_support: False
   # set to True if you use camera sensors in the environment
