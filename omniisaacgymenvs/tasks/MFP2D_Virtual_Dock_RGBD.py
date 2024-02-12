@@ -450,8 +450,6 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         # Get the camera data
         rgb_obs, depth_obs = self.get_rgbd_data()
         self.obs_buf["rgb"] = rgb_obs
-        np.save("rgb.npy", rgb_obs.cpu().numpy().transpose(0, 2, 3, 1))
-        np.save("depth.npy", depth_obs.squeeze().cpu().numpy())
         self.obs_buf["depth"] = depth_obs
 
         observations = {self._platforms.name: {"obs_buf": self.obs_buf}}
