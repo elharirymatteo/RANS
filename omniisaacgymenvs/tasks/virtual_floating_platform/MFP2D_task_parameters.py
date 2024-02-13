@@ -24,8 +24,6 @@ class GoToXYParameters:
     position_tolerance: float = 0.01
     kill_after_n_steps_in_tolerance: int = 50
     goal_random_position: float = 0.0
-    max_spawn_dist: float = 6.0
-    min_spawn_dist: float = 3.0
     kill_dist: float = 8.0
     boundary_cost: float = 25
     spawn_position_curriculum: CurriculumParameters = field(default_factory=dict)
@@ -68,8 +66,6 @@ class GoToPoseParameters:
     heading_tolerance: float = 0.025
     kill_after_n_steps_in_tolerance: int = 50
     goal_random_position: float = 0.0
-    max_spawn_dist: float = 6.0
-    min_spawn_dist: float = 3.0
     kill_dist: float = 8.0
 
     spawn_position_curriculum: CurriculumParameters = field(default_factory=dict)

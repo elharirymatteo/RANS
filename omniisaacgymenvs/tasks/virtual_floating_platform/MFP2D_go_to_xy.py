@@ -10,7 +10,6 @@ __status__ = "development"
 
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_core import (
     Core,
-    parse_data_dict,
 )
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_rewards import (
     GoToXYReward,
@@ -18,31 +17,57 @@ from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_rewards import 
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_parameters import (
     GoToXYParameters,
 )
+from omniisaacgymenvs.tasks.virtual_floating_platform.curriculum_helpers import (
+    CurriculumSampler,
+)
+
 from omniisaacgymenvs.utils.pin import VisualPin
-
 from omni.isaac.core.prims import XFormPrimView
+from pxr import Usd
 
-import math
+from typing import Tuple
 import torch
+import math
 
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
 
 class GoToXYTask(Core):
     """
-    Implements the GoToXY task. The robot has to reach a target position."""
+    Implements the GoToXY task. The robot has to reach a target position.
+    """
 
     def __init__(
         self,
-        task_param: GoToXYParameters,
-        reward_param: GoToXYReward,
+        task_param: dict,
+        reward_param: dict,
         num_envs: int,
         device: str,
     ) -> None:
+        """
+        Initializes the GoToXY task.
+
+        Args:
+            task_param (dict): Dictionary containing the task parameters.
+            reward_param (dict): Dictionary containing the reward parameters.
+            num_envs (int): Number of environments.
+            device (str): Device to run the task on.
+        """
+
         super(GoToXYTask, self).__init__(num_envs, device)
         # Task and reward parameters
-        self._task_parameters = parse_data_dict(GoToXYParameters(), task_param)
-        self._reward_parameters = parse_data_dict(GoToXYReward(), reward_param)
+        self._task_parameters = GoToXYParameters(**task_param)
+        self._reward_parameters = GoToXYReward(**reward_param)
+        # Curriculum samplers
+        self._spawn_position_sampler = CurriculumSampler(
+            self._task_parameters.spawn_position_curriculum
+        )
+        self._spawn_linear_velocity_sampler = CurriculumSampler(
+            self._task_parameters.spawn_linear_velocity_curriculum
+        )
+        self._spawn_angular_velocity_sampler = CurriculumSampler(
+            self._task_parameters.spawn_angular_velocity_curriculum
+        )
 
         # Buffers
         self._goal_reached = torch.zeros(
@@ -55,7 +80,14 @@ class GoToXYTask(Core):
 
     def create_stats(self, stats: dict) -> dict:
         """
-        Creates a dictionary to store the training statistics for the task."""
+        Creates a dictionary to store the training statistics for the task.
+
+        Args:
+            stats (dict): Dictionary containing the statistics.
+
+        Returns:
+            dict: Dictionary containing the statistics.
+        """
 
         torch_zeros = lambda: torch.zeros(
             self._num_envs, dtype=torch.float, device=self._device, requires_grad=False
@@ -73,7 +105,14 @@ class GoToXYTask(Core):
 
     def get_state_observations(self, current_state: dict) -> torch.Tensor:
         """
-        Computes the observation tensor from the current state of the robot."""
+        Computes the observation tensor from the current state of the robot.
+
+        Args:
+            current_state (dict): The current state of the robot.
+
+        Returns:
+            torch.Tensor: The observation tensor.
+        """
 
         self._position_error = self._target_positions - current_state["position"]
         self._task_data[:, :2] = self._position_error
@@ -83,7 +122,15 @@ class GoToXYTask(Core):
         self, current_state: torch.Tensor, actions: torch.Tensor
     ) -> torch.Tensor:
         """
-        Computes the reward for the current state of the robot."""
+        Computes the reward for the current state of the robot.
+
+        Args:
+            current_state (torch.Tensor): The current state of the robot.
+            actions (torch.Tensor): The actions taken by the robot.
+
+        Returns:
+            torch.Tensor: The reward for the current state of the robot.
+        """
 
         # position error
         self.position_dist = torch.sqrt(torch.square(self._position_error).sum(-1))
@@ -109,7 +156,11 @@ class GoToXYTask(Core):
 
     def update_kills(self) -> torch.Tensor:
         """
-        Updates if the platforms should be killed or not."""
+        Updates if the platforms should be killed or not.
+
+        Returns:
+            torch.Tensor: Wether the platforms should be killed or not.
+        """
 
         die = torch.zeros_like(self._goal_reached, dtype=torch.long)
         ones = torch.ones_like(self._goal_reached, dtype=torch.long)
@@ -125,7 +176,14 @@ class GoToXYTask(Core):
 
     def update_statistics(self, stats: dict) -> dict:
         """
-        Updates the training statistics."""
+        Updates the training statistics.
+
+        Args:
+            stats (dict):The new stastistics to be logged.
+
+        Returns:
+            dict: The statistics of the training
+        """
 
         stats["position_reward"] += self.position_reward
         stats["position_error"] += self.position_dist
@@ -135,7 +193,11 @@ class GoToXYTask(Core):
 
     def reset(self, env_ids: torch.Tensor) -> None:
         """
-        Resets the goal_reached_flag when an agent manages to solve its task."""
+        Resets the goal_reached_flag when an agent manages to solve its task.
+
+        Args:
+            env_ids (torch.Tensor): The ids of the environments.
+        """
 
         self._goal_reached[env_ids] = 0
 
@@ -146,7 +208,16 @@ class GoToXYTask(Core):
         targets_orientation: torch.Tensor,
     ) -> list:
         """
-        Generates a random goal for the task."""
+        Generates a random goal for the task.
+
+        Args:
+            env_ids (torch.Tensor): The ids of the environments.
+            target_positions (torch.Tensor): The target positions.
+            target_orientations (torch.Tensor): The target orientations.
+
+        Returns:
+            list: The target positions and orientations.
+        """
 
         num_goals = len(env_ids)
         self._target_positions[env_ids] = (
@@ -158,73 +229,67 @@ class GoToXYTask(Core):
         targets_position[env_ids, :2] += self._target_positions[env_ids]
         return targets_position, targets_orientation
 
-    def get_spawns(
+    def get_intitial_conditions(
         self,
         env_ids: torch.Tensor,
-        initial_position: torch.Tensor,
-        initial_orientation: torch.Tensor,
         step: int = 0,
-    ) -> list:
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
-        Generates spawning positions for the robots following a curriculum."""
+        Generates spawning positions for the robots following a curriculum.
+
+        Args:
+            env_ids (torch.Tensor): The ids of the environments.
+            step (int, optional): The current step. Defaults to 0.
+
+        Returns:
+            Tuple[torch.Tensor, torch.Tensor, torch.Tensor]: The initial position,
+            orientation and velocity of the robot.
+        """
 
         num_resets = len(env_ids)
         # Resets the counter of steps for which the goal was reached
-        self._goal_reached[env_ids] = 0
-        # Run curriculum if selected
-        if self._task_parameters.spawn_curriculum:
-            if step < self._task_parameters.spawn_curriculum_warmup:
-                rmax = self._task_parameters.spawn_curriculum_max_dist
-                rmin = self._task_parameters.spawn_curriculum_min_dist
-            elif step > self._task_parameters.spawn_curriculum_end:
-                rmax = self._task_parameters.max_spawn_dist
-                rmin = self._task_parameters.min_spawn_dist
-            else:
-                r = (step - self._task_parameters.spawn_curriculum_warmup) / (
-                    self._task_parameters.spawn_curriculum_end
-                    - self._task_parameters.spawn_curriculum_warmup
-                )
-                rmax = (
-                    r
-                    * (
-                        self._task_parameters.max_spawn_dist
-                        - self._task_parameters.spawn_curriculum_max_dist
-                    )
-                    + self._task_parameters.spawn_curriculum_max_dist
-                )
-                rmin = (
-                    r
-                    * (
-                        self._task_parameters.min_spawn_dist
-                        - self._task_parameters.spawn_curriculum_min_dist
-                    )
-                    + self._task_parameters.spawn_curriculum_min_dist
-                )
-        else:
-            rmax = self._task_parameters.max_spawn_dist
-            rmin = self._task_parameters.min_spawn_dist
-
-        # Randomizes the starting position of the platform
-        r = torch.rand((num_resets,), device=self._device) * (rmax - rmin) + rmin
+        self.reset(env_ids)
+        # Ranomizes the starting position of the platform
+        initial_position = torch.zeros(
+            (num_resets, 3), device=self._device, dtype=torch.float32
+        )
+        r = self._spawn_position_sampler.sample(num_resets, step)
         theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
-        initial_position[env_ids, 0] += (r) * torch.cos(theta) + self._target_positions[
-            env_ids, 0
-        ]
-        initial_position[env_ids, 1] += (r) * torch.sin(theta) + self._target_positions[
-            env_ids, 1
-        ]
-        initial_position[env_ids, 2] += 0
-
+        initial_position[:, 0] = r * torch.cos(theta)
+        initial_position[:, 1] = r * torch.sin(theta)
         # Randomizes the heading of the platform
-        random_orient = torch.rand(num_resets, device=self._device) * math.pi
-        initial_orientation[env_ids, 0] = torch.cos(random_orient * 0.5)
-        initial_orientation[env_ids, 3] = torch.sin(random_orient * 0.5)
-        return initial_position, initial_orientation
+        initial_orientation = torch.zeros(
+            (num_resets, 4), device=self._device, dtype=torch.float32
+        )
+        theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
+        initial_orientation[:, 0] = torch.cos(theta * 0.5)
+        initial_orientation[:, 3] = torch.sin(theta * 0.5)
+        # Randomizes the linear velocity of the platform
+        initial_velocity = torch.zeros(
+            (num_resets, 3), device=self._device, dtype=torch.float32
+        )
+        linear_velocity = self._spawn_linear_velocity_sampler.sample(num_resets, step)
+        theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
+        initial_velocity[env_ids, 0] = linear_velocity * torch.cos(theta)
+        initial_velocity[env_ids, 1] = linear_velocity * torch.sin(theta)
+        # Randomizes the angular velocity of the platform
+        angular_velocity = self._spawn_angular_velocity_sampler.sample(num_resets, step)
+        initial_velocity[env_ids, 5] = angular_velocity
+        return (
+            initial_position,
+            initial_orientation,
+            initial_velocity,
+        )
 
-    def generate_target(self, path, position):
+    def generate_target(self, path: str, position: torch.Tensor) -> None:
         """
         Generates a visual marker to help visualize the performance of the agent from the UI.
-        A pin is generated to represent the 2D position to be reached by the agent."""
+        A pin is generated to represent the 2D position to be reached by the agent.
+
+        Args:
+            path (str): The path where the pin is to be generated.
+            position (torch.Tensor): The position of the pin.
+        """
 
         color = torch.tensor([1, 0, 0])
         ball_radius = 0.2
@@ -240,9 +305,18 @@ class GoToXYTask(Core):
             color=color,
         )
 
-    def add_visual_marker_to_scene(self, scene):
+    def add_visual_marker_to_scene(
+        self, scene: Usd.Stage
+    ) -> Tuple[Usd.Stage, XFormPrimView]:
         """
-        Adds the visual marker to the scene."""
+        Adds the visual marker to the scene.
+
+        Args:
+            scene (Usd.Stage): The scene to add the visual marker to.
+
+        Returns:
+            Tuple[Usd.Stage, XFormPrimView]: The scene and the visual marker.
+        """
 
         pins = XFormPrimView(prim_paths_expr="/World/envs/.*/pin")
         scene.add(pins)

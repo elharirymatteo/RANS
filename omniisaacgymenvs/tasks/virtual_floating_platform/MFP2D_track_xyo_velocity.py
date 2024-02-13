@@ -10,7 +10,6 @@ __status__ = "development"
 
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_core import (
     Core,
-    parse_data_dict,
 )
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_rewards import (
     TrackXYOVelocityReward,
@@ -18,11 +17,16 @@ from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_rewards import 
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_parameters import (
     TrackXYOVelocityParameters,
 )
+from omniisaacgymenvs.tasks.virtual_floating_platform.curriculum_helpers import (
+    CurriculumSampler,
+)
 
 from omni.isaac.core.prims import XFormPrimView
+from pxr import Usd
 
-import math
+from typing import Tuple
 import torch
+import math
 
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
@@ -35,11 +39,21 @@ class TrackXYOVelocityTask(Core):
     def __init__(self, task_param, reward_param, num_envs, device):
         super(TrackXYOVelocityTask, self).__init__(num_envs, device)
         # Task and reward parameters
-        self._task_parameters = parse_data_dict(
-            TrackXYOVelocityParameters(), task_param
+        self._task_parameters = TrackXYOVelocityParameters(**task_param)
+        self._reward_parameters = TrackXYOVelocityReward(**reward_param)
+
+        # Curriculum
+        self._target_linear_velocity_sampler = CurriculumSampler(
+            self._task_parameters.target_linear_velocity_curriculum,
         )
-        self._reward_parameters = parse_data_dict(
-            TrackXYOVelocityReward(), reward_param
+        self._target_angular_velocity_sampler = CurriculumSampler(
+            self._task_parameters.target_angular_velocity_curriculum,
+        )
+        self._spawn_linear_velocity_sampler = CurriculumSampler(
+            self._task_parameters.spawn_linear_velocity_curriculum,
+        )
+        self._spawn_angular_velocity_sampler = CurriculumSampler(
+            self._task_parameters.spawn_angular_velocity_curriculum,
         )
 
         # Buffers
@@ -56,7 +70,14 @@ class TrackXYOVelocityTask(Core):
 
     def create_stats(self, stats: dict) -> dict:
         """
-        Creates a dictionary to store the training statistics for the task."""
+        Creates a dictionary to store the training statistics for the task.
+
+        Args:
+            stats (dict): The dictionary to store the statistics.
+
+        Returns:
+            dict: The dictionary containing the statistics.
+        """
 
         torch_zeros = lambda: torch.zeros(
             self._num_envs, dtype=torch.float, device=self._device, requires_grad=False
@@ -74,7 +95,14 @@ class TrackXYOVelocityTask(Core):
 
     def get_state_observations(self, current_state: dict) -> torch.Tensor:
         """
-        Computes the observation tensor from the current state of the robot.""" ""
+        Computes the observation tensor from the current state of the robot.
+
+        Args:
+            current_state (dict): The current state of the robot.
+
+        Returns:
+            torch.Tensor: The observation tensor.
+        """
 
         self._linear_velocity_error = (
             self._target_linear_velocities - current_state["linear_velocity"]
@@ -91,7 +119,15 @@ class TrackXYOVelocityTask(Core):
         self, current_state: torch.Tensor, actions: torch.Tensor
     ) -> torch.Tensor:
         """
-        Computes the reward for the current state of the robot."""
+        Computes the reward for the current state of the robot.
+
+        Args:
+            current_state (torch.Tensor): The current state of the robot.
+            actions (torch.Tensor): The actions taken by the robot.
+
+        Returns:
+            torch.Tensor: The reward for the current state of the robot.
+        """
 
         # position error
         self.position_dist = torch.sqrt(torch.square(self._position_error).sum(-1))
@@ -128,7 +164,11 @@ class TrackXYOVelocityTask(Core):
 
     def update_kills(self) -> torch.Tensor:
         """
-        Updates if the platforms should be killed or not."""
+        Updates if the platforms should be killed or not.
+
+        Returns:
+            torch.Tensor: Wether the platforms should be killed or not.
+        """
 
         die = torch.zeros_like(self._goal_reached, dtype=torch.long)
         ones = torch.ones_like(self._goal_reached, dtype=torch.long)
@@ -144,7 +184,14 @@ class TrackXYOVelocityTask(Core):
 
     def update_statistics(self, stats: dict) -> dict:
         """
-        Updates the training statistics."""
+        Updates the training statistics.
+
+        Args:
+            stats (dict):The new stastistics to be logged.
+
+        Returns:
+            dict: The statistics of the training
+        """
 
         stats["linear_velocity_reward"] += self.linear_velocity_reward
         stats["linear_velocity_error"] += self.linear_velocity_dist
@@ -154,7 +201,11 @@ class TrackXYOVelocityTask(Core):
 
     def reset(self, env_ids: torch.Tensor) -> None:
         """
-        Resets the goal_reached_flag when an agent manages to solve its task."""
+        Resets the goal_reached_flag when an agent manages to solve its task.
+
+        Args:
+            env_ids (torch.Tensor): The ids of the environments.
+        """
 
         self._goal_reached[env_ids] = 0
 
@@ -165,52 +216,96 @@ class TrackXYOVelocityTask(Core):
         target_orientations: torch.Tensor,
     ) -> list:
         """
-        Generates a random goal for the task."""
+        Generates a random goal for the task.
+        Args:
+            env_ids (torch.Tensor): The ids of the environments.
+            target_positions (torch.Tensor): The target positions.
+            target_orientations (torch.Tensor): The target orientations.
+
+        Returns:
+            list: The target positions and orientations.
+        """
 
         num_goals = len(env_ids)
-        self._target_linear_velocities[env_ids] = (
-            torch.rand((num_goals, 2), device=self._device)
-            * self._task_parameters.goal_random_linear_velocity
-            * 2
-            - self._task_parameters.goal_random_linear_velocity
-        )
-        self._target_angular_velocities[env_ids] = (
-            torch.rand((num_goals), device=self._device)
-            * self._task_parameters.goal_random_angular_velocity
-            * 2
-            - self._task_parameters.goal_random_angular_velocity
-        )
+        # Randomizes the target linear velocity
+        r = self._target_linear_velocity_sampler.sample(num_goals, step=0)
+        theta = torch.rand((num_goals,), device=self._device) * 2 * math.pi
+        self._target_linear_velocities[env_ids, 0] = r * torch.cos(theta)
+        self._target_linear_velocities[env_ids, 1] = r * torch.sin(theta)
+        # Randomizes the target angular velocity
+        omega = self._target_angular_velocity_sampler.sample(num_goals, step=0)
+        self._target_angular_velocities[env_ids] = omega
         # This does not matter
         return target_positions, target_orientations
 
-    def get_spawns(
+    def get_initial_conditions(
         self,
         env_ids: torch.Tensor,
-        initial_position: torch.Tensor,
-        initial_orientation: torch.Tensor,
         step: int = 0,
-    ) -> list:
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
-        Generates spawning positions for the robots following a curriculum."""
+        Generates the initial conditions for the robots following a curriculum.
+
+        Args:
+            env_ids (torch.Tensor): The ids of the environments.
+            step (int, optional): The current step. Defaults to 0.
+
+        Returns:
+            Tuple[torch.Tensor, torch.Tensor, torch.Tensor]: The initial position,
+            orientation and velocity of the robot.
+        """
 
         num_resets = len(env_ids)
         # Resets the counter of steps for which the goal was reached
-        self._goal_reached[env_ids] = 0
-
+        self.reset(env_ids)
+        # Randomizes the starting position of the platform
+        initial_position = torch.zeros(
+            (num_resets, 3), device=self._device, dtype=torch.float32
+        )
         # Randomizes the heading of the platform
-        random_orient = torch.rand(num_resets, device=self._device) * math.pi
-        initial_orientation[env_ids, 0] = torch.cos(random_orient * 0.5)
-        initial_orientation[env_ids, 3] = torch.sin(random_orient * 0.5)
-        return initial_position, initial_orientation
+        initial_orientation = torch.zeros(
+            (num_resets, 4), device=self._device, dtype=torch.float32
+        )
+        theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
+        initial_orientation[:, 0] = torch.cos(theta * 0.5)
+        initial_orientation[:, 3] = torch.sin(theta * 0.5)
+        # Randomizes the linear velocity of the platform
+        initial_velocity = torch.zeros(
+            (num_resets, 6), device=self._device, dtype=torch.float32
+        )
+        linear_velocity = self._spawn_linear_velocity_sampler.sample(num_resets, step)
+        theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
+        initial_velocity[env_ids, 0] = linear_velocity * torch.cos(theta)
+        initial_velocity[env_ids, 1] = linear_velocity * torch.sin(theta)
+        # Randomizes the angular velocity of the platform
+        angular_velocity = self._spawn_angular_velocity_sampler.sample(num_resets, step)
+        initial_velocity[env_ids, 5] = angular_velocity
+        return (
+            initial_position,
+            initial_orientation,
+            initial_velocity,
+        )
 
-    def generate_target(self, path, position):
+    def generate_target(self, path: str, position: torch.Tensor) -> None:
         """
         Generates a visual marker to help visualize the performance of the agent from the UI.
+
+        Args:
+            path (str): The path where the pin is to be generated.
+            position (torch.Tensor): The position of the target.
         """
+
         pass
 
-    def add_visual_marker_to_scene(self, scene):
+    def add_visual_marker_to_scene(self, scene: Usd.Stage) -> Tuple[Usd.Stage, None]:
         """
-        Adds the visual marker to the scene."""
+        Adds the visual marker to the scene.
+
+        Args:
+            scene (Usd.Stage): The scene to add the visual marker to.
+
+        Returns:
+            Tuple[Usd.Stage, None]: The scene and the visual marker.
+        """
 
         return scene, None
