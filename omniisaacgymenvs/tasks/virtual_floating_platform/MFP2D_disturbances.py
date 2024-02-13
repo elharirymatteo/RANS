@@ -31,7 +31,6 @@ class MassDistributionDisturbances:
         self._min_mass = task_cfg["min_mass"]
         self._max_mass = task_cfg["max_mass"]
         self._base_mass = task_cfg["base_mass"]
-        print(self._base_mass)
         self._CoM_max_displacement = task_cfg["CoM_max_displacement"]
         self._num_envs = num_envs
         self._device = device
