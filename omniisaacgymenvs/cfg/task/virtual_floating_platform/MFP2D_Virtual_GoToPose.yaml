@@ -75,9 +75,35 @@ env:
     name: GoToPose
     position_tolerance: 0.01
     kill_after_n_steps_in_tolerance: 50 # 10seconds
-    max_spawn_dist: 6.0
-    min_spawn_dist: 0.5
     kill_dist: 8.0
+    spawn_position_curriculum:
+      rate_parameters:
+        function: sigmoid
+        start: 50
+        end: 1000
+        extent: 4.5
+      sampling_parameters:
+        distribution: truncated_normal
+        start_mean: 0.25
+        start_std: 0.5
+        end_mean: 6.0
+        end_std: 3.0
+        min_value: 0.25
+        max_value: 6.0
+    spawn_heading_curriculum:
+      rate_parameters:
+        function: sigmoid
+        start: 25
+        end: 1000
+        extent: 4.5
+      sampling_parameters:
+        distribution: truncated_normal
+        start_mean: 0.0
+        start_std: 0.1
+        end_mean: 0.0 #2pi
+        end_std: 3.141592653589793 # pi
+        min_value: -3.141592653589793 # -pi
+        max_value: 3.141592653589793 # pi
 
   reward_parameters:
     name: GoToPose
