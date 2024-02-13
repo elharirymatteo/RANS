@@ -208,7 +208,7 @@ class TrackXYVelocityTask(Core):
         # This does not matter
         return target_positions, target_orientations
 
-    def get_intitial_conditions(
+    def get_initial_conditions(
         self, env_ids: torch.Tensor, step: int = 0
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """

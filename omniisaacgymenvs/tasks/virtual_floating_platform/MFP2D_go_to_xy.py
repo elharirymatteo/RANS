@@ -229,7 +229,7 @@ class GoToXYTask(Core):
         targets_position[env_ids, :2] += self._target_positions[env_ids]
         return targets_position, targets_orientation
 
-    def get_intitial_conditions(
+    def get_initial_conditions(
         self,
         env_ids: torch.Tensor,
         step: int = 0,
@@ -266,7 +266,7 @@ class GoToXYTask(Core):
         initial_orientation[:, 3] = torch.sin(theta * 0.5)
         # Randomizes the linear velocity of the platform
         initial_velocity = torch.zeros(
-            (num_resets, 3), device=self._device, dtype=torch.float32
+            (num_resets, 6), device=self._device, dtype=torch.float32
         )
         linear_velocity = self._spawn_linear_velocity_sampler.sample(
             num_resets, step, device=self._device
