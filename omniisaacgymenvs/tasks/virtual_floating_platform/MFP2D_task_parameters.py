@@ -21,6 +21,7 @@ class GoToXYParameters:
     """
     Parameters for the GoToXY task."""
 
+    name: str = "GoToXY"
     position_tolerance: float = 0.01
     kill_after_n_steps_in_tolerance: int = 50
     goal_random_position: float = 0.0
@@ -38,13 +39,8 @@ class GoToXYParameters:
             self.kill_after_n_steps_in_tolerance > 0
         ), "Kill after n steps in tolerance must be positive."
         assert self.goal_random_position >= 0, "Goal random position must be positive."
-        assert self.max_spawn_dist > 0, "Max spawn distance must be positive."
-        assert self.min_spawn_dist > 0, "Min spawn distance must be positive."
         assert self.kill_dist > 0, "Kill distance must be positive."
         assert self.boundary_cost >= 0, "Boundary cost must be positive."
-        assert (
-            self.min_spawn_dist < self.max_spawn_dist
-        ), "Min spawn distance must be smaller than max spawn distance."
 
         self.spawn_position_curriculum = CurriculumParameters(
             **self.spawn_position_curriculum
@@ -62,6 +58,7 @@ class GoToPoseParameters:
     """
     Parameters for the GoToPose task."""
 
+    name: str = "GoToPose"
     position_tolerance: float = 0.01
     heading_tolerance: float = 0.025
     kill_after_n_steps_in_tolerance: int = 50
@@ -82,12 +79,7 @@ class GoToPoseParameters:
             self.kill_after_n_steps_in_tolerance > 0
         ), "Kill after n steps in tolerance must be positive."
         assert self.goal_random_position >= 0, "Goal random position must be positive."
-        assert self.max_spawn_dist > 0, "Max spawn distance must be positive."
-        assert self.min_spawn_dist > 0, "Min spawn distance must be positive."
         assert self.kill_dist > 0, "Kill distance must be positive."
-        assert (
-            self.min_spawn_dist < self.max_spawn_dist
-        ), "Min spawn distance must be smaller than max spawn distance."
 
         self.spawn_position_curriculum = CurriculumParameters(
             **self.spawn_position_curriculum
@@ -108,6 +100,7 @@ class TrackXYVelocityParameters:
     """
     Parameters for the TrackXYVelocity task."""
 
+    name: str = "TrackXYVelocity"
     lin_vel_tolerance: float = 0.01
     kill_after_n_steps_in_tolerance: int = 50
     goal_random_velocity: float = 0.75
@@ -145,6 +138,7 @@ class TrackXYOVelocityParameters:
     """
     Parameters for the TrackXYOVelocity task."""
 
+    name: str = "TrackXYOVelocity"
     lin_vel_tolerance: float = 0.01
     ang_vel_tolerance: float = 0.025
     kill_after_n_steps_in_tolerance: int = 50
