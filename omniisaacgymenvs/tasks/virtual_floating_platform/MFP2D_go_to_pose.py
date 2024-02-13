@@ -236,11 +236,11 @@ class GoToPoseTask(Core):
 
         # Randomizes the starting position of the platform
         r = torch.rand((num_resets,), device=self._device) * (rmax - rmin) + rmin
-        # lab width=3, height=5
-        initial_position[env_ids, 0] += 3/5 * r + self._target_positions[
+        theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
+        initial_position[env_ids, 0] += (r) * torch.cos(theta) + self._target_positions[
             env_ids, 0
         ]
-        initial_position[env_ids, 1] += r + self._target_positions[
+        initial_position[env_ids, 1] += (r) * torch.sin(theta) + self._target_positions[
             env_ids, 1
         ]
         initial_position[env_ids, 2] += 0
