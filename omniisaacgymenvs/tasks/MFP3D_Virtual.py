@@ -23,7 +23,6 @@ from omniisaacgymenvs.tasks.virtual_floating_platform.MFP3D_task_factory import 
     task_factory,
 )
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP3D_core import (
-    parse_data_dict,
     quat_to_mat,
 )
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP3D_task_rewards import (
@@ -107,7 +106,7 @@ class MFP3DVirtual(MFP2DVirtual):
         penalty_cfg = self._task_cfg["env"]["penalties_parameters"]
         # Instantiate the task, reward and platform
         self.task = task_factory.get(task_cfg, reward_cfg, self._num_envs, self._device)
-        self._penalties = parse_data_dict(Penalties(), penalty_cfg)
+        self._penalties = Penalties(**penalty_cfg)
         self.virtual_platform = VirtualPlatform(
             self._num_envs, self._platform_cfg, self._device
         )

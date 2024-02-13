@@ -24,7 +24,6 @@ from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_thruster_generator i
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_factory import (
     task_factory,
 )
-from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_core import parse_data_dict
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_rewards import (
     Penalties,
 )
@@ -47,7 +46,6 @@ import time
 import math
 import torch
 from gym import spaces
-from dataclasses import dataclass
 
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
@@ -106,7 +104,7 @@ class MFP2DVirtual(RLTask):
         penalty_cfg = self._task_cfg["env"]["penalties_parameters"]
         # Instantiate the task, reward and platform
         self.task = task_factory.get(task_cfg, reward_cfg, self._num_envs, self._device)
-        self._penalties = parse_data_dict(Penalties(), penalty_cfg)
+        self._penalties = Penalties(**penalty_cfg)
         self.virtual_platform = VirtualPlatform(
             self._num_envs, self._platform_cfg, self._device
         )
@@ -502,21 +500,19 @@ class MFP2DVirtual(RLTask):
         self.MDD.set_masses(self._platforms.base, env_ids)
         # Randomizes the starting position of the platform within a disk around the target
         pos, quat, vel = self.task.get_initial_conditions(env_ids, step=0)
-        pos = pos + self.initial_root_pos[env_ids]
 
         # Resets the states of the joints
         self.dof_pos[env_ids, :] = torch.zeros(
             (num_resets, self._platforms.num_dof), device=self._device
         )
         self.dof_vel[env_ids, :] = 0
-        # Sets the velocities to 0
-        root_velocities = self.root_velocities.clone()
-        root_velocities[env_ids] = 0
 
         # apply resets
         self._platforms.set_joint_positions(self.dof_pos[env_ids], indices=env_ids)
         self._platforms.set_joint_velocities(self.dof_vel[env_ids], indices=env_ids)
-        self._platforms.set_world_poses(pos, quat, indices=env_ids)
+        self._platforms.set_world_poses(
+            pos + self.initial_root_pos[env_ids], quat, indices=env_ids
+        )
         self._platforms.set_velocities(vel, indices=env_ids)
 
         # bookkeeping

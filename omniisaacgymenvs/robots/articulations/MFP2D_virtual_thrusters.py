@@ -15,7 +15,6 @@ from omniisaacgymenvs.robots.articulations.utils.MFP_utils import *
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_thruster_generator import (
     compute_actions,
 )
-from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_core import parse_data_dict
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_thruster_generator import (
     ConfigurationParameters,
 )
@@ -79,7 +78,7 @@ class CreatePlatform:
             self.core_mass = 5.0
             self.refinement = 2
         # Reads the thruster configuration and computes the number of virtual thrusters.
-        thruster_cfg = parse_data_dict(ConfigurationParameters(), cfg["configuration"])
+        thruster_cfg = ConfigurationParameters(**cfg["configuration"])
         self.num_virtual_thrusters = compute_actions(thruster_cfg)
 
     def build(self) -> None:

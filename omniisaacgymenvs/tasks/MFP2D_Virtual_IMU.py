@@ -28,7 +28,6 @@ from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_thruster_generator i
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_factory import (
     task_factory,
 )
-from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_core import parse_data_dict
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_rewards import (
     Penalties,
 )
@@ -110,7 +109,7 @@ class MFP2DVirtual_IMU(RLTask):
         penalty_cfg = self._task_cfg["env"]["penalties_parameters"]
         # Instantiate the task, reward and platform
         self.task = task_factory.get(task_cfg, reward_cfg, self._num_envs, self._device)
-        self._penalties = parse_data_dict(Penalties(), penalty_cfg)
+        self._penalties = Penalties(**penalty_cfg)
         self.virtual_platform = VirtualPlatform(
             self._num_envs, self._platform_cfg, self._device
         )
@@ -260,7 +259,7 @@ class MFP2DVirtual_IMU(RLTask):
         # Add arrows to scene if task is go to pose
         scene, self._marker = self.task.add_visual_marker_to_scene(scene)
         return
-    
+
     def get_floating_platform(self):
         """
         Adds the floating platform to the scene."""
@@ -284,20 +283,31 @@ class MFP2DVirtual_IMU(RLTask):
         self.task.generate_target(
             self.default_zero_env_path, self._default_marker_position
         )
-    
+
     def get_imu(self) -> None:
         """
         Adds the IMU to the scene."""
         self.imu = IMUInterface(
             IMU_T(
-            dt = self.dt, 
-            body_to_sensor_frame=self._task_cfg["env"]["sensors"]["imu"]["body_to_sensor_frame"], 
-            sensor_frame_to_optical_frame=self._task_cfg["env"]["sensors"]["imu"]["sensor_frame_to_optical_frame"], 
-            gyro_param=Gyroscope_T(**self._task_cfg["env"]["sensors"]["imu"]["gyro_param"]),
-            accel_param=Accelometer_T(**self._task_cfg["env"]["sensors"]["imu"]["accel_param"]),
-            gravity_vector=self._task_cfg["env"]["sensors"]["imu"]["gravity_vector"]), 
-            num_envs=self._num_envs
-            )
+                dt=self.dt,
+                body_to_sensor_frame=self._task_cfg["env"]["sensors"]["imu"][
+                    "body_to_sensor_frame"
+                ],
+                sensor_frame_to_optical_frame=self._task_cfg["env"]["sensors"]["imu"][
+                    "sensor_frame_to_optical_frame"
+                ],
+                gyro_param=Gyroscope_T(
+                    **self._task_cfg["env"]["sensors"]["imu"]["gyro_param"]
+                ),
+                accel_param=Accelometer_T(
+                    **self._task_cfg["env"]["sensors"]["imu"]["accel_param"]
+                ),
+                gravity_vector=self._task_cfg["env"]["sensors"]["imu"][
+                    "gravity_vector"
+                ],
+            ),
+            num_envs=self._num_envs,
+        )
 
     def update_state(self) -> None:
         """
@@ -335,19 +345,24 @@ class MFP2DVirtual_IMU(RLTask):
             "angular_velocity": root_velocities[:, -1],
         }
         # Update the IMU state accordingly to the platform state
-        self._update_imu_state(self.root_pos.to(torch.float32), 
-                               self.root_quats.to(torch.float32), 
-                               self.root_velocities[:, :3].to(torch.float32), 
-                               self.root_velocities[:, 3:].to(torch.float32)
-                               )
-    
-    def _update_imu_state(self, position, orientation, linear_velocity, angular_velocity) -> None:
+        self._update_imu_state(
+            self.root_pos.to(torch.float32),
+            self.root_quats.to(torch.float32),
+            self.root_velocities[:, :3].to(torch.float32),
+            self.root_velocities[:, 3:].to(torch.float32),
+        )
+
+    def _update_imu_state(
+        self, position, orientation, linear_velocity, angular_velocity
+    ) -> None:
         """
         Updates the state of the IMU accordingly to the platform state."""
-        root_state = State(position=position, 
-                           orientation=orientation, 
-                           linear_velocity=linear_velocity, 
-                           angular_velocity=angular_velocity)
+        root_state = State(
+            position=position,
+            orientation=orientation,
+            linear_velocity=linear_velocity,
+            angular_velocity=angular_velocity,
+        )
         self.imu.update(root_state)
 
     def get_observations(self) -> Dict[str, torch.Tensor]:
