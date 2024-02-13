@@ -499,7 +499,7 @@ class MFP2DVirtual(RLTask):
         self.MDD.randomize_masses(env_ids, num_resets)
         self.MDD.set_masses(self._platforms.base, env_ids)
         # Randomizes the starting position of the platform within a disk around the target
-        pos, quat, vel = self.task.get_initial_conditions(env_ids, step=0)
+        pos, quat, vel = self.task.get_initial_conditions(env_ids, step=self.step)
 
         # Resets the states of the joints
         self.dof_pos[env_ids, :] = torch.zeros(
