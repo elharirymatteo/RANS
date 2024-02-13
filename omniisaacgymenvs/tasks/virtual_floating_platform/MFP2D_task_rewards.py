@@ -19,6 +19,7 @@ class GoToXYReward:
     """ "
     Reward function and parameters for the GoToXY task."""
 
+    name: str = "GoToXY"
     reward_mode: str = "linear"
     exponential_reward_coeff: float = 0.25
 
@@ -57,6 +58,7 @@ class GoToPoseReward:
     """
     Reward function and parameters for the GoToPose task."""
 
+    name: str = "GoToPose"
     position_reward_mode: str = "linear"
     heading_reward_mode: str = "linear"
     position_exponential_reward_coeff: float = 0.25
@@ -114,6 +116,7 @@ class TrackXYVelocityReward:
     """
     Reward function and parameters for the TrackXYVelocity task."""
 
+    name: str = "TrackXYVelocity"
     reward_mode: str = "linear"
     exponential_reward_coeff: float = 0.25
 
@@ -150,8 +153,10 @@ class TrackXYVelocityReward:
 @dataclass
 class TrackXYOVelocityReward:
     """
-    Reward function and parameters for the TrackXYOVelocity task."""
+    Reward function and parameters for the TrackXYOVelocity task.
+    """
 
+    name: str = "TrackXYOVelocity"
     linear_reward_mode: str = "linear"
     angular_reward_mode: str = "linear"
     linear_exponential_reward_coeff: float = 0.25
