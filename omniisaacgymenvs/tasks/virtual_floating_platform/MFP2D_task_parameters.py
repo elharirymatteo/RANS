@@ -8,7 +8,10 @@ __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from omniisaacgymenvs.tasks.virtual_floating_platform.curriculum_helpers import (
+    CurriculumParameters,
+)
 
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
@@ -25,29 +28,35 @@ class GoToXYParameters:
     min_spawn_dist: float = 3.0
     kill_dist: float = 8.0
     boundary_cost: float = 25
-
-    spawn_curriculum: bool = False
-    spawn_curriculum_min_dist: float = 0.5
-    spawn_curriculum_max_dist: float = 2.5
-    spawn_curriculum_kill_dist: float = 3.0
-    spawn_curriculum_mode: str = "linear"
-    spawn_curriculum_warmup: int = 250
-    spawn_curriculum_end: int = 750
+    spawn_position_curriculum: CurriculumParameters = field(default_factory=dict)
+    spawn_linear_velocity_curriculum: CurriculumParameters = field(default_factory=dict)
+    spawn_angular_velocity_curriculum: CurriculumParameters = field(
+        default_factory=dict
+    )
 
     def __post_init__(self) -> None:
-        """
-        Checks that the curicullum parameters are valid."""
+        assert self.position_tolerance > 0, "Position tolerance must be positive."
+        assert (
+            self.kill_after_n_steps_in_tolerance > 0
+        ), "Kill after n steps in tolerance must be positive."
+        assert self.goal_random_position >= 0, "Goal random position must be positive."
+        assert self.max_spawn_dist > 0, "Max spawn distance must be positive."
+        assert self.min_spawn_dist > 0, "Min spawn distance must be positive."
+        assert self.kill_dist > 0, "Kill distance must be positive."
+        assert self.boundary_cost >= 0, "Boundary cost must be positive."
+        assert (
+            self.min_spawn_dist < self.max_spawn_dist
+        ), "Min spawn distance must be smaller than max spawn distance."
 
-        assert self.spawn_curriculum_mode.lower() in [
-            "linear"
-        ], "Linear is the only currently supported mode."
-        if not self.spawn_curriculum:
-            self.spawn_curriculum_max_dist = 0
-            self.spawn_curriculum_min_dist = 0
-            self.spawn_curriculum_kill_dist = 0
-            self.spawn_curriculum_mode = 0
-            self.spawn_curriculum_warmup = 0
-            self.spawn_curriculum_end = 0
+        self.spawn_position_curriculum = CurriculumParameters(
+            **self.spawn_position_curriculum
+        )
+        self.spawn_linear_velocity_curriculum = CurriculumParameters(
+            **self.spawn_linear_velocity_curriculum
+        )
+        self.spawn_angular_velocity_curriculum = CurriculumParameters(
+            **self.spawn_angular_velocity_curriculum
+        )
 
 
 @dataclass
@@ -63,27 +72,39 @@ class GoToPoseParameters:
     min_spawn_dist: float = 3.0
     kill_dist: float = 8.0
 
-    spawn_curriculum: bool = False
-    spawn_curriculum_min_dist: float = 0.5
-    spawn_curriculum_max_dist: float = 2.5
-    spawn_curriculum_kill_dist: float = 3.0
-    spawn_curriculum_mode: str = "linear"
-    spawn_curriculum_warmup: int = 250
-    spawn_curriculum_end: int = 750
+    spawn_position_curriculum: CurriculumParameters = field(default_factory=dict)
+    spawn_heading_curriculum: CurriculumParameters = field(default_factory=dict)
+    spawn_linear_velocity_curriculum: CurriculumParameters = field(default_factory=dict)
+    spawn_angular_velocity_curriculum: CurriculumParameters = field(
+        default_factory=dict
+    )
 
     def __post_init__(self) -> None:
-        """
-        Checks that the curicullum parameters are valid."""
+        assert self.position_tolerance > 0, "Position tolerance must be positive."
+        assert self.heading_tolerance > 0, "Heading tolerance must be positive."
+        assert (
+            self.kill_after_n_steps_in_tolerance > 0
+        ), "Kill after n steps in tolerance must be positive."
+        assert self.goal_random_position >= 0, "Goal random position must be positive."
+        assert self.max_spawn_dist > 0, "Max spawn distance must be positive."
+        assert self.min_spawn_dist > 0, "Min spawn distance must be positive."
+        assert self.kill_dist > 0, "Kill distance must be positive."
+        assert (
+            self.min_spawn_dist < self.max_spawn_dist
+        ), "Min spawn distance must be smaller than max spawn distance."
 
-        assert self.spawn_curriculum_mode.lower() in [
-            "linear"
-        ], "Linear is the only currently supported mode."
-        if not self.spawn_curriculum:
-            self.spawn_curriculum_max_dist = 0
-            self.spawn_curriculum_min_dist = 0
-            self.spawn_curriculum_kill_dist = 0
-            self.spawn_curriculum_warmup = 0
-            self.spawn_curriculum_end = 0
+        self.spawn_position_curriculum = CurriculumParameters(
+            **self.spawn_position_curriculum
+        )
+        self.spawn_heading_curriculum = CurriculumParameters(
+            **self.spawn_heading_curriculum
+        )
+        self.spawn_linear_velocity_curriculum = CurriculumParameters(
+            **self.spawn_linear_velocity_curriculum
+        )
+        self.spawn_angular_velocity_curriculum = CurriculumParameters(
+            **self.spawn_angular_velocity_curriculum
+        )
 
 
 @dataclass
@@ -95,6 +116,32 @@ class TrackXYVelocityParameters:
     kill_after_n_steps_in_tolerance: int = 50
     goal_random_velocity: float = 0.75
     kill_dist: float = 500.0
+
+    target_linear_velocity_curriculum: CurriculumParameters = field(
+        default_factory=dict
+    )
+    spawn_linear_velocity_curriculum: CurriculumParameters = field(default_factory=dict)
+    spawn_angular_velocity_curriculum: CurriculumParameters = field(
+        default_factory=dict
+    )
+
+    def __post_init__(self) -> None:
+        assert self.lin_vel_tolerance > 0, "Linear velocity tolerance must be positive."
+        assert (
+            self.kill_after_n_steps_in_tolerance > 0
+        ), "Kill after n steps in tolerance must be positive."
+        assert self.goal_random_velocity >= 0, "Goal random velocity must be positive."
+        assert self.kill_dist > 0, "Kill distance must be positive."
+
+        self.target_linear_velocity_curriculum = CurriculumParameters(
+            **self.target_linear_velocity_curriculum
+        )
+        self.spawn_linear_velocity_curriculum = CurriculumParameters(
+            **self.spawn_linear_velocity_curriculum
+        )
+        self.spawn_angular_velocity_curriculum = CurriculumParameters(
+            **self.spawn_angular_velocity_curriculum
+        )
 
 
 @dataclass
@@ -108,3 +155,43 @@ class TrackXYOVelocityParameters:
     goal_random_linear_velocity: float = 0.75
     goal_random_angular_velocity: float = 1
     kill_dist: float = 500.0
+
+    target_linear_velocity_curriculum: CurriculumParameters = field(
+        default_factory=dict
+    )
+    target_angular_velocity_curriculum: CurriculumParameters = field(
+        default_factory=dict
+    )
+    spawn_linear_velocity_curriculum: CurriculumParameters = field(default_factory=dict)
+    spawn_angular_velocity_curriculum: CurriculumParameters = field(
+        default_factory=dict
+    )
+
+    def __post_init__(self) -> None:
+        assert self.lin_vel_tolerance > 0, "Linear velocity tolerance must be positive."
+        assert (
+            self.ang_vel_tolerance > 0
+        ), "Angular velocity tolerance must be positive."
+        assert (
+            self.kill_after_n_steps_in_tolerance > 0
+        ), "Kill after n steps in tolerance must be positive."
+        assert (
+            self.goal_random_linear_velocity >= 0
+        ), "Goal random linear velocity must be positive."
+        assert (
+            self.goal_random_angular_velocity >= 0
+        ), "Goal random angular velocity must be positive."
+        assert self.kill_dist > 0, "Kill distance must be positive."
+
+        self.target_linear_velocity_curriculum = CurriculumParameters(
+            **self.target_linear_velocity_curriculum
+        )
+        self.target_angular_velocity_curriculum = CurriculumParameters(
+            **self.target_angular_velocity_curriculum
+        )
+        self.spawn_linear_velocity_curriculum = CurriculumParameters(
+            **self.spawn_linear_velocity_curriculum
+        )
+        self.spawn_angular_velocity_curriculum = CurriculumParameters(
+            **self.spawn_angular_velocity_curriculum
+        )
