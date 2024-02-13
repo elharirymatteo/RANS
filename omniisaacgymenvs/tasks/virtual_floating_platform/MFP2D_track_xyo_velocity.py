@@ -228,12 +228,16 @@ class TrackXYOVelocityTask(Core):
 
         num_goals = len(env_ids)
         # Randomizes the target linear velocity
-        r = self._target_linear_velocity_sampler.sample(num_goals, step=0)
+        r = self._target_linear_velocity_sampler.sample(
+            num_goals, step=0, device=self._device
+        )
         theta = torch.rand((num_goals,), device=self._device) * 2 * math.pi
         self._target_linear_velocities[env_ids, 0] = r * torch.cos(theta)
         self._target_linear_velocities[env_ids, 1] = r * torch.sin(theta)
         # Randomizes the target angular velocity
-        omega = self._target_angular_velocity_sampler.sample(num_goals, step=0)
+        omega = self._target_angular_velocity_sampler.sample(
+            num_goals, step=0, device=self._device
+        )
         self._target_angular_velocities[env_ids] = omega
         # This does not matter
         return target_positions, target_orientations
@@ -273,13 +277,17 @@ class TrackXYOVelocityTask(Core):
         initial_velocity = torch.zeros(
             (num_resets, 6), device=self._device, dtype=torch.float32
         )
-        linear_velocity = self._spawn_linear_velocity_sampler.sample(num_resets, step)
+        linear_velocity = self._spawn_linear_velocity_sampler.sample(
+            num_resets, step, device=self._device
+        )
         theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
-        initial_velocity[env_ids, 0] = linear_velocity * torch.cos(theta)
-        initial_velocity[env_ids, 1] = linear_velocity * torch.sin(theta)
+        initial_velocity[:, 0] = linear_velocity * torch.cos(theta)
+        initial_velocity[:, 1] = linear_velocity * torch.sin(theta)
         # Randomizes the angular velocity of the platform
-        angular_velocity = self._spawn_angular_velocity_sampler.sample(num_resets, step)
-        initial_velocity[env_ids, 5] = angular_velocity
+        angular_velocity = self._spawn_angular_velocity_sampler.sample(
+            num_resets, step, device=self._device
+        )
+        initial_velocity[:, 5] = angular_velocity
         return (
             initial_position,
             initial_orientation,

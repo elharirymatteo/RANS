@@ -253,7 +253,7 @@ class GoToXYTask(Core):
         initial_position = torch.zeros(
             (num_resets, 3), device=self._device, dtype=torch.float32
         )
-        r = self._spawn_position_sampler.sample(num_resets, step)
+        r = self._spawn_position_sampler.sample(num_resets, step, device=self._device)
         theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
         initial_position[:, 0] = r * torch.cos(theta)
         initial_position[:, 1] = r * torch.sin(theta)
@@ -268,13 +268,17 @@ class GoToXYTask(Core):
         initial_velocity = torch.zeros(
             (num_resets, 3), device=self._device, dtype=torch.float32
         )
-        linear_velocity = self._spawn_linear_velocity_sampler.sample(num_resets, step)
+        linear_velocity = self._spawn_linear_velocity_sampler.sample(
+            num_resets, step, device=self._device
+        )
         theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
-        initial_velocity[env_ids, 0] = linear_velocity * torch.cos(theta)
-        initial_velocity[env_ids, 1] = linear_velocity * torch.sin(theta)
+        initial_velocity[:, 0] = linear_velocity * torch.cos(theta)
+        initial_velocity[:, 1] = linear_velocity * torch.sin(theta)
         # Randomizes the angular velocity of the platform
-        angular_velocity = self._spawn_angular_velocity_sampler.sample(num_resets, step)
-        initial_velocity[env_ids, 5] = angular_velocity
+        angular_velocity = self._spawn_angular_velocity_sampler.sample(
+            num_resets, step, device=self._device
+        )
+        initial_velocity[:, 5] = angular_velocity
         return (
             initial_position,
             initial_orientation,
