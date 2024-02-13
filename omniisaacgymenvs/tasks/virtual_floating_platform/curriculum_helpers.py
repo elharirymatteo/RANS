@@ -62,9 +62,9 @@ def curriculum_sigmoid_growth(
     relative_end = end - start
 
     rate = (
-        torch.tanh(((extent * 2 * current / relative_end) - extent) / 2)
-        - torch.tanh(-extent / 2)
-    ) / (torch.tanh(extent / 2) - torch.tanh(-extent / 2))
+        math.tanh(((extent * 2 * current / relative_end) - extent) / 2)
+        - math.tanh(-extent / 2)
+    ) / (math.tanh(extent / 2) - math.tanh(-extent / 2))
 
     return rate
 
