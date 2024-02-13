@@ -260,12 +260,12 @@ class MFP2DVirtual_IMU(RLTask):
         # Add arrows to scene if task is go to pose
         scene, self._marker = self.task.add_visual_marker_to_scene(scene)
         return
-    
+
     def get_floating_platform(self):
         """
         Adds the floating platform to the scene."""
 
-        fp = ModularFloatingPlatform(
+        self._fp = ModularFloatingPlatform(
             prim_path=self.default_zero_env_path + "/Modular_floating_platform",
             name="modular_floating_platform",
             translation=self._fp_position,
@@ -273,7 +273,7 @@ class MFP2DVirtual_IMU(RLTask):
         )
         self._sim_config.apply_articulation_settings(
             "modular_floating_platform",
-            get_prim_at_path(fp.prim_path),
+            get_prim_at_path(self._fp.prim_path),
             self._sim_config.parse_actor_config("modular_floating_platform"),
         )
 
@@ -284,31 +284,44 @@ class MFP2DVirtual_IMU(RLTask):
         self.task.generate_target(
             self.default_zero_env_path, self._default_marker_position
         )
-    
+
     def get_imu(self) -> None:
         """
         Adds the IMU to the scene."""
         self.imu = IMUInterface(
             IMU_T(
-            dt = self.dt, 
-            body_to_sensor_frame=self._task_cfg["env"]["sensors"]["imu"]["body_to_sensor_frame"], 
-            sensor_frame_to_optical_frame=self._task_cfg["env"]["sensors"]["imu"]["sensor_frame_to_optical_frame"], 
-            gyro_param=Gyroscope_T(**self._task_cfg["env"]["sensors"]["imu"]["gyro_param"]),
-            accel_param=Accelometer_T(**self._task_cfg["env"]["sensors"]["imu"]["accel_param"]),
-            gravity_vector=self._task_cfg["env"]["sensors"]["imu"]["gravity_vector"]), 
-            num_envs=self._num_envs
-            )
+                dt=self.dt,
+                body_to_sensor_frame=self._task_cfg["env"]["sensors"]["imu"][
+                    "body_to_sensor_frame"
+                ],
+                sensor_frame_to_optical_frame=self._task_cfg["env"]["sensors"]["imu"][
+                    "sensor_frame_to_optical_frame"
+                ],
+                gyro_param=Gyroscope_T(
+                    **self._task_cfg["env"]["sensors"]["imu"]["gyro_param"]
+                ),
+                accel_param=Accelometer_T(
+                    **self._task_cfg["env"]["sensors"]["imu"]["accel_param"]
+                ),
+                gravity_vector=self._task_cfg["env"]["sensors"]["imu"][
+                    "gravity_vector"
+                ],
+            ),
+            num_envs=self._num_envs,
+        )
 
     def update_state(self) -> None:
         """
         Updates the state of the system."""
 
         # Collects the position and orientation of the platform
-        self.root_pos, self.root_quats = self._platforms.get_world_poses(clone=True)
+        self.root_pos, self.root_quats = self._platforms.base.get_world_poses(
+            clone=True
+        )
         # Remove the offset from the different environments
         root_positions = self.root_pos - self._env_pos
         # Collects the velocity of the platform
-        self.root_velocities = self._platforms.get_velocities(clone=True)
+        self.root_velocities = self._platforms.base.get_velocities(clone=True)
         root_velocities = self.root_velocities.clone()
         # Cast quaternion to Yaw
         siny_cosp = 2 * (
@@ -335,19 +348,24 @@ class MFP2DVirtual_IMU(RLTask):
             "angular_velocity": root_velocities[:, -1],
         }
         # Update the IMU state accordingly to the platform state
-        self._update_imu_state(self.root_pos.to(torch.float32), 
-                               self.root_quats.to(torch.float32), 
-                               self.root_velocities[:, :3].to(torch.float32), 
-                               self.root_velocities[:, 3:].to(torch.float32)
-                               )
-    
-    def _update_imu_state(self, position, orientation, linear_velocity, angular_velocity) -> None:
+        self._update_imu_state(
+            self.root_pos.to(torch.float32),
+            self.root_quats.to(torch.float32),
+            self.root_velocities[:, :3].to(torch.float32),
+            self.root_velocities[:, 3:].to(torch.float32),
+        )
+
+    def _update_imu_state(
+        self, position, orientation, linear_velocity, angular_velocity
+    ) -> None:
         """
         Updates the state of the IMU accordingly to the platform state."""
-        root_state = State(position=position, 
-                           orientation=orientation, 
-                           linear_velocity=linear_velocity, 
-                           angular_velocity=angular_velocity)
+        root_state = State(
+            position=position,
+            orientation=orientation,
+            linear_velocity=linear_velocity,
+            angular_velocity=angular_velocity,
+        )
         self.imu.update(root_state)
 
     def get_observations(self) -> Dict[str, torch.Tensor]:
@@ -442,10 +460,14 @@ class MFP2DVirtual_IMU(RLTask):
         This function implements the logic to be performed after a reset."""
 
         # implement any logic required for simulation on-start here
-        self.root_pos, self.root_rot = self._platforms.get_world_poses()
-        self.root_velocities = self._platforms.get_velocities()
+        self.root_pos, self.root_rot = self._platforms.base.get_world_poses()
+        self.root_velocities = self._platforms.base.get_velocities()
         self.dof_pos = self._platforms.get_joint_positions()
         self.dof_vel = self._platforms.get_joint_velocities()
+
+        self._x_index = self._platforms.get_dof_index(self._fp.joints["x_tr_axis"])
+        self._y_index = self._platforms.get_dof_index(self._fp.joints["y_tr_axis"])
+        self._z_index = self._platforms.get_dof_index(self._fp.joints["z_rv_axis"])
 
         self.initial_root_pos, self.initial_root_rot = (
             self.root_pos.clone(),
@@ -506,27 +528,32 @@ class MFP2DVirtual_IMU(RLTask):
         # Resets the counter of steps for which the goal was reached
         self.task.reset(env_ids)
         self.virtual_platform.randomize_thruster_state(env_ids, num_resets)
+
         # Randomizes the starting position of the platform within a disk around the target
         root_pos = torch.zeros_like(self.root_pos)
         root_pos[env_ids, :2] = positions
         root_rot = torch.zeros_like(self.root_rot)
         root_rot[env_ids, :] = heading
+        siny_cosp = 2 * root_rot[:, 0] * root_rot[:, 3]
+        cosy_cosp = 1 - 2 * (root_rot[:, 3] * root_rot[:, 3])
+        h = torch.arctan2(siny_cosp, cosy_cosp)
+
         # Resets the states of the joints
         self.dof_pos[env_ids, :] = torch.zeros(
             (num_resets, self._platforms.num_dof), device=self._device
         )
         self.dof_vel[env_ids, :] = 0
-        # Sets the velocities to 0
-        root_velocities = self.root_velocities.clone()
-        root_velocities[env_ids] = 0
 
         # apply resets
+        self.dof_pos[env_ids, self._x_index] = (
+            root_pos[env_ids, 0] - self.initial_root_pos[env_ids, 0]
+        )
+        self.dof_pos[env_ids, self._y_index] = (
+            root_pos[env_ids, 1] - self.initial_root_pos[env_ids, 1]
+        )
+        self.dof_pos[env_ids, self._z_index] = h[env_ids]
         self._platforms.set_joint_positions(self.dof_pos[env_ids], indices=env_ids)
         self._platforms.set_joint_velocities(self.dof_vel[env_ids], indices=env_ids)
-        self._platforms.set_world_poses(
-            root_pos[env_ids], root_rot[env_ids], indices=env_ids
-        )
-        self._platforms.set_velocities(root_velocities[env_ids], indices=env_ids)
         self.imu.reset_idx(env_ids)
 
     def reset_idx(self, env_ids: torch.Tensor) -> None:
@@ -544,26 +571,31 @@ class MFP2DVirtual_IMU(RLTask):
         self.TD.generate_torque(env_ids, num_resets)
         self.MDD.randomize_masses(env_ids, num_resets)
         self.MDD.set_masses(self._platforms.base, env_ids)
-        # Randomizes the starting position of the platform within a disk around the target
+
+        # Randomizes the starting position of the platform
         root_pos, root_rot = self.task.get_spawns(
             env_ids, self.initial_root_pos.clone(), self.initial_root_rot.clone()
         )
+        siny_cosp = 2 * root_rot[:, 0] * root_rot[:, 3]
+        cosy_cosp = 1 - 2 * (root_rot[:, 3] * root_rot[:, 3])
+        h = torch.arctan2(siny_cosp, cosy_cosp)
+
         # Resets the states of the joints
         self.dof_pos[env_ids, :] = torch.zeros(
             (num_resets, self._platforms.num_dof), device=self._device
         )
         self.dof_vel[env_ids, :] = 0
-        # Sets the velocities to 0
-        root_velocities = self.root_velocities.clone()
-        root_velocities[env_ids] = 0
 
         # apply resets
+        self.dof_pos[env_ids, self._x_index] = (
+            root_pos[env_ids, 0] - self.initial_root_pos[env_ids, 0]
+        )
+        self.dof_pos[env_ids, self._y_index] = (
+            root_pos[env_ids, 1] - self.initial_root_pos[env_ids, 1]
+        )
+        self.dof_pos[env_ids, self._z_index] = h[env_ids]
         self._platforms.set_joint_positions(self.dof_pos[env_ids], indices=env_ids)
         self._platforms.set_joint_velocities(self.dof_vel[env_ids], indices=env_ids)
-        self._platforms.set_world_poses(
-            root_pos[env_ids], root_rot[env_ids], indices=env_ids
-        )
-        self._platforms.set_velocities(root_velocities[env_ids], indices=env_ids)
         self.imu.reset_idx(env_ids)
 
         # bookkeeping

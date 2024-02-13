@@ -2,7 +2,7 @@ from omni.isaac.core.utils.stage import add_reference_to_stage, get_current_stag
 from omni.isaac.core.utils.prims import get_prim_at_path
 from omni.isaac.core.prims import XFormPrim
 from typing import Optional, Sequence
-from omniisaacgymenvs.robots.articulations.utils.MFP_utils import applyCollider, applyRigidBody
+from omniisaacgymenvs.robots.articulations.utils.MFP_utils import applyCollider, applyRigidBody, create3DOFJoint
 
 class Dock(XFormPrim):
     """
@@ -46,3 +46,5 @@ class Dock(XFormPrim):
         Load a dock station prim and apply physics."""
         add_reference_to_stage(self.usd_path, self.prim_path)
         applyRigidBody(self.prim)
+        applyCollider(self.prim, True)
+        create3DOFJoint(get_current_stage(), self.prim_path+"/d6joint", "/World/envs/env_0", self.prim_path)

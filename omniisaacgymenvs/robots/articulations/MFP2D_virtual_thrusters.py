@@ -109,13 +109,6 @@ class CreatePlatform:
                 self.core_CoM,
                 self.core_mass,
             )
-            dummy_path = self.createRigidSphere(
-                self.platform_path + "/dummy",
-                "dummy_body",
-                0.00001,
-                self.core_CoM,
-                0.00001,
-            )
         elif self.core_shape == "cylinder":
             self.core_path = self.createRigidCylinder(
                 self.platform_path + "/core",
@@ -125,20 +118,14 @@ class CreatePlatform:
                 self.core_CoM,
                 self.core_mass,
             )
-            dummy_path = self.createRigidCylinder(
-                self.platform_path + "/dummy",
-                "dummy_body",
-                0.00001,
-                0.00001,
-                self.core_CoM,
-                0.00001,
-            )
+
+        # Creates a set of joints to constrain the platform on the XY plane (3DoF).
+        self.createXYPlaneLock()
+
+        # Visualization
         self.createArrowXform(self.core_path + "/arrow")
         self.createPositionMarkerXform(self.core_path + "/marker")
-        # Adds a dummy body with a joint & drive so that Isaac stays chill.
-        createRevoluteJoint(
-            self.stage, self.joints_path + "/dummy_link", self.core_path, dummy_path
-        )
+
         for i in range(self.num_virtual_thrusters):
             self.createVirtualThruster(
                 self.platform_path + "/v_thruster_" + str(i),
@@ -147,6 +134,67 @@ class CreatePlatform:
                 0.0001,
                 Gf.Vec3d([0, 0, 0]),
             )
+
+    def createXYPlaneLock(self) -> None:
+        """
+        Creates a set of joints to constrain the platform to the XY plane.
+        3DoF: translation on X and Y, rotation on Z."""
+
+        # Create anchor to world. It's fixed.
+        anchor_path, anchor_prim = createXform(
+            self.stage, self.platform_path + "/world_anchor"
+        )
+        setTranslate(anchor_prim, Gf.Vec3d(0, 0, 0))
+        setOrient(anchor_prim, Gf.Quatd(1, Gf.Vec3d(0, 0, 0)))
+        applyRigidBody(anchor_prim)
+        applyMass(anchor_prim, 0.0000001)
+        fixed_joint = createFixedJoint(
+            self.stage, self.joints_path, body_path2=anchor_path
+        )
+        # Create the bodies & joints allowing translation
+        x_tr_path, x_tr_prim = createXform(
+            self.stage, self.platform_path + "/x_translation_body"
+        )
+        y_tr_path, y_tr_prim = createXform(
+            self.stage, self.platform_path + "/y_translation_body"
+        )
+        setTranslate(x_tr_prim, Gf.Vec3d(0, 0, 0))
+        setOrient(x_tr_prim, Gf.Quatd(1, Gf.Vec3d(0, 0, 0)))
+        applyRigidBody(x_tr_prim)
+        applyMass(x_tr_prim, 0.0000001)
+        setTranslate(y_tr_prim, Gf.Vec3d(0, 0, 0))
+        setOrient(y_tr_prim, Gf.Quatd(1, Gf.Vec3d(0, 0, 0)))
+        applyRigidBody(y_tr_prim)
+        applyMass(y_tr_prim, 0.0000001)
+        tr_joint_x = createPrismaticJoint(
+            self.stage,
+            self.joints_path + "/fp_world_joint_x",
+            body_path1=anchor_path,
+            body_path2=x_tr_path,
+            axis="X",
+            enable_drive=False,
+        )
+        tr_joint_y = createPrismaticJoint(
+            self.stage,
+            self.joints_path + "/fp_world_joint_y",
+            body_path1=x_tr_path,
+            body_path2=y_tr_path,
+            axis="Y",
+            enable_drive=False,
+        )
+        # Adds the joint allowing for rotation
+        rv_joint_z = createRevoluteJoint(
+            self.stage,
+            self.joints_path + "/fp_world_joint_z",
+            body_path1=y_tr_path,
+            body_path2=self.core_path,
+            axis="Z",
+            enable_drive=False,
+        )
+
+        self.tr_x_axis = "fp_world_joint_x"
+        self.tr_y_axis = "fp_world_joint_y"
+        self.rv_z_axis = "fp_world_joint_z"
 
     def createBasicColors(self) -> None:
         """
@@ -292,3 +340,9 @@ class ModularFloatingPlatform(Robot):
             orientation=orientation,
             scale=scale,
         )
+
+        self.joints = {
+            "x_tr_axis": fp.tr_x_axis,
+            "y_tr_axis": fp.tr_y_axis,
+            "z_rv_axis": fp.rv_z_axis,
+        }

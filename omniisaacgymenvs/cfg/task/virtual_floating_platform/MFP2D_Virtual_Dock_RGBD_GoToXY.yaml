@@ -2,7 +2,7 @@
 name: MFP2DVirtual_Dock_RGBD
 
 physics_engine: ${..physics_engine}
-experiment: MFP2D_Virtual_Dock_RGBD_GoToPose
+experiment: MFP2D_Virtual_Dock_RGBD_GoToXY
 
 env_path: /World/envs/env_0/Modular_floating_platform
 lab_path: /World/envs/env_0/ZeroG_Lab
@@ -74,22 +74,36 @@ env:
       CoM_max_displacement: 0.25
       base_mass: ${...platform.core.mass}
 
-  task_parameters:
-    name: GoToDockPose
+  task_parameters: 
+    name: GoToDockXY
     position_tolerance: 0.01
     kill_after_n_steps_in_tolerance: 50 # 10seconds
-    max_spawn_dist: 1.0
-    min_spawn_dist: 0.2
+    max_spawn_dist: 1.2
+    min_spawn_dist: 0.8
+    spawn_curriculum_max_dist: 1.0
+    spawn_curriculum_min_dist: 0.6
+    goal_random_position: 0.2
     kill_dist: 8.0
+    boundary_cost: 25
 
   reward_parameters:
-    name: GoToDockPose
-    position_reward_mode: exponential
-    heading_reward_mode: exponential
-    position_exponential_reward_coeff: 0.25
-    heading_exponential_reward_coeff: 0.25
-    position_scale: 1.0
-    heading_scale: 1.0
+    name: GoToDockXY
+    reward_mode: exponential
+    exponential_reward_coeff: 0.25
+
+  penalties_parameters:
+    penalize_energy: False
+    penalize_energy_fn: "lambda x,step: -torch.abs(x)*0.01"
+    penalize_energy_c1: 0.01
+    penalize_energy_c2: 0.00
+    penalize_linear_velocities: False
+    penalize_linear_velocities_fn: "lambda x,step: -torch.norm(x, dim=-1)*0.01"
+    penalize_linear_velocities_c1: 0.01
+    penalize_linear_velocities_c2: 0.00
+    penalize_angular_velocities: False
+    penalize_angular_velocities_fn: "lambda x,step: -torch.abs(x)*1.0*step/2000"
+    penalize_angular_velocities_c1: 0.01
+    penalize_angular_velocities_c2: 0.00
 
   platform:
     randomization:
@@ -119,7 +133,7 @@ env:
       thrust_force: 1.0
       visualize: False
       save_path: "config.png"
-    
+
     camera:
       structure:
         module_name: "D455"
@@ -140,23 +154,9 @@ env:
           params:
             focalLength: 1.93
             focusDistance: 50.0
-            clippingRange: [0.6, 100.0]
+            clippingRange: [0.01, 20.0]
             horizontalAperture: 3.60
             verticalAperture: 2.70
-
-  penalties_parameters:
-    penalize_energy: False
-    penalize_energy_fn: "lambda x,step: -torch.abs(x)*0.05"
-    penalize_energy_c1: 0.01
-    penalize_energy_c2: 0.00
-    penalize_linear_velocities: False
-    penalize_linear_velocities_fn: "lambda x,step: -torch.norm(x, dim=-1)*0.025"
-    penalize_linear_velocities_c1: 0.01
-    penalize_linear_velocities_c2: 0.00
-    penalize_angular_velocities: False
-    penalize_angular_velocities_fn: "lambda x,step: -torch.abs(x)*0.1"
-    penalize_angular_velocities_c1: 0.01
-    penalize_angular_velocities_c2: 0.00
   
   sensors:
     camera:
@@ -167,7 +167,7 @@ env:
         params:
           focalLength: 1.93
           focusDistance: 50.0
-          clippingRange: [0.6, 100.0]
+          clippingRange: [0.01, 20.0]
           horizontalAperture: 3.60
           verticalAperture: 2.70
 
@@ -177,7 +177,7 @@ sim:
   gravity: [0.0, 0.0, 0.0]
   add_ground_plane: False
   add_lab: True
-  add_distant_light: True
+  add_distant_light: False
   use_flatcache: True
   enable_scene_query_support: False
   # set to True if you use camera sensors in the environment
