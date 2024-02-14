@@ -27,6 +27,8 @@ from omni.isaac.core.prims import XFormPrimView
 from pxr import Usd
 
 from typing import Tuple
+import numpy as np
+import wandb
 import torch
 import math
 
@@ -287,10 +289,10 @@ class GoToPoseTask(Core):
         )
         r = self._spawn_position_sampler.sample(num_resets, step, device=self._device)
         theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
-        initial_position[:, 0] += (
+        initial_position[:, 0] = (
             r * torch.cos(theta) + self._target_positions[env_ids, 0]
         )
-        initial_position[:, 1] += (
+        initial_position[:, 1] = (
             r * torch.sin(theta) + self._target_positions[env_ids, 1]
         )
         # Randomizes the heading of the platform
@@ -318,6 +320,10 @@ class GoToPoseTask(Core):
             num_resets, step, device=self._device
         )
         initial_velocity[:, 5] = angular_velocity
+
+        if step % 10 == 0:
+            self.log_spawn_data(step)
+
         return (
             initial_position,
             initial_orientation,
@@ -370,3 +376,51 @@ class GoToPoseTask(Core):
         arrows = XFormPrimView(prim_paths_expr="/World/envs/.*/arrow")
         scene.add(arrows)
         return scene, arrows
+
+    def log_spawn_data(self, step):
+        num_resets = self._num_envs
+        # Resets the counter of steps for which the goal was reached
+        xy_pos = torch.zeros((num_resets, 2), device=self._device, dtype=torch.float32)
+        r = self._spawn_position_sampler.sample(num_resets, step, device=self._device)
+        theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
+        xy_pos[:, 0] = r * torch.cos(theta)
+        xy_pos[:, 1] = r * torch.sin(theta)
+        # Randomizes the heading of the platform
+        heading = self._spawn_heading_sampler.sample(
+            num_resets, step, device=self._device
+        )
+        # Randomizes the linear velocity of the platform
+        xyz_velocity = torch.zeros(
+            (num_resets, 3), device=self._device, dtype=torch.float32
+        )
+        linear_velocity = self._spawn_linear_velocity_sampler.sample(
+            num_resets, step, device=self._device
+        )
+        theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
+        xyz_velocity[:, 0] = linear_velocity * torch.cos(theta)
+        xyz_velocity[:, 1] = linear_velocity * torch.sin(theta)
+        # Randomizes the angular velocity of the platform
+        angular_velocity = self._spawn_angular_velocity_sampler.sample(
+            num_resets, step, device=self._device
+        )
+        xyz_velocity[:, 2] = angular_velocity
+
+        xy_pos = xy_pos.cpu().numpy()
+        heading = np.expand_dims(heading.cpu().numpy(), axis=-1)
+
+        table = wandb.Table(data=xy_pos, columns=["x", "y"])
+        wandb.log(
+            {
+                "curriculum/spawn_position": wandb.plot.scatter(
+                    table, "x", "y", title="xy_position"
+                )
+            }
+        )
+        table = wandb.Table(data=heading, columns=["theta"])
+        wandb.log(
+            {
+                "curriculum/spawn_heading": wandb.plot.histogram(
+                    table, "theta", title="heading_distance"
+                )
+            }
+        )
