@@ -24,8 +24,8 @@ from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_thruster_generator i
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_factory import (
     task_factory,
 )
-from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_rewards import (
-    Penalties,
+from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_penalties import (
+    EnvironmentPenalties,
 )
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_disturbances import (
     UnevenFloorDisturbance,
@@ -104,7 +104,7 @@ class MFP2DVirtual(RLTask):
         penalty_cfg = self._task_cfg["env"]["penalties_parameters"]
         # Instantiate the task, reward and platform
         self.task = task_factory.get(task_cfg, reward_cfg, self._num_envs, self._device)
-        self._penalties = Penalties(**penalty_cfg)
+        self._penalties = EnvironmentPenalties(**penalty_cfg)
         self.virtual_platform = VirtualPlatform(
             self._num_envs, self._platform_cfg, self._device
         )
