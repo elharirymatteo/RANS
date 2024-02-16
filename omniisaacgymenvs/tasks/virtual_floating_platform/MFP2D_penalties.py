@@ -16,11 +16,13 @@ import torch
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
 scaling_functions = {
-    "linear": lambda x: x,
-    "log": lambda x: torch.log(x + EPS),
-    "exp": lambda x: torch.exp(x),
-    "sqrt": lambda x: torch.sqrt(x),
-    "square": lambda x: torch.pow(x, 2),
+    "linear": lambda x, p=0.0: x,
+    "log": lambda x, p=0.0: torch.log(x + EPS),
+    "exp": lambda x, p=0.0: torch.exp(x),
+    "sqrt": lambda x, p=0.0: torch.sqrt(x),
+    "square": lambda x, p=0.0: torch.pow(x, 2),
+    "cube": lambda x, p=0.0: torch.pow(x, 3),
+    "inv_exp": lambda x, p=1.0: torch.exp(-x / (p + EPS)),
 }
 
 
@@ -104,7 +106,7 @@ class EnergyPenalty(BasePenalty):
 
         self.last_rate = self.get_rate(step)
         self.last_penalties = torch.sum(torch.abs(actions), -1)
-        return self.last_penalties * self.last_rate
+        return self.last_penalties * self.last_rate * self.weight
 
 
 @dataclass
@@ -115,6 +117,7 @@ class LinearVelocityPenalty(BasePenalty):
 
     weight: float = 0.1
     scaling_function = "linear"
+    scaling_parameter = 1.0
     min_value = 0
     max_value = float("inf")
 
@@ -148,9 +151,9 @@ class LinearVelocityPenalty(BasePenalty):
         norm[norm < self.min_value] = 0
         norm[norm > self.max_value] = self.max_value
         # apply scaling function
-        norm = scaling_functions[self.scaling_function](norm)
+        norm = scaling_functions[self.scaling_function](norm, p=self.scaling_parameter)
         self.last_penalties = norm
-        return norm * self.last_rate
+        return norm * self.last_rate * self.weight
 
 
 @dataclass
@@ -161,6 +164,7 @@ class AngularVelocityPenalty(BasePenalty):
 
     weight: float = 0.1
     scaling_function = "linear"
+    scaling_parameter = 1.0
     min_value = 0
     max_value = float("inf")
 
@@ -194,9 +198,9 @@ class AngularVelocityPenalty(BasePenalty):
         norm[norm < self.min_value] = 0
         norm[norm > self.max_value] = self.max_value
         # apply scaling function
-        norm = scaling_functions[self.scaling_function](norm)
+        norm = scaling_functions[self.scaling_function](norm, p=self.scaling_parameter)
         self.last_penalties = norm
-        return norm * self.last_rate
+        return norm * self.last_rate * self.weight
 
 
 penalty_classes = {
@@ -266,4 +270,66 @@ class EnvironmentPenalties:
             stats["penalties/" + penalty.name + "_weight"] = (
                 penalty.get_last_rate() * penalty.weight
             )
+        return stats
+
+
+@dataclass
+class BoundaryPenalty(BasePenalty):
+    """
+    This class has access to the state and applies a penalty based on the distance to the boundaries.
+    """
+
+    weight: float = 10.0
+    scaling_function = "inv_exp"
+    scaling_parameter = 0.5
+    saturation_value = 2.0
+
+    def __post_init__(self):
+        assert self.weight > 0, "Weight must be positive"
+        assert self.scaling_function in scaling_functions, "Scaling function not found"
+        assert self.saturation_value > 0, "Saturation value must be positive"
+
+    def compute_penalty(self, distance, step: int):
+        """
+        Computes the penalty based on the distance to the boundaries.
+
+        Args:
+            state (Dict[str, torch.Tensor]): State of the system.
+            step (int): Current step.
+
+        Returns:
+            torch.Tensor: Penalty.
+        """
+
+        self.last_rate = self.get_rate(step)
+        self.last_penalty = torch.clamp(
+            self.scaling_function(distance, self.scaling_parameter),
+            0,
+            self.saturation_value,
+        )
+        return self.last_penalty * self.last_rate
+
+    def get_stats_name(self) -> list:
+        """
+        Returns the names of the statistics to be computed.
+
+        Returns:
+            list: Names of the statistics to be tracked.
+        """
+
+        return ["penalties/" + self.name]
+
+    def update_statistics(self, stats: dict) -> dict:
+        """
+        Updates the training statistics.
+
+        Args:
+            stats (dict): Current statistics.
+
+        Returns:
+            dict: Updated statistics.
+        """
+
+        stats["penalties/" + self.name] = self.get_unweigthed_penalties()
+        stats["penalties/" + self.name + "_weight"] = self.get_last_rate() * self.weight
         return stats

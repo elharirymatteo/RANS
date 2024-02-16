@@ -109,6 +109,9 @@ class GoToPoseTask(Core):
             stats["heading_reward"] = torch_zeros()
         if not "heading_error" in stats.keys():
             stats["heading_error"] = torch_zeros()
+        for name in self._task_parameters.boundary_penalty.create_stats(stats):
+            if not name in stats.keys():
+                stats[name] = torch_zeros()
         return stats
 
     def get_state_observations(self, current_state: dict) -> torch.Tensor:
@@ -139,7 +142,10 @@ class GoToPoseTask(Core):
         return self.update_observation_tensor(current_state)
 
     def compute_reward(
-        self, current_state: torch.Tensor, actions: torch.Tensor
+        self,
+        current_state: torch.Tensor,
+        actions: torch.Tensor,
+        step: int = 0,
     ) -> torch.Tensor:
         """
         Computes the reward for the current state of the robot.
@@ -147,6 +153,7 @@ class GoToPoseTask(Core):
         Args:
             current_state (torch.Tensor): The current state of the robot.
             actions (torch.Tensor): The actions taken by the robot.
+            step (int, optional): The current step. Defaults to 0.
 
         Returns:
             torch.Tensor: The reward for the current state of the robot.
@@ -155,6 +162,13 @@ class GoToPoseTask(Core):
         # position error
         self.position_dist = torch.sqrt(torch.square(self._position_error).sum(-1))
         self.heading_dist = torch.abs(self._heading_error)
+        # boundary penalty
+        self.boundary_dist = torch.abs(
+            self._task_parameters.kill_dist - self.position_dist
+        )
+        self.boundary_penalty = self._task_parameters.boundary_penalty.compute_penalty(
+            self.boundary_dist, step
+        )
 
         # Checks if the goal is reached
         position_goal_is_reached = (
@@ -175,7 +189,7 @@ class GoToPoseTask(Core):
             current_state, actions, self.position_dist, self.heading_dist
         )
 
-        return self.position_reward + self.heading_reward
+        return self.position_reward + self.heading_reward - self.boundary_penalty
 
     def update_kills(self) -> torch.Tensor:
         """
@@ -212,6 +226,7 @@ class GoToPoseTask(Core):
         stats["heading_reward"] += self.heading_reward
         stats["position_error"] += self.position_dist
         stats["heading_error"] += self.heading_dist
+        stats = self._task_parameters.boundary_penalty.update_statistics(stats)
         return stats
 
     def reset(self, env_ids: torch.Tensor) -> None:

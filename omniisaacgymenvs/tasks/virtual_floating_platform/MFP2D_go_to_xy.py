@@ -97,10 +97,11 @@ class GoToXYTask(Core):
             stats["position_reward"] = torch_zeros()
         if not "position_error" in stats.keys():
             stats["position_error"] = torch_zeros()
-        if not "boundary_penalty" in stats.keys():
-            stats["boundary_penalty"] = torch_zeros()
         if not "boundary_dist" in stats.keys():
             stats["boundary_dist"] = torch_zeros()
+        for name in self._task_parameters.boundary_penalty.create_stats(stats):
+            if not name in stats.keys():
+                stats[name] = torch_zeros()
         return stats
 
     def get_state_observations(self, current_state: dict) -> torch.Tensor:
@@ -119,7 +120,10 @@ class GoToXYTask(Core):
         return self.update_observation_tensor(current_state)
 
     def compute_reward(
-        self, current_state: torch.Tensor, actions: torch.Tensor
+        self,
+        current_state: torch.Tensor,
+        actions: torch.Tensor,
+        step: int = 0,
     ) -> torch.Tensor:
         """
         Computes the reward for the current state of the robot.
@@ -127,6 +131,7 @@ class GoToXYTask(Core):
         Args:
             current_state (torch.Tensor): The current state of the robot.
             actions (torch.Tensor): The actions taken by the robot.
+            step (int, optional): The current step. Defaults to 0.
 
         Returns:
             torch.Tensor: The reward for the current state of the robot.
@@ -134,10 +139,12 @@ class GoToXYTask(Core):
 
         # position error
         self.position_dist = torch.sqrt(torch.square(self._position_error).sum(-1))
-
-        self.boundary_dist = self.position_dist - self._task_parameters.kill_dist
-        self.boundary_penalty = (
-            -torch.exp(-self.boundary_dist / 0.25) * self._task_parameters.boundary_cost
+        # boundary penalty
+        self.boundary_dist = torch.abs(
+            self._task_parameters.kill_dist - self.position_dist
+        )
+        self.boundary_penalty = self._task_parameters.boundary_penalty.compute_penalty(
+            self.boundary_dist, step
         )
 
         # Checks if the goal is reached
@@ -152,7 +159,7 @@ class GoToXYTask(Core):
             current_state, actions, self.position_dist
         )
 
-        return self.position_reward
+        return self.position_reward - self.boundary_penalty
 
     def update_kills(self) -> torch.Tensor:
         """
@@ -187,8 +194,8 @@ class GoToXYTask(Core):
 
         stats["position_reward"] += self.position_reward
         stats["position_error"] += self.position_dist
-        stats["boundary_penalty"] += self.boundary_penalty
         stats["boundary_dist"] += self.boundary_dist
+        stats = self._task_parameters.boundary_penalty.update_statistics(stats)
         return stats
 
     def reset(self, env_ids: torch.Tensor) -> None:
