@@ -1,6 +1,6 @@
 __author__ = "Antoine Richard, Matteo El Hariry"
 __copyright__ = (
-    "Copyright 2023, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
+    "Copyright 2023-24, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
 )
 __license__ = "GPL"
 __version__ = "1.0.0"
@@ -11,6 +11,9 @@ __status__ = "development"
 from dataclasses import dataclass, field
 from omniisaacgymenvs.tasks.virtual_floating_platform.curriculum_helpers import (
     CurriculumParameters,
+)
+from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_penalties import (
+    BoundaryPenalty,
 )
 
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
@@ -25,8 +28,8 @@ class GoToXYParameters:
     position_tolerance: float = 0.01
     kill_after_n_steps_in_tolerance: int = 50
     goal_random_position: float = 0.0
-    kill_dist: float = 8.0
-    boundary_cost: float = 25
+    kill_dist: float = 10.0
+    boundary_penalty: BoundaryPenalty = field(default_factory=dict)
     spawn_position_curriculum: CurriculumParameters = field(default_factory=dict)
     spawn_linear_velocity_curriculum: CurriculumParameters = field(default_factory=dict)
     spawn_angular_velocity_curriculum: CurriculumParameters = field(
@@ -40,8 +43,8 @@ class GoToXYParameters:
         ), "Kill after n steps in tolerance must be positive."
         assert self.goal_random_position >= 0, "Goal random position must be positive."
         assert self.kill_dist > 0, "Kill distance must be positive."
-        assert self.boundary_cost >= 0, "Boundary cost must be positive."
 
+        self.boundary_penalty = BoundaryPenalty(**self.boundary_penalty)
         self.spawn_position_curriculum = CurriculumParameters(
             **self.spawn_position_curriculum
         )
@@ -63,8 +66,9 @@ class GoToPoseParameters:
     heading_tolerance: float = 0.025
     kill_after_n_steps_in_tolerance: int = 50
     goal_random_position: float = 0.0
-    kill_dist: float = 8.0
+    kill_dist: float = 10.0
 
+    boundary_penalty: BoundaryPenalty = field(default_factory=dict)
     spawn_position_curriculum: CurriculumParameters = field(default_factory=dict)
     spawn_heading_curriculum: CurriculumParameters = field(default_factory=dict)
     spawn_linear_velocity_curriculum: CurriculumParameters = field(default_factory=dict)
@@ -81,6 +85,7 @@ class GoToPoseParameters:
         assert self.goal_random_position >= 0, "Goal random position must be positive."
         assert self.kill_dist > 0, "Kill distance must be positive."
 
+        self.boundary_penalty = BoundaryPenalty(**self.boundary_penalty)
         self.spawn_position_curriculum = CurriculumParameters(
             **self.spawn_position_curriculum
         )

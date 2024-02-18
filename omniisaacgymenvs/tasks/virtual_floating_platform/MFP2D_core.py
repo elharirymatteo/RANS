@@ -1,6 +1,6 @@
 __author__ = "Antoine Richard, Matteo El Hariry"
 __copyright__ = (
-    "Copyright 2023, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
+    "Copyright 2023-24, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
 )
 __license__ = "GPL"
 __version__ = "1.0.0"
@@ -17,9 +17,18 @@ EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
 class Core:
     """
-    The base class that implements the core of the task."""
+    The base class that implements the core of the task.
+    """
 
     def __init__(self, num_envs: int, device: str) -> None:
+        """
+        The base class for the different subtasks.
+
+        Args:
+            num_envs (int): The number of environments.
+            device (str): The device on which the tensors are stored.
+        """
+
         self._num_envs = num_envs
         self._device = device
 
