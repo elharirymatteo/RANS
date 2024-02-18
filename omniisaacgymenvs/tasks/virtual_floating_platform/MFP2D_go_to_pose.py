@@ -110,7 +110,7 @@ class GoToPoseTask(Core):
             stats["heading_reward"] = torch_zeros()
         if not "heading_error" in stats.keys():
             stats["heading_error"] = torch_zeros()
-        for name in self._task_parameters.boundary_penalty.create_stats(stats):
+        for name in self._task_parameters.boundary_penalty.get_stats_name():
             if not name in stats.keys():
                 stats[name] = torch_zeros()
         return stats
@@ -189,6 +189,9 @@ class GoToPoseTask(Core):
         ) = self._reward_parameters.compute_reward(
             current_state, actions, self.position_dist, self.heading_dist
         )
+
+        if math.fmod(step, 50) == 0:
+            self._task_parameters.boundary_penalty.log_penalty()
 
         return self.position_reward + self.heading_reward - self.boundary_penalty
 

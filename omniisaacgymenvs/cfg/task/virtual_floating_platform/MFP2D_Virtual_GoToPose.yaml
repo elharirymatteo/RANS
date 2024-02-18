@@ -248,7 +248,7 @@ env:
         start: 250
         end: 1250
         extent: 4.5
-    angular_velocity_penatly:
+    angular_velocity_penalty:
       enable: False
       weight: 0.1
       scaling_function: linear

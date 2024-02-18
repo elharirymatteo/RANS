@@ -19,24 +19,17 @@ from omniisaacgymenvs.robots.articulations.views.mfp2d_virtual_thrusters_view im
 from omniisaacgymenvs.robots.sensors.proprioceptive.imu import IMUInterface
 from omniisaacgymenvs.robots.sensors.proprioceptive.Type import *
 
-from omniisaacgymenvs.utils.pin import VisualPin
-from omniisaacgymenvs.utils.arrow import VisualArrow
-
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_thruster_generator import (
     VirtualPlatform,
 )
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_factory import (
     task_factory,
 )
-from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_rewards import (
-    Penalties,
+from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_penalties import (
+    EnvironmentPenalties,
 )
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_disturbances import (
-    UnevenFloorDisturbance,
-    TorqueDisturbance,
-    NoisyObservations,
-    NoisyActions,
-    MassDistributionDisturbances,
+    Disturbances,
 )
 
 from omni.isaac.core.utils.torch.rotations import *

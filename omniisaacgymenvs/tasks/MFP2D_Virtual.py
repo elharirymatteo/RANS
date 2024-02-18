@@ -15,9 +15,6 @@ from omniisaacgymenvs.robots.articulations.MFP2D_virtual_thrusters import (
 from omniisaacgymenvs.robots.articulations.views.mfp2d_virtual_thrusters_view import (
     ModularFloatingPlatformView,
 )
-from omniisaacgymenvs.utils.pin import VisualPin
-from omniisaacgymenvs.utils.arrow import VisualArrow
-
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_thruster_generator import (
     VirtualPlatform,
 )
@@ -247,7 +244,7 @@ class MFP2DVirtual(RLTask):
         Adds the floating platform to the scene.
         """
 
-        fp = ModularFloatingPlatform(
+        self._fp = ModularFloatingPlatform(
             prim_path=self.default_zero_env_path + "/Modular_floating_platform",
             name="modular_floating_platform",
             translation=self._fp_position,
@@ -255,7 +252,7 @@ class MFP2DVirtual(RLTask):
         )
         self._sim_config.apply_articulation_settings(
             "modular_floating_platform",
-            get_prim_at_path(fp.prim_path),
+            get_prim_at_path(self._fp.prim_path),
             self._sim_config.parse_actor_config("modular_floating_platform"),
         )
 
@@ -406,7 +403,10 @@ class MFP2DVirtual(RLTask):
         self.root_velocities = self._platforms.get_velocities()
         self.dof_pos = self._platforms.get_joint_positions()
         self.dof_vel = self._platforms.get_joint_velocities()
-
+        # Get the indices for the CoM shifter.
+        self._CoM_x_index = self._platforms.get_dof_index(self._fp.joints["x_axis"])
+        self._CoM_y_index = self._platforms.get_dof_index(self._fp.joints["y_axis"])
+        # Set initial conditions
         self.initial_root_pos, self.initial_root_rot = (
             self.root_pos.clone(),
             self.root_rot.clone(),
@@ -464,19 +464,23 @@ class MFP2DVirtual(RLTask):
         self.DR.force_disturbances.generate_forces(env_ids, num_resets)
         self.DR.torque_disturbances.generate_torques(env_ids, num_resets)
         self.DR.mass_disturbances.randomize_masses(env_ids, num_resets)
-        self.DR.mass_disturbances.set_masses(self._platforms.base, env_ids)
         # Randomizes the starting position of the platform within a disk around the target
         pos, quat, vel = self.task.get_initial_conditions(env_ids, step=self.step)
 
-        # Resets the states of the joints
-        self.dof_pos[env_ids, :] = torch.zeros(
+        # Resets the states of the joints & applies CoM shift
+        self.DR.mass_disturbances.set_masses(
+            self._platforms,
+            self._platforms.CoM,
+            env_ids,
+            (self._CoM_x_index, self._CoM_y_index),
+        )
+        dof_vel = torch.zeros(
             (num_resets, self._platforms.num_dof), device=self._device
         )
         self.dof_vel[env_ids, :] = 0
 
         # apply resets
-        self._platforms.set_joint_positions(self.dof_pos[env_ids], indices=env_ids)
-        self._platforms.set_joint_velocities(self.dof_vel[env_ids], indices=env_ids)
+        self._platforms.set_joint_velocities(dof_vel, indices=env_ids)
         self._platforms.set_world_poses(
             pos + self.initial_root_pos[env_ids], quat, indices=env_ids
         )

@@ -21,14 +21,12 @@ class MassDistributionDisturbanceParameters:
     """
 
     mass_curriculum: CurriculumParameters = field(default_factory=dict)
-    CoM_displacement_curriculum: CurriculumParameters = field(default_factory=dict)
+    com_curriculum: CurriculumParameters = field(default_factory=dict)
     enable: bool = False
 
     def __post_init__(self):
         self.mass_curriculum = CurriculumParameters(**self.mass_curriculum)
-        self.CoM_displacement_curriculum = CurriculumParameters(
-            **self.CoM_displacement_curriculum
-        )
+        self.com_curriculum = CurriculumParameters(**self.com_curriculum)
 
 
 @dataclass

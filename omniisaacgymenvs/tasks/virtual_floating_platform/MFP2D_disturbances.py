@@ -47,7 +47,7 @@ class MassDistributionDisturbances:
         """
 
         self.mass_sampler = CurriculumSampler(parameters.mass_curriculum)
-        self.CoM_sampler = CurriculumSampler(parameters.CoM_displacement_curriculum)
+        self.CoM_sampler = CurriculumSampler(parameters.com_curriculum)
         self.parameters = parameters
         self._num_envs = num_envs
         self._device = device
@@ -77,7 +77,7 @@ class MassDistributionDisturbances:
         """
 
         num_resets = len(env_ids)
-        self.platforms_mass = self.mass_sampler.sample(
+        self.platforms_mass[env_ids, 0] = self.mass_sampler.sample(
             num_resets, step, device=self._device
         )
         r = self.CoM_sampler.sample(num_resets, step, device=self._device)
@@ -139,7 +139,7 @@ class MassDistributionDisturbances:
             joints_idx (Tuple[int, int]): The ids of the x and y joints respectively.
         """
 
-        if self.paramerters.enable:
+        if self.parameters.enable:
             mass_body.set_masses(self.platforms_mass[env_ids, 0], indices=env_ids)
         self.set_coms(articulation_body, env_ids, joints_idx)
 
@@ -207,7 +207,7 @@ class ForceDisturbance:
             step (int, optional): The current training step. Defaults to 0.
         """
 
-        if self._enable:
+        if self.parameters.enable:
             if self.parameters.use_sinusoidal_patterns:
                 self._floor_x_freq[env_ids] = (
                     torch.rand(num_resets, dtype=torch.float32, device=self._device)
@@ -254,20 +254,15 @@ class ForceDisturbance:
             torch.Tensor: The floor forces.
         """
 
-        if self.parameters.enable:
-            if self.parameters.use_sinusoidal_patterns:
-                self.forces[:, 0] = (
-                    torch.sin(
-                        root_pos[:, 0] * self._floor_x_freq + self._floor_x_offset
-                    )
-                    * self._max_forces
-                )
-                self.forces[:, 1] = (
-                    torch.sin(
-                        root_pos[:, 1] * self._floor_y_freq + self._floor_y_offset
-                    )
-                    * self._max_forces
-                )
+        if self.parameters.use_sinusoidal_patterns:
+            self.forces[:, 0] = (
+                torch.sin(root_pos[:, 0] * self._floor_x_freq + self._floor_x_offset)
+                * self._max_forces
+            )
+            self.forces[:, 1] = (
+                torch.sin(root_pos[:, 1] * self._floor_y_freq + self._floor_y_offset)
+                * self._max_forces
+            )
 
         return self.forces
 
@@ -377,14 +372,12 @@ class NoisyObservations:
     def __init__(
         self,
         parameters: NoisyObservationsParameters,
-        enable: bool,
         num_envs: int,
         device: str,
     ) -> None:
         """
         Args:
             task_cfg (NoisyObservationParameters): The settings of the domain randomization.
-            enable (bool): Whether to enable the observation disturbances.
             num_envs (int): The number of environments.
             device (str): The device on which the tensors are stored.
         """
@@ -517,31 +510,26 @@ class Disturbances:
 
         self.mass_disturbances = MassDistributionDisturbances(
             self.parameters.mass_disturbance,
-            self.parameters.enable_mass_disturbance,
             num_envs,
             device,
         )
         self.force_disturbances = ForceDisturbance(
             self.parameters.force_disturbance,
-            self.parameters.enable_force_disturbance,
             num_envs,
             device,
         )
         self.torque_disturbances = TorqueDisturbance(
             self.parameters.torque_disturbance,
-            self.parameters.enable_torque_disturbance,
             num_envs,
             device,
         )
         self.noisy_observations = NoisyObservations(
             self.parameters.observations_disturbance,
-            self.parameters.enable_observations_disturbance,
             num_envs,
             device,
         )
         self.noisy_actions = NoisyActions(
             self.parameters.actions_disturbance,
-            self.parameters.enable_actions_disturbance,
             num_envs,
             device,
         )

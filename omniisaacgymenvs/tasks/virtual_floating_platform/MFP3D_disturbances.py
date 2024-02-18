@@ -12,7 +12,7 @@ import math
 import torch
 
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_disturbances import (
-    UnevenFloorDisturbance as UnevenFloorDisturbance2D,
+    ForceDisturbance as ForceDisturbance2D,
 )
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_disturbances import (
     TorqueDisturbance as TorqueDisturbance2D,
@@ -62,7 +62,7 @@ class MassDistributionDisturbances(MassDistributionDisturbances2D):
         self.platforms_CoM[env_ids, 2] = torch.cos(phi) * r
 
 
-class UnevenFloorDisturbance(UnevenFloorDisturbance2D):
+class UnevenFloorDisturbance(ForceDisturbance2D):
     """
     Creates disturbances on the platform by simulating an uneven floor."""
 

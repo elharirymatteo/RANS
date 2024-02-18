@@ -8,10 +8,13 @@ __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
-from curriculum_helpers import CurriculumRateParameters
-from typing import Dict
+from omniisaacgymenvs.tasks.virtual_floating_platform.curriculum_helpers import (
+    CurriculumRateParameters,
+)
 from dataclasses import dataclass, field
+from typing import Dict
 import torch
+import wandb
 
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
@@ -33,14 +36,14 @@ class BasePenalty:
     """
 
     curriculum: CurriculumRateParameters = field(default_factory=dict)
-    parameters: dict = field(default_factory=dict)
+    enable: bool = False
 
     def __post_init__(self):
         self.curriculum = CurriculumRateParameters(**self.curriculum)
         self.name = "".join(
             [
                 "_" + c.lower() if (c.isupper() and i != 0) else c.lower()
-                for i, c in enumerate(self.__name__)
+                for i, c in enumerate(type(self).__name__)
             ]
         )
         self.last_rate = None
@@ -104,9 +107,14 @@ class EnergyPenalty(BasePenalty):
             torch.Tensor: Penalty.
         """
 
-        self.last_rate = self.get_rate(step)
-        self.last_penalties = torch.sum(torch.abs(actions), -1)
-        return self.last_penalties * self.last_rate * self.weight
+        if self.enable:
+            self.last_rate = self.get_rate(step)
+            self.last_penalties = torch.sum(torch.abs(actions), -1)
+            return self.last_penalties * self.last_rate * self.weight
+        else:
+            return torch.zeros(
+                [actions.shape[0]], dtype=torch.float32, device=actions.device
+            )
 
 
 @dataclass
@@ -116,10 +124,10 @@ class LinearVelocityPenalty(BasePenalty):
     """
 
     weight: float = 0.1
-    scaling_function = "linear"
-    scaling_parameter = 1.0
-    min_value = 0
-    max_value = float("inf")
+    scaling_function: str = "linear"
+    scaling_parameter: float = 1.0
+    min_value: float = 0
+    max_value: float = float("inf")
 
     def __post_init__(self):
         super().__post_init__()
@@ -128,6 +136,8 @@ class LinearVelocityPenalty(BasePenalty):
         assert (
             self.min_value < self.max_value
         ), "Min value must be smaller than max value"
+
+        self.scaling_function = scaling_functions[self.scaling_function]
 
     def compute_penalty(
         self, state: Dict["str", torch.Tensor], actions: torch.Tensor, step: int
@@ -144,16 +154,23 @@ class LinearVelocityPenalty(BasePenalty):
             torch.Tensor: Penalty.
         """
 
-        self.last_rate = self.get_rate(step)
-        # compute the norm of the linear velocity
-        norm = torch.norm(state["linear_velocity"], dim=-1)
-        # apply ranging function
-        norm[norm < self.min_value] = 0
-        norm[norm > self.max_value] = self.max_value
-        # apply scaling function
-        norm = scaling_functions[self.scaling_function](norm, p=self.scaling_parameter)
-        self.last_penalties = norm
-        return norm * self.last_rate * self.weight
+        if self.enable:
+            self.last_rate = self.get_rate(step)
+            # compute the norm of the linear velocity
+            norm = torch.norm(state["linear_velocity"], dim=-1)
+            # apply ranging function
+            norm[norm < self.min_value] = 0
+            norm[norm > self.max_value] = self.max_value
+            # apply scaling function
+            norm = scaling_functions[self.scaling_function](
+                norm, p=self.scaling_parameter
+            )
+            self.last_penalties = norm
+            return norm * self.last_rate * self.weight
+        else:
+            return torch.zeros(
+                [actions.shape[0]], dtype=torch.float32, device=actions.device
+            )
 
 
 @dataclass
@@ -163,10 +180,10 @@ class AngularVelocityPenalty(BasePenalty):
     """
 
     weight: float = 0.1
-    scaling_function = "linear"
-    scaling_parameter = 1.0
-    min_value = 0
-    max_value = float("inf")
+    scaling_function: str = "linear"
+    scaling_parameter: float = 1.0
+    min_value: float = 0
+    max_value: float = float("inf")
 
     def __post_init__(self):
         super().__post_init__()
@@ -175,6 +192,8 @@ class AngularVelocityPenalty(BasePenalty):
         assert (
             self.min_value < self.max_value
         ), "Min value must be smaller than max value"
+
+        self.scaling_function = scaling_functions[self.scaling_function]
 
     def compute_penalty(
         self, state: Dict["str", torch.Tensor], actions: torch.Tensor, step: int
@@ -191,16 +210,23 @@ class AngularVelocityPenalty(BasePenalty):
             torch.Tensor: Penalty.
         """
 
-        self.last_rate = self.get_rate(step)
-        # compute the norm of the angular velocity
-        norm = torch.norm(state["angular_velocity"], dim=-1)
-        # apply ranging function
-        norm[norm < self.min_value] = 0
-        norm[norm > self.max_value] = self.max_value
-        # apply scaling function
-        norm = scaling_functions[self.scaling_function](norm, p=self.scaling_parameter)
-        self.last_penalties = norm
-        return norm * self.last_rate * self.weight
+        if self.enable:
+            self.last_rate = self.get_rate(step)
+            # compute the norm of the angular velocity
+            norm = torch.norm(state["angular_velocity"], dim=-1)
+            # apply ranging function
+            norm[norm < self.min_value] = 0
+            norm[norm > self.max_value] = self.max_value
+            # apply scaling function
+            norm = scaling_functions[self.scaling_function](
+                norm, p=self.scaling_parameter
+            )
+            self.last_penalties = norm
+            return norm * self.last_rate * self.weight
+        else:
+            return torch.zeros(
+                [actions.shape[0]], dtype=torch.float32, device=actions.device
+            )
 
 
 penalty_classes = {
@@ -218,18 +244,18 @@ class EnvironmentPenalties:
 
     def __post_init__(self):
         self.penalties = []
-        if self.energy_penalty:
-            self.energy_penalty = EnergyPenalty(**self.energy_penalty)
+        self.energy_penalty = EnergyPenalty(**self.energy_penalty)
+        if self.energy_penalty.enable:
             self.penalties.append(self.energy_penalty)
-        if self.linear_velocity_penalty:
-            self.linear_velocity_penalty = LinearVelocityPenalty(
-                **self.linear_velocity_penalty
-            )
+        self.linear_velocity_penalty = LinearVelocityPenalty(
+            **self.linear_velocity_penalty
+        )
+        if self.linear_velocity_penalty.enable:
             self.penalties.append(self.linear_velocity_penalty)
-        if self.angular_velocity_penalty:
-            self.angular_velocity_penalty = AngularVelocityPenalty(
-                **self.angular_velocity_penalty
-            )
+        self.angular_velocity_penalty = AngularVelocityPenalty(
+            **self.angular_velocity_penalty
+        )
+        if self.angular_velocity_penalty.enable:
             self.penalties.append(self.angular_velocity_penalty)
 
     def compute_penalty(self, state, actions, step):
@@ -280,14 +306,17 @@ class BoundaryPenalty(BasePenalty):
     """
 
     weight: float = 10.0
-    scaling_function = "inv_exp"
-    scaling_parameter = 0.5
-    saturation_value = 2.0
+    scaling_function: str = "inv_exp"
+    scaling_parameter: float = 0.5
+    saturation_value: float = 2.0
 
     def __post_init__(self):
+        super().__post_init__()
         assert self.weight > 0, "Weight must be positive"
         assert self.scaling_function in scaling_functions, "Scaling function not found"
         assert self.saturation_value > 0, "Saturation value must be positive"
+
+        self.scaling_function = scaling_functions[self.scaling_function]
 
     def compute_penalty(self, distance, step: int):
         """
@@ -302,12 +331,12 @@ class BoundaryPenalty(BasePenalty):
         """
 
         self.last_rate = self.get_rate(step)
-        self.last_penalty = torch.clamp(
+        self.last_penalties = torch.clamp(
             self.scaling_function(distance, self.scaling_parameter),
             0,
             self.saturation_value,
         )
-        return self.last_penalty * self.last_rate
+        return self.last_penalties * self.last_rate
 
     def get_stats_name(self) -> list:
         """
@@ -329,7 +358,18 @@ class BoundaryPenalty(BasePenalty):
         Returns:
             dict: Updated statistics.
         """
-
         stats["penalties/" + self.name] = self.get_unweigthed_penalties()
-        stats["penalties/" + self.name + "_weight"] = self.get_last_rate() * self.weight
         return stats
+
+    def log_penalty(self):
+        """
+        Logs the penalty.
+
+        Args:
+            logger (Logger): Logger.
+            step (int): Current step.
+        """
+
+        wandb.log(
+            {"penalties/" + self.name + "_weight": self.get_last_rate() * self.weight}
+        )

@@ -31,20 +31,26 @@ from typing import Optional
 from omni.isaac.core.articulations import ArticulationView
 from omni.isaac.core.prims import RigidPrimView
 
+
 class ModularFloatingPlatformView(ArticulationView):
     def __init__(
-        self,
-        prim_paths_expr: str,
-        name: Optional[str] = "ModularFloatingPlatformView"
+        self, prim_paths_expr: str, name: Optional[str] = "ModularFloatingPlatformView"
     ) -> None:
-        """[summary]
-        """
+        """[summary]"""
 
         super().__init__(
             prim_paths_expr=prim_paths_expr,
             name=name,
         )
-        self.base = RigidPrimView(prim_paths_expr=f"/World/envs/.*/Modular_floating_platform/core/body",
-                                        name="base_view")
-
-        self.thrusters = RigidPrimView(prim_paths_expr=f"/World/envs/.*/Modular_floating_platform/v_thruster_*", name="thrusters")
+        self.base = RigidPrimView(
+            prim_paths_expr=f"/World/envs/.*/Modular_floating_platform/core/body",
+            name="base_view",
+        )
+        self.CoM = RigidPrimView(
+            prim_paths_expr=f"/World/envs/.*/Modular_floating_platform/movable_CoM/CoM",
+            name="CoM_view",
+        )
+        self.thrusters = RigidPrimView(
+            prim_paths_expr=f"/World/envs/.*/Modular_floating_platform/v_thruster_*",
+            name="thrusters",
+        )
