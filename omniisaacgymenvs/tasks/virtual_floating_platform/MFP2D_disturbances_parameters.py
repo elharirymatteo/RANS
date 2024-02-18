@@ -22,6 +22,7 @@ class MassDistributionDisturbanceParameters:
 
     mass_curriculum: CurriculumParameters = field(default_factory=dict)
     CoM_displacement_curriculum: CurriculumParameters = field(default_factory=dict)
+    enable: bool = False
 
     def __post_init__(self):
         self.mass_curriculum = CurriculumParameters(**self.mass_curriculum)
@@ -42,6 +43,7 @@ class ForceDisturbanceParameters:
     max_freq: float = 5.0
     min_offset: float = 0.0
     max_offset: float = 1.0
+    enable: bool = False
 
     def __post_init__(self):
         self.force_curriculum = CurriculumParameters(**self.force_curriculum)
@@ -64,6 +66,7 @@ class TorqueDisturbanceParameters:
     max_freq: float = 5.0
     min_offset: float = 0.0
     max_offset: float = 1.0
+    enable: bool = False
 
     def __post_init__(self):
         self.torque_curriculum = CurriculumParameters(**self.torque_curriculum)
@@ -83,6 +86,9 @@ class NoisyObservationsParameters:
     position_curriculum: CurriculumParameters = field(default_factory=dict)
     velocity_curriculum: CurriculumParameters = field(default_factory=dict)
     orientation_curriculum: CurriculumParameters = field(default_factory=dict)
+    enable_position_noise: bool = False
+    enable_velocity_noise: bool = False
+    enable_orientation_noise: bool = False
 
     def __post_init__(self):
         self.position_curriculum = CurriculumParameters(**self.position_curriculum)
@@ -99,6 +105,7 @@ class NoisyActionsParameters:
     """
 
     action_curriculum: CurriculumParameters = field(default_factory=dict)
+    enable: bool = False
 
     def __post_init__(self):
         self.action_curriculum = CurriculumParameters(**self.action_curriculum)

@@ -57,12 +57,12 @@ class BasePenalty:
             float: Current difficulty.
         """
 
-        return self.rp.function(
+        return self.curriculum.function(
             step,
-            self.rp.start,
-            self.rp.end,
-            extent=self.rp.extent,
-            alpha=self.rp.alpha,
+            self.curriculum.start,
+            self.curriculum.end,
+            extent=self.curriculum.extent,
+            alpha=self.curriculum.alpha,
         )
 
     def compute_penalty(self, value, step):

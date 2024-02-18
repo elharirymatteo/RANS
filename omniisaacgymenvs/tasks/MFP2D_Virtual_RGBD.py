@@ -528,44 +528,6 @@ class MFP2DVirtual_RGBD(RLTask):
                 indices=env_long,
             )
 
-    def set_to_pose(
-        self, env_ids: torch.Tensor, positions: torch.Tensor, heading: torch.Tensor
-    ) -> None:
-        """
-        Sets the platform to a specific pose.
-        TODO: Impose more iniiial conditions, such as linear and angular velocity.
-
-        Args:
-            env_ids (torch.Tensor): the indices of the environments for which to set the pose.
-            positions (torch.Tensor): the positions of the platform.
-            heading (torch.Tensor): the heading of the platform."""
-
-        num_resets = len(env_ids)
-        # Resets the counter of steps for which the goal was reached
-        self.task.reset(env_ids)
-        self.virtual_platform.randomize_thruster_state(env_ids, num_resets)
-        # Randomizes the starting position of the platform within a disk around the target
-        root_pos = torch.zeros_like(self.root_pos)
-        root_pos[env_ids, :2] = positions
-        root_rot = torch.zeros_like(self.root_rot)
-        root_rot[env_ids, :] = heading
-        # Resets the states of the joints
-        self.dof_pos[env_ids, :] = torch.zeros(
-            (num_resets, self._platforms.num_dof), device=self._device
-        )
-        self.dof_vel[env_ids, :] = 0
-        # Sets the velocities to 0
-        root_velocities = self.root_velocities.clone()
-        root_velocities[env_ids] = 0
-
-        # apply resets
-        self._platforms.set_joint_positions(self.dof_pos[env_ids], indices=env_ids)
-        self._platforms.set_joint_velocities(self.dof_vel[env_ids], indices=env_ids)
-        self._platforms.set_world_poses(
-            root_pos[env_ids], root_rot[env_ids], indices=env_ids
-        )
-        self._platforms.set_velocities(root_velocities[env_ids], indices=env_ids)
-
     def reset_idx(self, env_ids: torch.Tensor) -> None:
         """
         Resets the environments with the given indices.

@@ -21,10 +21,9 @@ from omniisaacgymenvs.tasks.virtual_floating_platform.curriculum_helpers import 
     CurriculumSampler,
 )
 
-from pxr import Gf, UsdPhysics
 from typing import Tuple
-import math
 import torch
+import math
 import omni
 
 
@@ -49,7 +48,7 @@ class MassDistributionDisturbances:
 
         self.mass_sampler = CurriculumSampler(parameters.mass_curriculum)
         self.CoM_sampler = CurriculumSampler(parameters.CoM_displacement_curriculum)
-
+        self.parameters = parameters
         self._num_envs = num_envs
         self._device = device
 
@@ -62,10 +61,10 @@ class MassDistributionDisturbances:
 
         self.platforms_mass = (
             torch.ones((self._num_envs, 1), device=self._device, dtype=torch.float32)
-            * self._base_mass
+            * self.mass_sampler.get_min()
         )
         self.platforms_CoM = torch.zeros(
-            (self._num_envs, 3), device=self._device, dtype=torch.float32
+            (self._num_envs, 2), device=self._device, dtype=torch.float32
         )
 
     def randomize_masses(self, env_ids: torch.Tensor, step: int = 0) -> None:
@@ -98,28 +97,51 @@ class MassDistributionDisturbances:
             Tuple(torch.Tensor, torch.Tensor): The masses and CoM of the platforms.
         """
 
-        return (self.platforms_mass, self.platforms_CoM)
+        return torch.cat((self.platforms_mass, self.platforms_CoM), axis=1)
+
+    def set_coms(
+        self,
+        body: omni.isaac.core.prims.XFormPrimView,
+        env_ids: torch.Tensor,
+        joints_idx: Tuple[int, int],
+    ) -> None:
+        """
+        Sets the CoM of the platforms.
+
+        Args:
+            body (omni.isaac.core.XFormPrimView): The rigid bodies containing the prismatic joints controlling the position of the CoMs.
+            env_ids (torch.Tensor): The ids of the environments to reset.
+            joints_idx (Tuple[int, int]): The ids of the x and y joints respectively.
+        """
+
+        joints_position = torch.zeros(
+            (len(env_ids), 2), device=self._device, dtype=torch.float32
+        )
+        joints_position[:, joints_idx[0]] = self.platforms_CoM[env_ids, 0]
+        joints_position[:, joints_idx[1]] = self.platforms_CoM[env_ids, 1]
+        if self.parameters.enable:
+            body.set_joint_positions(joints_position, indices=env_ids)
 
     def set_masses(
-        self, body: omni.isaac.core.prims.XFormPrimView, env_ids: torch.Tensor
+        self,
+        articulation_body: omni.isaac.core.prims.XFormPrimView,
+        mass_body: omni.isaac.core.prims.XFormPrimView,
+        env_ids: torch.Tensor,
+        joints_idx: Tuple[int, int],
     ) -> None:
         """
         Sets the masses and CoM of the platforms.
 
         Args:
-            body (omni.isaac.core.XFormPrimView): The rigid bodies.
-            env_ids (torch.Tensor): The ids of the environments to reset.
+            articulation_body (omni.isaac.core.XFormPrimView): The rigid bodies containing the prismatic joints controlling the position of the CoMs.
+            mass_body (omni.isaac.core.XFormPrimView): The rigid bodies containing the movable mass.
+            env_ids(torch.Tensor): The ids of the environments to reset.
+            joints_idx (Tuple[int, int]): The ids of the x and y joints respectively.
         """
 
-        if self._add_mass_disturbances:
-            body.set_masses(self.platforms_mass[env_ids, 0], indices=env_ids)
-            for id in env_ids.tolist():
-                rb = body._prims[id]
-                massAPI = UsdPhysics.MassAPI(rb)
-                massAPI.GetCenterOfMassAttr().Set(
-                    Gf.Vec3d(*self.platforms_CoM[env_ids].cpu().numpy().tolist())
-                )
-            # body.set_coms(self.platforms_CoM[idx], indices=idx)
+        if self.paramerters.enable:
+            mass_body.set_masses(self.platforms_mass[env_ids, 0], indices=env_ids)
+        self.set_coms(articulation_body, env_ids, joints_idx)
 
 
 class ForceDisturbance:
@@ -128,7 +150,10 @@ class ForceDisturbance:
     """
 
     def __init__(
-        self, parameters: ForceDisturbanceParameters, num_envs: int, device: str
+        self,
+        parameters: ForceDisturbanceParameters,
+        num_envs: int,
+        device: str,
     ) -> None:
         """
         Args:
@@ -182,39 +207,40 @@ class ForceDisturbance:
             step (int, optional): The current training step. Defaults to 0.
         """
 
-        if self.parameters.use_sinusoidal_patterns:
-            self._floor_x_freq[env_ids] = (
-                torch.rand(num_resets, dtype=torch.float32, device=self._device)
-                * (self.parameters.max_freq - self.parameters.min_freq)
-                + self.parameters.min_freq
-            )
-            self._floor_y_freq[env_ids] = (
-                torch.rand(num_resets, dtype=torch.float32, device=self._device)
-                * (self.parameters.max_freq - self.parameters.min_freq)
-                + self.parameters.min_freq
-            )
-            self._floor_x_offset[env_ids] = (
-                torch.rand(num_resets, dtype=torch.float32, device=self._device)
-                * (self.parameters.max_offset - self.parameters.min_offset)
-                + self.parameters.min_offset
-            )
-            self._floor_y_offset[env_ids] = (
-                torch.rand(num_resets, dtype=torch.float32, device=self._device)
-                * (self.parameters.max_offset - self.parameters.min_offset)
-                + self.parameters.min_offset
-            )
-            self._max_forces[env_ids] = self.force_sampler.sample(
-                num_resets, step, device=self._device
-            )
-        else:
-            r = self.force_sampler.sample(num_resets, step, device=self._device)
-            theta = (
-                torch.rand((num_resets), dtype=torch.float32, device=self._device)
-                * math.pi
-                * 2
-            )
-            self.forces[env_ids, 0] = torch.cos(theta) * r
-            self.forces[env_ids, 1] = torch.sin(theta) * r
+        if self._enable:
+            if self.parameters.use_sinusoidal_patterns:
+                self._floor_x_freq[env_ids] = (
+                    torch.rand(num_resets, dtype=torch.float32, device=self._device)
+                    * (self.parameters.max_freq - self.parameters.min_freq)
+                    + self.parameters.min_freq
+                )
+                self._floor_y_freq[env_ids] = (
+                    torch.rand(num_resets, dtype=torch.float32, device=self._device)
+                    * (self.parameters.max_freq - self.parameters.min_freq)
+                    + self.parameters.min_freq
+                )
+                self._floor_x_offset[env_ids] = (
+                    torch.rand(num_resets, dtype=torch.float32, device=self._device)
+                    * (self.parameters.max_offset - self.parameters.min_offset)
+                    + self.parameters.min_offset
+                )
+                self._floor_y_offset[env_ids] = (
+                    torch.rand(num_resets, dtype=torch.float32, device=self._device)
+                    * (self.parameters.max_offset - self.parameters.min_offset)
+                    + self.parameters.min_offset
+                )
+                self._max_forces[env_ids] = self.force_sampler.sample(
+                    num_resets, step, device=self._device
+                )
+            else:
+                r = self.force_sampler.sample(num_resets, step, device=self._device)
+                theta = (
+                    torch.rand((num_resets), dtype=torch.float32, device=self._device)
+                    * math.pi
+                    * 2
+                )
+                self.forces[env_ids, 0] = torch.cos(theta) * r
+                self.forces[env_ids, 1] = torch.sin(theta) * r
 
     def get_floor_forces(self, root_pos: torch.Tensor) -> torch.Tensor:
         """
@@ -228,15 +254,20 @@ class ForceDisturbance:
             torch.Tensor: The floor forces.
         """
 
-        if self.parameters.use_sinusoidal_patterns:
-            self.forces[:, 0] = (
-                torch.sin(root_pos[:, 0] * self._floor_x_freq + self._floor_x_offset)
-                * self._max_forces
-            )
-            self.forces[:, 1] = (
-                torch.sin(root_pos[:, 1] * self._floor_y_freq + self._floor_y_offset)
-                * self._max_forces
-            )
+        if self.parameters.enable:
+            if self.parameters.use_sinusoidal_patterns:
+                self.forces[:, 0] = (
+                    torch.sin(
+                        root_pos[:, 0] * self._floor_x_freq + self._floor_x_offset
+                    )
+                    * self._max_forces
+                )
+                self.forces[:, 1] = (
+                    torch.sin(
+                        root_pos[:, 1] * self._floor_y_freq + self._floor_y_offset
+                    )
+                    * self._max_forces
+                )
 
         return self.forces
 
@@ -247,7 +278,10 @@ class TorqueDisturbance:
     """
 
     def __init__(
-        self, parameters: TorqueDisturbanceParameters, num_envs: int, device: str
+        self,
+        parameters: TorqueDisturbanceParameters,
+        num_envs: int,
+        device: str,
     ) -> None:
         """
         Args:
@@ -295,28 +329,26 @@ class TorqueDisturbance:
             step (int, optional): The current step of the training. Default to 0.
         """
 
-        if self.parameters.use_sinusoidal_patterns:
-            #  use the same min/max frequencies and offsets for the floor
-            self._torque_freq[env_ids] = (
-                torch.rand(num_resets, dtype=torch.float32, device=self._device)
-                * (self.parameters.max_freq - self.parameters.min_freq)
-                + self.parameters.min_freq
-            )
-            self._torque_offset[env_ids] = (
-                torch.rand(num_resets, dtype=torch.float32, device=self._device)
-                * (self.parameters.max_offset - self.parameters.min_offset)
-                + self.parameters.min_offset
-            )
-            self._max_torques[env_ids] = self.torque_sampler.sample(
-                num_resets, step, device=self._device
-            )
-        else:
-            r = self.torque_sampler.sample(num_resets, step, device=self._device)
-            # make torques negative for half of the environments at random
-            r[
-                torch.rand((num_resets), dtype=torch.float32, device=self._device) > 0.5
-            ] *= -1
-            self.torques[env_ids, 2] = r
+        if self.parameters.enable:
+            if self.parameters.use_sinusoidal_patterns:
+                #  use the same min/max frequencies and offsets for the floor
+                self._torque_freq[env_ids] = (
+                    torch.rand(num_resets, dtype=torch.float32, device=self._device)
+                    * (self.parameters.max_freq - self.parameters.min_freq)
+                    + self.parameters.min_freq
+                )
+                self._torque_offset[env_ids] = (
+                    torch.rand(num_resets, dtype=torch.float32, device=self._device)
+                    * (self.parameters.max_offset - self.parameters.min_offset)
+                    + self.parameters.min_offset
+                )
+                self._max_torques[env_ids] = self.torque_sampler.sample(
+                    num_resets, step, device=self._device
+                )
+            else:
+                self.torques[env_ids, 2] = self.torque_sampler.sample(
+                    num_resets, step, device=self._device
+                )
 
     def get_torque_disturbance(self, root_pos: torch.Tensor) -> torch.Tensor:
         """
@@ -343,11 +375,16 @@ class NoisyObservations:
     """
 
     def __init__(
-        self, parameters: NoisyObservationsParameters, num_envs: int, device: str
+        self,
+        parameters: NoisyObservationsParameters,
+        enable: bool,
+        num_envs: int,
+        device: str,
     ) -> None:
         """
         Args:
             task_cfg (NoisyObservationParameters): The settings of the domain randomization.
+            enable (bool): Whether to enable the observation disturbances.
             num_envs (int): The number of environments.
             device (str): The device on which the tensors are stored.
         """
@@ -355,6 +392,7 @@ class NoisyObservations:
         self.position_sampler = CurriculumSampler(parameters.position_curriculum)
         self.velocity_sampler = CurriculumSampler(parameters.velocity_curriculum)
         self.orientation_sampler = CurriculumSampler(parameters.orientation_curriculum)
+        self.parameters = parameters
         self._num_envs = num_envs
         self._device = device
 
@@ -370,7 +408,10 @@ class NoisyObservations:
             torch.Tensor: The position of the robot with noise.
         """
 
-        pos += self.position_sampler.sample(self._num_envs, step, device=self._device)
+        if self.parameters.enable_position_noise:
+            pos += self.position_sampler.sample(
+                self._num_envs, step, device=self._device
+            )
         return pos
 
     def add_noise_on_vel(self, vel: torch.Tensor, step: int = 0) -> torch.Tensor:
@@ -385,7 +426,10 @@ class NoisyObservations:
             torch.Tensor: The velocity of the robot with noise.
         """
 
-        vel += self.velocity_sampler.sample(self._num_envs, step, device=self._device)
+        if self.parameters.enable_velocity_noise:
+            vel += self.velocity_sampler.sample(
+                self._num_envs, step, device=self._device
+            )
         return vel
 
     def add_noise_on_heading(
@@ -402,9 +446,10 @@ class NoisyObservations:
             torch.Tensor: The heading of the robot with noise.
         """
 
-        heading += self.orientation_sampler.sample(
-            self._num_envs, step, device=self._device
-        )
+        if self.parameters.enable_orientation_noise:
+            heading += self.orientation_sampler.sample(
+                self._num_envs, step, device=self._device
+            )
         return heading
 
 
@@ -413,7 +458,10 @@ class NoisyActions:
     Adds noise to the actions of the robot."""
 
     def __init__(
-        self, parameters: NoisyActionsParameters, num_envs: int, device: str
+        self,
+        parameters: NoisyActionsParameters,
+        num_envs: int,
+        device: str,
     ) -> None:
         """
         Args:
@@ -423,6 +471,7 @@ class NoisyActions:
         """
 
         self.action_sampler = CurriculumSampler(parameters.action_curriculum)
+        self.parameters = parameters
         self._num_envs = num_envs
         self._device = device
 
@@ -438,5 +487,61 @@ class NoisyActions:
             torch.Tensor: The actions of the robot with noise.
         """
 
-        act += self.action_sampler.sample(self._num_envs, step, device=self._device)
+        if self.parameters.enable:
+            act += self.action_sampler.sample(self._num_envs, step, device=self._device)
         return act
+
+
+class Disturbances:
+    """
+    Class to create disturbances on the platform.
+    """
+
+    def __init__(
+        self,
+        parameters: dict,
+        num_envs: int,
+        device: str,
+    ) -> None:
+        """
+        Args:
+            parameters (dict): The settings of the domain randomization.
+            num_envs (int): The number of environments.
+            device (str): The device on which the tensors are stored.
+        """
+
+        self._num_envs = num_envs
+        self._device = device
+
+        self.parameters = DisturbancesParameters(**parameters)
+
+        self.mass_disturbances = MassDistributionDisturbances(
+            self.parameters.mass_disturbance,
+            self.parameters.enable_mass_disturbance,
+            num_envs,
+            device,
+        )
+        self.force_disturbances = ForceDisturbance(
+            self.parameters.force_disturbance,
+            self.parameters.enable_force_disturbance,
+            num_envs,
+            device,
+        )
+        self.torque_disturbances = TorqueDisturbance(
+            self.parameters.torque_disturbance,
+            self.parameters.enable_torque_disturbance,
+            num_envs,
+            device,
+        )
+        self.noisy_observations = NoisyObservations(
+            self.parameters.observations_disturbance,
+            self.parameters.enable_observations_disturbance,
+            num_envs,
+            device,
+        )
+        self.noisy_actions = NoisyActions(
+            self.parameters.actions_disturbance,
+            self.parameters.enable_actions_disturbance,
+            num_envs,
+            device,
+        )

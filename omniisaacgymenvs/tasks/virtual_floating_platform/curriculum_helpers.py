@@ -338,6 +338,21 @@ class CurriculumSampler:
             alpha=self.rp.alpha,
         )
 
+    def get_min(self) -> float:
+        """
+        Gets the minimum value for the current step.
+
+        Returns:
+            float: Minimum value.
+        """
+
+        if self.sp.distribution == "truncated_normal":
+            return self.sp.start_mean
+        elif self.sp.distribution == "normal":
+            return self.sp.start_mean
+        else:
+            return self.sp.start_min_value
+
     def sample(self, n: int, step: int, device: str = "cpu") -> torch.Tensor:
         """
         Samples values from the curriculum distribution.
