@@ -26,6 +26,7 @@ from omniisaacgymenvs.utils.arrow import VisualArrow
 from omni.isaac.core.prims import XFormPrimView
 from pxr import Usd
 
+from matplotlib import pyplot as plt
 from typing import Tuple
 import numpy as np
 import wandb
@@ -229,6 +230,7 @@ class GoToPoseTask(Core):
         env_ids: torch.Tensor,
         target_positions: torch.Tensor,
         target_orientations: torch.Tensor,
+        step: int = 0,
     ) -> list:
         """
         Generates a random goal for the task.
@@ -237,6 +239,7 @@ class GoToPoseTask(Core):
             env_ids (torch.Tensor): The ids of the environments.
             target_positions (torch.Tensor): The target positions.
             target_orientations (torch.Tensor): The target orientations.
+            step (int, optional): The current step. Defaults to 0.
 
         Returns:
             list: The target positions and orientations.
@@ -261,6 +264,10 @@ class GoToPoseTask(Core):
         target_orientations[env_ids, 3] = torch.sin(
             self._target_headings[env_ids] * 0.5
         )
+
+        if math.fmod(step, 50) == 0:
+            self.log_target_data(int(step))
+
         return target_positions, target_orientations
 
     def get_initial_conditions(
@@ -321,8 +328,8 @@ class GoToPoseTask(Core):
         )
         initial_velocity[:, 5] = angular_velocity
 
-        if step % 10 == 0:
-            self.log_spawn_data(step)
+        if math.fmod(step, 50) == 0:
+            self.log_spawn_data(int(step))
 
         return (
             initial_position,
@@ -377,7 +384,14 @@ class GoToPoseTask(Core):
         scene.add(arrows)
         return scene, arrows
 
-    def log_spawn_data(self, step):
+    def log_spawn_data(self, step: int) -> None:
+        """
+        Logs the spawn data to wandb.
+
+        Args:
+            step (int): The current step.
+        """
+
         num_resets = self._num_envs
         # Resets the counter of steps for which the goal was reached
         xy_pos = torch.zeros((num_resets, 2), device=self._device, dtype=torch.float32)
@@ -407,20 +421,75 @@ class GoToPoseTask(Core):
 
         xy_pos = xy_pos.cpu().numpy()
         heading = np.expand_dims(heading.cpu().numpy(), axis=-1)
+        xyz_velocity = xyz_velocity.cpu().numpy()
 
-        table = wandb.Table(data=xy_pos, columns=["x", "y"])
+        fig, ax = plt.subplots(dpi=100, figsize=(8, 8))
+        ax.scatter(xy_pos[:, 0], xy_pos[:, 1])
+        ax.set_xlim(-self._task_parameters.kill_dist, self._task_parameters.kill_dist)
+        ax.set_ylim(-self._task_parameters.kill_dist, self._task_parameters.kill_dist)
+        ax.set_aspect("equal")
+        ax.set_title("Initial position")
+        ax.set_xlabel("x (m)")
+        ax.set_ylabel("y (m)")
+        fig.tight_layout()
+
+        fig.canvas.draw()
+        data = np.array(fig.canvas.renderer.buffer_rgba())
+
         wandb.log(
             {
-                "curriculum/spawn_position": wandb.plot.scatter(
-                    table, "x", "y", title="xy_position"
-                )
+                "curriculum/initial_position": wandb.Image(data),
             }
         )
-        table = wandb.Table(data=heading, columns=["theta"])
+
+        fig, ax = plt.subplots(dpi=100, figsize=(8, 8))
+        ax.hist(heading[:, 0], bins=32)
+        ax.set_title("Initial heading")
+        ax.set_xlim(-math.pi, math.pi)
+        ax.set_xlabel("theta (rad)")
+        ax.set_ylabel("count")
+        fig.tight_layout()
+
+        fig.canvas.draw()
+        data = np.array(fig.canvas.renderer.buffer_rgba())
+
         wandb.log(
             {
-                "curriculum/spawn_heading": wandb.plot.histogram(
-                    table, "theta", title="heading_distance"
-                )
+                "curriculum/initial_heading": wandb.Image(data),
             }
         )
+
+        fig, ax = plt.subplots(1, 3, dpi=100, figsize=(8, 8), sharey=True)
+        ax[0].hist(xyz_velocity[:, 0], bins=32)
+        ax[0].set_title("Initial x linear velocity")
+        ax[0].set_xlim(-0.5, 0.5)
+        ax[0].set_xlabel("vel (m/s)")
+        ax[0].set_ylabel("count")
+        ax[1].hist(xyz_velocity[:, 1], bins=32)
+        ax[1].set_title("Initial y linear velocity")
+        ax[1].set_xlim(-0.5, 0.5)
+        ax[1].set_xlabel("vel (m/s)")
+        ax[2].hist(xyz_velocity[:, 2], bins=32)
+        ax[2].set_title("Initial z angular velocity")
+        ax[2].set_xlim(-0.5, 0.5)
+        ax[2].set_xlabel("vel (rad/s)")
+        fig.tight_layout()
+
+        fig.canvas.draw()
+        data = np.array(fig.canvas.renderer.buffer_rgba())
+
+        wandb.log(
+            {
+                "curriculum/initial_velocities": wandb.Image(data),
+            }
+        )
+
+    def log_target_data(self, step: int) -> None:
+        """
+        Logs the target data to wandb.
+
+        Args:
+            step (int): The current step.
+        """
+
+        pass

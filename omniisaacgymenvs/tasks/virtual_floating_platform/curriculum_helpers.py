@@ -239,6 +239,8 @@ class CurriculumRateParameters:
     alpha: float = 2.0
 
     def __post_init__(self):
+        assert self.start >= 0, "Start must be greater than 0"
+        assert self.end > 0, "End must be greater than 0"
         assert self.start < self.end, "Start must be smaller than end"
         assert self.function in [
             "none",

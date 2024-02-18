@@ -24,7 +24,10 @@ from omniisaacgymenvs.tasks.virtual_floating_platform.curriculum_helpers import 
 from omni.isaac.core.prims import XFormPrimView
 from pxr import Usd
 
+from matplotlib import pyplot as plt
 from typing import Tuple
+import numpy as np
+import wandb
 import torch
 import math
 
@@ -185,6 +188,7 @@ class TrackXYVelocityTask(Core):
         env_ids: torch.Tensor,
         target_positions: torch.Tensor,
         target_orientations: torch.Tensor,
+        step: int = 0,
     ) -> list:
         """
         Generates a random goal for the task.
@@ -192,6 +196,7 @@ class TrackXYVelocityTask(Core):
             env_ids (torch.Tensor): The ids of the environments.
             target_positions (torch.Tensor): The target positions.
             target_orientations (torch.Tensor): The target orientations.
+            step (int, optional): The current step. Defaults to 0.
 
         Returns:
             list: The target positions and orientations.
@@ -205,6 +210,10 @@ class TrackXYVelocityTask(Core):
         theta = torch.rand((num_goals,), device=self._device) * 2 * math.pi
         self._target_velocities[env_ids, 0] = r * torch.cos(theta)
         self._target_velocities[env_ids, 1] = r * torch.sin(theta)
+
+        if math.fmod(step, 50) == 0:
+            self.log_target_data(int(step))
+
         # This does not matter
         return target_positions, target_orientations
 
@@ -252,6 +261,10 @@ class TrackXYVelocityTask(Core):
             num_resets, step, device=self._device
         )
         initial_velocity[:, 5] = angular_velocity
+
+        if math.fmod(step, 50) == 0:
+            self.log_spawn_data(int(step))
+
         return (
             initial_position,
             initial_orientation,
@@ -281,3 +294,93 @@ class TrackXYVelocityTask(Core):
         """
 
         return scene, None
+
+    def log_spawn_data(self, step: int) -> None:
+        """
+        Logs the spawn data to wandb.
+
+        Args:
+            step (int): The current step.
+        """
+
+        num_resets = self._num_envs
+        # Randomizes the linear velocity of the platform
+        xyz_velocity = torch.zeros(
+            (num_resets, 3), device=self._device, dtype=torch.float32
+        )
+        linear_velocity = self._spawn_linear_velocity_sampler.sample(
+            num_resets, step, device=self._device
+        )
+        theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
+        xyz_velocity[:, 0] = linear_velocity * torch.cos(theta)
+        xyz_velocity[:, 1] = linear_velocity * torch.sin(theta)
+        # Randomizes the angular velocity of the platform
+        angular_velocity = self._spawn_angular_velocity_sampler.sample(
+            num_resets, step, device=self._device
+        )
+        xyz_velocity[:, 2] = angular_velocity
+
+        xy_pos = xy_pos.cpu().numpy()
+        heading = np.expand_dims(heading.cpu().numpy(), axis=-1)
+        xyz_velocity = xyz_velocity.cpu().numpy()
+
+        fig, ax = plt.subplots(1, 3, dpi=100, figsize=(8, 8), sharey=True)
+        ax[0].hist(xyz_velocity[:, 0], bins=32)
+        ax[0].set_title("Initial x linear velocity")
+        ax[0].set_xlim(-0.5, 0.5)
+        ax[0].set_xlabel("vel (m/s)")
+        ax[0].set_ylabel("count")
+        ax[1].hist(xyz_velocity[:, 1], bins=32)
+        ax[1].set_title("Initial y linear velocity")
+        ax[1].set_xlim(-0.5, 0.5)
+        ax[1].set_xlabel("vel (m/s)")
+        ax[2].hist(xyz_velocity[:, 2], bins=32)
+        ax[2].set_title("Initial z angular velocity")
+        ax[2].set_xlim(-0.5, 0.5)
+        ax[2].set_xlabel("vel (rad/s)")
+        fig.tight_layout()
+
+        fig.canvas.draw()
+        data = np.array(fig.canvas.renderer.buffer_rgba())
+
+        wandb.log(
+            {
+                "curriculum/initial_velocities": wandb.Image(data),
+            }
+        )
+
+    def log_target_data(self, step: int):
+        """
+        Logs the target data to wandb.
+
+        Args:
+            step (int): The current step.
+        """
+
+        num_resets = self._num_envs
+        # Randomizes the target linear velocity of the platform
+        linear_velocity = self._target_linear_velocity_sampler.sample(
+            num_resets, step, device=self._device
+        )
+        linear_velocity = linear_velocity.cpu().numpy()
+
+        fig, ax = plt.subplots(1, 2, dpi=100, figsize=(8, 8), sharey=True)
+        ax[0].hist(linear_velocity[:, 0], bins=32)
+        ax[0].set_title("Target x linear velocity")
+        ax[0].set_xlim(-0.5, 0.5)
+        ax[0].set_xlabel("vel (m/s)")
+        ax[0].set_ylabel("count")
+        ax[1].hist(linear_velocity[:, 1], bins=32)
+        ax[1].set_title("Target y linear velocity")
+        ax[1].set_xlim(-0.5, 0.5)
+        ax[1].set_xlabel("vel (m/s)")
+        fig.tight_layout()
+
+        fig.canvas.draw()
+        data = np.array(fig.canvas.renderer.buffer_rgba())
+
+        wandb.log(
+            {
+                "curriculum/target_velocities": wandb.Image(data),
+            }
+        )
