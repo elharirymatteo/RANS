@@ -1,6 +1,6 @@
 __author__ = "Antoine Richard, Matteo El Hariry"
 __copyright__ = (
-    "Copyright 2023, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
+    "Copyright 2023-24, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
 )
 __license__ = "GPL"
 __version__ = "1.0.0"
