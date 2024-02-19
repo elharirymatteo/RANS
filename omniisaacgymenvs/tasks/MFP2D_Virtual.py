@@ -522,9 +522,11 @@ class MFP2DVirtual(RLTask):
         penalties = self._penalties.compute_penalty(
             self.current_state, self.actions, self.step
         )
-        self.rew_buf[:] = position_reward + penalties
+        self.rew_buf[:] = position_reward - penalties
         self.episode_sums = self.task.update_statistics(self.episode_sums)
         self.episode_sums = self._penalties.update_statistics(self.episode_sums)
+        self._penalties.log_penalty()
+
         self.update_state_statistics()
 
     def is_done(self) -> None:

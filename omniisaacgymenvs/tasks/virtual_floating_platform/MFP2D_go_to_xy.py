@@ -391,6 +391,7 @@ class GoToXYTask(Core):
 
         fig.canvas.draw()
         data = np.array(fig.canvas.renderer.buffer_rgba())
+        plt.close(fig)
 
         wandb.log(
             {
@@ -416,6 +417,7 @@ class GoToXYTask(Core):
 
         fig.canvas.draw()
         data = np.array(fig.canvas.renderer.buffer_rgba())
+        plt.close(fig)
 
         wandb.log(
             {

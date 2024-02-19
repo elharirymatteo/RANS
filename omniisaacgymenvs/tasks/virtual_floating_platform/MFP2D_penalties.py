@@ -157,14 +157,14 @@ class LinearVelocityPenalty(BasePenalty):
         if self.enable:
             self.last_rate = self.get_rate(step)
             # compute the norm of the linear velocity
-            norm = torch.norm(state["linear_velocity"], dim=-1)
+            norm = torch.norm(state["linear_velocity"], dim=-1) - self.min_value
             # apply ranging function
-            norm[norm < self.min_value] = 0
-            norm[norm > self.max_value] = self.max_value
-            # apply scaling function
-            norm = scaling_functions[self.scaling_function](
-                norm, p=self.scaling_parameter
+            norm[norm < 0] = 0
+            norm[norm > (self.max_value - self.min_value)] = (
+                self.max_value - self.min_value
             )
+            # apply scaling function
+            norm = self.scaling_function(norm, p=self.scaling_parameter)
             self.last_penalties = norm
             return norm * self.last_rate * self.weight
         else:
@@ -213,14 +213,14 @@ class AngularVelocityPenalty(BasePenalty):
         if self.enable:
             self.last_rate = self.get_rate(step)
             # compute the norm of the angular velocity
-            norm = torch.norm(state["angular_velocity"], dim=-1)
+            norm = torch.abs(state["angular_velocity"]) - self.min_value
             # apply ranging function
-            norm[norm < self.min_value] = 0
-            norm[norm > self.max_value] = self.max_value
-            # apply scaling function
-            norm = scaling_functions[self.scaling_function](
-                norm, p=self.scaling_parameter
+            norm[norm < 0] = 0
+            norm[norm > (self.max_value - self.min_value)] = (
+                self.max_value - self.min_value
             )
+            # apply scaling function
+            norm = self.scaling_function(norm, p=self.scaling_parameter)
             self.last_penalties = norm
             return norm * self.last_rate * self.weight
         else:
@@ -277,7 +277,7 @@ class EnvironmentPenalties:
         names = []
         for penalty in self.penalties:
             names.append("penalties/" + penalty.name)
-            names.append("penalties/" + penalty.name + "_weight")
+            # names.append("penalties/" + penalty.name + "_weight")
         return names
 
     def update_statistics(self, stats: dict) -> dict:
@@ -293,10 +293,28 @@ class EnvironmentPenalties:
 
         for penalty in self.penalties:
             stats["penalties/" + penalty.name] = penalty.get_unweigthed_penalties()
-            stats["penalties/" + penalty.name + "_weight"] = (
-                penalty.get_last_rate() * penalty.weight
-            )
+            # stats["penalties/" + penalty.name + "_weight"] = (
+            #    penalty.get_last_rate() * penalty.weight
+            # )
         return stats
+
+    def log_penalty(self):
+        """
+        Logs the penalty.
+
+        Args:
+            logger (Logger): Logger.
+            step (int): Current step.
+        """
+
+        for penalty in self.penalties:
+            wandb.log(
+                {
+                    "penalties/"
+                    + penalty.name
+                    + "_weight": penalty.get_last_rate() * penalty.weight
+                }
+            )
 
 
 @dataclass

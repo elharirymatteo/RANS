@@ -162,7 +162,7 @@ env:
     name: GoToPose
     position_tolerance: 0.01
     kill_after_n_steps_in_tolerance: 50 # 10seconds
-    kill_dist: 8.0
+    kill_dist: 10.0
     spawn_position_curriculum:
       rate_parameters:
         function: sigmoid
@@ -249,15 +249,15 @@ env:
         end: 1250
         extent: 4.5
     angular_velocity_penalty:
-      enable: False
-      weight: 0.1
+      enable: True
+      weight: 0.5
       scaling_function: linear
-      min_value: 0.3
-      max_value: 1.0
+      min_value: 0.5
+      max_value: 2.0
       curriculum:
         function: sigmoid
-        start: 250
-        end: 1250
+        start: 0
+        end: 250
         extent: 4.5
 
 sim:
