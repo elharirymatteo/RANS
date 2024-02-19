@@ -230,12 +230,12 @@ env:
 
   penalties_parameters:
     energy_penalty:
-      enable: False
-      weight: 0.01
+      enable: True
+      weight: 0.15
       curriculum:
         function: sigmoid
         start: 250
-        end: 1250
+        end: 1000
         extent: 4.5
     linear_velocity_penalty:
       enable: False
