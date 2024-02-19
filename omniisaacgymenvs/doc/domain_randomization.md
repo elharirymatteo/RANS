@@ -1,5 +1,4 @@
 # Domain Randomization
-
 Unlike the regular version of OmniIsaacGymEnv, this modified version chooses to apply domain randomization 
 directly inside the task. This is done so that different parameters can receive different level of noise.
 For instance, the state is composed of unnormalized angular values and linear velocity values, both of which 
@@ -15,9 +14,7 @@ flag inside the configuration file. As of today, we support the following distur
  - `observations_disturbance` it adds noise onto the obervations.
  - `actions_disturbance` it adds noise onto the actions.
 
-
 ## Applying disturbances
-
 In the following, we will go over the different parameters available for the disturbances and how to set them.
 All the disturbances build ontop of a scheduler, and a sampler.
 The scheduler regulates how quickly the disturbances should take effect during the training.
@@ -71,8 +68,9 @@ If this flag is set to `True`, the force magnitude will be modified depending on
 This is meant to recreate attraction and repulsion points. The non-constant force means that recurrent networks will struggle more
 to reliably estimate the disturbance.
 
-|![sinusoidal_pattern_0.25](figures/sinusoidal_pattern_025.png) | ![sinusoidal_pattern_3](figures/sinusoidal_pattern_3.png)|
-Figure: Two sinusoidal patterns with different frequencies, 0.25: left, 3.0: right.
+Sinusoidal pattern, freq = 0.25 | Sinusoidal pattern, freq = 3.0
+:------------------------------:|:------------------------------:
+![sinusoidal_pattern_0.25](figures/sinusoidal_pattern_025.png) | ![sinusoidal_pattern_3](figures/sinusoidal_pattern_3.png)
 
 Please note that the values for the sinusoidal patterns and the magnitude of the force are updated on an environment reset only.
 This means that the magnitude of the force will not evolve through an episode.
@@ -123,9 +121,9 @@ Setting the `use_sinusoidal_patterns` flag to `False` will mean that each enviro
 If this flag is set to `True`, the torque magnitude will be modified depending on the position of the system.
 This is meant to recreate attraction and repulsion points. The non-constant torque means that recurrent networks will struggle more
 to reliably estimate the disturbance.
-
-|![sinusoidal_pattern_0.25](figures/sinusoidal_pattern_025.png) | ![sinusoidal_pattern_3](figures/sinusoidal_pattern_3.png)|
-Figure: Two sinusoidal patterns with different frequencies, 0.25: left, 3.0: right.
+Sinusoidal pattern, freq = 0.25 | Sinusoidal pattern, freq = 3.0
+:------------------------------:|:------------------------------:
+![sinusoidal_pattern_0.25](figures/sinusoidal_pattern_025.png) | ![sinusoidal_pattern_3](figures/sinusoidal_pattern_3.png)
 
 Please note that the values for the sinusoidal patterns and the magnitude of the torque are updated on an environment reset only.
 This means that the magnitude of the torque will not evolve through an episode.
@@ -432,7 +430,6 @@ With all this done, your disturbance can be parametrized, and instantiated!
 All that's left to do is to apply it!
 
 ### Applying domain randomization
-
 First we need to instantiate the `Disturbances` class.
 This can be done as shown below:
 
@@ -457,5 +454,3 @@ In this example this would be done like so:
 ```python
 thrusts = self.DR.noisy_actions.add_noise_on_act(thrusts)
 ```
-
-Happy coding!

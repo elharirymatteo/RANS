@@ -8,6 +8,7 @@ __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
+from inspect import isfunction
 import dataclasses
 import torch
 import math
@@ -17,7 +18,9 @@ import math
 ####################################################################################################
 
 
-def curriculum_linear_growth(step: int, start: int, end: int, **kwargs) -> float:
+def curriculum_linear_growth(
+    step: int = 0, start: int = 0, end: int = 1000, **kwargs
+) -> float:
     """
     Generates a curriculum with a linear growth rate.
 
@@ -46,7 +49,7 @@ def curriculum_linear_growth(step: int, start: int, end: int, **kwargs) -> float
 
 
 def curriculum_sigmoid_growth(
-    step: int, start: int, end: int, extent: float = 3, **kwargs
+    step: int = 0, start: int = 100, end: int = 1000, extent: float = 3, **kwargs
 ) -> float:
     """
     Generates a curriculum with a sigmoid growth rate.
@@ -80,7 +83,7 @@ def curriculum_sigmoid_growth(
 
 
 def curriculum_pow_growth(
-    step: int, start: int, end: int, alpha: float = 2.0, **kwargs
+    step: int = 0, start: int = 0, end: int = 1000, alpha: float = 2.0, **kwargs
 ) -> float:
     """
     Generates a curriculum with a power growth rate.
@@ -261,6 +264,25 @@ class CurriculumRateParameters:
         assert self.extent > 0, "Extent must be greater than 0"
         assert self.alpha > 0, "Alpha must be greater than 0"
         self.function = RateFunctionDict[self.function]
+        self.kwargs = {
+            key: value for key, value in self.__dict__.items() if not isfunction(value)
+        }
+
+    def get(self, step: int) -> float:
+        """
+        Gets the difficulty for the given step.
+
+        Args:
+            step (int): Current step.
+
+        Returns:
+            float: Current difficulty.
+        """
+
+        return self.function(
+            step=step,
+            **self.kwargs,
+        )
 
 
 @dataclasses.dataclass
@@ -330,13 +352,7 @@ class CurriculumSampler:
             float: Current difficulty.
         """
 
-        return self.rp.function(
-            step,
-            self.rp.start,
-            self.rp.end,
-            extent=self.rp.extent,
-            alpha=self.rp.alpha,
-        )
+        return self.rp.get(step)
 
     def get_min(self) -> float:
         """
