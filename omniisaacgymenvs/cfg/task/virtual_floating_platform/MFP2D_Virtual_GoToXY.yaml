@@ -23,53 +23,140 @@ env:
   split_thrust: True
 
   disturbances:
-    # Uneven floor generation
-    forces:
-      use_uneven_floor: False
-      use_sinusoidal_floor: False
-      floor_min_freq: 0.25
-      floor_max_freq: 3
-      floor_min_offset: -6
-      floor_max_offset: 6
-      max_floor_force: 0.5
-      min_floor_force: 0.25
-
-    torques:
-      # Torque disturbance generation
-      use_torque_disturbance: False
-      use_sinusoidal_torque: False
-      floor_min_freq: 0.25
-      floor_max_freq: 3
-      floor_min_offset: -6
-      floor_max_offset: 6
-      max_torque: 0.1 # Nm , 30% of max torque of thruster
-      min_torque: 0.0
-
-    observations:
-      # Add noisy observations
-      add_noise_on_pos: False 
-      position_noise_min: -0.01 
-      position_noise_max:  0.01
-      add_noise_on_vel: False
-      velocity_noise_min: -0.01
-      velocity_noise_max:  0.01
-      add_noise_on_heading: False
-      heading_noise_min: -0.025
-      heading_noise_max:  0.025
-
-    actions:
-      # Add noisy actions
-      add_noise_on_act: False
-      min_action_noise: -0.05
-      max_action_noise:  0.05
-
-    mass:
-      # Add mass disturbances
-      add_mass_disturbances: False
-      min_mass: 4.0
-      max_mass: 6.0
-      CoM_max_displacement: 0.25
-      base_mass: ${...platform.core.mass}
+    force_disturbance:
+      enable: False
+      use_sinusoidal_patterns: False
+      min_freq: 0.25
+      max_freq: 3
+      min_offset: -6
+      max_offset: 6
+      force_curriculum:
+        rate_parameters:
+          function: sigmoid
+          start: 250
+          end: 1250
+          extent: 4.5
+        sampling_parameters:
+          distribution: truncated_normal
+          start_mean: 0.0
+          start_std: 0.0001
+          end_mean: 0.5
+          end_std: 0.5
+          min_value: 0.0
+          max_value: 0.5
+    torque_disturbance:
+      enable: False
+      use_sinusoidal_patterns: False
+      min_freq: 0.25
+      max_freq: 3
+      min_offset: -6
+      max_offset: 6
+      torque_curriculum:
+        rate_parameters:
+          function: sigmoid
+          start: 250
+          end: 1250
+          extent: 4.5
+        sampling_parameters:
+          distribution: truncated_normal
+          start_mean: 0.0
+          start_std: 0.0001
+          end_mean: 0.0
+          end_std: 0.2
+          min_value: -0.1
+          max_value: 0.1
+    observations_disturbance:
+      enable_position_noise: False
+      enable_velocity_noise: False
+      enable_orientation_noise: False
+      position_curriculum:
+        rate_parameters:
+          function: sigmoid
+          start: 250
+          end: 1250
+          extent: 4.5
+        sampling_parameters:
+          distribution: truncated_normal
+          start_mean: 0.0
+          start_std: 0.0001
+          end_mean: 0.0
+          end_std: 0.03
+          min_value: -0.015
+          max_value: 0.015
+      velocity_curriculum:
+        rate_parameters:
+          function: sigmoid
+          start: 250
+          end: 1250
+          extent: 4.5
+        sampling_parameters:
+          distribution: truncated_normal
+          start_mean: 0.0
+          start_std: 0.0001
+          end_mean: 0.0
+          end_std: 0.03
+          min_value: -0.015
+          max_value: 0.015
+      orientation_curriculum:
+        rate_parameters:
+          function: sigmoid
+          start: 250
+          end: 1250
+          extent: 4.5
+        sampling_parameters:
+          distribution: truncated_normal
+          start_mean: 0.0
+          start_std: 0.0001
+          end_mean: 0.0
+          end_std: 0.05
+          min_value: -0.025
+          max_value: 0.025
+    actions_disturbance:
+      enable: False
+      action_curriculum:
+        rate_parameters:
+          function: sigmoid
+          start: 250
+          end: 1250
+          extent: 4.5
+        sampling_parameters:
+          distribution: truncated_normal
+          start_mean: 0.0
+          start_std: 0.0001
+          end_mean: 0.0
+          end_std: 0.1
+          min_value: -0.05
+          max_value: 0.05
+    mass_disturbance:
+      enable: False
+      mass_curriculum:
+        rate_parameters:
+          function: sigmoid
+          start: 250
+          end: 1250
+          extent: 4.5
+        sampling_parameters:
+          distribution: truncated_normal
+          start_mean: 5.32
+          start_std: 0.0001
+          end_mean: 5.0
+          end_std: 3.0
+          min_value: 3.5
+          max_value: 6.5
+      com_curriculum:
+        rate_parameters:
+          function: sigmoid
+          start: 250
+          end: 1250
+          extent: 4.5
+        sampling_parameters:
+          distribution: truncated_normal
+          start_mean: 0.0
+          start_std: 0.0001
+          end_mean: 0.25
+          end_std: 0.25
+          min_value: 0.0
+          max_value: 0.25
 
   task_parameters: 
     name: GoToXY
@@ -98,18 +185,36 @@ env:
     exponential_reward_coeff: 0.25
 
   penalties_parameters:
-    penalize_energy: False
-    penalize_energy_fn: "lambda x,step: -torch.abs(x)*0.01"
-    penalize_energy_c1: 0.01
-    penalize_energy_c2: 0.00
-    penalize_linear_velocities: False
-    penalize_linear_velocities_fn: "lambda x,step: -torch.norm(x, dim=-1)*0.01"
-    penalize_linear_velocities_c1: 0.01
-    penalize_linear_velocities_c2: 0.00
-    penalize_angular_velocities: False
-    penalize_angular_velocities_fn: "lambda x,step: -torch.abs(x)*1.0*step/2000"
-    penalize_angular_velocities_c1: 0.01
-    penalize_angular_velocities_c2: 0.00
+    energy_penalty:
+      enable: True
+      weight: 0.15
+      curriculum:
+        function: sigmoid
+        start: 250
+        end: 1000
+        extent: 4.5
+    linear_velocity_penalty:
+      enable: False
+      weight: 0.1
+      scaling_function: linear
+      min_value: 0.3
+      max_value: 1.0
+      curriculum:
+        function: sigmoid
+        start: 250
+        end: 1250
+        extent: 4.5
+    angular_velocity_penalty:
+      enable: True
+      weight: 0.5
+      scaling_function: linear
+      min_value: 0.5
+      max_value: 2.0
+      curriculum:
+        function: sigmoid
+        start: 0
+        end: 250
+        extent: 4.5
 
   platform:
     randomization:
