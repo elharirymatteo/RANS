@@ -110,6 +110,8 @@ class GoToPoseTask(Core):
             stats["heading_reward"] = torch_zeros()
         if not "heading_error" in stats.keys():
             stats["heading_error"] = torch_zeros()
+        self.log_with_wandb = []
+        self.log_with_wandb += self._task_parameters.boundary_penalty.get_stats_name()
         for name in self._task_parameters.boundary_penalty.get_stats_name():
             if not name in stats.keys():
                 stats[name] = torch_zeros()
@@ -189,9 +191,6 @@ class GoToPoseTask(Core):
         ) = self._reward_parameters.compute_reward(
             current_state, actions, self.position_dist, self.heading_dist
         )
-
-        if math.fmod(step, 50) == 0:
-            self._task_parameters.boundary_penalty.log_penalty()
 
         return self.position_reward + self.heading_reward - self.boundary_penalty
 
@@ -283,9 +282,6 @@ class GoToPoseTask(Core):
             self._target_headings[env_ids] * 0.5
         )
 
-        if math.fmod(step, 50) == 0:
-            self.log_target_data(int(step))
-
         return target_positions, target_orientations
 
     def get_initial_conditions(
@@ -346,9 +342,6 @@ class GoToPoseTask(Core):
         )
         initial_velocity[:, 5] = angular_velocity
 
-        if math.fmod(step, 50) == 0:
-            self.log_spawn_data(int(step))
-
         return (
             initial_position,
             initial_orientation,
@@ -402,13 +395,18 @@ class GoToPoseTask(Core):
         scene.add(arrows)
         return scene, arrows
 
-    def log_spawn_data(self, step: int) -> None:
+    def log_spawn_data(self, step: int) -> dict:
         """
         Logs the spawn data to wandb.
 
         Args:
             step (int): The current step.
+
+        Returns:
+            dict: The spawn data.
         """
+
+        dict = {}
 
         num_resets = self._num_envs
         # Resets the counter of steps for which the goal was reached
@@ -455,11 +453,7 @@ class GoToPoseTask(Core):
         data = np.array(fig.canvas.renderer.buffer_rgba())
         plt.close(fig)
 
-        wandb.log(
-            {
-                "curriculum/initial_position": wandb.Image(data),
-            }
-        )
+        dict["curriculum/initial_position"] = wandb.Image(data)
 
         fig, ax = plt.subplots(dpi=100, figsize=(8, 8))
         ax.hist(heading[:, 0], bins=32)
@@ -473,11 +467,7 @@ class GoToPoseTask(Core):
         data = np.array(fig.canvas.renderer.buffer_rgba())
         plt.close(fig)
 
-        wandb.log(
-            {
-                "curriculum/initial_heading": wandb.Image(data),
-            }
-        )
+        dict["curriculum/initial_heading"] = wandb.Image(data)
 
         fig, ax = plt.subplots(1, 3, dpi=100, figsize=(8, 8), sharey=True)
         ax[0].hist(xyz_velocity[:, 0], bins=32)
@@ -499,18 +489,35 @@ class GoToPoseTask(Core):
         data = np.array(fig.canvas.renderer.buffer_rgba())
         plt.close(fig)
 
-        wandb.log(
-            {
-                "curriculum/initial_velocities": wandb.Image(data),
-            }
-        )
+        dict["curriculum/initial_velocities"] = wandb.Image(data)
+        return dict
 
-    def log_target_data(self, step: int) -> None:
+    def log_target_data(self, step: int) -> dict:
         """
         Logs the target data to wandb.
 
         Args:
             step (int): The current step.
+
+        Returns:
+            dict: The target data.
         """
 
-        pass
+        return {}
+
+    def get_logs(self, step) -> dict:
+        """
+        Logs the task data to wandb.
+
+        Args:
+            step (int): The current step.
+
+        Returns:
+            dict: The task data.
+        """
+
+        dict = self._task_parameters.boundary_penalty.get_logs()
+        if step % 50 == 0:
+            dict = {**dict, **self.log_spawn_data(step)}
+            dict = {**dict, **self.log_target_data(step)}
+        return dict

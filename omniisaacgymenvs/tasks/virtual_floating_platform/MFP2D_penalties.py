@@ -60,13 +60,7 @@ class BasePenalty:
             float: Current difficulty.
         """
 
-        return self.curriculum.function(
-            step,
-            self.curriculum.start,
-            self.curriculum.end,
-            extent=self.curriculum.extent,
-            alpha=self.curriculum.alpha,
-        )
+        return self.curriculum.get(step)
 
     def compute_penalty(self, value, step):
         raise NotImplementedError
@@ -277,7 +271,6 @@ class EnvironmentPenalties:
         names = []
         for penalty in self.penalties:
             names.append("penalties/" + penalty.name)
-            # names.append("penalties/" + penalty.name + "_weight")
         return names
 
     def update_statistics(self, stats: dict) -> dict:
@@ -293,28 +286,22 @@ class EnvironmentPenalties:
 
         for penalty in self.penalties:
             stats["penalties/" + penalty.name] += penalty.get_unweigthed_penalties()
-            # stats["penalties/" + penalty.name + "_weight"] = (
-            #    penalty.get_last_rate() * penalty.weight
-            # )
         return stats
 
-    def log_penalty(self):
+    def get_logs(self) -> dict:
         """
         Logs the penalty.
 
-        Args:
-            logger (Logger): Logger.
-            step (int): Current step.
+        Returns:
+            dict: Dictionary containing the penalty.
         """
 
+        dict = {}
         for penalty in self.penalties:
-            wandb.log(
-                {
-                    "penalties/"
-                    + penalty.name
-                    + "_weight": penalty.get_last_rate() * penalty.weight
-                }
+            dict["penalties/" + penalty.name + "_weight"] = (
+                penalty.get_last_rate() * penalty.weight
             )
+        return dict
 
 
 @dataclass
@@ -376,18 +363,18 @@ class BoundaryPenalty(BasePenalty):
         Returns:
             dict: Updated statistics.
         """
+
         stats["penalties/" + self.name] += self.get_unweigthed_penalties()
         return stats
 
-    def log_penalty(self):
+    def get_logs(self) -> dict:
         """
         Logs the penalty.
 
-        Args:
-            logger (Logger): Logger.
-            step (int): Current step.
+        Returns:
+            dict: Dictionary containing the penalty.
         """
 
-        wandb.log(
-            {"penalties/" + self.name + "_weight": self.get_last_rate() * self.weight}
-        )
+        return {
+            "penalties/" + self.name + "_weight": self.get_last_rate() * self.weight
+        }

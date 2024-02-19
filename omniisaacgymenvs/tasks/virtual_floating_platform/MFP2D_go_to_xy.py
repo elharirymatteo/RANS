@@ -102,6 +102,8 @@ class GoToXYTask(Core):
             stats["position_error"] = torch_zeros()
         if not "boundary_dist" in stats.keys():
             stats["boundary_dist"] = torch_zeros()
+        self.log_with_wandb = []
+        self.log_with_wandb += self._task_parameters.boundary_penalty.get_stats_name()
         for name in self._task_parameters.boundary_penalty.get_stats_name():
             if not name in stats.keys():
                 stats[name] = torch_zeros()
@@ -161,9 +163,6 @@ class GoToXYTask(Core):
         self.position_reward = self._reward_parameters.compute_reward(
             current_state, actions, self.position_dist
         )
-
-        if math.fmod(step, 50) == 0:
-            self._task_parameters.boundary_penalty.log_penalty()
 
         return self.position_reward - self.boundary_penalty
 
@@ -243,9 +242,6 @@ class GoToXYTask(Core):
         )
         targets_position[env_ids, :2] += self._target_positions[env_ids]
 
-        if math.fmod(step, 50) == 0:
-            self.log_target_data(int(step))
-
         return targets_position, targets_orientation
 
     def get_initial_conditions(
@@ -298,6 +294,7 @@ class GoToXYTask(Core):
             num_resets, step, device=self._device
         )
         initial_velocity[:, 5] = angular_velocity
+
         return (
             initial_position,
             initial_orientation,
@@ -345,13 +342,15 @@ class GoToXYTask(Core):
         scene.add(pins)
         return scene, pins
 
-    def log_spawn_data(self, step: int) -> None:
+    def log_spawn_data(self, step: int) -> dict:
         """
         Logs the spawn data to wandb.
 
         Args:
             step (int): The current step.
         """
+
+        dict = {}
 
         num_resets = self._num_envs
         # Resets the counter of steps for which the goal was reached
@@ -393,11 +392,7 @@ class GoToXYTask(Core):
         data = np.array(fig.canvas.renderer.buffer_rgba())
         plt.close(fig)
 
-        wandb.log(
-            {
-                "/curriculum/spawn_position": wandb.Image(data),
-            }
-        )
+        dict["/curriculum/spawn_position"] = wandb.Image(data)
 
         fig, ax = plt.subplots(1, 3, dpi=100, figsize=(8, 8), sharey=True)
         ax[0].hist(xyz_velocity[:, 0], bins=32)
@@ -419,18 +414,35 @@ class GoToXYTask(Core):
         data = np.array(fig.canvas.renderer.buffer_rgba())
         plt.close(fig)
 
-        wandb.log(
-            {
-                "curriculum/initial_velocities": wandb.Image(data),
-            }
-        )
+        dict["curriculum/initial_velocities"] = wandb.Image(data)
+        return dict
 
-    def log_target_data(self, step: int):
+    def log_target_data(self, step: int) -> dict:
         """
         Logs the target data to wandb.
 
         Args:
             step (int): The current step.
+
+        Returns:
+            dict: The target data.
         """
 
-        pass
+        return {}
+
+    def get_logs(self, step) -> dict:
+        """
+        Logs the task data to wandb.
+
+        Args:
+            step (int): The current step.
+
+        Returns:
+            dict: The task data.
+        """
+
+        dict = self._task_parameters.boundary_penalty.get_logs()
+        if step % 50 == 0:
+            dict = {**dict, **self.log_spawn_data(step)}
+            dict = {**dict, **self.log_target_data(step)}
+        return dict

@@ -34,6 +34,7 @@ from omni.isaac.core.utils.prims import get_prim_at_path
 from typing import Dict, List, Tuple
 
 import numpy as np
+import wandb
 import omni
 import time
 import math
@@ -114,6 +115,7 @@ class MFP2DVirtual(RLTask):
         )
         # Extra info
         self.extras = {}
+        self.extras_wandb = {}
         # Episode statistics
         self.episode_sums = self.task.create_stats({})
         self.add_stats(self._penalties.get_stats_name())
@@ -208,6 +210,7 @@ class MFP2DVirtual(RLTask):
             self._num_envs, device=self._device, dtype=torch.long
         )
         self.extras = {}
+        self.extras_wandb = {}
 
     def set_up_scene(self, scene) -> None:
         """
@@ -492,10 +495,17 @@ class MFP2DVirtual(RLTask):
 
         # fill `extras`
         self.extras["episode"] = {}
+        self.extras_wandb = {}
         for key in self.episode_sums.keys():
-            self.extras["episode"][key] = (
+            value = (
                 torch.mean(self.episode_sums[key][env_ids]) / self._max_episode_length
             )
+            if key in self._penalties.get_stats_name():
+                self.extras_wandb[key] = value
+            elif key in self.task.log_with_wandb:
+                self.extras_wandb[key] = value
+            else:
+                self.extras["episode"][key] = value
             self.episode_sums[key][env_ids] = 0.0
 
     def update_state_statistics(self) -> None:
@@ -525,7 +535,13 @@ class MFP2DVirtual(RLTask):
         self.rew_buf[:] = position_reward - penalties
         self.episode_sums = self.task.update_statistics(self.episode_sums)
         self.episode_sums = self._penalties.update_statistics(self.episode_sums)
-        self._penalties.log_penalty()
+        if self.step % 1 == 0:
+            self.extras_wandb["wandb_step"] = int(self.step)
+            for key, value in self._penalties.get_logs().items():
+                self.extras_wandb[key] = value
+            for key, value in self.task.get_logs(self.step).items():
+                self.extras_wandb[key] = value
+            wandb.log(self.extras_wandb)
 
         self.update_state_statistics()
 
