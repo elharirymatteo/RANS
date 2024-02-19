@@ -292,7 +292,7 @@ class EnvironmentPenalties:
         """
 
         for penalty in self.penalties:
-            stats["penalties/" + penalty.name] = penalty.get_unweigthed_penalties()
+            stats["penalties/" + penalty.name] += penalty.get_unweigthed_penalties()
             # stats["penalties/" + penalty.name + "_weight"] = (
             #    penalty.get_last_rate() * penalty.weight
             # )
@@ -376,7 +376,7 @@ class BoundaryPenalty(BasePenalty):
         Returns:
             dict: Updated statistics.
         """
-        stats["penalties/" + self.name] = self.get_unweigthed_penalties()
+        stats["penalties/" + self.name] += self.get_unweigthed_penalties()
         return stats
 
     def log_penalty(self):
