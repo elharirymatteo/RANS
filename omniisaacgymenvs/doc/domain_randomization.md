@@ -36,7 +36,7 @@ Below, is an example of a configuration, please note that all the parameters hav
 So you do not need to add them unless you want to modify them. In this example, the sampler is
 following a `truncated_normal` distribution (a normal distribution with extremas) and the 
 scheduler is using a sigmoid growth. We can see that at the begining, there will be almost no force applied,
-at the end it is almost uniformly sampled on the [0, 0.5] range.
+at the end it is almost uniformly sampled on the \[0, 0.5\] range.
 
 ```yaml
 force_disturbance:
