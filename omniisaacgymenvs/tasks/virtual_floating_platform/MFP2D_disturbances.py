@@ -248,7 +248,6 @@ class ForceDisturbance:
 
         Args:
             root_pos (torch.Tensor): The position of the root of the robot.
-            step (int, optional): The current training step. Defaults to 0.
 
         Returns:
             torch.Tensor: The floor forces.

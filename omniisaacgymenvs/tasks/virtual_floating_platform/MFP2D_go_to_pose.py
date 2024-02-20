@@ -505,7 +505,7 @@ class GoToPoseTask(Core):
 
         return {}
 
-    def get_logs(self, step) -> dict:
+    def get_logs(self, step: int) -> dict:
         """
         Logs the task data to wandb.
 
