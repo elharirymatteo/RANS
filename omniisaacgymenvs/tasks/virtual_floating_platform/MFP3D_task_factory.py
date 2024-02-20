@@ -12,9 +12,12 @@ from omniisaacgymenvs.tasks.virtual_floating_platform.MFP3D_go_to_xyz import GoT
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP3D_go_to_pose import (
     GoToPoseTask,
 )
-
-# from omniisaacgymenvs.tasks.virtual_floating_platform.MFP3D_track_xy_velocity import TrackXYVelocityTask
-# from omniisaacgymenvs.tasks.virtual_floating_platform.MFP3D_track_xyo_velocity import TrackXYOVelocityTask
+from omniisaacgymenvs.tasks.virtual_floating_platform.MFP3D_track_xy_velocity import (
+    TrackXYVelocityTask,
+)
+from omniisaacgymenvs.tasks.virtual_floating_platform.MFP3D_track_xyo_velocity import (
+    TrackXYOVelocityTask,
+)
 
 
 class TaskFactory:
@@ -45,6 +48,6 @@ class TaskFactory:
 task_factory = TaskFactory()
 task_factory.register("GoToXYZ", GoToXYZTask)
 task_factory.register("GoToPose", GoToPoseTask)
-# task_factory.register("TrackXYVelocity", TrackXYVelocityTask)
-# task_factory.register("TrackXYOVelocity", TrackXYOVelocityTask)
+task_factory.register("TrackXYVelocity", TrackXYVelocityTask)
+task_factory.register("TrackXYOVelocity", TrackXYOVelocityTask)
 # task_factory.register("TrackXYVelocityHeading", TrackXYVelocityHeadingTask)
