@@ -22,7 +22,8 @@ EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 @dataclass
 class GoToXYParameters:
     """
-    Parameters for the GoToXY task."""
+    Parameters for the GoToXY task.
+    """
 
     name: str = "GoToXY"
     position_tolerance: float = 0.01
@@ -59,7 +60,8 @@ class GoToXYParameters:
 @dataclass
 class GoToPoseParameters:
     """
-    Parameters for the GoToPose task."""
+    Parameters for the GoToPose task.
+    """
 
     name: str = "GoToPose"
     position_tolerance: float = 0.01
@@ -103,7 +105,8 @@ class GoToPoseParameters:
 @dataclass
 class TrackXYVelocityParameters:
     """
-    Parameters for the TrackXYVelocity task."""
+    Parameters for the TrackXYVelocity task.
+    """
 
     name: str = "TrackXYVelocity"
     lin_vel_tolerance: float = 0.01
@@ -141,7 +144,8 @@ class TrackXYVelocityParameters:
 @dataclass
 class TrackXYOVelocityParameters:
     """
-    Parameters for the TrackXYOVelocity task."""
+    Parameters for the TrackXYOVelocity task.
+    """
 
     name: str = "TrackXYOVelocity"
     lin_vel_tolerance: float = 0.01
