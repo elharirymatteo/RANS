@@ -39,7 +39,19 @@ class TrackXYOVelocityTask(Core):
     Implements the GoToPose task. The robot has to reach a target position and heading.
     """
 
-    def __init__(self, task_param, reward_param, num_envs, device):
+    def __init__(
+        self, task_param: dict, reward_param: dict, num_envs: int, device: str
+    ) -> None:
+        """
+        Initializes the GoToPoseTask.
+
+        Args:
+            task_param (dict): The parameters of the task.
+            reward_param (dict): The parameters of the reward.
+            num_envs (int): The number of environments.
+            device (str): The device to run the task on.
+        """
+
         super(TrackXYOVelocityTask, self).__init__(num_envs, device)
         # Task and reward parameters
         self._task_parameters = TrackXYOVelocityParameters(**task_param)
@@ -94,6 +106,7 @@ class TrackXYOVelocityTask(Core):
             stats["angular_velocity_reward"] = torch_zeros()
         if not "angular_velocity_error" in stats.keys():
             stats["angular_velocity_error"] = torch_zeros()
+        self.log_with_wandb = []
         return stats
 
     def get_state_observations(self, current_state: dict) -> torch.Tensor:
@@ -234,19 +247,16 @@ class TrackXYOVelocityTask(Core):
         num_goals = len(env_ids)
         # Randomizes the target linear velocity
         r = self._target_linear_velocity_sampler.sample(
-            num_goals, step=0, device=self._device
+            num_goals, step, device=self._device
         )
         theta = torch.rand((num_goals,), device=self._device) * 2 * math.pi
         self._target_linear_velocities[env_ids, 0] = r * torch.cos(theta)
         self._target_linear_velocities[env_ids, 1] = r * torch.sin(theta)
         # Randomizes the target angular velocity
         omega = self._target_angular_velocity_sampler.sample(
-            num_goals, step=0, device=self._device
+            num_goals, step, device=self._device
         )
         self._target_angular_velocities[env_ids] = omega
-
-        if math.fmod(step, 50) == 0:
-            self.log_target_data(int(step))
 
         # This does not matter
         return target_positions, target_orientations
@@ -298,9 +308,6 @@ class TrackXYOVelocityTask(Core):
         )
         initial_velocity[:, 5] = angular_velocity
 
-        if math.fmod(step, 50) == 0:
-            self.log_spawn_data(int(step))
-
         return (
             initial_position,
             initial_orientation,
@@ -331,13 +338,18 @@ class TrackXYOVelocityTask(Core):
 
         return scene, None
 
-    def log_spawn_data(self, step: int) -> None:
+    def log_spawn_data(self, step: int) -> dict:
         """
         Logs the spawn data to wandb.
 
         Args:
             step (int): The current step.
+
+        Returns:
+            dict: The spawn data.
         """
+
+        dict = {}
 
         num_resets = self._num_envs
         # Randomizes the linear velocity of the platform
@@ -379,19 +391,20 @@ class TrackXYOVelocityTask(Core):
         fig.canvas.draw()
         data = np.array(fig.canvas.renderer.buffer_rgba())
 
-        wandb.log(
-            {
-                "curriculum/initial_velocities": wandb.Image(data),
-            }
-        )
+        dict["curriculum/initial_velocities"] = wandb.Image(data)
 
-    def log_target_data(self, step: int) -> None:
+    def log_target_data(self, step: int) -> dict:
         """
         Logs the target data to wandb.
 
         Args:
             step (int): The current step.
+
+        Returns:
+            dict: The target data.
         """
+
+        dict = {}
 
         num_resets = self._num_envs
         # Randomizes the target linear velocity of the platform
@@ -428,8 +441,21 @@ class TrackXYOVelocityTask(Core):
         fig.canvas.draw()
         data = np.array(fig.canvas.renderer.buffer_rgba())
 
-        wandb.log(
-            {
-                "curriculum/target_velocities": wandb.Image(data),
-            }
-        )
+        dict["curriculum/target_velocities"] = wandb.Image(data)
+        return dict
+
+    def get_logs(self, step: int) -> dict:
+        """
+        Logs the task data to wandb.
+
+        Args:
+            step (int): The current step.
+
+        Returns:
+            dict: The task data.
+        """
+
+        if step % 50 == 0:
+            dict = {**dict, **self.log_spawn_data(step)}
+            dict = {**dict, **self.log_target_data(step)}
+        return dict

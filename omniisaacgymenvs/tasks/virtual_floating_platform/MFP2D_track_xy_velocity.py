@@ -42,6 +42,16 @@ class TrackXYVelocityTask(Core):
     def __init__(
         self, task_param: dict, reward_param: dict, num_envs: int, device: str
     ):
+        """
+        Initializes the task.
+
+        Args:
+            task_param (dict): The parameters of the task.
+            reward_param (dict): The parameters of the reward.
+            num_envs (int): The number of environments.
+            device (str): The device to run the task on.
+        """
+
         super(TrackXYVelocityTask, self).__init__(num_envs, device)
         # Task and reward parameters
         self._task_parameters = TrackXYVelocityParameters(**task_param)
@@ -86,6 +96,7 @@ class TrackXYVelocityTask(Core):
             stats["velocity_reward"] = torch_zeros()
         if not "velocity_error" in stats.keys():
             stats["velocity_error"] = torch_zeros()
+        self.log_with_wandb = []
         return stats
 
     def get_state_observations(self, current_state: dict) -> torch.Tensor:
@@ -295,13 +306,18 @@ class TrackXYVelocityTask(Core):
 
         return scene, None
 
-    def log_spawn_data(self, step: int) -> None:
+    def log_spawn_data(self, step: int) -> dict:
         """
         Logs the spawn data to wandb.
 
         Args:
             step (int): The current step.
+
+        Returns:
+            dict: The dictionary containing the spawn data.
         """
+
+        dict = {}
 
         num_resets = self._num_envs
         # Randomizes the linear velocity of the platform
@@ -343,19 +359,21 @@ class TrackXYVelocityTask(Core):
         fig.canvas.draw()
         data = np.array(fig.canvas.renderer.buffer_rgba())
 
-        wandb.log(
-            {
-                "curriculum/initial_velocities": wandb.Image(data),
-            }
-        )
+        dict["curriculum/initial_velocities"] = wandb.Image(data)
+        return dict
 
-    def log_target_data(self, step: int):
+    def log_target_data(self, step: int) -> dict:
         """
         Logs the target data to wandb.
 
         Args:
             step (int): The current step.
+
+        Returns:
+            dict: The dictionary containing the target data.
         """
+
+        dict = {}
 
         num_resets = self._num_envs
         # Randomizes the target linear velocity of the platform
@@ -379,8 +397,21 @@ class TrackXYVelocityTask(Core):
         fig.canvas.draw()
         data = np.array(fig.canvas.renderer.buffer_rgba())
 
-        wandb.log(
-            {
-                "curriculum/target_velocities": wandb.Image(data),
-            }
-        )
+        dict["curriculum/target_velocities"] = wandb.Image(data)
+        return dict
+
+    def get_logs(self, step: int) -> dict:
+        """
+        Logs the task data to wandb.
+
+        Args:
+            step (int): The current step.
+
+        Returns:
+            dict: The task data.
+        """
+
+        if step % 50 == 0:
+            dict = {**dict, **self.log_spawn_data(step)}
+            dict = {**dict, **self.log_target_data(step)}
+        return dict
