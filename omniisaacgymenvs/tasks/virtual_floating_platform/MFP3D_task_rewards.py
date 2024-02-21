@@ -1,9 +1,9 @@
 __author__ = "Antoine Richard, Matteo El Hariry"
 __copyright__ = (
-    "Copyright 2023, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
+    "Copyright 2023-24, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
 )
 __license__ = "GPL"
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
@@ -94,7 +94,10 @@ class GoToPoseReward:
         elif self.position_reward_mode.lower() == "square":
             position_reward = 1.0 / (1.0 + position_error) * self.position_scale
         elif self.position_reward_mode.lower() == "exponential":
-            position_reward = torch.exp(-position_error / 0.25) * self.position_scale
+            position_reward = (
+                torch.exp(-position_error / self.position_exponential_reward_coeff)
+                * self.position_scale
+            )
         else:
             raise ValueError("Unknown reward type.")
 
@@ -103,7 +106,10 @@ class GoToPoseReward:
         elif self.heading_reward_mode.lower() == "square":
             heading_reward = 1.0 / (1.0 + heading_error) * self.heading_scale
         elif self.heading_reward_mode.lower() == "exponential":
-            heading_reward = torch.exp(-heading_error / 0.25) * self.heading_scale
+            heading_reward = (
+                torch.exp(-heading_error / self.heading_exponential_reward_coeff)
+                * self.heading_scale
+            )
         else:
             raise ValueError("Unknown reward type.")
         return position_reward, heading_reward
@@ -190,7 +196,10 @@ class TrackXYOVelocityReward:
         elif self.linear_reward_mode.lower() == "square":
             linear_reward = 1.0 / (1.0 + linear_velocity_error) * self.linear_scale
         elif self.linear_reward_mode.lower() == "exponential":
-            linear_reward = torch.exp(-linear_velocity_error / 0.25) * self.linear_scale
+            linear_reward = (
+                torch.exp(-linear_velocity_error / self.linear_exponential_reward_coeff)
+                * self.linear_scale
+            )
         else:
             raise ValueError("Unknown reward type.")
 
@@ -200,100 +209,11 @@ class TrackXYOVelocityReward:
             angular_reward = 1.0 / (1.0 + angular_velocity_error) * self.angular_scale
         elif self.angular_reward_mode.lower() == "exponential":
             angular_reward = (
-                torch.exp(-angular_velocity_error / 0.25) * self.angular_scale
+                torch.exp(
+                    -angular_velocity_error / self.angular_exponential_reward_coeff
+                )
+                * self.angular_scale
             )
         else:
             raise ValueError("Unknown reward type.")
         return linear_reward, angular_reward
-
-
-@dataclass
-class Penalties:
-    """
-    Metaclass to compute penalties for the tasks."""
-
-    penalize_linear_velocities: bool = False
-    penalize_linear_velocities_fn: str = (
-        "lambda x,step : -torch.norm(x, dim=-1)*c1 + c2"
-    )
-    penalize_linear_velocities_c1: float = 0.01
-    penalize_linear_velocities_c2: float = 0.0
-    penalize_angular_velocities: bool = False
-    penalize_angular_velocities_fn: str = "lambda x,step : -torch.abs(x)*c1 + c2"
-    penalize_angular_velocities_c1: float = 0.01
-    penalize_angular_velocities_c2: float = 0.0
-    penalize_energy: bool = False
-    penalize_energy_fn: str = "lambda x,step : -torch.abs(x)*c1 + c2"
-    penalize_energy_c1: float = 0.01
-    penalize_energy_c2: float = 0.0
-
-    def __post_init__(self):
-        """
-        Converts the string functions into python callable functions."""
-        self.penalize_linear_velocities_fn = eval(self.penalize_linear_velocities_fn)
-        self.penalize_angular_velocities_fn = eval(self.penalize_angular_velocities_fn)
-        self.penalize_energy_fn = eval(self.penalize_energy_fn)
-
-    def compute_penalty(
-        self, state: torch.Tensor, actions: torch.Tensor, step: int
-    ) -> torch.Tensor:
-        """
-        Computes the penalties for the task."""
-
-        # Linear velocity penalty
-        if self.penalize_linear_velocities:
-            self.linear_vel_penalty = self.penalize_linear_velocities_fn(
-                state["linear_velocity"],
-                torch.tensor(step, dtype=torch.float32, device=actions.device),
-            )
-        else:
-            self.linear_vel_penalty = torch.zeros(
-                [actions.shape[0]], dtype=torch.float32, device=actions.device
-            )
-        # Angular velocity penalty
-        if self.penalize_angular_velocities:
-            self.angular_vel_penalty = self.penalize_angular_velocities_fn(
-                state["angular_velocity"],
-                torch.tensor(step, dtype=torch.float32, device=actions.device),
-            )
-        else:
-            self.angular_vel_penalty = torch.zeros(
-                [actions.shape[0]], dtype=torch.float32, device=actions.device
-            )
-        # Energy penalty
-        if self.penalize_energy:
-            self.energy_penalty = self.penalize_energy_fn(
-                torch.sum(actions, -1),
-                torch.tensor(step, dtype=torch.float32, device=actions.device),
-            )
-        else:
-            self.energy_penalty = torch.zeros(
-                [actions.shape[0]], dtype=torch.float32, device=actions.device
-            )
-
-        return self.linear_vel_penalty + self.angular_vel_penalty + self.energy_penalty
-
-    def get_stats_name(self) -> list:
-        """
-        Returns the names of the statistics to be computed."""
-
-        names = []
-        if self.penalize_linear_velocities:
-            names.append("linear_vel_penalty")
-        if self.penalize_angular_velocities:
-            names.append("angular_vel_penalty")
-        if self.penalize_energy:
-            names.append("energy_penalty")
-        return names
-
-    def update_statistics(self, stats: dict) -> dict:
-        """
-        Updates the training statistics."""
-
-        if self.penalize_linear_velocities:
-            stats["linear_vel_penalty"] += self.linear_vel_penalty
-        if self.penalize_angular_velocities:
-            stats["angular_vel_penalty"] += self.angular_vel_penalty
-        if self.penalize_energy:
-            stats["energy_penalty"] += self.energy_penalty
-        return stats
