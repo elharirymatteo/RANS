@@ -3,7 +3,7 @@ __copyright__ = (
     "Copyright 2023-24, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
 )
 __license__ = "GPL"
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
@@ -104,7 +104,8 @@ class GoToPoseParameters:
 @dataclass
 class TrackXYVelocityParameters:
     """
-    Parameters for the TrackXYVelocity task."""
+    Parameters for the TrackXYVelocity task.
+    """
 
     name: str = "TrackXYVelocity"
     lin_vel_tolerance: float = 0.01
@@ -142,7 +143,8 @@ class TrackXYVelocityParameters:
 @dataclass
 class TrackXYOVelocityParameters:
     """
-    Parameters for the TrackXYOVelocity task."""
+    Parameters for the TrackXYOVelocity task.
+    """
 
     name: str = "TrackXYOVelocity"
     lin_vel_tolerance: float = 0.01

@@ -1,9 +1,9 @@
 __author__ = "Antoine Richard, Matteo El Hariry"
 __copyright__ = (
-    "Copyright 2023, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
+    "Copyright 2023-24, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
 )
 __license__ = "GPL"
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
@@ -17,6 +17,16 @@ EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
 
 def quat_to_mat(quat: torch.Tensor) -> torch.Tensor:
+    """
+    Converts a batch of quaternions to a batch of rotation matrices.
+
+    Args:
+        quat (torch.Tensor): batch of quaternions.
+
+    Returns:
+        torch.Tensor: the batch of rotation matrices.
+    """
+
     w, x, y, z = torch.unbind(quat, -1)
     two_s = 2.0 / ((quat * quat).sum(-1) + EPS)
     R = torch.stack(
@@ -37,6 +47,17 @@ def quat_to_mat(quat: torch.Tensor) -> torch.Tensor:
 
 
 def axis_angle_rotation(angle: torch.Tensor, axis: str) -> torch.Tensor:
+    """
+    Returns the rotation matrix for a given angle and axis.
+
+    Args:
+        angle (torch.Tensor): the angle of rotation.
+        axis (str): the axis of rotation.
+
+    Returns:
+        torch.Tensor: the rotation matrix.
+    """
+
     cos = torch.cos(angle)
     sin = torch.sin(angle)
     one = torch.ones_like(angle)
@@ -55,6 +76,17 @@ def axis_angle_rotation(angle: torch.Tensor, axis: str) -> torch.Tensor:
 
 
 def euler_angles_to_matrix(euler_angles: torch.Tensor, convention: str) -> torch.Tensor:
+    """
+    Converts a batch of euler angles to a batch of rotation matrices.
+
+    Args:
+        euler_angles (torch.Tensor): batch of euler angles.
+        convention (str): the convention to use for the conversion.
+
+    Returns:
+        torch.Tensor: the batch of rotation matrices.
+    """
+
     matrices = [
         axis_angle_rotation(e, c)
         for c, e in zip(convention, torch.unbind(euler_angles, -1))
@@ -64,14 +96,25 @@ def euler_angles_to_matrix(euler_angles: torch.Tensor, convention: str) -> torch
 
 class Core(Core2D):
     """
-    The base class that implements the core of the task."""
+    The base class that implements the core of the task.
+    """
 
     def __init__(self, num_envs: int, device: str) -> None:
+        """
+        Initializes the core of the task.
+
+        Args:
+            num_envs (int): number of environments.
+            device (str): device to run the code on.
+        """
+
         self._num_envs = num_envs
         self._device = device
 
         # Dimensions of the observation tensors
-        self._dim_orientation: 6  # theta heading in the world frame (cos(theta), sin(theta)) [0:6]
+        self._dim_orientation: (
+            6  # theta heading in the world frame (cos(theta), sin(theta)) [0:6]
+        )
         self._dim_velocity: 3  # velocity in the world (x_dot, y_dot) [6:9]
         self._dim_omega: 3  # rotation velocity (theta_dot) [9:12]
         self._dim_task_label: 1  # label of the task to be executed (int) [12]
@@ -93,7 +136,14 @@ class Core(Core2D):
 
     def update_observation_tensor(self, current_state: dict) -> torch.Tensor:
         """
-        Updates the observation tensor with the current state of the robot."""
+        Updates the observation tensor with the current state of the robot.
+
+        Args:
+            current_state (dict): the current state of the robot.
+
+        Returns:
+            torch.Tensor: the observation tensor.
+        """
 
         self._obs_buffer[:, 0:6] = current_state["orientation"][:, :2, :].reshape(
             self._num_envs, 6
@@ -116,32 +166,3 @@ class TaskDict:
         self.trackxyvel = 2
         self.trackxyovel = 3
         self.trackxyvelheading = 4
-
-
-def parse_data_dict(
-    dataclass: dataclass, data: dict, ask_for_validation: bool = False
-) -> dataclass:
-    """
-    Parses a dictionary and stores the values in a dataclass."""
-
-    unknown_keys = []
-    for key in data.keys():
-        if key in dataclass.__dict__.keys():
-            dataclass.__setattr__(key, data[key])
-        else:
-            unknown_keys.append(key)
-    try:
-        dataclass.__post_init__()
-    except:
-        pass
-
-    print("Parsed configuration parameters:")
-    for key in dataclass.__dict__:
-        print("     + " + key + ":" + str(dataclass.__getattribute__(key)))
-    if unknown_keys:
-        print("The following keys were given but do not match any parameters:")
-        for i, key in enumerate(unknown_keys):
-            print("     + " + str(i) + " : " + key)
-    if ask_for_validation:
-        lock = input("Press enter to validate.")
-    return dataclass
