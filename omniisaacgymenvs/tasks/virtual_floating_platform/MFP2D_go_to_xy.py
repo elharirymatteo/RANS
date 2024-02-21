@@ -1,9 +1,9 @@
 __author__ = "Antoine Richard, Matteo El Hariry"
 __copyright__ = (
-    "Copyright 2023, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
+    "Copyright 2023-24, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
 )
 __license__ = "GPL"
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
@@ -219,7 +219,7 @@ class GoToXYTask(Core):
         targets_position: torch.Tensor,
         targets_orientation: torch.Tensor,
         step: int = 0,
-    ) -> list:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Generates a random goal for the task.
 
@@ -230,7 +230,7 @@ class GoToXYTask(Core):
             step (int, optional): The current step. Defaults to 0.
 
         Returns:
-            list: The target positions and orientations.
+            Tuple[torch.Tensor, torch.Tensor]: The target positions and orientations.
         """
 
         num_goals = len(env_ids)
