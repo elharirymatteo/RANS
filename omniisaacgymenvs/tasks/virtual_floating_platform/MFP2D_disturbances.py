@@ -3,7 +3,7 @@ __copyright__ = (
     "Copyright 2023-24, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
 )
 __license__ = "GPL"
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
@@ -402,8 +402,8 @@ class NoisyObservations:
 
         if self.parameters.enable_position_noise:
             pos += self.position_sampler.sample(
-                self._num_envs, step, device=self._device
-            )
+                self._num_envs * pos.shape[1], step, device=self._device
+            ).reshape(-1, pos.shape[1])
         return pos
 
     def add_noise_on_vel(self, vel: torch.Tensor, step: int = 0) -> torch.Tensor:
@@ -420,8 +420,8 @@ class NoisyObservations:
 
         if self.parameters.enable_velocity_noise:
             vel += self.velocity_sampler.sample(
-                self._num_envs, step, device=self._device
-            )
+                self._num_envs * vel.shape[1], step, device=self._device
+            ).reshape(-1, vel.shape[1])
         return vel
 
     def add_noise_on_heading(
@@ -480,7 +480,9 @@ class NoisyActions:
         """
 
         if self.parameters.enable:
-            act += self.action_sampler.sample(self._num_envs, step, device=self._device)
+            act += self.action_sampler.sample(
+                self._num_envs * act.shape[1], step, device=self._device
+            ).reshape(-1, act.shape[1])
         return act
 
 

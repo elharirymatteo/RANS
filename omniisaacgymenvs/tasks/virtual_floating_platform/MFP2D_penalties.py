@@ -1,9 +1,9 @@
 __author__ = "Antoine Richard, Matteo El Hariry"
 __copyright__ = (
-    "Copyright 2023, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
+    "Copyright 2023-24, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
 )
 __license__ = "GPL"
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
@@ -14,7 +14,6 @@ from omniisaacgymenvs.tasks.virtual_floating_platform.curriculum_helpers import 
 from dataclasses import dataclass, field
 from typing import Dict
 import torch
-import wandb
 
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
@@ -252,7 +251,21 @@ class EnvironmentPenalties:
         if self.angular_velocity_penalty.enable:
             self.penalties.append(self.angular_velocity_penalty)
 
-    def compute_penalty(self, state, actions, step):
+    def compute_penalty(
+        self, state: Dict[str, torch.Tensor], actions: torch.Tensor, step: int
+    ) -> torch.Tensor:
+        """
+        Computes the penalties.
+
+        Args:
+            state (Dict[str, torch.Tensor]): State of the system.
+            actions (torch.Tensor): Actions taken.
+            step (int): Current step.
+
+        Returns:
+            torch.Tensor: Penalty.
+        """
+
         penalties = torch.zeros(
             [actions.shape[0]], dtype=torch.float32, device=actions.device
         )
