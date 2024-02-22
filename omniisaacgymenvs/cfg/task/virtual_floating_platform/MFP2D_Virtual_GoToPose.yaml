@@ -231,7 +231,7 @@ env:
   penalties_parameters:
     energy_penalty:
       enable: True
-      weight: 0.15
+      weight: 0.03
       curriculum:
         function: sigmoid
         start: 250
