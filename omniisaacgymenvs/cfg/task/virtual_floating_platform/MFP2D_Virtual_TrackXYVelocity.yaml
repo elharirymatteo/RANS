@@ -190,6 +190,20 @@ env:
         end_std: 0.75
         min_value: 0.0
         max_value: 0.75
+    spawn_angular_velocity_curriculum:
+      rate_parameters:
+        function: sigmoid
+        start: 500
+        end: 1000
+        extent: 4.5
+      sampling_parameters:
+        distribution: truncated_normal
+        start_mean: 0.0
+        start_std: 0.0001
+        end_mean: 0.75
+        end_std: 0.75
+        min_value: 0.0
+        max_value: 0.75
     
     
 

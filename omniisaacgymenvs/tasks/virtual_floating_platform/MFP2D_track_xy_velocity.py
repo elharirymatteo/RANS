@@ -330,8 +330,7 @@ class TrackXYVelocityTask(Core):
         theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
         xyz_velocity[:, 0] = linear_velocity * torch.cos(theta)
         xyz_velocity[:, 1] = linear_velocity * torch.sin(theta)
-        print(xyz_velocity.shape)
-        print(xyz_velocity[:10])
+
         # Randomizes the angular velocity of the platform
         angular_velocity = self._spawn_angular_velocity_sampler.sample(
             num_resets, step, device=self._device
@@ -387,8 +386,6 @@ class TrackXYVelocityTask(Core):
         target_velocities[:, 0] = r * torch.cos(theta)
         target_velocities[:, 1] = r * torch.sin(theta)
         target_velocities = target_velocities.cpu().numpy()
-        print(target_velocities.shape)
-        print(target_velocities[:10])
 
         fig, ax = plt.subplots(1, 2, dpi=100, figsize=(8, 8), sharey=True)
         ax[0].hist(target_velocities[:, 0], bins=32)
@@ -419,6 +416,7 @@ class TrackXYVelocityTask(Core):
         Returns:
             dict: The task data.
         """
+
         dict = {}
 
         if step % 50 == 0:
