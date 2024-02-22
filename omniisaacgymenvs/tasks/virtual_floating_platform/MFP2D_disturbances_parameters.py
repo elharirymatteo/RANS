@@ -111,6 +111,10 @@ class NoisyActionsParameters:
 
 @dataclass
 class DisturbancesParameters:
+    """
+    Collection of disturbances.
+    """
+
     mass_disturbance: MassDistributionDisturbanceParameters = field(
         default_factory=dict
     )
