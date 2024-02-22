@@ -1,6 +1,7 @@
 name: Discrete_LQR_Controller
 # State cost matrix
-Q: [1,1,5,5,1,1,1]
+# pos_x, pos_y, vel_x, vel_y, qw, qz, wz
+Q: [0.0001,0.00001,100,100,0.000001,0.000001,1]
 # Control cost matrix
 R: [0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01]
 # Disturbance weight matrix

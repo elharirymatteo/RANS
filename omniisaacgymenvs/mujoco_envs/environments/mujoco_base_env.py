@@ -138,7 +138,7 @@ def parseEnvironmentConfig(
 
     new_cfg["step_time"] = cfg["task"]["sim"]["dt"]
     new_cfg["duration"] = (
-        cfg["task"]["env"]["maxEpisodeLength"] * cfg["task"]["sim"]["dt"]
+        cfg["task"]["env"]["maxEpisodeLength"] * cfg["task"]["sim"]["dt"] * cfg["task"]["env"]["controlFrequencyInv"]
     )
     new_cfg["inv_play_rate"] = cfg["task"]["env"]["controlFrequencyInv"]
     new_cfg["platform"] = cfg["task"]["env"]["platform"]

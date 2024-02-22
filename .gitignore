@@ -10,6 +10,7 @@ ros_lab_exp
 lab_tests
 *.mp4
 *.npy
+*.png
 *.csv
 *.zip
 *.ipynb

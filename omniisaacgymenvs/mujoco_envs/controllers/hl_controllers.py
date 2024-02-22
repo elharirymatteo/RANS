@@ -705,6 +705,23 @@ class TrajectoryTracker:
         )
         self.angles = np.array([-np.sin(theta), np.cos(theta)]).T
 
+    def generateInfinite(self, a: float = 2, num_points: int = 360 * 10) -> None:
+        """
+        Generates an infinite (lemniscate of Bernoulli) trajectory.
+
+        Args:
+            a (float, optional): Controls the size of the lemniscate. Defaults to 2.
+            num_points (int, optional): Number of points. Defaults to 360*10.
+        """
+
+        t = np.linspace(0, 2 * np.pi, num_points, endpoint=(not self.closed))
+        x = (a * np.cos(t)) / (1 + np.sin(t)**2)
+        y = (a * np.sin(t) * np.cos(t)) / (1 + np.sin(t)**2)
+        self.positions = np.array([x, y]).T + self.offset
+        # Derive angles based on the direction of movement across points for consistency with other functions
+        directions = np.diff(self.positions, axis=0, append=self.positions[0:1])
+        self.angles = np.array([directions[:, 1], -directions[:, 0]]).T / np.linalg.norm(directions, axis=1)[:, None]
+
     def getTrackingPointIdx(self, position: np.ndarray) -> None:
         """
         Gets the tracking point index.
@@ -846,6 +863,8 @@ class VelocityTracker(BaseController):
             self.tracker.generateSpiral(
                 start_radius=start_radius, end_radius=end_radius, num_loop=num_loops
             )
+        elif trajectory_type.lower() == "infinite":
+            self.tracker.generateInfinite(a=radius)
         else:
             raise ValueError(
                 "Unknown trajectory type. Must be square, circle or spiral."
