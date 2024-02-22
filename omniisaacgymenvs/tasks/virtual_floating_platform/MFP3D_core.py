@@ -21,10 +21,10 @@ def quat_to_mat(quat: torch.Tensor) -> torch.Tensor:
     Converts a batch of quaternions to a batch of rotation matrices.
 
     Args:
-        quat (torch.Tensor): batch of quaternions.
+        quat (torch.Tensor): Batch of quaternions.
 
     Returns:
-        torch.Tensor: the batch of rotation matrices.
+        torch.Tensor: The batch of rotation matrices.
     """
 
     w, x, y, z = torch.unbind(quat, -1)
@@ -46,16 +46,38 @@ def quat_to_mat(quat: torch.Tensor) -> torch.Tensor:
     return R.reshape(quat.shape[:-1] + (3, 3))
 
 
+def mat_to_quat(mat: torch.Tensor) -> torch.Tensor:
+    """
+    Converts a batch of rotation matrices to a batch of quaternions.
+
+    Args:
+        mat (torch.Tensor): Batch of rotation matrices.
+
+    Returns:
+        torch.Tensor: The batch of quaternions.
+    q = [w,x,y,z]
+    """
+    quat = torch.zeros((mat.shape[0], 4), dtype=mat.dtype, device=mat.device)
+    t = mat[..., 0, 0] + mat[..., 1, 1] + mat[..., 2, 2]
+    r = torch.sqrt(1 + t)
+    s = 0.5 / r
+    quat[:, 0] = 0.5 * r
+    quat[:, 1] = mat[..., 2, 1] - mat[..., 1, 2] * s
+    quat[:, 2] = mat[..., 0, 2] - mat[..., 2, 0] * s
+    quat[:, 3] = mat[..., 1, 0] - mat[..., 0, 1] * s
+    return quat
+
+
 def axis_angle_rotation(angle: torch.Tensor, axis: str) -> torch.Tensor:
     """
     Returns the rotation matrix for a given angle and axis.
 
     Args:
-        angle (torch.Tensor): the angle of rotation.
-        axis (str): the axis of rotation.
+        angle (torch.Tensor): The angle of rotation.
+        axis (str): The axis of rotation.
 
     Returns:
-        torch.Tensor: the rotation matrix.
+        torch.Tensor: The rotation matrix.
     """
 
     cos = torch.cos(angle)
@@ -75,16 +97,48 @@ def axis_angle_rotation(angle: torch.Tensor, axis: str) -> torch.Tensor:
     return torch.stack(R_flat, -1).reshape(angle.shape + (3, 3))
 
 
+def euler_angles_to_quat(euler_angles: torch.Tensor) -> torch.Tensor:
+    """
+    Converts a batch of euler angles to a batch of quaternions.
+
+    Args:
+        euler_angles (torch.Tensor): Batch of euler angles.
+        convention (str): The convention to use for the conversion.
+
+    Returns:
+        torch.Tensor: The batch of quaternions.
+    """
+
+    roll, pitch, yaw = torch.unbind(euler_angles, -1)
+
+    cr = torch.cos(roll * 0.5)
+    sr = torch.sin(roll * 0.5)
+    cp = torch.cos(pitch * 0.5)
+    sp = torch.sin(pitch * 0.5)
+    cy = torch.cos(yaw * 0.5)
+    sy = torch.sin(yaw * 0.5)
+
+    quat = torch.zeros(
+        (euler_angles.shape[0], 4), dtype=euler_angles.dtype, device=euler_angles.device
+    )
+    quat[:, 0] = cr * cp * cy + sr * sp * sy
+    quat[:, 1] = sr * cp * cy - cr * sp * sy
+    quat[:, 2] = cr * sp * cy + sr * cp * sy
+    quat[:, 3] = cr * cp * sy - sr * sp * cy
+
+    return quat
+
+
 def euler_angles_to_matrix(euler_angles: torch.Tensor, convention: str) -> torch.Tensor:
     """
     Converts a batch of euler angles to a batch of rotation matrices.
 
     Args:
-        euler_angles (torch.Tensor): batch of euler angles.
-        convention (str): the convention to use for the conversion.
+        euler_angles (torch.Tensor): Batch of euler angles.
+        convention (str): The convention to use for the conversion.
 
     Returns:
-        torch.Tensor: the batch of rotation matrices.
+        torch.Tensor: The batch of rotation matrices.
     """
 
     matrices = [
@@ -104,8 +158,8 @@ class Core(Core2D):
         Initializes the core of the task.
 
         Args:
-            num_envs (int): number of environments.
-            device (str): device to run the code on.
+            num_envs (int): Number of environments.
+            device (str): Device to run the code on.
         """
 
         self._num_envs = num_envs
@@ -139,10 +193,10 @@ class Core(Core2D):
         Updates the observation tensor with the current state of the robot.
 
         Args:
-            current_state (dict): the current state of the robot.
+            current_state (dict): The current state of the robot.
 
         Returns:
-            torch.Tensor: the observation tensor.
+            torch.Tensor: The observation tensor.
         """
 
         self._obs_buffer[:, 0:6] = current_state["orientation"][:, :2, :].reshape(

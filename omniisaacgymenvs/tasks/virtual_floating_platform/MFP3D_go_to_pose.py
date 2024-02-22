@@ -252,14 +252,20 @@ class GoToPoseTask(GoToPoseTask2D, Core):
         r = self._spawn_position_sampler.sample(num_resets, step, device=self._device)
         theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
         phi = torch.rand((num_resets,), device=self._device) * math.pi
-        initial_position[:, 0] = r * torch.cos(theta) * torch.sin(phi)
-        initial_position[:, 1] = r * torch.sin(theta) * torch.sin(phi)
-        initial_position[:, 1] = r * torch.cos(phi)
+        initial_position[:, 0] = (
+            r * torch.cos(theta) * torch.sin(phi) + self._target_positions[0]
+        )
+        initial_position[:, 1] = (
+            r * torch.sin(theta) * torch.sin(phi) + self._target_positions[1]
+        )
+        initial_position[:, 2] = r * torch.cos(phi) + self._target_positions[2]
 
         # Randomizes the orientation of the platform
+        # We want to sample something that's not too far from the original orientation
         initial_orientation = torch.zeros(
             (num_resets, 4), device=self._device, dtype=torch.float32
         )
+
         uvw = torch.rand((num_resets, 3), device=self._device)
         initial_orientation[env_ids, 0] = torch.sqrt(uvw[:, 0]) * torch.cos(
             uvw[:, 2] * 2 * math.pi
@@ -290,6 +296,8 @@ class GoToPoseTask(GoToPoseTask2D, Core):
         angular_velocity = self._spawn_angular_velocity_sampler.sample(
             num_resets, step, device=self._device
         )
+        theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
+        phi = torch.rand((num_resets,), device=self._device) * math.pi
         initial_velocity[:, 3] = angular_velocity * torch.cos(theta) * torch.sin(phi)
         initial_velocity[:, 4] = angular_velocity * torch.sin(theta) * torch.sin(phi)
         initial_velocity[:, 5] = angular_velocity * torch.cos(phi)
@@ -323,3 +331,137 @@ class GoToPoseTask(GoToPoseTask2D, Core):
         arrows = XFormPrimView(prim_paths_expr="/World/envs/.*/arrow")
         scene.add(arrows)
         return scene, arrows
+
+    def log_spawn_data(self, step: int) -> dict:
+        """
+        Logs the spawn data to wandb.
+
+        Args:
+            step (int): The current step.
+
+        Returns:
+            dict: The spawn data.
+        """
+
+        dict = {}
+
+        num_resets = self._num_envs
+        # Resets the counter of steps for which the goal was reached
+        xyz_pos = torch.zeros((num_resets, 2), device=self._device, dtype=torch.float32)
+        r = self._spawn_position_sampler.sample(num_resets, step, device=self._device)
+        theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
+        phi = torch.rand((num_resets,), device=self._device) * math.pi
+        xyz_pos[:, 0] = r * torch.cos(theta) * torch.sin(phi)
+        xyz_pos[:, 1] = r * torch.sin(theta) * torch.sin(phi)
+        xyz_pos[:, 2] = r * torch.cos(phi)
+        # Randomizes the heading of the platform
+        heading = self._spawn_heading_sampler.sample(
+            num_resets, step, device=self._device
+        )
+        # Randomizes the linear velocity of the platform
+        velocities = torch.zeros(
+            (num_resets, 6), device=self._device, dtype=torch.float32
+        )
+        linear_velocity = self._spawn_linear_velocity_sampler.sample(
+            num_resets, step, device=self._device
+        )
+        theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
+        phi = torch.rand((num_resets,), device=self._device) * math.pi
+        velocities[:, 0] = linear_velocity * torch.cos(theta) * torch.sin(phi)
+        velocities[:, 1] = linear_velocity * torch.sin(theta) * torch.sin(phi)
+        velocities[:, 2] = linear_velocity * torch.cos(phi)
+        # Randomizes the angular velocity of the platform
+        angular_velocity = self._spawn_angular_velocity_sampler.sample(
+            num_resets, step, device=self._device
+        )
+        theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
+        phi = torch.rand((num_resets,), device=self._device) * math.pi
+        velocities[:, 3] = angular_velocity * torch.cos(theta) * torch.sin(phi)
+        velocities[:, 4] = angular_velocity * torch.sin(theta) * torch.sin(phi)
+        velocities[:, 5] = angular_velocity * torch.cos(phi)
+
+        xy_pos = xy_pos.cpu().numpy()
+        heading = np.expand_dims(heading.cpu().numpy(), axis=-1)
+        velocities = velocities.cpu().numpy()
+
+        fig.tight_layout()
+        fig, ax = plt.subplots(1, 3, dpi=100, figsize=(8, 8), sharey=True)
+        ax[0].hist(xyz_pos[:, 0], bins=32)
+        ax[0].set_title("Initial x position")
+        ax[0].set_xlim(self._task_parameters.kill_dist, self._task_parameters.kill_dist)
+        ax[0].set_xlabel("pos (m)")
+        ax[0].set_ylabel("count")
+        ax[1].hist(xyz_pos[:, 1], bins=32)
+        ax[1].set_title("Initial y position")
+        ax[1].set_xlim(self._task_parameters.kill_dist, self._task_parameters.kill_dist)
+        ax[1].set_xlabel("pos (m)")
+        ax[2].hist(xyz_pos[:, 2], bins=32)
+        ax[2].set_title("Initial z position")
+        ax[2].set_xlim(self._task_parameters.kill_dist, self._task_parameters.kill_dist)
+        ax[2].set_xlabel("pos (m)")
+        fig.tight_layout()
+
+        fig.canvas.draw()
+        data = np.array(fig.canvas.renderer.buffer_rgba())
+        plt.close(fig)
+
+        dict["curriculum/initial_position"] = wandb.Image(data)
+
+        fig, ax = plt.subplots(dpi=100, figsize=(8, 8))
+        ax.hist(heading[:, 0], bins=32)
+        ax.set_title("Initial heading")
+        ax.set_xlim(-math.pi, math.pi)
+        ax.set_xlabel("theta (rad)")
+        ax.set_ylabel("count")
+        fig.tight_layout()
+
+        fig.canvas.draw()
+        data = np.array(fig.canvas.renderer.buffer_rgba())
+        plt.close(fig)
+
+        dict["curriculum/initial_heading"] = wandb.Image(data)
+
+        fig, ax = plt.subplots(1, 3, dpi=100, figsize=(8, 8), sharey=True)
+        ax[0].hist(velocities[:, 0], bins=32)
+        ax[0].set_title("Initial x linear velocity")
+        ax[0].set_xlim(-0.5, 0.5)
+        ax[0].set_xlabel("vel (m/s)")
+        ax[0].set_ylabel("count")
+        ax[1].hist(velocities[:, 1], bins=32)
+        ax[1].set_title("Initial y linear velocity")
+        ax[1].set_xlim(-0.5, 0.5)
+        ax[1].set_xlabel("vel (m/s)")
+        ax[2].hist(velocities[:, 2], bins=32)
+        ax[2].set_title("Initial z linear velocity")
+        ax[2].set_xlim(-0.5, 0.5)
+        ax[2].set_xlabel("vel (rad/s)")
+        fig.tight_layout()
+        fig.canvas.draw()
+
+        data = np.array(fig.canvas.renderer.buffer_rgba())
+        plt.close(fig)
+
+        dict["curriculum/initial_linear_velocities"] = wandb.Image(data)
+
+        fig, ax = plt.subplots(1, 3, dpi=100, figsize=(8, 8), sharey=True)
+        ax[0].hist(velocities[:, 0], bins=32)
+        ax[0].set_title("Initial x angular velocity")
+        ax[0].set_xlim(-0.5, 0.5)
+        ax[0].set_xlabel("vel (m/s)")
+        ax[0].set_ylabel("count")
+        ax[1].hist(velocities[:, 1], bins=32)
+        ax[1].set_title("Initial y angular velocity")
+        ax[1].set_xlim(-0.5, 0.5)
+        ax[1].set_xlabel("vel (m/s)")
+        ax[2].hist(velocities[:, 2], bins=32)
+        ax[2].set_title("Initial z angular velocity")
+        ax[2].set_xlim(-0.5, 0.5)
+        ax[2].set_xlabel("vel (rad/s)")
+        fig.tight_layout()
+
+        fig.canvas.draw()
+        data = np.array(fig.canvas.renderer.buffer_rgba())
+        plt.close(fig)
+
+        dict["curriculum/initial_angular_velocities"] = wandb.Image(data)
+        return dict
