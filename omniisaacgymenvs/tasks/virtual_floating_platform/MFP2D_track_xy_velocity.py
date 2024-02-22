@@ -330,14 +330,13 @@ class TrackXYVelocityTask(Core):
         theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
         xyz_velocity[:, 0] = linear_velocity * torch.cos(theta)
         xyz_velocity[:, 1] = linear_velocity * torch.sin(theta)
+        print(xyz_velocity.shape)
+        print(xyz_velocity[:10])
         # Randomizes the angular velocity of the platform
         angular_velocity = self._spawn_angular_velocity_sampler.sample(
             num_resets, step, device=self._device
         )
         xyz_velocity[:, 2] = angular_velocity
-
-        xy_pos = xy_pos.cpu().numpy()
-        heading = np.expand_dims(heading.cpu().numpy(), axis=-1)
         xyz_velocity = xyz_velocity.cpu().numpy()
 
         fig, ax = plt.subplots(1, 3, dpi=100, figsize=(8, 8), sharey=True)
@@ -358,6 +357,7 @@ class TrackXYVelocityTask(Core):
 
         fig.canvas.draw()
         data = np.array(fig.canvas.renderer.buffer_rgba())
+        plt.close(fig)
 
         dict["curriculum/initial_velocities"] = wandb.Image(data)
         return dict
@@ -377,18 +377,26 @@ class TrackXYVelocityTask(Core):
 
         num_resets = self._num_envs
         # Randomizes the target linear velocity of the platform
-        linear_velocity = self._target_linear_velocity_sampler.sample(
-            num_resets, step, device=self._device
+        target_velocities = torch.zeros(
+            (num_resets, 3), device=self._device, dtype=torch.float32
         )
-        linear_velocity = linear_velocity.cpu().numpy()
+        r = self._target_linear_velocity_sampler.sample(
+            num_resets, step=0, device=self._device
+        )
+        theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
+        target_velocities[:, 0] = r * torch.cos(theta)
+        target_velocities[:, 1] = r * torch.sin(theta)
+        target_velocities = target_velocities.cpu().numpy()
+        print(target_velocities.shape)
+        print(target_velocities[:10])
 
         fig, ax = plt.subplots(1, 2, dpi=100, figsize=(8, 8), sharey=True)
-        ax[0].hist(linear_velocity[:, 0], bins=32)
+        ax[0].hist(target_velocities[:, 0], bins=32)
         ax[0].set_title("Target x linear velocity")
         ax[0].set_xlim(-0.5, 0.5)
         ax[0].set_xlabel("vel (m/s)")
         ax[0].set_ylabel("count")
-        ax[1].hist(linear_velocity[:, 1], bins=32)
+        ax[1].hist(target_velocities[:, 1], bins=32)
         ax[1].set_title("Target y linear velocity")
         ax[1].set_xlim(-0.5, 0.5)
         ax[1].set_xlabel("vel (m/s)")
@@ -396,6 +404,7 @@ class TrackXYVelocityTask(Core):
 
         fig.canvas.draw()
         data = np.array(fig.canvas.renderer.buffer_rgba())
+        plt.close(fig)
 
         dict["curriculum/target_velocities"] = wandb.Image(data)
         return dict
@@ -410,6 +419,7 @@ class TrackXYVelocityTask(Core):
         Returns:
             dict: The task data.
         """
+        dict = {}
 
         if step % 50 == 0:
             dict = {**dict, **self.log_spawn_data(step)}
