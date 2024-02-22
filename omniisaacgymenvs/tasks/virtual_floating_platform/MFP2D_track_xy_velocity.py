@@ -216,14 +216,11 @@ class TrackXYVelocityTask(Core):
         num_goals = len(env_ids)
         # Randomizes the target linear velocity
         r = self._target_linear_velocity_sampler.sample(
-            num_goals, step=0, device=self._device
+            num_goals, step=step, device=self._device
         )
         theta = torch.rand((num_goals,), device=self._device) * 2 * math.pi
         self._target_velocities[env_ids, 0] = r * torch.cos(theta)
         self._target_velocities[env_ids, 1] = r * torch.sin(theta)
-
-        if math.fmod(step, 50) == 0:
-            self.log_target_data(int(step))
 
         # This does not matter
         return target_positions, target_orientations
@@ -272,9 +269,6 @@ class TrackXYVelocityTask(Core):
             num_resets, step, device=self._device
         )
         initial_velocity[:, 5] = angular_velocity
-
-        if math.fmod(step, 50) == 0:
-            self.log_spawn_data(int(step))
 
         return (
             initial_position,
@@ -380,7 +374,7 @@ class TrackXYVelocityTask(Core):
             (num_resets, 3), device=self._device, dtype=torch.float32
         )
         r = self._target_linear_velocity_sampler.sample(
-            num_resets, step=0, device=self._device
+            num_resets, step=step, device=self._device
         )
         theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
         target_velocities[:, 0] = r * torch.cos(theta)

@@ -441,7 +441,10 @@ class MFP2DVirtual(RLTask):
         env_long = env_ids.long()
         # Randomizes the position of the ball on the x y axis
         target_positions, target_orientation = self.task.get_goals(
-            env_long, self.initial_pin_pos.clone(), self.initial_pin_rot.clone()
+            env_long,
+            self.initial_pin_pos.clone(),
+            self.initial_pin_rot.clone(),
+            step=self.step,
         )
         target_positions[env_long, 2] = torch.ones(num_sets, device=self._device) * 2.0
         # Apply the new goals
