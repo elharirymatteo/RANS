@@ -463,6 +463,7 @@ class MFP2DVirtual(RLTask):
         num_resets = len(env_ids)
         # Resets the counter of steps for which the goal was reached
         self.task.reset(env_ids)
+        self.set_targets(env_ids)
         self.virtual_platform.randomize_thruster_state(env_ids, num_resets)
         self.DR.force_disturbances.generate_forces(env_ids, num_resets)
         self.DR.torque_disturbances.generate_torques(env_ids, num_resets)
