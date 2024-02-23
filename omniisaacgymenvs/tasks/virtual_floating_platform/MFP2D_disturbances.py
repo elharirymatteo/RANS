@@ -21,7 +21,9 @@ from omniisaacgymenvs.tasks.virtual_floating_platform.curriculum_helpers import 
     CurriculumSampler,
 )
 
+from matplotlib import pyplot as plt
 from typing import Tuple
+import numpy as np
 import torch
 import math
 import omni
@@ -142,6 +144,46 @@ class MassDistributionDisturbances:
         if self.parameters.enable:
             mass_body.set_masses(self.platforms_mass[env_ids, 0], indices=env_ids)
         self.set_coms(articulation_body, env_ids, joints_idx)
+
+    def log(self, step: int) -> dict:
+        """
+        Logs the current state of the disturbances.
+
+        Args:
+            step (int): The current step of the learning process.
+
+        Returns:
+            dict: The logged data.
+        """
+        dict = {}
+
+        if self.parameters.enable:
+            mass = self.platforms_mass.cpu().numpy().flatten()
+            fig, ax = plt.subplots(1, 1, dpi=100, figsize=(8, 8), sharey=True)
+            ax.hist(mass, bins=32)
+            ax.set_title("Mass disturbance")
+            ax.set_xlim(-0.5, 0.5)
+            ax.set_xlabel("mass (Kg)")
+            ax.set_ylabel("count")
+            fig.tight_layout()
+            fig.canvas.draw()
+            data = np.array(fig.canvas.renderer.buffer_rgba())
+            plt.close(fig)
+            dict["disturbance/force_disturbance"] = data
+        if self.parameters.enable:
+            com = torch.norm(self.platforms_CoM.cpu(), axis=-1).numpy().flatten()
+            fig, ax = plt.subplots(1, 2, dpi=100, figsize=(8, 8), sharey=True)
+            ax.hist(com, bins=32)
+            ax.set_title("CoM disturbance")
+            ax.set_xlim(-0.5, 0.5)
+            ax.set_xlabel("Displacement (m)")
+            ax.set_ylabel("count")
+            fig.tight_layout()
+            fig.canvas.draw()
+            data = np.array(fig.canvas.renderer.buffer_rgba())
+            plt.close(fig)
+            dict["disturbance/force_disturbance"] = data
+        return dict
 
 
 class ForceDisturbance:
@@ -265,6 +307,33 @@ class ForceDisturbance:
 
         return self.forces
 
+    def log(self, step: int) -> dict:
+        """
+        Logs the current state of the disturbances.
+
+        Args:
+            step (int): The current step of the learning process.
+
+        Returns:
+            dict: The logged data.
+        """
+        dict = {}
+
+        if self.parameters.enable:
+            force = self.forces[:, :2].cpu().numpy().flatten()
+            fig, ax = plt.subplots(1, 1, dpi=100, figsize=(8, 8), sharey=True)
+            ax.hist(force, bins=32)
+            ax.set_title("Force disturbance")
+            ax.set_xlim(-0.5, 0.5)
+            ax.set_xlabel("force (N)")
+            ax.set_ylabel("count")
+            fig.tight_layout()
+            fig.canvas.draw()
+            data = np.array(fig.canvas.renderer.buffer_rgba())
+            plt.close(fig)
+            dict["disturbance/force_disturbance"] = data
+        return dict
+
 
 class TorqueDisturbance:
     """
@@ -362,6 +431,33 @@ class TorqueDisturbance:
 
         return self.torques
 
+    def log(self, step: int) -> dict:
+        """
+        Logs the current state of the disturbances.
+
+        Args:
+            step (int): The current step of the learning process.
+
+        Returns:
+            dict: The logged data.
+        """
+        dict = {}
+
+        if self.parameters.enable:
+            torque = self.torques[:, 2].cpu().numpy().flatten()
+            fig, ax = plt.subplots(1, 1, dpi=100, figsize=(8, 8), sharey=True)
+            ax.hist(torque, bins=32)
+            ax.set_title("Torque disturbance")
+            ax.set_xlim(-0.5, 0.5)
+            ax.set_xlabel("torque (Nm)")
+            ax.set_ylabel("count")
+            fig.tight_layout()
+            fig.canvas.draw()
+            data = np.array(fig.canvas.renderer.buffer_rgba())
+            plt.close(fig)
+            dict["disturbance/torque_disturbance"] = data
+        return dict
+
 
 class NoisyObservations:
     """
@@ -401,9 +497,10 @@ class NoisyObservations:
         """
 
         if self.parameters.enable_position_noise:
+            self.pos_shape = pos.shape
             pos += self.position_sampler.sample(
                 self._num_envs * pos.shape[1], step, device=self._device
-            ).reshape(-1, pos.shape[1])
+            ).reshape(-1, self.pos_shape[1])
         return pos
 
     def add_noise_on_vel(self, vel: torch.Tensor, step: int = 0) -> torch.Tensor:
@@ -419,9 +516,10 @@ class NoisyObservations:
         """
 
         if self.parameters.enable_velocity_noise:
+            self.vel_shape = vel.shape
             vel += self.velocity_sampler.sample(
                 self._num_envs * vel.shape[1], step, device=self._device
-            ).reshape(-1, vel.shape[1])
+            ).reshape(-1, self.vel_shape[1])
         return vel
 
     def add_noise_on_heading(
@@ -443,6 +541,70 @@ class NoisyObservations:
                 self._num_envs, step, device=self._device
             )
         return heading
+
+    def log(self, step: int) -> dict:
+        """
+        Logs the current state of the disturbances.
+
+        Args:
+            step (int): The current step of the learning process.
+
+        Returns:
+            dict: The logged data.
+        """
+
+        dict = {}
+
+        if self.parameters.enable_position_noise:
+            position = self.position_sampler.sample(
+                self._num_envs * self.pos_shape[1], step, device=self._device
+            )
+            position = position.cpu().numpy().flatten()
+            fig, ax = plt.subplots(1, 1, dpi=100, figsize=(8, 8), sharey=True)
+            ax.hist(position, bins=32)
+            ax.set_title("Position noise")
+            ax.set_xlim(-0.5, 0.5)
+            ax.set_xlabel("noise (m)")
+            ax.set_ylabel("count")
+            fig.tight_layout()
+            fig.canvas.draw()
+            data = np.array(fig.canvas.renderer.buffer_rgba())
+            plt.close(fig)
+            dict["disturbance/position_noise"] = data
+        if self.parameters.enable_velocity_noise:
+            velocity = self.velocity_sampler.sample(
+                self._num_envs * self.vel_shape[1], step, device=self._device
+            )
+            velocity = velocity.cpu().numpy().flatten()
+            fig, ax = plt.subplots(1, 1, dpi=100, figsize=(8, 8), sharey=True)
+            ax.hist(velocity, bins=32)
+            ax.set_title("Velocity noise")
+            ax.set_xlim(-0.5, 0.5)
+            ax.set_xlabel("noise (m/s)")
+            ax.set_ylabel("count")
+            fig.tight_layout()
+            fig.canvas.draw()
+            data = np.array(fig.canvas.renderer.buffer_rgba())
+            plt.close(fig)
+            dict["disturbance/velocity_noise"] = data
+        if self.parameters.enable_orientation_noise:
+            orientation = self.orientation_sampler.sample(
+                self._num_envs, step, device=self._device
+            )
+            orientation = orientation.cpu().numpy().flatten()
+            fig, ax = plt.subplots(1, 1, dpi=100, figsize=(8, 8), sharey=True)
+            ax.hist(orientation, bins=32)
+            ax.set_title("Orientation noise")
+            ax.set_xlim(-0.5, 0.5)
+            ax.set_xlabel("noise (rad)")
+            ax.set_ylabel("count")
+            fig.tight_layout()
+            fig.canvas.draw()
+            data = np.array(fig.canvas.renderer.buffer_rgba())
+            plt.close(fig)
+            dict["disturbance/orientation_noise"] = data
+
+        return dict
 
 
 class NoisyActions:
@@ -480,10 +642,41 @@ class NoisyActions:
         """
 
         if self.parameters.enable:
+            self.shape = act.shape
             act += self.action_sampler.sample(
                 self._num_envs * act.shape[1], step, device=self._device
-            ).reshape(-1, act.shape[1])
+            ).reshape(-1, self.shape[1])
         return act
+
+    def log(self, step: int) -> dict:
+        """
+        Logs the current state of the disturbances.
+
+        Args:
+            step (int): The current step of the learning process.
+
+        Returns:
+            dict: The logged data.
+        """
+        dict = {}
+
+        if self.parameters.enable:
+            action = self.action_sampler.sample(
+                self._num_envs * self.shape[1], step, device=self._device
+            ).reshape(-1, self.shape[1])
+            action = action.cpu().numpy().flatten()
+            fig, ax = plt.subplots(1, 1, dpi=100, figsize=(8, 8), sharey=True)
+            ax.hist(action, bins=32)
+            ax.set_title("Action noise")
+            ax.set_xlim(-0.5, 0.5)
+            ax.set_xlabel("noise (N)")
+            ax.set_ylabel("count")
+            fig.tight_layout()
+            fig.canvas.draw()
+            data = np.array(fig.canvas.renderer.buffer_rgba())
+            plt.close(fig)
+            dict["disturbance/action_noise"] = data
+        return dict
 
 
 class Disturbances:
@@ -534,3 +727,21 @@ class Disturbances:
             num_envs,
             device,
         )
+
+    def log(self, step: int) -> dict:
+        """
+        Collects logs for all the disturbances.
+
+        Args:
+            step (int): The current training step.
+
+        Returns:
+            dict: The logs for all used disturbances.
+        """
+        dict = {}
+        dict = {**dict, **self.mass_disturbances.log(step)}
+        dict = {**dict, **self.force_disturbances.log(step)}
+        dict = {**dict, **self.torque_disturbances.log(step)}
+        dict = {**dict, **self.noisy_observations.log(step)}
+        dict = {**dict, **self.noisy_actions.log(step)}
+        return dict

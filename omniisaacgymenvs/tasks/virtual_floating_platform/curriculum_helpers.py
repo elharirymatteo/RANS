@@ -369,6 +369,47 @@ class CurriculumSampler:
         else:
             return self.sp.start_min_value
 
+    def get_max(self) -> float:
+        """
+        Gets the maximum value for the current step.
+
+        Returns:
+            float: Maximum value.
+        """
+
+        if self.sp.distribution == "truncated_normal":
+            return self.sp.end_mean
+        elif self.sp.distribution == "normal":
+            return self.sp.end_mean
+        else:
+            return self.sp.end_max_value
+
+    def get_min_bound(self) -> float:
+        if self.sp.distribution == "truncated_normal":
+            return self.sp.min_value
+        elif self.sp.distribution == "normal":
+            return max(
+                [
+                    self.sp.end_mean - 2 * self.sp.end_std,
+                    self.sp.start_mean - 2 * self.sp.end_std,
+                ]
+            )
+        else:
+            return max([self.sp.end_min_value, self.sp.start_min_value])
+
+    def get_max_bound(self) -> float:
+        if self.sp.distribution == "truncated_normal":
+            return self.sp.max_value
+        elif self.sp.distribution == "normal":
+            return max(
+                [
+                    self.sp.end_mean + 2 * self.sp.end_std,
+                    self.sp.start_mean + 2 * self.sp.end_std,
+                ]
+            )
+        else:
+            return max([self.sp.end_max_value, self.sp.start_max_value])
+
     def sample(self, n: int, step: int, device: str = "cpu") -> torch.Tensor:
         """
         Samples values from the curriculum distribution.
