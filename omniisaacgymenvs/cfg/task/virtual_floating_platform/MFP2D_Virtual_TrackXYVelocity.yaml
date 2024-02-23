@@ -201,8 +201,8 @@ env:
         start_mean: 0.0
         start_std: 0.0001
         end_mean: 0.75
-        end_std: 0.75
-        min_value: 0.0
+        end_std: 1.5
+        min_value: -0.75
         max_value: 0.75
     
     
