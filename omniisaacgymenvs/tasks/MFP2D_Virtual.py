@@ -291,9 +291,15 @@ class MFP2DVirtual(RLTask):
         )
         orient_z = torch.arctan2(siny_cosp, cosy_cosp)
         # Add noise on obs
-        root_positions = self.DR.noisy_observations.add_noise_on_pos(root_positions)
-        root_velocities = self.DR.noisy_observations.add_noise_on_vel(root_velocities)
-        orient_z = self.DR.noisy_observations.add_noise_on_heading(orient_z)
+        root_positions = self.DR.noisy_observations.add_noise_on_pos(
+            root_positions, step=self.step
+        )
+        root_velocities = self.DR.noisy_observations.add_noise_on_vel(
+            root_velocities, step=self.step
+        )
+        orient_z = self.DR.noisy_observations.add_noise_on_heading(
+            orient_z, step=self.step
+        )
         # Compute the heading
         self.heading[:, 0] = torch.cos(orient_z)
         self.heading[:, 1] = torch.sin(orient_z)
@@ -359,7 +365,7 @@ class MFP2DVirtual(RLTask):
         # Applies the thrust multiplier
         thrusts = self.virtual_platform.thruster_cfg.thrust_force * thrust_cmds
         # Adds random noise on the actions
-        thrusts = self.DR.noisy_actions.add_noise_on_act(thrusts)
+        thrusts = self.DR.noisy_actions.add_noise_on_act(thrusts, step=self.step)
         # clear actions for reset envs
         thrusts[reset_env_ids] = 0
         # If split thrust, equally shares the maximum amount of thrust across thrusters.
@@ -468,9 +474,11 @@ class MFP2DVirtual(RLTask):
         self.task.reset(env_ids)
         self.set_targets(env_ids)
         self.virtual_platform.randomize_thruster_state(env_ids, num_resets)
-        self.DR.force_disturbances.generate_forces(env_ids, num_resets)
-        self.DR.torque_disturbances.generate_torques(env_ids, num_resets)
-        self.DR.mass_disturbances.randomize_masses(env_ids, num_resets)
+        self.DR.force_disturbances.generate_forces(env_ids, num_resets, step=self.step)
+        self.DR.torque_disturbances.generate_torques(
+            env_ids, num_resets, step=self.step
+        )
+        self.DR.mass_disturbances.randomize_masses(env_ids, step=self.step)
         # Randomizes the starting position of the platform within a disk around the target
         pos, quat, vel = self.task.get_initial_conditions(env_ids, step=self.step)
 
@@ -545,7 +553,10 @@ class MFP2DVirtual(RLTask):
                 self.extras_wandb[key] = value
             for key, value in self.task.get_logs(self.step).items():
                 self.extras_wandb[key] = value
+            for key, value in self.DR.get_logs(self.step).items():
+                self.extras_wandb[key] = value
             wandb.log(self.extras_wandb)
+            self.extras_wandb = {}
 
         self.update_state_statistics()
 
