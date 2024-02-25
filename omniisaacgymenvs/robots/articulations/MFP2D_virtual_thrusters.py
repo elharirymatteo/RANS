@@ -1,7 +1,15 @@
-from typing import Optional
+__author__ = "Antoine Richard, Matteo El Hariry"
+__copyright__ = (
+    "Copyright 2023-24, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
+)
+__license__ = "GPL"
+__version__ = "1.1.0"
+__maintainer__ = "Antoine Richard"
+__email__ = "antoine.richard@uni.lu"
+__status__ = "development"
 
 from omni.isaac.core.robots.robot import Robot
-
+from typing import Optional
 import numpy as np
 import dataclasses
 from pxr import Gf
@@ -182,8 +190,6 @@ class CreatePlatform:
             enable_drive=True,
         )
 
-        self.CoM_x_axis = os.path.join("x_axis_joint")
-        self.CoM_y_axis = os.path.join("y_axis_joint")
         return cylinder_path
 
     def createBasicColors(self) -> None:
@@ -330,5 +336,3 @@ class ModularFloatingPlatform(Robot):
             orientation=orientation,
             scale=scale,
         )
-
-        self.joints = {"x_axis": fp.CoM_x_axis, "y_axis": fp.CoM_y_axis}
