@@ -118,7 +118,7 @@ class GoToPoseReward:
 
 
 @dataclass
-class TrackXYVelocityReward:
+class TrackXYZVelocityReward:
     """
     Reward function and parameters for the TrackXYVelocity task."""
 
@@ -157,7 +157,7 @@ class TrackXYVelocityReward:
 
 
 @dataclass
-class TrackXYOVelocityReward:
+class Track6DoFVelocityReward:
     """
     Reward function and parameters for the TrackXYOVelocity task."""
 

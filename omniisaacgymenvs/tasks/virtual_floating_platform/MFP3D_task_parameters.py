@@ -102,12 +102,12 @@ class GoToPoseParameters:
 
 
 @dataclass
-class TrackXYVelocityParameters:
+class TrackXYZVelocityParameters:
     """
     Parameters for the TrackXYVelocity task.
     """
 
-    name: str = "TrackXYVelocity"
+    name: str = "TrackXYZVelocity"
     lin_vel_tolerance: float = 0.01
     kill_after_n_steps_in_tolerance: int = 50
     goal_random_velocity: float = 0.75
@@ -141,12 +141,12 @@ class TrackXYVelocityParameters:
 
 
 @dataclass
-class TrackXYOVelocityParameters:
+class Track6DoFVelocityParameters:
     """
     Parameters for the TrackXYOVelocity task.
     """
 
-    name: str = "TrackXYOVelocity"
+    name: str = "Track6DoFVelocity"
     lin_vel_tolerance: float = 0.01
     ang_vel_tolerance: float = 0.025
     kill_after_n_steps_in_tolerance: int = 50

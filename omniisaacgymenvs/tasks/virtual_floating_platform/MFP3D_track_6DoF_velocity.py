@@ -8,17 +8,20 @@ __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
-from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_core import (
+from omniisaacgymenvs.tasks.virtual_floating_platform.MFP3D_core import (
     Core,
 )
-from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_rewards import (
-    TrackXYOVelocityReward,
+from omniisaacgymenvs.tasks.virtual_floating_platform.MFP3D_task_rewards import (
+    Track6DoFVelocityReward,
 )
-from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_parameters import (
-    TrackXYOVelocityParameters,
+from omniisaacgymenvs.tasks.virtual_floating_platform.MFP3D_task_parameters import (
+    Track6DoFVelocityParameters,
 )
 from omniisaacgymenvs.tasks.virtual_floating_platform.curriculum_helpers import (
     CurriculumSampler,
+)
+from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_track_xyo_velocity import (
+    TrackXYOVelocityTask as TrackXYOVelocityTask2D,
 )
 
 from omni.isaac.core.prims import XFormPrimView
@@ -34,7 +37,7 @@ import math
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
 
-class TrackXYOVelocityTask(Core):
+class TrackXYOVelocityTask(TrackXYOVelocityTask2D, Core):
     """
     Implements the GoToPose task. The robot has to reach a target position and heading.
     """
@@ -51,11 +54,10 @@ class TrackXYOVelocityTask(Core):
             num_envs (int): The number of environments.
             device (str): The device to run the task on.
         """
-
-        super(TrackXYOVelocityTask, self).__init__(num_envs, device)
+        Core.__init__(self, num_envs, device)
         # Task and reward parameters
-        self._task_parameters = TrackXYOVelocityParameters(**task_param)
-        self._reward_parameters = TrackXYOVelocityReward(**reward_param)
+        self._task_parameters = Track6DoFVelocityParameters(**task_param)
+        self._reward_parameters = Track6DoFVelocityReward(**reward_param)
 
         # Curriculum
         self._target_linear_velocity_sampler = CurriculumSampler(
@@ -76,38 +78,25 @@ class TrackXYOVelocityTask(Core):
             (self._num_envs), device=self._device, dtype=torch.int32
         )
         self._target_linear_velocities = torch.zeros(
-            (self._num_envs, 2), device=self._device, dtype=torch.float32
+            (self._num_envs, 3), device=self._device, dtype=torch.float32
         )
         self._target_angular_velocities = torch.zeros(
-            (self._num_envs), device=self._device, dtype=torch.float32
+            (self._num_envs, 3), device=self._device, dtype=torch.float32
         )
         self._task_label = self._task_label * 3
 
-    def create_stats(self, stats: dict) -> dict:
+    def update_observation_tensor(self, current_state: dict) -> torch.Tensor:
         """
-        Creates a dictionary to store the training statistics for the task.
+        Updates the observation tensor with the current state of the robot.
 
         Args:
-            stats (dict): The dictionary to store the statistics.
+            current_state (dict): The current state of the robot.
 
         Returns:
-            dict: The dictionary containing the statistics.
+            torch.Tensor: The observation tensor.
         """
 
-        torch_zeros = lambda: torch.zeros(
-            self._num_envs, dtype=torch.float, device=self._device, requires_grad=False
-        )
-
-        if not "linear_velocity_reward" in stats.keys():
-            stats["linear_velocity_reward"] = torch_zeros()
-        if not "linear_velocity_error" in stats.keys():
-            stats["linear_velocity_error"] = torch_zeros()
-        if not "angular_velocity_reward" in stats.keys():
-            stats["angular_velocity_reward"] = torch_zeros()
-        if not "angular_velocity_error" in stats.keys():
-            stats["angular_velocity_error"] = torch_zeros()
-        self.log_with_wandb = []
-        return stats
+        return Core.update_observation_tensor(self, current_state)
 
     def get_state_observations(self, current_state: dict) -> torch.Tensor:
         """
@@ -127,8 +116,8 @@ class TrackXYOVelocityTask(Core):
             self._target_angular_velocities - current_state["angular_velocity"]
         )
         self._position_error = current_state["position"]
-        self._task_data[:, :2] = self._linear_velocity_error
-        self._task_data[:, 2] = self._angular_velocity_error
+        self._task_data[:, :3] = self._linear_velocity_error
+        self._task_data[:, 3:6] = self._angular_velocity_error
         return self.update_observation_tensor(current_state)
 
     def compute_reward(
@@ -150,7 +139,9 @@ class TrackXYOVelocityTask(Core):
         self.linear_velocity_dist = torch.sqrt(
             torch.square(self._linear_velocity_error).sum(-1)
         )
-        self.angular_velocity_dist = torch.abs(self._angular_velocity_error)
+        self.angular_velocity_dist = torch.sqrt(
+            torch.square(self._angular_velocity_error).sum(-1)
+        )
 
         # Checks if the goal is reached
         lin_goal_is_reached = (
@@ -176,53 +167,6 @@ class TrackXYOVelocityTask(Core):
 
         return self.linear_velocity_reward + self.angular_velocity_reward
 
-    def update_kills(self) -> torch.Tensor:
-        """
-        Updates if the platforms should be killed or not.
-
-        Returns:
-            torch.Tensor: Wether the platforms should be killed or not.
-        """
-
-        die = torch.zeros_like(self._goal_reached, dtype=torch.long)
-        ones = torch.ones_like(self._goal_reached, dtype=torch.long)
-        die = torch.where(
-            self.position_dist > self._task_parameters.kill_dist, ones, die
-        )
-        die = torch.where(
-            self._goal_reached > self._task_parameters.kill_after_n_steps_in_tolerance,
-            ones,
-            die,
-        )
-        return die
-
-    def update_statistics(self, stats: dict) -> dict:
-        """
-        Updates the training statistics.
-
-        Args:
-            stats (dict):The new stastistics to be logged.
-
-        Returns:
-            dict: The statistics of the training
-        """
-
-        stats["linear_velocity_reward"] += self.linear_velocity_reward
-        stats["linear_velocity_error"] += self.linear_velocity_dist
-        stats["angular_velocity_reward"] += self.angular_velocity_reward
-        stats["angular_velocity_error"] += self.angular_velocity_dist
-        return stats
-
-    def reset(self, env_ids: torch.Tensor) -> None:
-        """
-        Resets the goal_reached_flag when an agent manages to solve its task.
-
-        Args:
-            env_ids (torch.Tensor): The ids of the environments.
-        """
-
-        self._goal_reached[env_ids] = 0
-
     def get_goals(
         self,
         env_ids: torch.Tensor,
@@ -245,16 +189,32 @@ class TrackXYOVelocityTask(Core):
         num_goals = len(env_ids)
         # Randomizes the target linear velocity
         r = self._target_linear_velocity_sampler.sample(
-            num_goals, step, device=self._device
+            num_goals, step=step, device=self._device
         )
         theta = torch.rand((num_goals,), device=self._device) * 2 * math.pi
-        self._target_linear_velocities[env_ids, 0] = r * torch.cos(theta)
-        self._target_linear_velocities[env_ids, 1] = r * torch.sin(theta)
-        # Randomizes the target angular velocity
-        omega = self._target_angular_velocity_sampler.sample(
-            num_goals, step, device=self._device
+        phi = torch.rand((num_goals,), device=self._device) * math.pi
+
+        self._target_linear_velocities[env_ids, 0] = (
+            r * torch.cos(theta) * torch.sin(phi)
         )
-        self._target_angular_velocities[env_ids] = omega
+        self._target_linear_velocities[env_ids, 1] = (
+            r * torch.sin(theta) * torch.sin(phi)
+        )
+        self._target_linear_velocities[env_ids, 2] = r * torch.cos(phi)
+        # Randomizes the target angular velocity
+        r = self._target_angular_velocity_sampler.sample(
+            num_goals, step=step, device=self._device
+        )
+        theta = torch.rand((num_goals,), device=self._device) * 2 * math.pi
+        phi = torch.rand((num_goals,), device=self._device) * math.pi
+
+        self._target_angular_velocities[env_ids, 0] = (
+            r * torch.cos(theta) * torch.sin(phi)
+        )
+        self._target_angular_velocities[env_ids, 1] = (
+            r * torch.sin(theta) * torch.sin(phi)
+        )
+        self._target_angular_velocities[env_ids, 2] = r * torch.cos(phi)
 
         # This does not matter
         return target_positions, target_orientations
@@ -287,9 +247,19 @@ class TrackXYOVelocityTask(Core):
         initial_orientation = torch.zeros(
             (num_resets, 4), device=self._device, dtype=torch.float32
         )
-        theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
-        initial_orientation[:, 0] = torch.cos(theta * 0.5)
-        initial_orientation[:, 3] = torch.sin(theta * 0.5)
+        uvw = torch.rand((num_resets, 3), device=self._device)
+        initial_orientation[:, 0] = torch.sqrt(uvw[:, 0]) * torch.cos(
+            uvw[:, 2] * 2 * math.pi
+        )
+        initial_orientation[:, 1] = torch.sqrt(1 - uvw[:, 0]) * torch.sin(
+            uvw[:, 1] * 2 * math.pi
+        )
+        initial_orientation[:, 2] = torch.sqrt(1 - uvw[:, 0]) * torch.cos(
+            uvw[:, 1] * 2 * math.pi
+        )
+        initial_orientation[:, 3] = torch.sqrt(uvw[:, 0]) * torch.sin(
+            uvw[:, 2] * 2 * math.pi
+        )
         # Randomizes the linear velocity of the platform
         initial_velocity = torch.zeros(
             (num_resets, 6), device=self._device, dtype=torch.float32
@@ -298,43 +268,25 @@ class TrackXYOVelocityTask(Core):
             num_resets, step, device=self._device
         )
         theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
-        initial_velocity[:, 0] = linear_velocity * torch.cos(theta)
-        initial_velocity[:, 1] = linear_velocity * torch.sin(theta)
+        phi = torch.rand((num_resets,), device=self._device) * math.pi
+        initial_velocity[:, 0] = linear_velocity * torch.cos(theta) * torch.sin(phi)
+        initial_velocity[:, 1] = linear_velocity * torch.sin(theta) * torch.sin(phi)
+        initial_velocity[:, 2] = linear_velocity * torch.cos(phi)
         # Randomizes the angular velocity of the platform
         angular_velocity = self._spawn_angular_velocity_sampler.sample(
             num_resets, step, device=self._device
         )
-        initial_velocity[:, 5] = angular_velocity
+        theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
+        phi = torch.rand((num_resets,), device=self._device) * math.pi
+        initial_velocity[:, 3] = angular_velocity * torch.cos(theta) * torch.sin(phi)
+        initial_velocity[:, 4] = angular_velocity * torch.sin(theta) * torch.sin(phi)
+        initial_velocity[:, 5] = angular_velocity * torch.cos(phi)
 
         return (
             initial_position,
             initial_orientation,
             initial_velocity,
         )
-
-    def generate_target(self, path: str, position: torch.Tensor) -> None:
-        """
-        Generates a visual marker to help visualize the performance of the agent from the UI.
-
-        Args:
-            path (str): The path where the pin is to be generated.
-            position (torch.Tensor): The position of the target.
-        """
-
-        pass
-
-    def add_visual_marker_to_scene(self, scene: Usd.Stage) -> Tuple[Usd.Stage, None]:
-        """
-        Adds the visual marker to the scene.
-
-        Args:
-            scene (Usd.Stage): The scene to add the visual marker to.
-
-        Returns:
-            Tuple[Usd.Stage, None]: The scene and the visual marker.
-        """
-
-        return scene, None
 
     def log_spawn_data(self, step: int) -> dict:
         """
@@ -397,6 +349,7 @@ class TrackXYOVelocityTask(Core):
         Returns:
             dict: The target data.
         """
+
         dict = {}
 
         num_resets = self._num_envs
@@ -434,23 +387,5 @@ class TrackXYOVelocityTask(Core):
         data = np.array(fig.canvas.renderer.buffer_rgba())
         plt.close(fig)
 
-        dict["curriculum/initial_velocities"] = wandb.Image(data)
-        return dict
-
-    def get_logs(self, step: int) -> dict:
-        """
-        Logs the task data to wandb.
-
-        Args:
-            step (int): The current step.
-
-        Returns:
-            dict: The task data.
-        """
-
-        dict = {}
-
-        if step % 50 == 0:
-            dict = {**dict, **self.log_spawn_data(step)}
-            dict = {**dict, **self.log_target_data(step)}
+        dict["curriculum/target_velocities"] = wandb.Image(data)
         return dict
