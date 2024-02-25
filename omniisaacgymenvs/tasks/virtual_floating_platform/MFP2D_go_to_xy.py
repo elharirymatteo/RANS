@@ -383,8 +383,10 @@ class GoToXYTask(Core):
 
         fig, ax = plt.subplots(dpi=100, figsize=(8, 8))
         ax.scatter(xy_pos[:, 0], xy_pos[:, 1])
-        ax.set_xlim(-self._task_parameters.kill_dist, self._task_parameters.kill_dist)
-        ax.set_ylim(-self._task_parameters.kill_dist, self._task_parameters.kill_dist)
+        ax.set_xlim(
+            -self._spawn_position_sampler.get_min_bound(),
+            self._spawn_position_sampler.get_max_bound(),
+        )
         ax.set_aspect("equal")
         ax.set_title("Spawn position")
         ax.set_xlabel("x (m)")
@@ -408,7 +410,7 @@ class GoToXYTask(Core):
         ax[1].set_xlim(-0.5, 0.5)
         ax[1].set_xlabel("vel (m/s)")
         ax[2].hist(xyz_velocity[:, 2], bins=32)
-        ax[2].set_title("Initial z angular velocity")
+        ax[2].set_title("Initial z linear velocity")
         ax[2].set_xlim(-0.5, 0.5)
         ax[2].set_xlabel("vel (rad/s)")
         fig.tight_layout()
@@ -417,7 +419,7 @@ class GoToXYTask(Core):
         data = np.array(fig.canvas.renderer.buffer_rgba())
         plt.close(fig)
 
-        dict["curriculum/initial_velocities"] = wandb.Image(data)
+        dict["curriculum/initial_linear_velocities"] = wandb.Image(data)
         return dict
 
     def log_target_data(self, step: int) -> dict:
