@@ -89,6 +89,9 @@ class GoToPoseTask(GoToPoseTask2D, Core):
         self._target_headings = torch.zeros(
             (self._num_envs, 3, 3), device=self._device, dtype=torch.float32
         )
+        self._target_quat = torch.zeros(
+            (self._num_envs, 4), device=self._device, dtype=torch.float32
+        )
         self._task_label = self._task_label * 1
 
     def update_observation_tensor(self, current_state: dict) -> torch.Tensor:
@@ -214,15 +217,12 @@ class GoToPoseTask(GoToPoseTask2D, Core):
         # Randomize heading
         uvw = torch.rand((num_goals, 3), device=self._device)
         quat = torch.zeros((num_goals, 4), device=self._device)
-        quat[env_ids, 0] = torch.sqrt(uvw[:, 0]) * torch.cos(uvw[:, 2] * 2 * math.pi)
-        quat[env_ids, 1] = torch.sqrt(1 - uvw[:, 0]) * torch.sin(
-            uvw[:, 1] * 2 * math.pi
-        )
-        quat[env_ids, 2] = torch.sqrt(1 - uvw[:, 0]) * torch.cos(
-            uvw[:, 1] * 2 * math.pi
-        )
-        quat[env_ids, 3] = torch.sqrt(uvw[:, 0]) * torch.sin(uvw[:, 2] * 2 * math.pi)
+        quat[:, 0] = torch.sqrt(uvw[:, 0]) * torch.cos(uvw[:, 2] * 2 * math.pi)
+        quat[:, 1] = torch.sqrt(1 - uvw[:, 0]) * torch.sin(uvw[:, 1] * 2 * math.pi)
+        quat[:, 2] = torch.sqrt(1 - uvw[:, 0]) * torch.cos(uvw[:, 1] * 2 * math.pi)
+        quat[:, 3] = torch.sqrt(uvw[:, 0]) * torch.sin(uvw[:, 2] * 2 * math.pi)
         # cast quaternions to rotation matrix
+        self._target_quat[env_ids] = quat
         self._target_headings = quat_to_mat(quat)
         return target_positions, quat
 
@@ -265,20 +265,17 @@ class GoToPoseTask(GoToPoseTask2D, Core):
         initial_orientation = torch.zeros(
             (num_resets, 4), device=self._device, dtype=torch.float32
         )
+        d = self._spawn_position_sampler.sample(num_resets, step, device=self._device)
 
         uvw = torch.rand((num_resets, 3), device=self._device)
-        initial_orientation[env_ids, 0] = torch.sqrt(uvw[:, 0]) * torch.cos(
-            uvw[:, 2] * 2 * math.pi
-        )
-        initial_orientation[env_ids, 1] = torch.sqrt(1 - uvw[:, 0]) * torch.sin(
-            uvw[:, 1] * 2 * math.pi
-        )
-        initial_orientation[env_ids, 2] = torch.sqrt(1 - uvw[:, 0]) * torch.cos(
-            uvw[:, 1] * 2 * math.pi
-        )
-        initial_orientation[env_ids, 3] = torch.sqrt(uvw[:, 0]) * torch.sin(
-            uvw[:, 2] * 2 * math.pi
-        )
+        uvw = uvw / torch.norm(uvw, dim=-1, keepdim=True)
+
+        initial_orientation[:, 0] = np.cos(d / 2)
+        initial_orientation[:, 1] = uvw[:, 0] * np.sin(d / 2)
+        initial_orientation[:, 2] = uvw[:, 1] * np.sin(d / 2)
+        initial_orientation[:, 3] = uvw[:, 2] * np.sin(d / 2)
+
+        initial_orientation = initial_orientation * self._target_quat[env_ids]
 
         # Randomizes the linear velocity of the platform
         initial_velocity = torch.zeros(
