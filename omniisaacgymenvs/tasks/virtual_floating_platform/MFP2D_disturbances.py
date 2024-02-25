@@ -343,6 +343,7 @@ class ForceDisturbance:
 
         if self.parameters.enable:
             force = self.force_sampler.sample(self._num_envs, step, device=self._device)
+            force = force.cpu().numpy().flatten()
             fig, ax = plt.subplots(1, 1, dpi=100, figsize=(8, 8), sharey=True)
             ax.hist(force, bins=32)
             ax.set_title("Force disturbance")
@@ -487,6 +488,7 @@ class TorqueDisturbance:
             torque = self.torque_sampler.sample(
                 self._num_envs, step, device=self._device
             )
+            torque = torque.cpu().numpy().flatten()
             fig, ax = plt.subplots(1, 1, dpi=100, figsize=(8, 8), sharey=True)
             ax.hist(torque, bins=32)
             ax.set_title("Torque disturbance")
