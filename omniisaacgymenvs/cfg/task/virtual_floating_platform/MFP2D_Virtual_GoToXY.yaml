@@ -183,38 +183,6 @@ env:
     reward_mode: exponential
     exponential_reward_coeff: 0.25
 
-  penalties_parameters:
-    energy_penalty:
-      enable: True
-      weight: 0.15
-      curriculum:
-        function: sigmoid
-        start: 250
-        end: 1000
-        extent: 4.5
-    linear_velocity_penalty:
-      enable: False
-      weight: 0.1
-      scaling_function: linear
-      min_value: 0.3
-      max_value: 1.0
-      curriculum:
-        function: sigmoid
-        start: 250
-        end: 1250
-        extent: 4.5
-    angular_velocity_penalty:
-      enable: True
-      weight: 0.5
-      scaling_function: linear
-      min_value: 0.5
-      max_value: 2.0
-      curriculum:
-        function: sigmoid
-        start: 0
-        end: 250
-        extent: 4.5
-
   platform:
     randomization:
       random_permutation: False
@@ -241,6 +209,38 @@ env:
       thrust_force: 1.0
       visualize: False
       save_path: "config.png"
+
+  penalties_parameters:
+    energy_penalty:
+      enable: True
+      weight: 0.15
+      curriculum:
+        function: sigmoid
+        start: 250
+        end: 1000
+        extent: 4.5
+    linear_velocity_penalty:
+      enable: False
+      weight: 0.1
+      scaling_function: linear
+      min_value: 0.3
+      max_value: 1.0
+      curriculum:
+        function: sigmoid
+        start: 250
+        end: 1250
+        extent: 4.5
+    angular_velocity_penalty:
+      enable: True
+      weight: 0.5
+      scaling_function: linear
+      min_value: 0.5
+      max_value: 10.0
+      curriculum:
+        function: sigmoid
+        start: 0
+        end: 250
+        extent: 4.5
 
 sim:
   dt: 0.02

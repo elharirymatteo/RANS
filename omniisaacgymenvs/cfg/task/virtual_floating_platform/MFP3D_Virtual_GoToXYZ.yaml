@@ -20,7 +20,7 @@ env:
   clipActions: 1.0
 
   # Split the maximum amount of thrust across all thrusters.
-  split_thrust: False
+  split_thrust: True
 
   disturbances:
     force_disturbance:

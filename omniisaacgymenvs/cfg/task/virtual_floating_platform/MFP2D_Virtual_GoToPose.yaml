@@ -162,7 +162,7 @@ env:
     name: GoToPose
     position_tolerance: 0.01
     kill_after_n_steps_in_tolerance: 50 # 10seconds
-    kill_dist: 10.0
+    kill_dist: 8.0
     spawn_position_curriculum:
       rate_parameters:
         function: sigmoid
