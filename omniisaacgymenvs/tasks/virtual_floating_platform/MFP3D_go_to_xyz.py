@@ -204,6 +204,8 @@ class GoToXYZTask(GoToXYTask2D, Core):
         angular_velocity = self._spawn_angular_velocity_sampler.sample(
             num_resets, step, device=self._device
         )
+        theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
+        phi = torch.rand((num_resets,), device=self._device) * math.pi
         initial_velocity[:, 3] = angular_velocity * torch.cos(theta) * torch.sin(phi)
         initial_velocity[:, 4] = angular_velocity * torch.sin(theta) * torch.sin(phi)
         initial_velocity[:, 5] = angular_velocity * torch.cos(phi)

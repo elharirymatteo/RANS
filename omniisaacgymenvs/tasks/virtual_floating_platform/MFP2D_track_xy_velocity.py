@@ -338,7 +338,10 @@ class TrackXYVelocityTask(Core):
         ax[0].set_ylabel("count")
         ax[1].hist(angular_velocities, bins=32)
         ax[1].set_title("Initial normed angular velocity")
-        ax[1].set_xlim(-0.5, 0.5)
+        ax[1].set_xlim(
+            self._spawn_angular_velocity_sampler.get_min_bound(),
+            self._spawn_angular_velocity_sampler.get_max_bound(),
+        )
         ax[1].set_xlabel("vel (rad/s)")
         fig.tight_layout()
 
