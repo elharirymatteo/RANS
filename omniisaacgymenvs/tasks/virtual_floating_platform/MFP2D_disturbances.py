@@ -306,7 +306,7 @@ class ForceDisturbance:
                 self.forces[env_ids, 0] = torch.cos(theta) * r
                 self.forces[env_ids, 1] = torch.sin(theta) * r
 
-    def get_floor_forces(self, root_pos: torch.Tensor) -> torch.Tensor:
+    def get_force_disturbance(self, root_pos: torch.Tensor) -> torch.Tensor:
         """
         Computes the forces given the current state of the robot.
 

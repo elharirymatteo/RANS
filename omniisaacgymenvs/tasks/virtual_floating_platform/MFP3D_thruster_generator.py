@@ -9,7 +9,6 @@ __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP3D_core import (
-    parse_data_dict,
     euler_angles_to_matrix,
 )
 from dataclasses import dataclass
@@ -82,13 +81,9 @@ class VirtualPlatform:
         self._device = device
 
         # Generates dataclasses from the configuration file
-        self.core_cfg = parse_data_dict(PlatformParameters(), platform_cfg["core"])
-        self.rand_cfg = parse_data_dict(
-            PlatformRandomization(), platform_cfg["randomization"]
-        )
-        self.thruster_cfg = parse_data_dict(
-            ConfigurationParameters(), platform_cfg["configuration"]
-        )
+        self.core_cfg = PlatformParameters(**platform_cfg["core"])
+        self.rand_cfg = PlatformRandomization(**platform_cfg["randomization"])
+        self.thruster_cfg = ConfigurationParameters(**platform_cfg["configuration"])
         # Computes the number of actions
         self._max_thrusters = compute_actions(self.thruster_cfg)
         # Sets the empty buffers

@@ -47,7 +47,7 @@ class TaskFactory:
 
 task_factory = TaskFactory()
 task_factory.register("GoToXYZ", GoToXYZTask)
-task_factory.register("GoToPose", GoToPoseTask)
-task_factory.register("TrackXYVelocity", TrackXYVelocityTask)
-task_factory.register("TrackXYOVelocity", TrackXYOVelocityTask)
+# task_factory.register("GoToPose", GoToPoseTask)
+# task_factory.register("TrackXYVelocity", TrackXYVelocityTask)
+# task_factory.register("TrackXYOVelocity", TrackXYOVelocityTask)
 # task_factory.register("TrackXYVelocityHeading", TrackXYVelocityHeadingTask)

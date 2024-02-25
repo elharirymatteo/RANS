@@ -32,6 +32,9 @@ from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_disturbances import 
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_disturbances import (
     MassDistributionDisturbances as MassDistributionDisturbances2D,
 )
+from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_disturbances import (
+    Disturbances as Disturbances2D,
+)
 
 from typing import Tuple
 import torch
@@ -95,6 +98,30 @@ class MassDistributionDisturbances(MassDistributionDisturbances2D):
         self.platforms_CoM[env_ids, 0] = torch.cos(theta) * torch.sin(phi) * r
         self.platforms_CoM[env_ids, 1] = torch.sin(theta) * torch.sin(phi) * r
         self.platforms_CoM[env_ids, 2] = torch.cos(phi) * r
+
+    def set_coms(
+        self,
+        body: omni.isaac.core.prims.XFormPrimView,
+        env_ids: torch.Tensor,
+        joints_idx: Tuple[int, int],
+    ) -> None:
+        """
+        Sets the CoM of the platforms.
+
+        Args:
+            body (omni.isaac.core.XFormPrimView): The rigid bodies containing the prismatic joints controlling the position of the CoMs.
+            env_ids (torch.Tensor): The ids of the environments to reset.
+            joints_idx (Tuple[int, int]): The ids of the x and y joints respectively.
+        """
+
+        joints_position = torch.zeros(
+            (len(env_ids), 3), device=self._device, dtype=torch.float32
+        )
+        joints_position[:, joints_idx[0]] = self.platforms_CoM[env_ids, 0]
+        joints_position[:, joints_idx[1]] = self.platforms_CoM[env_ids, 1]
+        joints_position[:, joints_idx[2]] = self.platforms_CoM[env_ids, 2]
+        if self.parameters.enable:
+            body.set_joint_positions(joints_position, indices=env_ids)
 
 
 class ForceDisturbance(ForceDisturbance2D):
@@ -411,7 +438,7 @@ class NoisyActions(NoisyActions2D):
         super(NoisyActions, self).__init__(parameters, num_envs, device)
 
 
-class Disturbances:
+class Disturbances(Disturbances2D):
     """
     Class to create disturbances on the platform.
     """

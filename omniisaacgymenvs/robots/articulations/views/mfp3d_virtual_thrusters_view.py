@@ -28,12 +28,16 @@ class ModularFloatingPlatformView(ArticulationView):
             prim_paths_expr=f"/World/envs/.*/Modular_floating_platform/core/body",
             name="base_view",
         )
-
+        self.CoM = RigidPrimView(
+            prim_paths_expr=f"/World/envs/.*/Modular_floating_platform/movable_CoM/CoM",
+            name="CoM_view",
+        )
         self.thrusters = RigidPrimView(
             prim_paths_expr=f"/World/envs/.*/Modular_floating_platform/v_thruster_*",
             name="thrusters",
         )
 
+    def get_CoM_indices(self):
         self.CoM_shifter_indices = [
             self.get_dof_index("x_axis_joint"),
             self.get_dof_index("y_axis_joint"),

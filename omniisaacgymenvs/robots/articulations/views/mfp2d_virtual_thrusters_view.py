@@ -36,6 +36,7 @@ class ModularFloatingPlatformView(ArticulationView):
             name="thrusters",
         )
 
+    def get_CoM_indices(self):
         self.CoM_shifter_indices = [
             self.get_dof_index("x_axis_joint"),
             self.get_dof_index("y_axis_joint"),

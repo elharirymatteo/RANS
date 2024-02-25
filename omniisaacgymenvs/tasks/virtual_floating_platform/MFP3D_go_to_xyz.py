@@ -176,16 +176,16 @@ class GoToXYZTask(GoToXYTask2D, Core):
             (num_resets, 4), device=self._device, dtype=torch.float32
         )
         uvw = torch.rand((num_resets, 3), device=self._device)
-        initial_orientation[env_ids, 0] = torch.sqrt(uvw[:, 0]) * torch.cos(
+        initial_orientation[:, 0] = torch.sqrt(uvw[:, 0]) * torch.cos(
             uvw[:, 2] * 2 * math.pi
         )
-        initial_orientation[env_ids, 1] = torch.sqrt(1 - uvw[:, 0]) * torch.sin(
+        initial_orientation[:, 1] = torch.sqrt(1 - uvw[:, 0]) * torch.sin(
             uvw[:, 1] * 2 * math.pi
         )
-        initial_orientation[env_ids, 2] = torch.sqrt(1 - uvw[:, 0]) * torch.cos(
+        initial_orientation[:, 2] = torch.sqrt(1 - uvw[:, 0]) * torch.cos(
             uvw[:, 1] * 2 * math.pi
         )
-        initial_orientation[env_ids, 3] = torch.sqrt(uvw[:, 0]) * torch.sin(
+        initial_orientation[:, 3] = torch.sqrt(uvw[:, 0]) * torch.sin(
             uvw[:, 2] * 2 * math.pi
         )
         # Randomizes the linear velocity of the platform
@@ -228,14 +228,6 @@ class GoToXYZTask(GoToXYTask2D, Core):
             color=color,
         )
 
-    def add_visual_marker_to_scene(self, scene):
-        """
-        Adds the visual marker to the scene."""
-
-        pins = XFormPrimView(prim_paths_expr="/World/envs/.*/pin")
-        scene.add(pins)
-        return scene, pins
-
     def log_spawn_data(self, step: int) -> dict:
         """
         Logs the spawn data to wandb.
@@ -251,11 +243,7 @@ class GoToXYZTask(GoToXYTask2D, Core):
 
         num_resets = self._num_envs
         # Resets the counter of steps for which the goal was reached
-        xy_pos = torch.zeros((num_resets, 2), device=self._device, dtype=torch.float32)
         r = self._spawn_position_sampler.sample(num_resets, step, device=self._device)
-        theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
-        xy_pos[:, 0] = r * torch.cos(theta)
-        xy_pos[:, 1] = r * torch.sin(theta)
         # Randomizes the linear velocity of the platform
         xyz_velocity = torch.zeros(
             (num_resets, 3), device=self._device, dtype=torch.float32
@@ -272,24 +260,21 @@ class GoToXYZTask(GoToXYTask2D, Core):
         )
         xyz_velocity[:, 2] = angular_velocity
 
-        xy_pos = xy_pos.cpu().numpy()
-        heading = np.expand_dims(heading.cpu().numpy(), axis=-1)
+        r = r.cpu().numpy()
+        xyz_velocity = xyz_velocity.cpu().numpy()
 
         fig, ax = plt.subplots(dpi=100, figsize=(8, 8))
-        ax.scatter(xy_pos[:, 0], xy_pos[:, 1])
-        ax.set_xlim(-self._task_parameters.kill_dist, self._task_parameters.kill_dist)
-        ax.set_ylim(-self._task_parameters.kill_dist, self._task_parameters.kill_dist)
-        ax.set_aspect("equal")
-        ax.set_title("Spawn position")
-        ax.set_xlabel("x (m)")
-        ax.set_ylabel("y (m)")
+        ax.hist(r, bins=32)
+        ax.set_title("Spawn radius")
+        ax.set_xlabel("r (m)")
+        ax.set_ylabel("count")
         fig.tight_layout()
 
         fig.canvas.draw()
         data = np.array(fig.canvas.renderer.buffer_rgba())
         plt.close(fig)
 
-        dict["/curriculum/spawn_position"] = wandb.Image(data)
+        dict["curriculum/spawn_position"] = wandb.Image(data)
 
         fig, ax = plt.subplots(1, 3, dpi=100, figsize=(8, 8), sharey=True)
         ax[0].hist(xyz_velocity[:, 0], bins=32)

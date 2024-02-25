@@ -1,9 +1,9 @@
 __author__ = "Antoine Richard, Matteo El Hariry"
 __copyright__ = (
-    "Copyright 2023, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
+    "Copyright 2023-24, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
 )
 __license__ = "GPL"
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
@@ -28,18 +28,16 @@ from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_disturbances import 
     Disturbances,
 )
 
-from omni.isaac.core.utils.torch.rotations import *
 from omni.isaac.core.utils.prims import get_prim_at_path
-
+from omni.isaac.core.utils.torch.rotations import *
 from typing import Dict, List, Tuple
-
+from gym import spaces
 import numpy as np
 import wandb
+import torch
 import omni
 import time
 import math
-import torch
-from gym import spaces
 
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
@@ -196,6 +194,11 @@ class MFP2DVirtual(RLTask):
                 device=self._device,
                 dtype=torch.float,
             ),
+            "masses": torch.zeros(
+                (self._num_envs, 3),
+                device=self._device,
+                dtype=torch.float,
+            ),
         }
 
         self.states_buf = torch.zeros(
@@ -236,7 +239,6 @@ class MFP2DVirtual(RLTask):
         # Add views to scene
         scene.add(self._platforms)
         scene.add(self._platforms.base)
-
         scene.add(self._platforms.thrusters)
 
         # Add arrows to scene if task is go to pose
@@ -248,7 +250,7 @@ class MFP2DVirtual(RLTask):
         Adds the floating platform to the scene.
         """
 
-        self._fp = ModularFloatingPlatform(
+        fp = ModularFloatingPlatform(
             prim_path=self.default_zero_env_path + "/Modular_floating_platform",
             name="modular_floating_platform",
             translation=self._fp_position,
@@ -256,7 +258,7 @@ class MFP2DVirtual(RLTask):
         )
         self._sim_config.apply_articulation_settings(
             "modular_floating_platform",
-            get_prim_at_path(self._fp.prim_path),
+            get_prim_at_path(fp.prim_path),
             self._sim_config.parse_actor_config("modular_floating_platform"),
         )
 
@@ -392,7 +394,7 @@ class MFP2DVirtual(RLTask):
             forces=self.forces, positions=self.positions, is_global=False
         )
         # Applies the domain randomization
-        floor_forces = self.DR.force_disturbances.get_floor_forces(self.root_pos)
+        floor_forces = self.DR.force_disturbances.get_force_disturbance(self.root_pos)
         torque_disturbance = self.DR.torque_disturbances.get_torque_disturbance(
             self.root_pos
         )
@@ -413,9 +415,7 @@ class MFP2DVirtual(RLTask):
         self.root_velocities = self._platforms.get_velocities()
         self.dof_pos = self._platforms.get_joint_positions()
         self.dof_vel = self._platforms.get_joint_velocities()
-        # Get the indices for the CoM shifter.
-        self._CoM_x_index = self._platforms.get_dof_index(self._fp.joints["x_axis"])
-        self._CoM_y_index = self._platforms.get_dof_index(self._fp.joints["y_axis"])
+        self._platforms.get_CoM_indices()
         # Set initial conditions
         self.initial_root_pos, self.initial_root_rot = (
             self.root_pos.clone(),
@@ -446,7 +446,7 @@ class MFP2DVirtual(RLTask):
 
         num_sets = len(env_ids)
         env_long = env_ids.long()
-        # Randomizes the position of the ball on the x y axis
+        # Randomizes the position of the ball on the x y axes
         target_positions, target_orientation = self.task.get_goals(
             env_long,
             self.initial_pin_pos.clone(),
@@ -480,21 +480,19 @@ class MFP2DVirtual(RLTask):
             env_ids, num_resets, step=self.step
         )
         self.DR.mass_disturbances.randomize_masses(env_ids, step=self.step)
-        # Randomizes the starting position of the platform within a disk around the target
+        # Randomizes the starting position of the platform
         pos, quat, vel = self.task.get_initial_conditions(env_ids, step=self.step)
-
         # Resets the states of the joints & applies CoM shift
         self.DR.mass_disturbances.set_masses(
             self._platforms,
             self._platforms.CoM,
             env_ids,
-            (self._CoM_x_index, self._CoM_y_index),
+            self._platforms.CoM_shifter_indices,
         )
         dof_vel = torch.zeros(
             (num_resets, self._platforms.num_dof), device=self._device
         )
         self.dof_vel[env_ids, :] = 0
-
         # apply resets
         self._platforms.set_joint_velocities(dof_vel, indices=env_ids)
         self._platforms.set_world_poses(

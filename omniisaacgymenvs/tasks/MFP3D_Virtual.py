@@ -1,9 +1,9 @@
 __author__ = "Antoine Richard, Matteo El Hariry"
 __copyright__ = (
-    "Copyright 2023, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
+    "Copyright 2023-24, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
 )
 __license__ = "GPL"
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
@@ -15,39 +15,33 @@ from omniisaacgymenvs.robots.articulations.MFP3D_virtual_thrusters import (
 from omniisaacgymenvs.robots.articulations.views.mfp3d_virtual_thrusters_view import (
     ModularFloatingPlatformView,
 )
-
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP3D_thruster_generator import (
     VirtualPlatform,
 )
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP3D_task_factory import (
     task_factory,
 )
+from omniisaacgymenvs.tasks.virtual_floating_platform.MFP3D_penalties import (
+    EnvironmentPenalties,
+)
+from omniisaacgymenvs.tasks.virtual_floating_platform.MFP3D_disturbances import (
+    Disturbances,
+)
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP3D_core import (
     quat_to_mat,
 )
-from omniisaacgymenvs.tasks.virtual_floating_platform.MFP3D_task_rewards import (
-    Penalties,
-)
-from omniisaacgymenvs.tasks.virtual_floating_platform.MFP3D_disturbances import (
-    UnevenFloorDisturbance,
-    TorqueDisturbance,
-    NoisyObservations,
-    NoisyActions,
-    MassDistributionDisturbances,
-)
-
 from omniisaacgymenvs.tasks.MFP2D_Virtual import MFP2DVirtual
 
-from omni.isaac.core.utils.torch.rotations import *
 from omni.isaac.core.utils.prims import get_prim_at_path
-
+from omni.isaac.core.utils.torch.rotations import *
+from typing import Dict, List, Tuple
+from gym import spaces
 import numpy as np
+import wandb
+import torch
 import omni
 import time
 import math
-import torch
-from gym import spaces
-from dataclasses import dataclass
 
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
@@ -75,40 +69,29 @@ class MFP3DVirtual(MFP2DVirtual):
         self._max_episode_length = self._task_cfg["env"]["maxEpisodeLength"]
         self._discrete_actions = self._task_cfg["env"]["action_mode"]
         self._device = self._cfg["sim_device"]
+        self.iteration = 0
         self.step = 0
 
         # Split the maximum amount of thrust across all thrusters.
         self.split_thrust = self._task_cfg["env"]["split_thrust"]
 
-        # Domain randomization and adaptation
-        self.UF = UnevenFloorDisturbance(
-            self._task_cfg["env"]["disturbances"]["forces"],
-            self._num_envs,
-            self._device,
-        )
-        self.TD = TorqueDisturbance(
-            self._task_cfg["env"]["disturbances"]["torques"],
-            self._num_envs,
-            self._device,
-        )
-        self.ON = NoisyObservations(
-            self._task_cfg["env"]["disturbances"]["observations"]
-        )
-        self.AN = NoisyActions(self._task_cfg["env"]["disturbances"]["actions"])
-        self.MDD = MassDistributionDisturbances(
-            self._task_cfg["env"]["disturbances"]["mass"], self.num_envs, self._device
-        )
         # Collects the platform parameters
         self.dt = self._task_cfg["sim"]["dt"]
         # Collects the task parameters
         task_cfg = self._task_cfg["env"]["task_parameters"]
         reward_cfg = self._task_cfg["env"]["reward_parameters"]
         penalty_cfg = self._task_cfg["env"]["penalties_parameters"]
+        domain_randomization_cfg = self._task_cfg["env"]["disturbances"]
         # Instantiate the task, reward and platform
         self.task = task_factory.get(task_cfg, reward_cfg, self._num_envs, self._device)
-        self._penalties = Penalties(**penalty_cfg)
+        self._penalties = EnvironmentPenalties(**penalty_cfg)
         self.virtual_platform = VirtualPlatform(
             self._num_envs, self._platform_cfg, self._device
+        )
+        self.DR = Disturbances(
+            domain_randomization_cfg,
+            num_envs=self._num_envs,
+            device=self._device,
         )
         self._num_observations = self.task._num_observations
         self._max_actions = self.virtual_platform._max_thrusters
@@ -134,6 +117,7 @@ class MFP3DVirtual(MFP2DVirtual):
         )
         # Extra info
         self.extras = {}
+        self.extras_wandb = {}
         # Episode statistics
         self.episode_sums = self.task.create_stats({})
         self.add_stats(self._penalties.get_stats_name())
@@ -142,7 +126,8 @@ class MFP3DVirtual(MFP2DVirtual):
 
     def set_action_and_observation_spaces(self) -> None:
         """
-        Sets the action and observation spaces."""
+        Sets the action and observation spaces.
+        """
 
         # Defines the observation space
         self.observation_space = spaces.Dict(
@@ -153,6 +138,9 @@ class MFP3DVirtual(MFP2DVirtual):
                 ),
                 "transforms": spaces.Box(low=-1, high=1, shape=(self._max_actions, 10)),
                 "masks": spaces.Box(low=0, high=1, shape=(self._max_actions,)),
+                "masses": spaces.Box(
+                    low=-np.inf, high=np.inf, shape=(self._num_envs, 4)
+                ),
             }
         )
 
@@ -169,38 +157,10 @@ class MFP3DVirtual(MFP2DVirtual):
                 "The requested discrete action type is not supported."
             )
 
-    def set_up_scene(self, scene) -> None:
-        """
-        Sets up the USD scene inside Omniverse for the task.
-
-        Args:
-            scene: The USD stage to setup."""
-
-        # Add the floating platform, and the marker
-        self.get_floating_platform()
-        self.get_target()
-
-        RLTask.set_up_scene(self, scene)
-
-        # Collects the interactive elements in the scene
-        root_path = "/World/envs/.*/Modular_floating_platform"
-        self._platforms = ModularFloatingPlatformView(
-            prim_paths_expr=root_path, name="modular_floating_platform_view"
-        )
-
-        # Add views to scene
-        scene.add(self._platforms)
-        scene.add(self._platforms.base)
-
-        scene.add(self._platforms.thrusters)
-
-        # Add arrows to scene if task is go to pose
-        scene, self._marker = self.task.add_visual_marker_to_scene(scene)
-        return
-
     def cleanup(self) -> None:
         """
-        Prepares torch buffers for RL data collection."""
+        Prepares torch buffers for RL data collection.
+        """
 
         # prepare tensors
         self.obs_buf = {
@@ -216,6 +176,11 @@ class MFP3DVirtual(MFP2DVirtual):
             ),
             "masks": torch.zeros(
                 (self._num_envs, self._max_actions),
+                device=self._device,
+                dtype=torch.float,
+            ),
+            "masses": torch.zeros(
+                (self._num_envs, 4),
                 device=self._device,
                 dtype=torch.float,
             ),
@@ -235,11 +200,41 @@ class MFP3DVirtual(MFP2DVirtual):
         )
         self.extras = {}
 
+    def set_up_scene(self, scene) -> None:
+        """
+        Sets up the USD scene inside Omniverse for the task.
+
+        Args:
+            scene (Usd.Stage): The USD stage to setup.
+        """
+
+        # Add the floating platform, and the marker
+        self.get_floating_platform()
+        self.get_target()
+
+        RLTask.set_up_scene(self, scene)
+
+        # Collects the interactive elements in the scene
+        root_path = "/World/envs/.*/Modular_floating_platform"
+        self._platforms = ModularFloatingPlatformView(
+            prim_paths_expr=root_path, name="modular_floating_platform_view"
+        )
+
+        # Add views to scene
+        scene.add(self._platforms)
+        scene.add(self._platforms.base)
+        scene.add(self._platforms.thrusters)
+
+        # Add arrows to scene if task is go to pose
+        scene, self._marker = self.task.add_visual_marker_to_scene(scene)
+        return
+
     def get_floating_platform(self):
         """
-        Adds the floating platform to the scene."""
+        Adds the floating platform to the scene.
+        """
 
-        fp = ModularFloatingPlatform(
+        self._fp = ModularFloatingPlatform(
             prim_path=self.default_zero_env_path + "/Modular_floating_platform",
             name="modular_floating_platform",
             translation=self._fp_position,
@@ -247,13 +242,14 @@ class MFP3DVirtual(MFP2DVirtual):
         )
         self._sim_config.apply_articulation_settings(
             "modular_floating_platform",
-            get_prim_at_path(fp.prim_path),
+            get_prim_at_path(self._fp.prim_path),
             self._sim_config.parse_actor_config("modular_floating_platform"),
         )
 
     def update_state(self) -> None:
         """
-        Updates the state of the system."""
+        Updates the state of the system.
+        """
 
         # Collects the position and orientation of the platform
         self.root_pos, self.root_quats = self._platforms.get_world_poses(clone=True)
@@ -262,10 +258,13 @@ class MFP3DVirtual(MFP2DVirtual):
         # Collects the velocity of the platform
         self.root_velocities = self._platforms.get_velocities(clone=True)
         root_velocities = self.root_velocities.clone()
-        # Cast quaternion to Yaw
         # Add noise on obs
-        root_positions = self.ON.add_noise_on_pos(root_positions)
-        root_velocities = self.ON.add_noise_on_vel(root_velocities)
+        root_positions = self.DR.noisy_observations.add_noise_on_pos(
+            root_positions, step=self.step
+        )
+        root_velocities = self.DR.noisy_observations.add_noise_on_vel(
+            root_velocities, step=self.step
+        )
         # Compute the heading
         heading = quat_to_mat(self.root_quats)
         # Dump to state
@@ -284,9 +283,12 @@ class MFP3DVirtual(MFP2DVirtual):
             env_ids: The indices of the environments to set the targets for."""
 
         env_long = env_ids.long()
-        # Randomizes the position of the ball on the x y axis
+        # Randomizes the position of the ball on the x y z axes
         target_positions, target_orientation = self.task.get_goals(
-            env_long, self.initial_pin_pos.clone(), self.initial_pin_rot.clone()
+            env_long,
+            self.initial_pin_pos.clone(),
+            self.initial_pin_rot.clone(),
+            step=self.step,
         )
         # Apply the new goals
         if self._marker:

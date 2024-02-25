@@ -111,8 +111,8 @@ class CreatePlatform:
                 self.platform_path + "/core",
                 "body",
                 self.core_radius,
-                self.core_CoM,
-                self.core_mass,
+                Gf.Vec3d([0, 0, 0]),
+                0.0001,
             )
         elif self.core_shape == "cylinder":
             self.core_path = self.createRigidCylinder(
@@ -120,8 +120,8 @@ class CreatePlatform:
                 "body",
                 self.core_radius,
                 self.core_height,
-                self.core_CoM,
-                self.core_mass,
+                Gf.Vec3d([0, 0, 0]),
+                0.0001,
             )
         self.createMovableCoM(
             self.platform_path + "/movable_CoM",
