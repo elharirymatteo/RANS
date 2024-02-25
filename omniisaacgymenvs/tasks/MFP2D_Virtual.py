@@ -68,6 +68,7 @@ class MFP2DVirtual(RLTask):
         self._max_episode_length = self._task_cfg["env"]["maxEpisodeLength"]
         self._discrete_actions = self._task_cfg["env"]["action_mode"]
         self._device = self._cfg["sim_device"]
+        self.iteration = 0
         self.step = 0
 
         # Split the maximum amount of thrust across all thrusters.
@@ -540,6 +541,7 @@ class MFP2DVirtual(RLTask):
         """
 
         position_reward = self.task.compute_reward(self.current_state, self.actions)
+        self.iteration += 1
         self.step += 1 / self._task_cfg["env"]["horizon_length"]
         penalties = self._penalties.compute_penalty(
             self.current_state, self.actions, self.step
@@ -547,7 +549,7 @@ class MFP2DVirtual(RLTask):
         self.rew_buf[:] = position_reward - penalties
         self.episode_sums = self.task.update_statistics(self.episode_sums)
         self.episode_sums = self._penalties.update_statistics(self.episode_sums)
-        if self.step % 1 == 0:
+        if self.iteration / self._task_cfg["env"]["horizon_length"] % 1 == 0:
             self.extras_wandb["wandb_step"] = int(self.step)
             for key, value in self._penalties.get_logs().items():
                 self.extras_wandb[key] = value
