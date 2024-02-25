@@ -110,6 +110,8 @@ class GoToPoseTask(Core):
             stats["heading_reward"] = torch_zeros()
         if not "heading_error" in stats.keys():
             stats["heading_error"] = torch_zeros()
+        if not "boundary_dist" in stats.keys():
+            stats["boundary_dist"] = torch_zeros()
         self.log_with_wandb = []
         self.log_with_wandb += self._task_parameters.boundary_penalty.get_stats_name()
         for name in self._task_parameters.boundary_penalty.get_stats_name():
@@ -229,6 +231,7 @@ class GoToPoseTask(Core):
         stats["heading_reward"] += self.heading_reward
         stats["position_error"] += self.position_dist
         stats["heading_error"] += self.heading_dist
+        stats["boundary_dist"] += self.boundary_dist
         stats = self._task_parameters.boundary_penalty.update_statistics(stats)
         return stats
 

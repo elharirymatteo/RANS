@@ -315,37 +315,31 @@ class TrackXYVelocityTask(Core):
 
         num_resets = self._num_envs
         # Randomizes the linear velocity of the platform
-        xyz_velocity = torch.zeros(
-            (num_resets, 3), device=self._device, dtype=torch.float32
-        )
-        linear_velocity = self._spawn_linear_velocity_sampler.sample(
+        linear_velocities = self._spawn_linear_velocity_sampler.sample(
             num_resets, step, device=self._device
         )
-        theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
-        xyz_velocity[:, 0] = linear_velocity * torch.cos(theta)
-        xyz_velocity[:, 1] = linear_velocity * torch.sin(theta)
 
         # Randomizes the angular velocity of the platform
-        angular_velocity = self._spawn_angular_velocity_sampler.sample(
+        angular_velocities = self._spawn_angular_velocity_sampler.sample(
             num_resets, step, device=self._device
         )
-        xyz_velocity[:, 2] = angular_velocity
-        xyz_velocity = xyz_velocity.cpu().numpy()
 
-        fig, ax = plt.subplots(1, 3, dpi=100, figsize=(8, 8), sharey=True)
-        ax[0].hist(xyz_velocity[:, 0], bins=32)
-        ax[0].set_title("Initial x linear velocity")
-        ax[0].set_xlim(-0.5, 0.5)
+        linear_velocities = linear_velocities.cpu().numpy()
+        angular_velocities = angular_velocities.cpu().numpy()
+
+        fig, ax = plt.subplots(1, 2, dpi=100, figsize=(8, 8), sharey=True)
+        ax[0].hist(linear_velocities, bins=32)
+        ax[0].set_title("Initial normed linear velocity")
+        ax[0].set_xlim(
+            self._spawn_linear_velocity_sampler.get_min_bound(),
+            self._spawn_linear_velocity_sampler.get_max_bound(),
+        )
         ax[0].set_xlabel("vel (m/s)")
         ax[0].set_ylabel("count")
-        ax[1].hist(xyz_velocity[:, 1], bins=32)
-        ax[1].set_title("Initial y linear velocity")
+        ax[1].hist(angular_velocities, bins=32)
+        ax[1].set_title("Initial normed angular velocity")
         ax[1].set_xlim(-0.5, 0.5)
-        ax[1].set_xlabel("vel (m/s)")
-        ax[2].hist(xyz_velocity[:, 2], bins=32)
-        ax[2].set_title("Initial z angular velocity")
-        ax[2].set_xlim(-0.5, 0.5)
-        ax[2].set_xlabel("vel (rad/s)")
+        ax[1].set_xlabel("vel (rad/s)")
         fig.tight_layout()
 
         fig.canvas.draw()
@@ -376,21 +370,18 @@ class TrackXYVelocityTask(Core):
         r = self._target_linear_velocity_sampler.sample(
             num_resets, step=step, device=self._device
         )
-        theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
-        target_velocities[:, 0] = r * torch.cos(theta)
-        target_velocities[:, 1] = r * torch.sin(theta)
-        target_velocities = target_velocities.cpu().numpy()
 
-        fig, ax = plt.subplots(1, 2, dpi=100, figsize=(8, 8), sharey=True)
-        ax[0].hist(target_velocities[:, 0], bins=32)
-        ax[0].set_title("Target x linear velocity")
-        ax[0].set_xlim(-0.5, 0.5)
-        ax[0].set_xlabel("vel (m/s)")
-        ax[0].set_ylabel("count")
-        ax[1].hist(target_velocities[:, 1], bins=32)
-        ax[1].set_title("Target y linear velocity")
-        ax[1].set_xlim(-0.5, 0.5)
-        ax[1].set_xlabel("vel (m/s)")
+        r = r.cpu().numpy()
+
+        fig, ax = plt.subplots(dpi=100, figsize=(8, 8), sharey=True)
+        ax.hist(r, bins=32)
+        ax.set_title("Target normed linear velocity")
+        ax.set_xlim(
+            self._target_linear_velocity_sampler.get_min_bound(),
+            self._target_linear_velocity_sampler.get_max_bound(),
+        )
+        ax.set_xlabel("vel (m/s)")
+        ax.set_ylabel("count")
         fig.tight_layout()
 
         fig.canvas.draw()

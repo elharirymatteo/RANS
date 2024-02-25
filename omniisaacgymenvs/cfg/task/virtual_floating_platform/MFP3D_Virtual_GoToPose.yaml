@@ -215,7 +215,7 @@ env:
       kill_thrusters: False
       max_thruster_kill: 2
     core:
-      mass: 10.92
+      mass: 5.32
       CoM: [0,0,0]
       radius: 0.31
       shape: "cylinder"
