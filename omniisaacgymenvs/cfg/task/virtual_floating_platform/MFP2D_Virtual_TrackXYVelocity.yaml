@@ -210,7 +210,7 @@ env:
   reward_parameters:
     name: TrackXYVelocity
     reward_mode: exponential
-    exponential_reward_coeff: 0.25
+    exponential_reward_coeff: 0.10
 
 
   platform:

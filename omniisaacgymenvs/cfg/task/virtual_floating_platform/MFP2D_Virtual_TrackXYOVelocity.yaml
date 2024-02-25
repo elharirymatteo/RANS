@@ -224,10 +224,10 @@ env:
     name: TrackXYOVelocity
     linear_reward_mode: exponential
     angular_reward_mode: linear
-    linear_exponential_reward_coeff: 0.25
-    angular_exponential_reward_coeff: 0.25
-    linear_scale: 1.0
-    angular_scale: 1.0
+    linear_exponential_reward_coeff: 0.10
+    angular_exponential_reward_coeff: 0.10
+    linear_scale: 0.5
+    angular_scale: 0.5
 
   platform:
     randomization:
