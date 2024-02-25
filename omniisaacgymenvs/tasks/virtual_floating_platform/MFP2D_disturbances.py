@@ -342,13 +342,11 @@ class ForceDisturbance:
         dict = {}
 
         if self.parameters.enable:
-            force = self.forces[:, :2].cpu().numpy().flatten()
+            force = self.force_sampler.sample(self._num_envs, step, device=self._device)
             fig, ax = plt.subplots(1, 1, dpi=100, figsize=(8, 8), sharey=True)
             ax.hist(force, bins=32)
             ax.set_title("Force disturbance")
-            ax.set_xlim(
-                -self.force_sampler.get_max_bound(), self.force_sampler.get_max_bound()
-            )
+            ax.set_xlim(0, self.force_sampler.get_max_bound())
             ax.set_xlabel("force (N)")
             ax.set_ylabel("count")
             fig.tight_layout()
@@ -486,7 +484,9 @@ class TorqueDisturbance:
         dict = {}
 
         if self.parameters.enable:
-            torque = self.torques[:, 2].cpu().numpy().flatten()
+            torque = self.torque_sampler.sample(
+                self._num_envs, step, device=self._device
+            )
             fig, ax = plt.subplots(1, 1, dpi=100, figsize=(8, 8), sharey=True)
             ax.hist(torque, bins=32)
             ax.set_title("Torque disturbance")
