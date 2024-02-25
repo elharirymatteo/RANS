@@ -221,10 +221,11 @@ class GoToPoseTask(GoToPoseTask2D, Core):
         quat[:, 1] = torch.sqrt(1 - uvw[:, 0]) * torch.sin(uvw[:, 1] * 2 * math.pi)
         quat[:, 2] = torch.sqrt(1 - uvw[:, 0]) * torch.cos(uvw[:, 1] * 2 * math.pi)
         quat[:, 3] = torch.sqrt(uvw[:, 0]) * torch.sin(uvw[:, 2] * 2 * math.pi)
+        target_orientations[env_ids] = quat
         # cast quaternions to rotation matrix
         self._target_quat[env_ids] = quat
-        self._target_headings = quat_to_mat(quat)
-        return target_positions, quat
+        self._target_headings[env_ids] = quat_to_mat(quat)
+        return target_positions, target_orientations
 
     def get_initial_conditions(
         self,
@@ -253,29 +254,50 @@ class GoToPoseTask(GoToPoseTask2D, Core):
         theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
         phi = torch.rand((num_resets,), device=self._device) * math.pi
         initial_position[:, 0] = (
-            r * torch.cos(theta) * torch.sin(phi) + self._target_positions[0]
+            r * torch.cos(theta) * torch.sin(phi) + self._target_positions[env_ids, 0]
         )
         initial_position[:, 1] = (
-            r * torch.sin(theta) * torch.sin(phi) + self._target_positions[1]
+            r * torch.sin(theta) * torch.sin(phi) + self._target_positions[env_ids, 1]
         )
-        initial_position[:, 2] = r * torch.cos(phi) + self._target_positions[2]
+        initial_position[:, 2] = r * torch.cos(phi) + self._target_positions[env_ids, 2]
 
         # Randomizes the orientation of the platform
         # We want to sample something that's not too far from the original orientation
         initial_orientation = torch.zeros(
             (num_resets, 4), device=self._device, dtype=torch.float32
         )
-        d = self._spawn_position_sampler.sample(num_resets, step, device=self._device)
-
-        uvw = torch.rand((num_resets, 3), device=self._device)
-        uvw = uvw / torch.norm(uvw, dim=-1, keepdim=True)
-
-        initial_orientation[:, 0] = np.cos(d / 2)
-        initial_orientation[:, 1] = uvw[:, 0] * np.sin(d / 2)
-        initial_orientation[:, 2] = uvw[:, 1] * np.sin(d / 2)
-        initial_orientation[:, 3] = uvw[:, 2] * np.sin(d / 2)
-
-        initial_orientation = initial_orientation * self._target_quat[env_ids]
+        r = self._spawn_position_sampler.sample(num_resets, step, device=self._device)
+        # Projects the angular distance on a sphere in the RPY space
+        u = (
+            torch.rand(num_resets, device=self._device, dtype=torch.float32)
+            * math.pi
+            * 2
+        )
+        v = torch.rand(num_resets, device=self._device, dtype=torch.float32) * math.pi
+        roll = r * torch.cos(u) * torch.sin(v)
+        pitch = r * torch.sin(u) * torch.sin(v)
+        yaw = r * torch.cos(v)
+        # Cast the displacement in the Quaternion space
+        cr = torch.cos(roll * 0.5)
+        sr = torch.sin(roll * 0.5)
+        cp = torch.cos(pitch * 0.5)
+        sp = torch.sin(pitch * 0.5)
+        cy = torch.cos(yaw * 0.5)
+        sy = torch.sin(yaw * 0.5)
+        w0 = cr * cp * cy + sr * sp * sy
+        x0 = sr * cp * cy - cr * sp * sy
+        y0 = cr * sp * cy + sr * cp * sy
+        z0 = cr * cp * sy - sr * sp * cy
+        w1 = self._target_quat[env_ids, 0]
+        x1 = self._target_quat[env_ids, 1]
+        y1 = self._target_quat[env_ids, 2]
+        z1 = self._target_quat[env_ids, 3]
+        # Quaternion multiplication with the target orientation
+        initial_orientation[:, 0] = w0 * w1 - x0 * x1 - y0 * y1 - z0 * z1
+        initial_orientation[:, 1] = w0 * x1 + x0 * w1 + y0 * z1 - z0 * y1
+        initial_orientation[:, 2] = w0 * y1 - x0 * z1 + y0 * w1 + z0 * x1
+        initial_orientation[:, 3] = w0 * z1 + x0 * y1 - y0 * x1 + z0 * w1
+        initial_orientation /= torch.norm(initial_orientation, dim=-1, keepdim=True)
 
         # Randomizes the linear velocity of the platform
         initial_velocity = torch.zeros(
@@ -344,58 +366,34 @@ class GoToPoseTask(GoToPoseTask2D, Core):
 
         num_resets = self._num_envs
         # Resets the counter of steps for which the goal was reached
-        xyz_pos = torch.zeros((num_resets, 2), device=self._device, dtype=torch.float32)
         r = self._spawn_position_sampler.sample(num_resets, step, device=self._device)
-        theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
-        phi = torch.rand((num_resets,), device=self._device) * math.pi
-        xyz_pos[:, 0] = r * torch.cos(theta) * torch.sin(phi)
-        xyz_pos[:, 1] = r * torch.sin(theta) * torch.sin(phi)
-        xyz_pos[:, 2] = r * torch.cos(phi)
         # Randomizes the heading of the platform
         heading = self._spawn_heading_sampler.sample(
             num_resets, step, device=self._device
         )
         # Randomizes the linear velocity of the platform
-        velocities = torch.zeros(
-            (num_resets, 6), device=self._device, dtype=torch.float32
-        )
         linear_velocity = self._spawn_linear_velocity_sampler.sample(
             num_resets, step, device=self._device
         )
-        theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
-        phi = torch.rand((num_resets,), device=self._device) * math.pi
-        velocities[:, 0] = linear_velocity * torch.cos(theta) * torch.sin(phi)
-        velocities[:, 1] = linear_velocity * torch.sin(theta) * torch.sin(phi)
-        velocities[:, 2] = linear_velocity * torch.cos(phi)
         # Randomizes the angular velocity of the platform
         angular_velocity = self._spawn_angular_velocity_sampler.sample(
             num_resets, step, device=self._device
         )
-        theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
-        phi = torch.rand((num_resets,), device=self._device) * math.pi
-        velocities[:, 3] = angular_velocity * torch.cos(theta) * torch.sin(phi)
-        velocities[:, 4] = angular_velocity * torch.sin(theta) * torch.sin(phi)
-        velocities[:, 5] = angular_velocity * torch.cos(phi)
 
-        xy_pos = xy_pos.cpu().numpy()
-        heading = np.expand_dims(heading.cpu().numpy(), axis=-1)
-        velocities = velocities.cpu().numpy()
+        r = r.cpu().numpy()
+        heading = heading.cpu().numpy()
+        linear_velocities = linear_velocity.cpu().numpy()
+        angular_velocities = angular_velocity.cpu().numpy()
 
-        fig.tight_layout()
-        fig, ax = plt.subplots(1, 3, dpi=100, figsize=(8, 8), sharey=True)
-        ax[0].hist(xyz_pos[:, 0], bins=32)
-        ax[0].set_title("Initial x position")
-        ax[0].set_xlim(self._task_parameters.kill_dist, self._task_parameters.kill_dist)
-        ax[0].set_xlabel("pos (m)")
-        ax[0].set_ylabel("count")
-        ax[1].hist(xyz_pos[:, 1], bins=32)
-        ax[1].set_title("Initial y position")
-        ax[1].set_xlim(self._task_parameters.kill_dist, self._task_parameters.kill_dist)
-        ax[1].set_xlabel("pos (m)")
-        ax[2].hist(xyz_pos[:, 2], bins=32)
-        ax[2].set_title("Initial z position")
-        ax[2].set_xlim(self._task_parameters.kill_dist, self._task_parameters.kill_dist)
-        ax[2].set_xlabel("pos (m)")
+        fig, ax = plt.subplots(dpi=100, figsize=(8, 8))
+        ax.hist(r, bins=32)
+        ax.set_title("Initial position")
+        ax.set_xlim(
+            self._spawn_position_sampler.get_min_bound(),
+            self._spawn_position_sampler.get_max_bound(),
+        )
+        ax.set_xlabel("spawn distance (m)")
+        ax.set_ylabel("count")
         fig.tight_layout()
 
         fig.canvas.draw()
@@ -405,10 +403,13 @@ class GoToPoseTask(GoToPoseTask2D, Core):
         dict["curriculum/initial_position"] = wandb.Image(data)
 
         fig, ax = plt.subplots(dpi=100, figsize=(8, 8))
-        ax.hist(heading[:, 0], bins=32)
+        ax.hist(heading, bins=32)
         ax.set_title("Initial heading")
-        ax.set_xlim(-math.pi, math.pi)
-        ax.set_xlabel("theta (rad)")
+        ax.set_xlim(
+            self._spawn_heading_sampler.get_min_bound(),
+            self._spawn_heading_sampler.get_max_bound(),
+        )
+        ax.set_xlabel("angular distance (rad)")
         ax.set_ylabel("count")
         fig.tight_layout()
 
@@ -418,47 +419,27 @@ class GoToPoseTask(GoToPoseTask2D, Core):
 
         dict["curriculum/initial_heading"] = wandb.Image(data)
 
-        fig, ax = plt.subplots(1, 3, dpi=100, figsize=(8, 8), sharey=True)
-        ax[0].hist(velocities[:, 0], bins=32)
-        ax[0].set_title("Initial x linear velocity")
-        ax[0].set_xlim(-0.5, 0.5)
+        fig, ax = plt.subplots(1, 2, dpi=100, figsize=(8, 8), sharey=True)
+        ax[0].hist(linear_velocities, bins=32)
+        ax[0].set_title("Initial normed linear velocity")
+        ax[0].set_xlim(
+            self._spawn_linear_velocity_sampler.get_min_bound(),
+            self._spawn_linear_velocity_sampler.get_max_bound(),
+        )
         ax[0].set_xlabel("vel (m/s)")
         ax[0].set_ylabel("count")
-        ax[1].hist(velocities[:, 1], bins=32)
-        ax[1].set_title("Initial y linear velocity")
-        ax[1].set_xlim(-0.5, 0.5)
-        ax[1].set_xlabel("vel (m/s)")
-        ax[2].hist(velocities[:, 2], bins=32)
-        ax[2].set_title("Initial z linear velocity")
-        ax[2].set_xlim(-0.5, 0.5)
-        ax[2].set_xlabel("vel (rad/s)")
-        fig.tight_layout()
-        fig.canvas.draw()
-
-        data = np.array(fig.canvas.renderer.buffer_rgba())
-        plt.close(fig)
-
-        dict["curriculum/initial_linear_velocities"] = wandb.Image(data)
-
-        fig, ax = plt.subplots(1, 3, dpi=100, figsize=(8, 8), sharey=True)
-        ax[0].hist(velocities[:, 0], bins=32)
-        ax[0].set_title("Initial x angular velocity")
-        ax[0].set_xlim(-0.5, 0.5)
-        ax[0].set_xlabel("vel (m/s)")
-        ax[0].set_ylabel("count")
-        ax[1].hist(velocities[:, 1], bins=32)
-        ax[1].set_title("Initial y angular velocity")
-        ax[1].set_xlim(-0.5, 0.5)
-        ax[1].set_xlabel("vel (m/s)")
-        ax[2].hist(velocities[:, 2], bins=32)
-        ax[2].set_title("Initial z angular velocity")
-        ax[2].set_xlim(-0.5, 0.5)
-        ax[2].set_xlabel("vel (rad/s)")
+        ax[1].hist(angular_velocities, bins=32)
+        ax[1].set_title("Initial normed angular velocity")
+        ax[1].set_xlim(
+            self._spawn_angular_velocity_sampler.get_min_bound(),
+            self._spawn_angular_velocity_sampler.get_max_bound(),
+        )
+        ax[1].set_xlabel("vel (rad/s)")
         fig.tight_layout()
 
         fig.canvas.draw()
         data = np.array(fig.canvas.renderer.buffer_rgba())
         plt.close(fig)
 
-        dict["curriculum/initial_angular_velocities"] = wandb.Image(data)
+        dict["curriculum/initial_velocities"] = wandb.Image(data)
         return dict

@@ -79,7 +79,7 @@ class GoToPoseParameters:
 
     def __post_init__(self) -> None:
         assert self.position_tolerance > 0, "Position tolerance must be positive."
-        assert self.heading_tolerance > 0, "Heading tolerance must be positive."
+        assert self.orientation_tolerance > 0, "Heading tolerance must be positive."
         assert (
             self.kill_after_n_steps_in_tolerance > 0
         ), "Kill after n steps in tolerance must be positive."

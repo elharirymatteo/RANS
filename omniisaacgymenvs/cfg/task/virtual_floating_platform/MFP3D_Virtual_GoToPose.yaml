@@ -8,7 +8,7 @@ experiment: MFP3D_Virtual_GoToPose
 env:
   numEnvs: ${resolve_default:64,${...num_envs}}
   envSpacing: 12
-  maxEpisodeLength: 700
+  maxEpisodeLength: 450
   enableDebugVis: False
   action_mode: MultiDiscrete
   numQuantizedActions: 1
