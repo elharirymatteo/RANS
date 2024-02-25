@@ -12,7 +12,7 @@ env:
   enableDebugVis: False
   action_mode: MultiDiscrete
   numQuantizedActions: 1
-  horizon_length: 16
+  horizon_length: ${...train.params.config.horizon_length}
 
   controlFrequencyInv: 10
 
