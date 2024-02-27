@@ -9,9 +9,9 @@ __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
 from omni.isaac.core.robots.robot import Robot
+from dataclasses import dataclass, field
 from typing import Optional
 import numpy as np
-import dataclasses
 from pxr import Gf
 import torch
 import omni
@@ -28,6 +28,30 @@ from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_thruster_generator i
 )
 
 
+@dataclass
+class PlatformParameters:
+    shape: str = "sphere"
+    radius: float = 0.31
+    height: float = 0.5
+    mass: float = 5.32
+    CoM: tuple = (0, 0, 0)
+    refinement: int = 2
+    usd_asset_path: str = "/None"
+
+    def __post_init__(self):
+        assert self.shape in [
+            "cylinder",
+            "sphere",
+            "asset",
+        ], "The shape must be 'cylinder', 'sphere' or 'asset'."
+        assert self.radius > 0, "The radius must be larger than 0."
+        assert self.height > 0, "The height must be larger than 0."
+        assert self.mass > 0, "The mass must be larger than 0."
+        assert len(self.CoM) == 3, "The length of the CoM coordinates must be 3."
+        assert self.refinement > 0, "The refinement level must be larger than 0."
+        self.refinement = int(self.refinement)
+
+
 class CreatePlatform:
     """
     Creates a floating platform with a core body and a set of thrusters."""
@@ -39,53 +63,8 @@ class CreatePlatform:
         self.core_path = None
         self.stage = omni.usd.get_context().get_stage()
 
-        self.read_cfg(cfg)
-
-    def read_cfg(self, cfg: dict) -> None:
-        """
-        Reads the configuration file and sets the parameters for the platform."""
-
-        if "core" in cfg.keys():
-            if "shape" in cfg["core"].keys():
-                self.core_shape = cfg["core"]["shape"]
-                assert type(self.core_shape) is str
-                self.core_shape.lower()
-                assert (self.core_shape == "sphere") or (self.core_shape == "cylinder")
-            else:
-                self.core_shape = "sphere"
-            if self.core_shape == "sphere":
-                if "radius" in cfg["core"].keys():
-                    self.core_radius = cfg["core"]["radius"]
-                else:
-                    self.core_radius = 0.5
-            if self.core_shape == "cylinder":
-                if "radius" in cfg["core"].keys():
-                    self.core_radius = cfg["core"]["radius"]
-                else:
-                    self.core_radius = 0.5
-                if "height" in cfg["core"].keys():
-                    self.height_radius = cfg["core"]["radius"]
-                else:
-                    self.core_height = 0.5
-            if "CoM" in cfg["core"].keys():
-                self.core_CoM = Gf.Vec3d(list(cfg["core"]["CoM"]))
-            else:
-                self.core_CoM = Gf.Vec3d([0, 0, 0])
-            if "mass" in cfg["core"].keys():
-                self.core_mass = cfg["core"]["mass"]
-            else:
-                self.core_mass = 5.0
-            if "refinement" in cfg.keys():
-                self.refinement = cfg["refinement"]
-            else:
-                self.refinement = 2
-        else:
-            self.core_shape = "sphere"
-            self.core_radius = 0.5
-            self.core_CoM = Gf.Vec3d([0, 0, 0])
-            self.core_mass = 5.0
-            self.refinement = 2
         # Reads the thruster configuration and computes the number of virtual thrusters.
+        self.settings = PlatformParameters(**cfg["core"])
         thruster_cfg = ConfigurationParameters(**cfg["configuration"])
         self.num_virtual_thrusters = compute_actions(thruster_cfg)
 
@@ -108,29 +87,29 @@ class CreatePlatform:
         self.createBasicColors()
 
         # Creates the main body element and adds the position & heading markers.
-        if self.core_shape == "sphere":
+        if self.settings.shape == "sphere":
             self.core_path = self.createRigidSphere(
                 self.platform_path + "/core",
                 "body",
-                self.core_radius,
+                self.settings.radius,
                 Gf.Vec3d(0, 0, 0),
                 0.0001,
             )
-        elif self.core_shape == "cylinder":
+        elif self.settings.shape == "cylinder":
             self.core_path = self.createRigidCylinder(
                 self.platform_path + "/core",
                 "body",
-                self.core_radius,
-                self.core_height,
+                self.settings.radius,
+                self.settings.height,
                 Gf.Vec3d(0, 0, 0),
                 0.0001,
             )
         self.createMovableCoM(
             self.platform_path + "/movable_CoM",
             "CoM",
-            self.core_radius / 2,
-            self.core_CoM,
-            self.core_mass,
+            self.settings.radius / 2,
+            self.settings.CoM,
+            self.settings.mass,
         )
         self.createArrowXform(self.core_path + "/arrow")
         self.createPositionMarkerXform(self.core_path + "/marker")

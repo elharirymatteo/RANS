@@ -11,15 +11,58 @@ __status__ = "development"
 from omniisaacgymenvs.tasks.virtual_floating_platform.MFP3D_core import (
     euler_angles_to_matrix,
 )
-from dataclasses import dataclass
+from typing import List, Tuple
+from dataclasses import dataclass, field
 import torch
 import math
 
 
+
+
 @dataclass
-class ConfigurationParameters:
+class CoreParameters:
     """
-    Thruster configuration parameters."""
+    Platform physical parameters."""
+
+    mass: float = 5.0
+    radius: float = 0.25
+    refinement: int = 2
+    CoM: tuple = (0, 0, 0)
+    shape: str = "sphere"
+
+
+@dataclass
+class Thruster:
+    """
+    The definition of a basic thruster.
+    """
+
+    max_force: float = 1.0
+    position: tuple = (0, 0, 0)
+    orientation: tuple = (0, 0, 0)
+
+
+@dataclass
+class ReactionWheel:
+    """
+    The definition of a basic reaction wheel.
+    """
+
+    mass: float = 0.250
+    inertia: float = 0.3
+    position: tuple = (0, 0, 0)
+    orientation: tuple = (0, 0, 0)
+    max_speed: float = 5000
+    delay: float = 0.0
+    response_order: float = 1
+    k1: float = 1.0
+    k2: float = 1.0
+
+@dataclass
+class FloatingPlatform:
+    """
+    Thruster configuration parameters.
+    """
 
     use_four_configurations: bool = False
     num_anchors: int = 4
@@ -33,15 +76,19 @@ class ConfigurationParameters:
 
 
 @dataclass
-class PlatformParameters:
+class SpaceCraftDefinition:
     """
-    Platform physical parameters."""
+    The definition of the spacecraft / floating platform.
+    """
 
-    mass: float = 5.0
-    radius: float = 0.25
-    refinement: int = 2
-    CoM: tuple = (0, 0, 0)
-    shape: str = "sphere"
+    use_floating_platform_generation = True
+    core: CoreParameters = field(default_factory=dict)
+    floating_platform: FloatingPlatform = field(default_factory=dict)
+    thrusters: List[Thruster] = field(default_factory=list)
+    reaction_wheels: List[ReactionWheel] = field(default_factory=list)
+    
+    def __post_init__(self):
+
 
 
 @dataclass
