@@ -17,10 +17,7 @@ import math
 import os
 
 from omniisaacgymenvs.mujoco_envs.environments.disturbances import (
-    NoisyActions,
-    NoisyObservations,
-    TorqueDisturbance,
-    UnevenFloorDisturbance,
+    Disturbances,
     RandomKillThrusters,
     RandomSpawn,
 )
@@ -39,98 +36,22 @@ def parseEnvironmentConfig(
         Dict[str, Union[float, int, Dict]]: The parsed configuration dictionary."""
 
     new_cfg = {}
-    new_cfg["disturbances"] = {}
-    new_cfg["disturbances"]["seed"] = cfg["seed"]
-    new_cfg["disturbances"]["use_uneven_floor"] = cfg["task"]["env"]["disturbances"][
-        "forces"
-    ]["use_uneven_floor"]
-    new_cfg["disturbances"]["use_sinusoidal_floor"] = cfg["task"]["env"][
-        "disturbances"
-    ]["forces"]["use_sinusoidal_floor"]
-    new_cfg["disturbances"]["floor_min_freq"] = cfg["task"]["env"]["disturbances"][
-        "forces"
-    ]["floor_min_freq"]
-    new_cfg["disturbances"]["floor_max_freq"] = cfg["task"]["env"]["disturbances"][
-        "forces"
-    ]["floor_max_freq"]
-    new_cfg["disturbances"]["floor_min_offset"] = cfg["task"]["env"]["disturbances"][
-        "forces"
-    ]["floor_min_offset"]
-    new_cfg["disturbances"]["floor_max_offset"] = cfg["task"]["env"]["disturbances"][
-        "forces"
-    ]["floor_max_offset"]
-    new_cfg["disturbances"]["min_floor_force"] = cfg["task"]["env"]["disturbances"][
-        "forces"
-    ]["min_floor_force"]
-    new_cfg["disturbances"]["max_floor_force"] = cfg["task"]["env"]["disturbances"][
-        "forces"
-    ]["max_floor_force"]
-
-    new_cfg["disturbances"]["use_torque_disturbance"] = cfg["task"]["env"][
-        "disturbances"
-    ]["torques"]["use_torque_disturbance"]
-    new_cfg["disturbances"]["use_sinusoidal_torque"] = cfg["task"]["env"][
-        "disturbances"
-    ]["torques"]["use_sinusoidal_torque"]
-    new_cfg["disturbances"]["min_torque"] = cfg["task"]["env"]["disturbances"][
-        "torques"
-    ]["min_torque"]
-    new_cfg["disturbances"]["max_torque"] = cfg["task"]["env"]["disturbances"][
-        "torques"
-    ]["max_torque"]
-
-    new_cfg["disturbances"]["add_noise_on_pos"] = cfg["task"]["env"]["disturbances"][
-        "observations"
-    ]["add_noise_on_pos"]
-    new_cfg["disturbances"]["position_noise_min"] = cfg["task"]["env"]["disturbances"][
-        "observations"
-    ]["position_noise_min"]
-    new_cfg["disturbances"]["position_noise_max"] = cfg["task"]["env"]["disturbances"][
-        "observations"
-    ]["position_noise_max"]
-    new_cfg["disturbances"]["add_noise_on_vel"] = cfg["task"]["env"]["disturbances"][
-        "observations"
-    ]["add_noise_on_vel"]
-    new_cfg["disturbances"]["velocity_noise_min"] = cfg["task"]["env"]["disturbances"][
-        "observations"
-    ]["velocity_noise_min"]
-    new_cfg["disturbances"]["velocity_noise_max"] = cfg["task"]["env"]["disturbances"][
-        "observations"
-    ]["velocity_noise_max"]
-    new_cfg["disturbances"]["add_noise_on_heading"] = cfg["task"]["env"][
-        "disturbances"
-    ]["observations"]["add_noise_on_heading"]
-    new_cfg["disturbances"]["heading_noise_min"] = cfg["task"]["env"]["disturbances"][
-        "observations"
-    ]["heading_noise_min"]
-    new_cfg["disturbances"]["heading_noise_max"] = cfg["task"]["env"]["disturbances"][
-        "observations"
-    ]["heading_noise_max"]
-
-    new_cfg["disturbances"]["add_noise_on_act"] = cfg["task"]["env"]["disturbances"][
-        "actions"
-    ]["add_noise_on_act"]
-    new_cfg["disturbances"]["min_action_noise"] = cfg["task"]["env"]["disturbances"][
-        "actions"
-    ]["min_action_noise"]
-    new_cfg["disturbances"]["max_action_noise"] = cfg["task"]["env"]["disturbances"][
-        "actions"
-    ]["max_action_noise"]
+    new_cfg["disturbances"] = cfg["task"]["env"]["disturbances"]
 
     new_cfg["spawn_parameters"] = {}
     new_cfg["spawn_parameters"]["seed"] = cfg["seed"]
     try:
         new_cfg["spawn_parameters"]["max_spawn_dist"] = cfg["task"]["env"][
             "task_parameters"
-        ]["max_spawn_dist"]
+        ]["max_spawn_dist"][]
     except:
-        new_cfg["spawn_parameters"]["max_spawn_dist"] = 0
+        new_cfg["spawn_parameters"]["max_spawn_dist"] = 5.0
     try:
         new_cfg["spawn_parameters"]["min_spawn_dist"] = cfg["task"]["env"][
             "task_parameters"
         ]["min_spawn_dist"]
     except:
-        new_cfg["spawn_parameters"]["min_spawn_dist"] = 0
+        new_cfg["spawn_parameters"]["min_spawn_dist"] = 5.0
 
     new_cfg["spawn_parameters"]["kill_dist"] = cfg["task"]["env"]["task_parameters"][
         "kill_dist"
@@ -182,10 +103,7 @@ class MuJoCoFloatingPlatform:
         self.run_batch = run_batch
         self.max_episode_length = max_episode_length
 
-        self.AN = NoisyActions(disturbances)
-        self.ON = NoisyObservations(disturbances)
-        self.TD = TorqueDisturbance(disturbances)
-        self.UF = UnevenFloorDisturbance(disturbances)
+        self.DR = Disturbances(disturbances, platform["seed"])
 
         self.TK = RandomKillThrusters(
             {

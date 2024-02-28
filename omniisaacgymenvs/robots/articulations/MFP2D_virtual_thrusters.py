@@ -146,7 +146,7 @@ class CreatePlatform:
         # Add shapes
         cylinder_path = CoM_path + "/" + name
         cylinder_path, cylinder_geom = createCylinder(
-            self.stage, CoM_path + "/" + name, radius, radius, self.refinement
+            self.stage, CoM_path + "/" + name, radius, radius, self.settings.refinement
         )
         cylinder_prim = self.stage.GetPrimAtPath(cylinder_geom.GetPath())
         applyRigidBody(cylinder_prim)
@@ -208,8 +208,8 @@ class CreatePlatform:
             self.arrow_path,
             0.1,
             0.5,
-            [self.core_radius, 0, 0],
-            self.refinement,
+            [self.settings.radius, 0, 0],
+            self.settings.refinement,
         )
         applyMaterial(self.arrow_prim, self.colors["blue"])
 
@@ -219,9 +219,12 @@ class CreatePlatform:
 
         self.marker_path, self.marker_prim = createXform(self.stage, path)
         sphere_path, sphere_geom = createSphere(
-            self.stage, self.marker_path + "/marker_sphere", 0.05, self.refinement
+            self.stage,
+            self.marker_path + "/marker_sphere",
+            0.05,
+            self.settings.refinement,
         )
-        setTranslate(sphere_geom, Gf.Vec3d([0, 0, self.core_radius]))
+        setTranslate(sphere_geom, Gf.Vec3d([0, 0, self.settings.radius]))
         applyMaterial(self.marker_prim, self.colors["green"])
 
     def createRigidSphere(
@@ -236,7 +239,7 @@ class CreatePlatform:
         # Creates a sphere
         sphere_path = path + "/" + name
         sphere_path, sphere_geom = createSphere(
-            self.stage, path + "/" + name, radius, self.refinement
+            self.stage, path + "/" + name, radius, self.settings.refinement
         )
         sphere_prim = self.stage.GetPrimAtPath(sphere_geom.GetPath())
         applyRigidBody(sphere_prim)
@@ -258,7 +261,7 @@ class CreatePlatform:
         # Creates a sphere
         sphere_path = path + "/" + name
         sphere_path, sphere_geom = createCylinder(
-            self.stage, path + "/" + name, radius, height, self.refinement
+            self.stage, path + "/" + name, radius, height, self.settings.refinement
         )
         sphere_prim = self.stage.GetPrimAtPath(sphere_geom.GetPath())
         applyRigidBody(sphere_prim)
