@@ -43,7 +43,7 @@ def parseEnvironmentConfig(
     try:
         new_cfg["spawn_parameters"]["max_spawn_dist"] = cfg["task"]["env"][
             "task_parameters"
-        ]["max_spawn_dist"][]
+        ]["max_spawn_dist"]
     except:
         new_cfg["spawn_parameters"]["max_spawn_dist"] = 5.0
     try:
@@ -138,8 +138,8 @@ class MuJoCoFloatingPlatform:
         self.resetPosition(
             initial_position=initial_position, initial_orientation=initial_orientation
         )
-        self.UF.generate_floor()
-        self.TD.generate_torque()
+        self.DR.force_disturbances.generate_forces()
+        self.DR.torque_disturbances.generate_torques()
         self.TK.generate_thruster_kills()
 
     def initializeModel(self) -> None:
@@ -288,7 +288,7 @@ class MuJoCoFloatingPlatform:
             ):
                 continue
             # The force applied is the action value (1 or 0), divided by the number of thrusters fired (factor),
-            force = self.AN.add_noise_on_act(action[i])
+            force = self.DR.noisy_actions.add_noise_on_act(action[i])
             force = force * (1.0 / factor) * self.forces[i]
             # If the force is not zero, apply the force.
             if np.sum(np.abs(force)) > 0:
@@ -306,8 +306,10 @@ class MuJoCoFloatingPlatform:
                     self.data.qfrc_applied,
                 )  # Apply the force.
 
-        uf_forces = self.UF.get_floor_forces(self.data.qpos[:2])
-        td_forces = self.TD.get_torque_disturbance(self.data.qpos[:2])
+        uf_forces = self.DR.force_disturbances.get_floor_forces(self.data.qpos[:2])
+        td_forces = self.DR.torque_disturbances.get_torque_disturbance(
+            self.data.qpos[:2]
+        )
         mujoco.mj_applyFT(
             self.model,
             self.data,
@@ -327,9 +329,15 @@ class MuJoCoFloatingPlatform:
         """
 
         state = {}
-        state["angular_velocity"] = self.ON.add_noise_on_vel(self.data.qvel[3:6].copy())
-        state["linear_velocity"] = self.ON.add_noise_on_vel(self.data.qvel[0:3].copy())
-        state["position"] = self.ON.add_noise_on_pos(self.data.qpos[0:3].copy())
+        state["angular_velocity"] = self.DR.noisy_observations.add_noise_on_vel(
+            self.data.qvel[3:6].copy()
+        )
+        state["linear_velocity"] = self.DR.noisy_observations.add_noise_on_vel(
+            self.data.qvel[0:3].copy()
+        )
+        state["position"] = self.DR.noisy_observations.add_noise_on_pos(
+            self.data.qpos[0:3].copy()
+        )
         state["quaternion"] = self.data.qpos[3:].copy()
         return state
 

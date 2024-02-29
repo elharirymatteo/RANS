@@ -92,8 +92,8 @@ class MassDistributionDisturbances:
 
     def __init__(
         self,
-        parameters: MassDistributionDisturbanceParameters,
         rng: np.random.default_rng,
+        parameters: MassDistributionDisturbanceParameters,
     ) -> None:
         """
         Args:

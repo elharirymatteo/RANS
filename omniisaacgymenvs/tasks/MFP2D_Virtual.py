@@ -135,9 +135,7 @@ class MFP2DVirtual(RLTask):
                 ),
                 "transforms": spaces.Box(low=-1, high=1, shape=(self._max_actions, 5)),
                 "masks": spaces.Box(low=0, high=1, shape=(self._max_actions,)),
-                "masses": spaces.Box(
-                    low=-np.inf, high=np.inf, shape=(self._num_envs, 3)
-                ),
+                "masses": spaces.Box(low=-np.inf, high=np.inf, shape=(3,)),
             }
         )
 
