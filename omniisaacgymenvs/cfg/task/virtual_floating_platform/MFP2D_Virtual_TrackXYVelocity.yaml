@@ -23,7 +23,7 @@ env:
 
   disturbances:
     force_disturbance:
-      enable: True
+      enable: False
       use_sinusoidal_patterns: False
       min_freq: 0.25
       max_freq: 3
@@ -44,7 +44,7 @@ env:
           min_value: 0.0
           max_value: 0.333
     torque_disturbance:
-      enable: True
+      enable: False
       use_sinusoidal_patterns: False
       min_freq: 0.25
       max_freq: 3
@@ -65,9 +65,9 @@ env:
           min_value: -0.1
           max_value: 0.1
     observations_disturbance:
-      enable_position_noise: True
-      enable_velocity_noise: True
-      enable_orientation_noise: True
+      enable_position_noise: False
+      enable_velocity_noise: False
+      enable_orientation_noise: False
       position_curriculum:
         rate_parameters:
           function: sigmoid
