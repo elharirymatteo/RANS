@@ -298,7 +298,7 @@ class NoisyObservations:
         self.orientation_sampler = CurriculumSampler(parameters.orientation_curriculum)
         self.parameters = parameters
 
-    def add_noise_on_pos(self, pos: np.ndarray, step: int = 0) -> np.ndarray:
+    def add_noise_on_pos(self, pos: np.ndarray, step: int = 100000) -> np.ndarray:
         """
         Adds noise to the position of the robot.
 

@@ -18,66 +18,9 @@ import math
 
 
 @dataclass
-class CoreParameters:
-    shape: str = "sphere"
-    radius: float = 0.31
-    height: float = 0.5
-    mass: float = 5.32
-    CoM: tuple = (0, 0, 0)
-    refinement: int = 2
-    usd_asset_path: str = "/None"
-
-    def __post_init__(self):
-        assert self.shape in [
-            "cylinder",
-            "sphere",
-            "asset",
-        ], "The shape must be 'cylinder', 'sphere' or 'asset'."
-        assert self.radius > 0, "The radius must be larger than 0."
-        assert self.height > 0, "The height must be larger than 0."
-        assert self.mass > 0, "The mass must be larger than 0."
-        assert len(self.CoM) == 3, "The length of the CoM coordinates must be 3."
-        assert self.refinement > 0, "The refinement level must be larger than 0."
-        self.refinement = int(self.refinement)
-
-
-@dataclass
-class Thruster:
+class ConfigurationParameters:
     """
-    The definition of a basic thruster.
-    """
-
-    max_force: float = 1.0
-    position: tuple = (0, 0, 0)
-    orientation: tuple = (0, 0, 0)
-    delay: float = 0.0
-    response_order: float = 1
-    k1: float = 1.0
-    k2: float = 1.0
-
-
-@dataclass
-class ReactionWheel:
-    """
-    The definition of a basic reaction wheel.
-    """
-
-    mass: float = 0.250
-    inertia: float = 0.3
-    position: tuple = (0, 0, 0)
-    orientation: tuple = (0, 0, 0)
-    max_speed: float = 5000
-    delay: float = 0.0
-    response_order: float = 1
-    k1: float = 1.0
-    k2: float = 1.0
-
-
-@dataclass
-class FloatingPlatformParameters:
-    """
-    Thruster configuration parameters.
-    """
+    Thruster configuration parameters."""
 
     use_four_configurations: bool = False
     num_anchors: int = 4
@@ -85,27 +28,21 @@ class FloatingPlatformParameters:
     thrust_force: float = 1.0
     visualize: bool = False
     save_path: str = "thruster_configuration.png"
-    thruster_model: Thruster = field(default_factory=dict)
-    reaction_wheel_model: ReactionWheel = field(default_factory=dict)
 
     def __post_init__(self):
         assert self.num_anchors > 1, "num_anchors must be larger or equal to 2."
 
 
 @dataclass
-class SpaceCraftDefinition:
+class PlatformParameters:
     """
-    The definition of the spacecraft / floating platform.
-    """
+    Platform physical parameters."""
 
-    use_floating_platform_generation = True
-    core: CoreParameters = field(default_factory=dict)
-    floating_platform: FloatingPlatformParameters = field(default_factory=dict)
-    thrusters: List[Thruster] = field(default_factory=list)
-    reaction_wheels: List[ReactionWheel] = field(default_factory=list)
-
-    def __post_init__(self):
-        self.core = CoreParameters(**self.core)
+    mass: float = 5.0
+    radius: float = 0.25
+    refinement: int = 2
+    CoM: tuple = (0, 0, 0)
+    shape: str = "sphere"
 
 
 @dataclass
@@ -126,7 +63,7 @@ class PlatformRandomization:
     max_thruster_kill: int = 1
 
 
-def compute_actions(cfg_param: FloatingPlatformParameters):
+def compute_actions(cfg_param: ConfigurationParameters):
     """
     Computes the number of actions for the thruster configuration."""
 
