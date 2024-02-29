@@ -51,7 +51,7 @@ def initialize_task(config, env, init_sim=True):
 
     # from omniisaacgymenvs.tasks.MFP2D_Virtual_RGBD import MFP2DVirtual_RGBD
     # from omniisaacgymenvs.tasks.MFP2D_Virtual_IMU import MFP2DVirtual_IMU
-    from omniisaacgymenvs.tasks.MFP3D_Virtual import MFP3DVirtual
+    # from omniisaacgymenvs.tasks.MFP3D_Virtual import MFP3DVirtual
 
     # Mappings from strings to environments
     task_map = {
@@ -73,7 +73,7 @@ def initialize_task(config, env, init_sim=True):
         "MFP2DVirtual": MFP2DVirtual,
         # "MFP2DVirtual_RGBD": MFP2DVirtual_RGBD,
         # "MFP2DVirtual_IMU": MFP2DVirtual_IMU,
-        "MFP3DVirtual": MFP3DVirtual,
+        # "MFP3DVirtual": MFP3DVirtual,
     }
 
     cfg = sim_config.config
