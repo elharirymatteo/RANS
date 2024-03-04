@@ -60,6 +60,7 @@ class MFP2DVirtual(RLTask):
         self._sim_config = sim_config
         self._cfg = sim_config.config
         self._task_cfg = sim_config.task_config
+        self._enable_wandb_logs = self._task_cfg["enable_wandb_log"]
         self._platform_cfg = self._task_cfg["env"]["platform"]
         self._num_envs = self._task_cfg["env"]["numEnvs"]
         self._env_spacing = self._task_cfg["env"]["envSpacing"]
@@ -545,16 +546,17 @@ class MFP2DVirtual(RLTask):
         self.rew_buf[:] = position_reward - penalties
         self.episode_sums = self.task.update_statistics(self.episode_sums)
         self.episode_sums = self._penalties.update_statistics(self.episode_sums)
-        if self.iteration / self._task_cfg["env"]["horizon_length"] % 1 == 0:
-            self.extras_wandb["wandb_step"] = int(self.step)
-            for key, value in self._penalties.get_logs().items():
-                self.extras_wandb[key] = value
-            for key, value in self.task.get_logs(self.step).items():
-                self.extras_wandb[key] = value
-            for key, value in self.DR.get_logs(self.step).items():
-                self.extras_wandb[key] = value
-            wandb.log(self.extras_wandb)
-            self.extras_wandb = {}
+        if self._enable_wandb_logs:
+            if self.iteration / self._task_cfg["env"]["horizon_length"] % 1 == 0:
+                self.extras_wandb["wandb_step"] = int(self.step)
+                for key, value in self._penalties.get_logs().items():
+                    self.extras_wandb[key] = value
+                for key, value in self.task.get_logs(self.step).items():
+                    self.extras_wandb[key] = value
+                for key, value in self.DR.get_logs(self.step).items():
+                    self.extras_wandb[key] = value
+                wandb.log(self.extras_wandb)
+                self.extras_wandb = {}
 
         self.update_state_statistics()
 

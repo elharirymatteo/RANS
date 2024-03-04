@@ -50,7 +50,7 @@ env:
       use_sinusoidal_patterns: False
       min_freq: 0.25
       max_freq: 3
-      min_offset: -6
+      min_offset: -6omniisaacgymenvs/cfg/task/virtual_floating_platform/MFP2D_Virtual_GoToPose_perturbed.yaml
       max_offset: 6
       torque_curriculum:
         rate_parameters:
@@ -166,45 +166,37 @@ env:
     kill_dist: 8.0
     spawn_position_curriculum:
       rate_parameters:
-        function: sigmoid
-        start: 50
-        end: 1000
-        extent: 4.5
+        function: none
       sampling_parameters:
         distribution: truncated_normal
-        start_mean: 0.25
-        start_std: 0.5
-        end_mean: 6.0
-        end_std: 3.0
-        min_value: 0.25
-        max_value: 6.0
+        start_mean: 5.0
+        start_std: 0.00001
+        end_mean: 5.0
+        end_std: 0.00001
+        min_value: 0.0
+        max_value: 6.1
     spawn_heading_curriculum:
       rate_parameters:
-        function: sigmoid
-        start: 25
-        end: 1000
-        extent: 4.5
+        function: none
       sampling_parameters:
         distribution: truncated_normal
         start_mean: 0.0
-        start_std: 0.25
-        end_mean: 0.0 #2pi
-        end_std: 4.71238898038469 #3/2 pi
+        start_std: 5.0
+        end_mean: 0.0
+        end_std: 5.0
         min_value: -3.141592653589793 # -pi
         max_value: 3.141592653589793 # pi
     spawn_linear_velocity_curriculum:
       rate_parameters:
-        start: 500
-        end: 1500
-        extent: 4.5
+        function: none
       sampling_parameters:
         distribution: truncated_normal
         start_mean: 0.0
         start_std: 0.0001
-        end_mean: 0.5
-        end_std: 0.5
-        min_value: 0.0
-        max_value: 0.5
+        end_mean: 0.0
+        end_std: 0.00001
+        min_value: 0.00
+        max_value: 0.001
     spawn_angular_velocity_curriculum:
       rate_parameters:
         start: 500
@@ -215,9 +207,9 @@ env:
         start_mean: 0.0
         start_std: 0.0001
         end_mean: 0.0
-        end_std: 0.5
-        min_value: -0.5
-        max_value: 0.5
+        end_std: 0.0001
+        min_value: 0.0
+        max_value: 0.001
         
 
   reward_parameters:
