@@ -23,7 +23,7 @@ from omniisaacgymenvs.envs.vec_env_rlgames import VecEnvRLGames
 from utils.plot_experiment import plot_episode_data_virtual
 from utils.eval_metrics import (
     get_GoToXY_success_rate,
-    get_GoToPose_success_rate,
+    get_GoToPose_results,
     get_TrackXYVelocity_success_rate,
     get_TrackXYOVelocity_success_rate,
 )
@@ -92,6 +92,8 @@ def eval_multi_agents(cfg, horizon):
         for i in range(0, ep_data["act"].shape[1])
         if ep_data["act"][:, i, :].sum() == 0
     ]
+    print(broken_episodes)
+    broken_episodes = []
     # Remove episodes that are broken by the environment (IsaacGym bug)
     if broken_episodes:
         print(f"Broken episodes: {broken_episodes}")
@@ -113,7 +115,7 @@ def eval_multi_agents(cfg, horizon):
     if task_flag == 0:  # GoToXY
         success_rate = get_GoToXY_success_rate(ep_data, print_intermediate=True)
     elif task_flag == 1:  # GoToPose
-        success_rate = get_GoToPose_success_rate(ep_data, print_intermediate=True)
+        success_rate = get_GoToPose_results(ep_data)
     elif task_flag == 2:  # TrackXYVelocity
         success_rate = get_TrackXYVelocity_success_rate(
             ep_data, print_intermediate=True
@@ -154,13 +156,6 @@ def parse_hydra_configs(cfg: DictConfig):
 
     horizon = 500
     cfg.task.env.maxEpisodeLength = horizon + 2
-    cfg.task.env.platform.core.mass = 5.32
-    cfg.task.env.split_thrust = True
-    cfg.task.env.clipObservations["state"] = 20.0
-    cfg.task.env.task_parameters["max_spawn_dist"] = 4.0
-    cfg.task.env.task_parameters["min_spawn_dist"] = 3.0
-    cfg.task.env.task_parameters["kill_dist"] = 6.0
-    cfg.task.env.task_parameters["kill_after_n_steps_in_tolerance"] = 500
     cfg_dict = omegaconf_to_dict(cfg)
     print_dict(cfg_dict)
 
