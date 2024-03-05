@@ -9,22 +9,22 @@ __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
 from omniisaacgymenvs.tasks.base.rl_task import RLTask
-from omniisaacgymenvs.robots.articulations.MFP2D_virtual_thrusters import (
+from omniisaacgymenvs.robots.articulations.MFP2D_thrusters import (
     ModularFloatingPlatform,
 )
-from omniisaacgymenvs.robots.articulations.views.mfp2d_virtual_thrusters_view import (
+from omniisaacgymenvs.robots.articulations.views.MFP2D_view import (
     ModularFloatingPlatformView,
 )
-from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_thruster_generator import (
+from omniisaacgymenvs.tasks.MFP.MFP2D_thruster_generator import (
     VirtualPlatform,
 )
-from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_factory import (
+from omniisaacgymenvs.tasks.MFP.MFP2D_task_factory import (
     task_factory,
 )
-from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_penalties import (
+from omniisaacgymenvs.tasks.MFP.MFP2D_penalties import (
     EnvironmentPenalties,
 )
-from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_disturbances import (
+from omniisaacgymenvs.tasks.MFP.MFP2D_disturbances import (
     Disturbances,
 )
 

@@ -12,7 +12,7 @@ from typing import Dict, Tuple
 import numpy as np
 import math
 
-from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_disturbances_parameters import (
+from omniisaacgymenvs.tasks.MFP.MFP2D_disturbances_parameters import (
     DisturbancesParameters,
     MassDistributionDisturbanceParameters,
     ForceDisturbanceParameters,
@@ -21,7 +21,7 @@ from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_disturbances_paramet
     NoisyActionsParameters,
 )
 
-from omniisaacgymenvs.tasks.virtual_floating_platform.curriculum_helpers import (
+from omniisaacgymenvs.tasks.MFP.curriculum_helpers import (
     CurriculumSampler,
 )
 
