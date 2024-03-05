@@ -297,7 +297,9 @@ class GoToPoseTask(GoToPoseTask2D, Core):
         initial_orientation[:, 1] = w0 * x1 + x0 * w1 + y0 * z1 - z0 * y1
         initial_orientation[:, 2] = w0 * y1 - x0 * z1 + y0 * w1 + z0 * x1
         initial_orientation[:, 3] = w0 * z1 + x0 * y1 - y0 * x1 + z0 * w1
-        initial_orientation /= torch.norm(initial_orientation, dim=-1, keepdim=True)
+        initial_orientation /= torch.norm(
+            initial_orientation + EPS, dim=-1, keepdim=True
+        )
 
         # Randomizes the linear velocity of the platform
         initial_velocity = torch.zeros(

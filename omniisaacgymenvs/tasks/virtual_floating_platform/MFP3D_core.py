@@ -59,7 +59,7 @@ def mat_to_quat(mat: torch.Tensor) -> torch.Tensor:
     """
     quat = torch.zeros((mat.shape[0], 4), dtype=mat.dtype, device=mat.device)
     t = mat[..., 0, 0] + mat[..., 1, 1] + mat[..., 2, 2]
-    r = torch.sqrt(1 + t)
+    r = torch.sqrt(1 + t) + EPS
     s = 0.5 / r
     quat[:, 0] = 0.5 * r
     quat[:, 1] = mat[..., 2, 1] - mat[..., 1, 2] * s
