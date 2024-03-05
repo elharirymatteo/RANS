@@ -647,6 +647,7 @@ class TrajectoryTracker:
             np.array([np.cos(theta) * radius, np.sin(theta) * radius]).T + self.offset
         )
         self.angles = np.array([-np.sin(theta), np.cos(theta)]).T
+        self.angles = np.arctan2(self.angles[:, 1], self.angles[:, 0])
 
     def generateSquare(self, h: float = 2, num_points: int = 360 * 10) -> None:
         """
@@ -659,19 +660,29 @@ class TrajectoryTracker:
         points_per_side = num_points // 4
         s1y = np.linspace(-h / 2, h / 2, num_points, endpoint=False)
         s1x = np.ones_like(s1y) * h / 2
+        u1 = np.ones_like(s1y)
+        v1 = np.zeros_like(s1y)
         s2x = np.linspace(h / 2, -h / 2, num_points, endpoint=False)
         s2y = np.ones_like(s2x) * h / 2
+        u2 = np.zeros_like(s2x)
+        v2 = -np.ones_like(s2x)
         s3y = np.linspace(h / 2, -h / 2, num_points, endpoint=False)
         s3x = np.ones_like(s3y) * (-h / 2)
+        u3 = -np.ones_like(s3y)
+        v3 = np.zeros_like(s3y)
         s4x = np.linspace(-h / 2, h / 2, num_points, endpoint=False)
         s4y = np.ones_like(s4x) * (-h / 2)
+        u4 = np.zeros_like(s4x)
+        v4 = np.ones_like(s4x)
         self.positions = (
             np.vstack(
                 [np.hstack([s1x, s2x, s3x, s4x]), np.hstack([s1y, s2y, s3y, s4y])]
             ).T
             + self.offset
         )
-        self.angles = np.ones_like(self.positions)
+        self.u = np.hstack([u1, u2, u3, u4]).T
+        self.v = np.hstack([v1, v2, v3, v4]).T
+        self.angles = np.arctan2(self.u, self.v)
 
     def generateSpiral(
         self,
@@ -699,6 +710,7 @@ class TrajectoryTracker:
             np.array([np.cos(theta) * radius, np.sin(theta) * radius]).T + self.offset
         )
         self.angles = np.array([-np.sin(theta), np.cos(theta)]).T
+        self.angles = np.arctan2(self.angles[:, 1], self.angles[:, 0])
 
     def generateInfinite(self, a: float = 2, num_points: int = 360 * 10) -> None:
         """
@@ -719,6 +731,7 @@ class TrajectoryTracker:
             np.array([directions[:, 1], -directions[:, 0]]).T
             / np.linalg.norm(directions, axis=1)[:, None]
         )
+        self.angles = np.arctan2(self.angles[:, 0], self.angles[:, 1])
 
     def getTrackingPointIdx(self, position: np.ndarray) -> None:
         """
@@ -807,7 +820,7 @@ class TrajectoryTracker:
         self.getTrackingPointIdx(position)
         self.target_position, target_angle = self.getPointForTracking()
         velocity_vector = self.computeVelocityVector(self.target_position, position)
-        return velocity_vector
+        return velocity_vector, target_angle
 
 
 class VelocityTracker(BaseController):
@@ -949,7 +962,7 @@ class VelocityTracker(BaseController):
             mute (bool, optional): Whether to print the goal reached or not. Defaults to False.
         """
 
-        self.velocity_vector = self.tracker.getVelocityVector(state["position"][:2])
+        self.velocity_vector, _ = self.tracker.getVelocityVector(state["position"][:2])
         self.velocity_goal[0] = self.velocity_vector[0] * self.target_tracking_velocity
         self.velocity_goal[1] = self.velocity_vector[1] * self.target_tracking_velocity
         self.setTarget()
@@ -974,13 +987,28 @@ class VelocityTracker(BaseController):
 
         fig, ax = plt.subplots(1, 1, figsize=figsize, dpi=dpi)
 
+        linear_velocity = np.array(self.logs["linear_velocity"])
+        target_velocity = np.array(self.logs["velocity_goal"])
+
         ax.plot(
             self.logs["timevals"],
-            self.logs["linear_velocity"],
-            label="system velocities",
+            linear_velocity[:, 0],
+            label="x linear velocity",
         )
         ax.plot(
-            self.logs["timevals"], self.logs["velocity_goal"], label="target velocities"
+            self.logs["timevals"],
+            linear_velocity[:, 1],
+            label="y linear velocity",
+        )
+        ax.plot(
+            self.logs["timevals"],
+            target_velocity[:, 0],
+            label="x target velocity",
+        )
+        ax.plot(
+            self.logs["timevals"],
+            target_velocity[:, 1],
+            label="y target velocity",
         )
         ax.legend()
         ax.set_xlabel("time (seconds)")
@@ -1002,6 +1030,283 @@ class VelocityTracker(BaseController):
             np.array(self.logs["position"])[:, 0],
             np.array(self.logs["position"])[:, 1],
             label="system position",
+        )
+        ax.legend()
+        ax.set_xlabel("x (meters)")
+        ax.set_ylabel("y (meters)")
+        ax.axis("equal")
+        _ = ax.set_title("Trajectory in xy plane")
+        plt.tight_layout()
+        try:
+            os.makedirs(self.save_dir, exist_ok=True)
+            fig.savefig(os.path.join(self.save_dir, "positions.png"))
+        except Exception as e:
+            print("Saving failed: ", e)
+
+
+class VelocityHeadingTracker(BaseController):
+    def __init__(
+        self,
+        dt: float,
+        model: Union[RLGamesModel, DiscreteController],
+        target_tracking_velocity: float = 0.25,
+        lookahead_dist: float = 0.15,
+        closed: bool = True,
+        x_offset: float = 0,
+        y_offset: float = 0,
+        radius: float = 1.5,
+        height: float = 1.5,
+        start_radius: float = 0.5,
+        end_radius: float = 2.0,
+        num_loops: int = 4,
+        trajectory_type: str = "circle",
+        save_dir: str = "mujoco_experiment",
+        **kwargs
+    ) -> None:
+        """
+        Initializes the controller.
+
+        Args:
+            dt (float): Simulation time step.
+            model (Union[RLGamesModel, DiscreteController]): Low-level controller.
+            target_tracking_velocity (float, optional): Target tracking velocity. Defaults to 0.25.
+            lookahead_dist (float, optional): Lookahead distance. Defaults to 0.15.
+            closed (bool, optional): Whether the trajectory is closed or not. Defaults to True.
+            x_offset (float, optional): x offset of the trajectory. Defaults to 0.
+            y_offset (float, optional): y offset of the trajectory. Defaults to 0.
+            radius (float, optional): Radius of the trajectory. Defaults to 1.5.
+            height (float, optional): Height of the trajectory. Defaults to 1.5.
+            start_radius (float, optional): Start radius of the trajectory. Defaults to 0.5.
+            end_radius (float, optional): End radius of the trajectory. Defaults to 2.0.
+            num_loops (int, optional): Number of loops. Defaults to 4.
+            trajectory_type (str, optional): Type of trajectory. Defaults to "circle".
+            save_dir (str, optional): Directory to save the simulation data. Defaults to "mujoco_experiment".
+            **kwargs: Additional arguments."""
+
+        super().__init__(dt, save_dir)
+        self.tracker = TrajectoryTracker(
+            lookahead=lookahead_dist, closed=closed, offset=(x_offset, y_offset)
+        )
+        if trajectory_type.lower() == "square":
+            self.tracker.generateSquare(h=height)
+        elif trajectory_type.lower() == "circle":
+            self.tracker.generateCircle(radius=radius)
+        elif trajectory_type.lower() == "spiral":
+            self.tracker.generateSpiral(
+                start_radius=start_radius, end_radius=end_radius, num_loop=num_loops
+            )
+        elif trajectory_type.lower() == "infinite":
+            self.tracker.generateInfinite(a=radius)
+        else:
+            raise ValueError(
+                "Unknown trajectory type. Must be square, circle or spiral."
+            )
+
+        self.model = model
+        self.target_tracking_velocity = target_tracking_velocity
+        self.velocity_goal = [0, 0, 0]
+        self.target_heading = [0]
+
+    def initializeLoggers(self) -> None:
+        """
+        Initializes the loggers."""
+
+        super().initializeLoggers()
+        self.logs["velocity_goal"] = []
+        self.logs["heading_target"] = []
+        self.logs["position_target"] = []
+
+    def updateLoggers(self, state, actions) -> None:
+        """
+        Updates the loggers.
+
+        Args:
+            state (Dict[str, np.ndarray]): State of the system.
+            actions (np.ndarray): Action taken by the controller."""
+
+        super().updateLoggers(state, actions)
+        self.logs["velocity_goal"].append(self.velocity_goal[:2])
+        self.logs["heading_target"].append(self.target_heading[0])
+        self.logs["position_target"].append(self.getTargetPosition())
+
+    def getGoal(self) -> np.ndarray:
+        """
+        Returns the current goal.
+
+        Returns:
+            np.ndarray: Current goal."""
+
+        return self.velocity_goal + self.target_heading
+
+    def setGoal(self, goal: np.ndarray) -> None:
+        """
+        Sets the goal of the controller.
+
+        Args:
+            goal (np.ndarray): Goal to set."""
+
+        self.target_tracking_velocity = goal[:3]
+        self.target_heading = goal[3]
+
+    def getTargetPosition(self) -> np.ndarray:
+        """
+        Gets the target position.
+
+        Returns:
+            np.ndarray: Target position."""
+
+        return self.tracker.get_target_position()
+
+    def isDone(self) -> bool:
+        """
+        Checks if the simulation is done.
+
+        Returns:
+            bool: True if the simulation is done, False otherwise."""
+
+        return self.tracker.is_done
+
+    def setTarget(self) -> None:
+        """
+        Sets the target of the low-level controller."""
+
+        yaw = self.target_heading[0]
+        q = [np.cos(yaw / 2), 0, 0, np.sin(yaw / 2)]
+        orientation_goal = q
+        self.model.setTarget(
+            target_linear_velocity=self.velocity_goal, target_heading=orientation_goal
+        )
+
+    def getAction(
+        self,
+        state: Dict[str, np.ndarray],
+        is_deterministic: bool = True,
+        mute: bool = False,
+    ) -> np.ndarray:
+        """
+        Gets the action from the controller.
+
+        Args:
+            state (Dict[str, np.ndarray]): State of the system.
+            is_deterministic (bool, optional): Whether the action is deterministic or not. Defaults to True.
+            mute (bool, optional): Whether to print the goal reached or not. Defaults to False.
+        """
+
+        self.velocity_vector, target_heading = self.tracker.getVelocityVector(
+            state["position"][:2]
+        )
+        self.velocity_goal[0] = self.velocity_vector[0] * self.target_tracking_velocity
+        self.velocity_goal[1] = self.velocity_vector[1] * self.target_tracking_velocity
+        self.target_heading[0] = target_heading
+        self.setTarget()
+        actions = self.model.getAction(
+            state, is_deterministic=is_deterministic, mute=mute
+        )
+        self.updateLoggers(state, actions)
+        return actions
+
+    def plotSimulation(
+        self, dpi: int = 135, width: int = 1000, height: int = 1000
+    ) -> None:
+        """
+        Plots the simulation.
+
+        Args:
+            dpi (int, optional): Dots per inch. Defaults to 135.
+            width (int, optional): Width of the figure. Defaults to 1000.
+            height (int, optional): Height of the figure. Defaults to 1000."""
+
+        figsize = (width / dpi, height / dpi)
+
+        fig, ax = plt.subplots(1, 1, figsize=figsize, dpi=dpi)
+
+        linear_velocity = np.array(self.logs["linear_velocity"])
+        target_velocity = np.array(self.logs["velocity_goal"])
+
+        ax.plot(
+            self.logs["timevals"],
+            linear_velocity[:, 0],
+            label="x linear velocity",
+        )
+        ax.plot(
+            self.logs["timevals"],
+            linear_velocity[:, 1],
+            label="y linear velocity",
+        )
+        ax.plot(
+            self.logs["timevals"],
+            target_velocity[:, 0],
+            label="x target velocity",
+        )
+        ax.plot(
+            self.logs["timevals"],
+            target_velocity[:, 1],
+            label="y target velocity",
+        )
+        ax.legend()
+        ax.set_xlabel("time (seconds)")
+        ax.set_ylabel("Linear velocities (m/s)")
+        _ = ax.set_title("Linear velocity tracking")
+        try:
+            os.makedirs(self.save_dir, exist_ok=True)
+            fig.savefig(os.path.join(self.save_dir, "velocities.png"))
+        except Exception as e:
+            print("Saving failed: ", e)
+
+        fig, ax = plt.subplots(1, 1, figsize=figsize, dpi=dpi)
+        ax.plot(
+            np.array(self.logs["position_target"])[:, 0],
+            np.array(self.logs["position_target"])[:, 1],
+            label="trajectory",
+        )
+        ax.plot(
+            np.array(self.logs["position"])[:, 0],
+            np.array(self.logs["position"])[:, 1],
+            label="system position",
+        )
+        ax.legend()
+        ax.set_xlabel("x (meters)")
+        ax.set_ylabel("y (meters)")
+        ax.axis("equal")
+        _ = ax.set_title("Trajectory in xy plane")
+        plt.tight_layout()
+        try:
+            os.makedirs(self.save_dir, exist_ok=True)
+            fig.savefig(os.path.join(self.save_dir, "positions.png"))
+        except Exception as e:
+            print("Saving failed: ", e)
+
+        orientations = np.array(self.logs["quaternion"])
+        positions = np.array(self.logs["position"])
+        target_positions = np.array(self.logs["position_target"])
+        v = 2 * (
+            orientations[:, 0] * orientations[:, 3]
+            + orientations[:, 1] * orientations[:, 2]
+        )
+        u = 1 - 2 * (
+            orientations[:, 2] * orientations[:, 2]
+            + orientations[:, 3] * orientations[:, 3]
+        )
+        target_headings = np.array(self.logs["heading_target"])
+        u_target = np.cos(target_headings)
+        v_target = np.sin(target_headings)
+
+        fig, ax = plt.subplots(1, 1, figsize=figsize, dpi=dpi)
+        ax.quiver(
+            target_positions[:, 0],
+            target_positions[:, 1],
+            u_target,
+            v_target,
+            label="reference_trajectory",
+            color="r",
+        )
+        ax.quiver(
+            positions[:, 0],
+            positions[:, 1],
+            u,
+            v,
+            label="system trajectory",
+            color="b",
         )
         ax.legend()
         ax.set_xlabel("x (meters)")
@@ -1069,3 +1374,6 @@ hlControllerFactory = HLControllerFactory()
 hlControllerFactory.registerController("position", PositionController)
 hlControllerFactory.registerController("pose", PoseController)
 hlControllerFactory.registerController("linear_velocity", VelocityTracker)
+hlControllerFactory.registerController(
+    "linear_velocity_heading", VelocityHeadingTracker
+)

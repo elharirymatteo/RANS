@@ -1,0 +1,10 @@
+name: "linear_velocity_heading"
+run_batch: 0
+trajectory_type: "square"
+x_offset: 0
+y_offset: 0
+height: 3.0
+closed: True
+lookahead_dist: 0.3
+target_tracking_velocity: 0.25
+save_dir: "mj_runs/vel_heading_square"
