@@ -20,8 +20,8 @@ from rl_games.torch_runner import Runner
 from omniisaacgymenvs.utils.task_util import initialize_task
 from omniisaacgymenvs.envs.vec_env_rlgames import VecEnvRLGames
 
-from utils.plot_experiment import plot_episode_data_virtual
-from utils.eval_metrics import (
+from omniisaacgymenvs.utils.plot_experiment import plot_episode_data_virtual
+from omniisaacgymenvs.utils.eval_metrics import (
     get_GoToXY_success_rate,
     get_GoToPose_results,
     get_TrackXYVelocity_success_rate,
@@ -49,6 +49,9 @@ def eval_multi_agents(cfg, horizon):
 
     agent = runner.create_player()
     agent.restore(cfg.checkpoint)
+    agent.has_batch_dimension = True
+    agent.batch_size = 4096
+    agent.init_rnn()
 
     store_all_agents = (
         True  # store all agents generated data, if false only the first agent is stored

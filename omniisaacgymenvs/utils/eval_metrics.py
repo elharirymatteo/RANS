@@ -290,7 +290,7 @@ def get_GoToPose_results(
     )
 
     # Print the metrics line by line
-    print(f"Metrics acquired using a sample of {ep_data['act'].shape[0]}:")
+    print(f"Metrics acquired using a sample of {ep_data['act'].shape[1]}:")
     for i, (metric, unit, mult, desc) in enumerate(
         zip(
             ordered_metrics_keys,
