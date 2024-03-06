@@ -559,7 +559,7 @@ class DiscreteController:
         )
 
     def getAction(
-        self, obs_state: Dict[str, np.ndarray], is_deterministic: bool = True
+        self, obs_state: Dict[str, np.ndarray], is_deterministic: bool = True, **kwargs
     ) -> np.ndarray:
         """
         Get the action.

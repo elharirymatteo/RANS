@@ -1,0 +1,10 @@
+name: "linear_velocity"
+run_batch: 0
+trajectory_type: "circle"
+x_offset: 2.5
+y_offset: -1.5
+radius: 0.75
+closed: True
+lookahead_dist: 0.15
+target_tracking_velocity: 0.3
+save_dir: "ros_runs/trackXYVel/vel_circle_run_0"

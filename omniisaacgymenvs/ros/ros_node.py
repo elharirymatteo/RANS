@@ -9,16 +9,15 @@ import rospy
 from std_msgs.msg import ByteMultiArray
 from geometry_msgs.msg import PoseStamped, Point, Pose
 
-from ros.ros_utills import derive_velocities
+from omniisaacgymenvs.ros.ros_utills import derive_velocities
 from omniisaacgymenvs.mujoco_envs.controllers.hl_controllers import (
     PoseController,
     PositionController,
     VelocityTracker,
 )
 from omniisaacgymenvs.mujoco_envs.environments.disturbances import (
-    NoisyActions,
-    NoisyObservations,
     RandomKillThrusters,
+    Disturbances,
 )
 
 
@@ -26,9 +25,8 @@ class RLPlayerNode:
     def __init__(
         self,
         hl_controller: Union[PositionController, PoseController, VelocityTracker],
+        cfg: dict,
         map: List[int] = [2, 5, 4, 7, 6, 1, 0, 3],
-        platform: Dict[str, Union[bool, dict, float, str, int]] = None,
-        disturbances: Dict[str, Union[bool, float]] = None,
         debug: bool = False,
     ) -> None:
         """
@@ -39,8 +37,15 @@ class RLPlayerNode:
             disturbances (Dict[str, Union[bool, float]], optional): The disturbances. Defaults to None.
         """
 
-        self.AN = NoisyActions(disturbances)
-        self.ON = NoisyObservations(disturbances)
+        platform = cfg["task"]["env"]["platform"]
+        disturbances = cfg["task"]["env"]["disturbances"]
+        self.play_rate = 1 / (
+            cfg["task"]["env"]["controlFrequencyInv"] * cfg["task"]["sim"]["dt"]
+        )
+
+        self.run_time = cfg["task"]["env"]["maxEpisodeLength"] / self.play_rate
+
+        self.DR = Disturbances(disturbances, platform["seed"])
         self.TK = RandomKillThrusters(
             {
                 "num_thrusters_to_kill": platform["randomization"]["max_thruster_kill"]
@@ -83,9 +88,13 @@ class RLPlayerNode:
         """
 
         state = {}
-        state["angular_velocity"] = self.ON.add_noise_on_vel(self.ang_vel)
-        state["linear_velocity"] = self.ON.add_noise_on_vel(self.lin_vel)
-        state["position"] = self.ON.add_noise_on_pos(self.pos)
+        state["angular_velocity"] = self.DR.noisy_observations.add_noise_on_vel(
+            self.ang_vel
+        )
+        state["linear_velocity"] = self.DR.noisy_observations.add_noise_on_vel(
+            self.lin_vel
+        )
+        state["position"] = self.DR.noisy_observations.add_noise_on_pos(self.pos)
         state["quaternion"] = self.quat
         return state
 
@@ -96,6 +105,7 @@ class RLPlayerNode:
         self.ready = False
         self.hl_controller.initializeLoggers()
         self.hl_controller.time = 0
+        self.count = 0
 
     def shutdown(self) -> None:
         """
@@ -162,7 +172,7 @@ class RLPlayerNode:
 
         self.hl_controller.setGoal(np.array([msg.x, msg.y, msg.z]))
 
-    def get_action(self, lifting_active: int = 1) -> None:
+    def get_action(self, run_time: float, lifting_active: int = 1) -> None:
         """
         Gets the action from the RL algorithm and publishes it to the thrusters.
 
@@ -170,35 +180,32 @@ class RLPlayerNode:
             lifting_active (int, optional): Whether or not the lifting thruster is active. Defaults to 1.
         """
         self.state = self.getObs()
-        self.action = self.hl_controller.getAction(self.state)
-        self.action = self.action * self.thruster_mask
+        self.action = self.hl_controller.getAction(self.state, time=run_time)
+        # self.action = self.action * self.thruster_mask
         action = self.remap_actions(self.action)
         lifting_active = 1
         action.insert(0, lifting_active)
         self.thruster_msg.data = action
-        self.action_pub.publish(self.thruster_msg)
+        # self.action_pub.publish(self.thruster_msg)
 
     def print_logs(self) -> None:
         """
         Prints the logs."""
 
         print("=========================================")
-        for key, value in self.hl_controller.loggers.items():
+        for key, value in self.hl_controller.logs.items():
             print(f"{key}: {value[-1]}")
 
     def run(self) -> None:
         """
         Runs the RL algorithm."""
         self.update_once = True
-        self.rate = rospy.Rate(self.settings.play_rate)
+        self.rate = rospy.Rate(self.play_rate)
         start_time = rospy.Time.now()
         run_time = rospy.Time.now() - start_time
-        while (not rospy.is_shutdown()) and (
-            run_time.to_sec() < self.settings.exp_duration
-        ):
+        while (not rospy.is_shutdown()) and (run_time.to_sec() < self.run_time):
             if self.ready:
-                self.get_action()
-                self.hl_controller.updateLoggers(self.state, dt=run_time.to_sec())
+                self.get_action(run_time.to_sec())
                 self.count += 1
                 if self.debug:
                     self.print_logs()
