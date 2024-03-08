@@ -29,8 +29,6 @@ from omniisaacgymenvs.mujoco_envs.environments.mujoco_base_env import (
 )
 from omniisaacgymenvs.mujoco_envs.controllers.hl_controllers import hlControllerFactory
 from omniisaacgymenvs.ros.ros_utills import enable_ros_extension
-from omniisaacgymenvs.ros.ros_node import RLPlayerNode
-import rospy
 
 
 @hydra.main(config_name="config_mujoco", config_path="../cfg")
@@ -47,6 +45,9 @@ def run(cfg: DictConfig):
 
     simulation_app = SimulationApp({"headless": True})
     enable_ros_extension()
+
+    from omniisaacgymenvs.ros.ros_node import RLPlayerNode
+    import rospy
 
     rospy.init_node("RL_player")
 
@@ -70,17 +71,15 @@ def run(cfg: DictConfig):
 
     node = RLPlayerNode(
         hl_controller,
-        platform=cfg_dict["platform"],
-        disturbances=cfg_dict["disturbances"],
-        debug=False,
+        cfg=cfg_dict,
+        debug=True,
     )
     # Run the node.
     node.run()
-    # Close the simulationApp.
-    simulation_app.close()
-
     hl_controller.saveSimulationData()
     hl_controller.plotSimulation()
+    # Close the simulationApp.
+    simulation_app.close()
 
 
 if __name__ == "__main__":
