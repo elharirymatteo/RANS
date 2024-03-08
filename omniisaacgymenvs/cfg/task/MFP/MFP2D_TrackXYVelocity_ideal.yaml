@@ -3,6 +3,7 @@ name: MFP2DVirtual
 
 physics_engine: ${..physics_engine}
 experiment: MFP2D_Virtual_TrackXYVelocity
+enable_wandb_log: ${..wandb_activate}
 
 # if given, will override the device setting in gym. 
 env:
