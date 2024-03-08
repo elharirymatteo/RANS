@@ -2,7 +2,7 @@
     "pose2D_ideal_run_1": {
         "experiment": "pose2D_ideal_run_1",
         "task": "MFP/MFP2D_GoToPose_ideal",
-        "train": "MFP2D_PPOmulti_dict_MLP",
+        "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
         "task.sim.dt": "0.02",
         "num_envs": "4096",
@@ -15,7 +15,7 @@
     "pose2D_ideal_run_2": {
         "experiment": "pose2D_ideal_run2",
         "task": "MFP/MFP2D_GoToPose_ideal",
-        "train": "MFP2D_PPOmulti_dict_MLP",
+        "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
         "task.sim.dt": "0.02",
         "num_envs": "4096",
@@ -28,7 +28,7 @@
     "pose2D_ideal_run_3": {
         "experiment": "pose2D_ideal_run3",
         "task": "MFP/MFP2D_GoToPose_ideal",
-        "train": "MFP2D_PPOmulti_dict_MLP",
+        "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
         "task.sim.dt": "0.02",
         "num_envs": "4096",
@@ -41,7 +41,7 @@
     "pose2D_ideal_run_4": {
         "experiment": "pose2D_ideal_run4",
         "task": "MFP/MFP2D_GoToPose_ideal",
-        "train": "MFP2D_PPOmulti_dict_MLP",
+        "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
         "task.sim.dt": "0.02",
         "num_envs": "4096",
@@ -54,7 +54,7 @@
     "pose2D_ideal_run5": {
         "experiment": "pose2D_ideal_run5",
         "task": "MFP/MFP2D_GoToPose_ideal",
-        "train": "MFP2D_PPOmulti_dict_MLP",
+        "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
         "task.sim.dt": "0.02",
         "num_envs": "4096",
@@ -67,7 +67,7 @@
     "pose2D_LowDR_run_1": {
         "experiment": "pose2D_LowDR_run_1",
         "task": "MFP/MFP2D_GoToPose_ideal",
-        "train": "MFP2D_PPOmulti_dict_MLP",
+        "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
         "task.sim.dt": "0.02",
         "num_envs": "4096",
@@ -122,7 +122,7 @@
     "pose2D_LowDR_run_2": {
         "experiment": "pose2D_LowDR_run_2",
         "task": "MFP/MFP2D_GoToPose_ideal",
-        "train": "MFP2D_PPOmulti_dict_MLP",
+        "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
         "task.sim.dt": "0.02",
         "num_envs": "4096",
@@ -177,7 +177,7 @@
     "pose2D_LowDR_run_3": {
         "experiment": "pose2D_LowDR_run_3",
         "task": "MFP/MFP2D_GoToPose_ideal",
-        "train": "MFP2D_PPOmulti_dict_MLP",
+        "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
         "task.sim.dt": "0.02",
         "num_envs": "4096",
@@ -232,7 +232,7 @@
     "pose2D_LowDR_run_4": {
         "experiment": "pose2D_LowDR_run_4",
         "task": "MFP/MFP2D_GoToPose_ideal",
-        "train": "MFP2D_PPOmulti_dict_MLP",
+        "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
         "task.sim.dt": "0.02",
         "num_envs": "4096",
@@ -287,7 +287,7 @@
     "pose2D_LowDR_run_5": {
         "experiment": "pose2D_LowDR_run_5",
         "task": "MFP/MFP2D_GoToPose_ideal",
-        "train": "MFP2D_PPOmulti_dict_MLP",
+        "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
         "task.sim.dt": "0.02",
         "num_envs": "4096",
@@ -342,7 +342,7 @@
     "pose2D_MidDR_run_1": {
         "experiment": "pose2D_MidDR_run_1",
         "task": "MFP/MFP2D_GoToPose_ideal",
-        "train": "MFP2D_PPOmulti_dict_MLP",
+        "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
         "task.sim.dt": "0.02",
         "num_envs": "4096",
@@ -397,7 +397,7 @@
     "pose2D_MidDR_run_2": {
         "experiment": "pose2D_MidDR_run_2",
         "task": "MFP/MFP2D_GoToPose_ideal",
-        "train": "MFP2D_PPOmulti_dict_MLP",
+        "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
         "task.sim.dt": "0.02",
         "num_envs": "4096",
@@ -452,7 +452,7 @@
     "pose2D_MidDR_run_3": {
         "experiment": "pose2D_MidDR_run_3",
         "task": "MFP/MFP2D_GoToPose_ideal",
-        "train": "MFP2D_PPOmulti_dict_MLP",
+        "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
         "task.sim.dt": "0.02",
         "num_envs": "4096",
@@ -507,7 +507,7 @@
     "pose2D_MidDR_run_4": {
         "experiment": "pose2D_MidDR_run_4",
         "task": "MFP/MFP2D_GoToPose_ideal",
-        "train": "MFP2D_PPOmulti_dict_MLP",
+        "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
         "task.sim.dt": "0.02",
         "num_envs": "4096",
@@ -562,7 +562,7 @@
     "pose2D_MidDR_run_5": {
         "experiment": "pose2D_MidDR_run_5",
         "task": "MFP/MFP2D_GoToPose_ideal",
-        "train": "MFP2D_PPOmulti_dict_MLP",
+        "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
         "task.sim.dt": "0.02",
         "num_envs": "4096",
@@ -617,7 +617,7 @@
     "pose2D_HighDR_run_1": {
         "experiment": "pose2D_HighDR_run_1",
         "task": "MFP/MFP2D_GoToPose_ideal",
-        "train": "MFP2D_PPOmulti_dict_MLP",
+        "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
         "task.sim.dt": "0.02",
         "num_envs": "4096",
@@ -672,7 +672,7 @@
     "pose2D_HighDR_run_2": {
         "experiment": "pose2D_HighDR_run_2",
         "task": "MFP/MFP2D_GoToPose_ideal",
-        "train": "MFP2D_PPOmulti_dict_MLP",
+        "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
         "task.sim.dt": "0.02",
         "num_envs": "4096",
@@ -727,7 +727,7 @@
     "pose2D_HighDR_run_3": {
         "experiment": "pose2D_HighDR_run_3",
         "task": "MFP/MFP2D_GoToPose_ideal",
-        "train": "MFP2D_PPOmulti_dict_MLP",
+        "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
         "task.sim.dt": "0.02",
         "num_envs": "4096",
@@ -782,7 +782,7 @@
     "pose2D_HighDR_run_4": {
         "experiment": "pose2D_HighDR_run_4",
         "task": "MFP/MFP2D_GoToPose_ideal",
-        "train": "MFP2D_PPOmulti_dict_MLP",
+        "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
         "task.sim.dt": "0.02",
         "num_envs": "4096",
@@ -837,7 +837,7 @@
     "pose2D_HighDR_run_5": {
         "experiment": "pose2D_HighDR_run_5",
         "task": "MFP/MFP2D_GoToPose_ideal",
-        "train": "MFP2D_PPOmulti_dict_MLP",
+        "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
         "task.sim.dt": "0.02",
         "num_envs": "4096",
