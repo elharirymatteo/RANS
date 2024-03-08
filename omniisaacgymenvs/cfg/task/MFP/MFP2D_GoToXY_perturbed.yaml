@@ -178,6 +178,32 @@ env:
         end_std: 3.0
         min_value: 0.25
         max_value: 6.0
+    spawn_linear_velocity_curriculum:
+      rate_parameters:
+        start: 500
+        end: 1500
+        extent: 4.5
+      sampling_parameters:
+        distribution: truncated_normal
+        start_mean: 0.0
+        start_std: 0.0001
+        end_mean: 0.5
+        end_std: 0.5
+        min_value: 0.0
+        max_value: 0.5
+    spawn_angular_velocity_curriculum:
+      rate_parameters:
+        start: 500
+        end: 1500
+        extent: 4.5
+      sampling_parameters:
+        distribution: truncated_normal
+        start_mean: 0.0
+        start_std: 0.0001
+        end_mean: 0.0
+        end_std: 0.5
+        min_value: -0.5
+        max_value: 0.5
 
   reward_parameters:
     name: GoToXY
