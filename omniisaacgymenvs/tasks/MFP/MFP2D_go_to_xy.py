@@ -389,7 +389,7 @@ class GoToXYTask(Core):
         dict["curriculum/spawn_position"] = wandb.Image(data)
 
         fig, ax = plt.subplots(1, 2, dpi=100, figsize=(8, 8), sharey=True)
-        ax[0].hist(linear_velocities[:, 0], bins=32)
+        ax[0].hist(linear_velocities, bins=32)
         ax[0].set_title("Initial normed linear velocity")
         ax[0].set_xlim(
             self._spawn_linear_velocity_sampler.get_min_bound(),
@@ -397,7 +397,7 @@ class GoToXYTask(Core):
         )
         ax[0].set_xlabel("vel (m/s)")
         ax[0].set_ylabel("count")
-        ax[1].hist(angular_velocities[:, 1], bins=32)
+        ax[1].hist(angular_velocities, bins=32)
         ax[1].set_title("Initial normed angular velocity")
         ax[1].set_xlim(
             self._spawn_angular_velocity_sampler.get_min_bound(),
