@@ -1,6 +1,6 @@
 {
-    "xy2D_ideal_run_1": {
-        "experiment": "xy2D_ideal_run_1",
+    "velxy2d_ideal_run_1": {
+        "experiment": "velxy2d_ideal_run_1",
         "task": "MFP/MFP2D_TrackXYVelocity_ideal",
         "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
@@ -12,8 +12,8 @@
         "wandb_project": "JSR_VelXY2D",
         "seed": "0"
     },
-    "xy2D_ideal_run_2": {
-        "experiment": "xy2D_ideal_run2",
+    "velxy2d_ideal_run_2": {
+        "experiment": "velxy2d_ideal_run2",
         "task": "MFP/MFP2D_TrackXYVelocity_ideal",
         "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
@@ -25,8 +25,8 @@
         "wandb_project": "JSR_VelXY2D",
         "seed": "1"
     },
-    "xy2D_ideal_run_3": {
-        "experiment": "xy2D_ideal_run3",
+    "velxy2d_ideal_run_3": {
+        "experiment": "velxy2d_ideal_run3",
         "task": "MFP/MFP2D_TrackXYVelocity_ideal",
         "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
@@ -38,8 +38,8 @@
         "wandb_project": "JSR_VelXY2D",
         "seed": "2"
     },
-    "xy2D_ideal_run_4": {
-        "experiment": "xy2D_ideal_run4",
+    "velxy2d_ideal_run_4": {
+        "experiment": "velxy2d_ideal_run4",
         "task": "MFP/MFP2D_TrackXYVelocity_ideal",
         "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
@@ -51,8 +51,8 @@
         "wandb_project": "JSR_VelXY2D",
         "seed": "3"
     },
-    "xy2D_ideal_run5": {
-        "experiment": "xy2D_ideal_run5",
+    "velxy2d_ideal_run5": {
+        "experiment": "velxy2d_ideal_run5",
         "task": "MFP/MFP2D_TrackXYVelocity_ideal",
         "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
@@ -64,8 +64,8 @@
         "wandb_project": "JSR_VelXY2D",
         "seed": "4"
     },
-    "xy2D_LowDR_run_1": {
-        "experiment": "xy2D_LowDR_run_1",
+    "velxy2d_LowDR_run_1": {
+        "experiment": "velxy2d_LowDR_run_1",
         "task": "MFP/MFP2D_TrackXYVelocity_ideal",
         "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
@@ -119,8 +119,8 @@
         "task.env.disturbances.actions_disturbance.action_curriculum.sampling_parameters.min_value": "-0.05",
         "task.env.disturbances.actions_disturbance.action_curriculum.sampling_parameters.max_value": "0.05"
     },
-    "xy2D_LowDR_run_2": {
-        "experiment": "xy2D_LowDR_run_2",
+    "velxy2d_LowDR_run_2": {
+        "experiment": "velxy2d_LowDR_run_2",
         "task": "MFP/MFP2D_TrackXYVelocity_ideal",
         "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
@@ -174,8 +174,8 @@
         "task.env.disturbances.actions_disturbance.action_curriculum.sampling_parameters.min_value": "-0.05",
         "task.env.disturbances.actions_disturbance.action_curriculum.sampling_parameters.max_value": "0.05"
     },
-    "xy2D_LowDR_run_3": {
-        "experiment": "xy2D_LowDR_run_3",
+    "velxy2d_LowDR_run_3": {
+        "experiment": "velxy2d_LowDR_run_3",
         "task": "MFP/MFP2D_TrackXYVelocity_ideal",
         "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
@@ -229,8 +229,8 @@
         "task.env.disturbances.actions_disturbance.action_curriculum.sampling_parameters.min_value": "-0.05",
         "task.env.disturbances.actions_disturbance.action_curriculum.sampling_parameters.max_value": "0.05"
     },
-    "xy2D_LowDR_run_4": {
-        "experiment": "xy2D_LowDR_run_4",
+    "velxy2d_LowDR_run_4": {
+        "experiment": "velxy2d_LowDR_run_4",
         "task": "MFP/MFP2D_TrackXYVelocity_ideal",
         "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
@@ -284,8 +284,8 @@
         "task.env.disturbances.actions_disturbance.action_curriculum.sampling_parameters.min_value": "-0.05",
         "task.env.disturbances.actions_disturbance.action_curriculum.sampling_parameters.max_value": "0.05"
     },
-    "xy2D_LowDR_run_5": {
-        "experiment": "xy2D_LowDR_run_5",
+    "velxy2d_LowDR_run_5": {
+        "experiment": "velxy2d_LowDR_run_5",
         "task": "MFP/MFP2D_TrackXYVelocity_ideal",
         "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
@@ -339,8 +339,8 @@
         "task.env.disturbances.actions_disturbance.action_curriculum.sampling_parameters.min_value": "-0.05",
         "task.env.disturbances.actions_disturbance.action_curriculum.sampling_parameters.max_value": "0.05"
     },
-    "xy2D_MidDR_run_1": {
-        "experiment": "xy2D_MidDR_run_1",
+    "velxy2d_MidDR_run_1": {
+        "experiment": "velxy2d_MidDR_run_1",
         "task": "MFP/MFP2D_TrackXYVelocity_ideal",
         "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
@@ -394,8 +394,8 @@
         "task.env.disturbances.actions_disturbance.action_curriculum.sampling_parameters.min_value": "-0.1",
         "task.env.disturbances.actions_disturbance.action_curriculum.sampling_parameters.max_value": "0.1"
     },
-    "xy2D_MidDR_run_2": {
-        "experiment": "xy2D_MidDR_run_2",
+    "velxy2d_MidDR_run_2": {
+        "experiment": "velxy2d_MidDR_run_2",
         "task": "MFP/MFP2D_TrackXYVelocity_ideal",
         "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
@@ -449,8 +449,8 @@
         "task.env.disturbances.actions_disturbance.action_curriculum.sampling_parameters.min_value": "-0.1",
         "task.env.disturbances.actions_disturbance.action_curriculum.sampling_parameters.max_value": "0.1"
     },
-    "xy2D_MidDR_run_3": {
-        "experiment": "xy2D_MidDR_run_3",
+    "velxy2d_MidDR_run_3": {
+        "experiment": "velxy2d_MidDR_run_3",
         "task": "MFP/MFP2D_TrackXYVelocity_ideal",
         "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
@@ -504,8 +504,8 @@
         "task.env.disturbances.actions_disturbance.action_curriculum.sampling_parameters.min_value": "-0.1",
         "task.env.disturbances.actions_disturbance.action_curriculum.sampling_parameters.max_value": "0.1"
     },
-    "xy2D_MidDR_run_4": {
-        "experiment": "xy2D_MidDR_run_4",
+    "velxy2d_MidDR_run_4": {
+        "experiment": "velxy2d_MidDR_run_4",
         "task": "MFP/MFP2D_TrackXYVelocity_ideal",
         "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
@@ -559,8 +559,8 @@
         "task.env.disturbances.actions_disturbance.action_curriculum.sampling_parameters.min_value": "-0.1",
         "task.env.disturbances.actions_disturbance.action_curriculum.sampling_parameters.max_value": "0.1"
     },
-    "xy2D_MidDR_run_5": {
-        "experiment": "xy2D_MidDR_run_5",
+    "velxy2d_MidDR_run_5": {
+        "experiment": "velxy2d_MidDR_run_5",
         "task": "MFP/MFP2D_TrackXYVelocity_ideal",
         "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
@@ -614,8 +614,8 @@
         "task.env.disturbances.actions_disturbance.action_curriculum.sampling_parameters.min_value": "-0.1",
         "task.env.disturbances.actions_disturbance.action_curriculum.sampling_parameters.max_value": "0.1"
     },
-    "xy2D_HighDR_run_1": {
-        "experiment": "xy2D_HighDR_run_1",
+    "velxy2d_HighDR_run_1": {
+        "experiment": "velxy2d_HighDR_run_1",
         "task": "MFP/MFP2D_TrackXYVelocity_ideal",
         "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
@@ -669,8 +669,8 @@
         "task.env.disturbances.actions_disturbance.action_curriculum.sampling_parameters.min_value": "-0.15",
         "task.env.disturbances.actions_disturbance.action_curriculum.sampling_parameters.max_value": "0.15"
     },
-    "xy2D_HighDR_run_2": {
-        "experiment": "xy2D_HighDR_run_2",
+    "velxy2d_HighDR_run_2": {
+        "experiment": "velxy2d_HighDR_run_2",
         "task": "MFP/MFP2D_TrackXYVelocity_ideal",
         "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
@@ -724,8 +724,8 @@
         "task.env.disturbances.actions_disturbance.action_curriculum.sampling_parameters.min_value": "-0.15",
         "task.env.disturbances.actions_disturbance.action_curriculum.sampling_parameters.max_value": "0.15"
     },
-    "xy2D_HighDR_run_3": {
-        "experiment": "xy2D_HighDR_run_3",
+    "velxy2d_HighDR_run_3": {
+        "experiment": "velxy2d_HighDR_run_3",
         "task": "MFP/MFP2D_TrackXYVelocity_ideal",
         "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
@@ -779,8 +779,8 @@
         "task.env.disturbances.actions_disturbance.action_curriculum.sampling_parameters.min_value": "-0.15",
         "task.env.disturbances.actions_disturbance.action_curriculum.sampling_parameters.max_value": "0.15"
     },
-    "xy2D_HighDR_run_4": {
-        "experiment": "xy2D_HighDR_run_4",
+    "velxy2d_HighDR_run_4": {
+        "experiment": "velxy2d_HighDR_run_4",
         "task": "MFP/MFP2D_TrackXYVelocity_ideal",
         "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
@@ -834,8 +834,8 @@
         "task.env.disturbances.actions_disturbance.action_curriculum.sampling_parameters.min_value": "-0.15",
         "task.env.disturbances.actions_disturbance.action_curriculum.sampling_parameters.max_value": "0.15"
     },
-    "xy2D_HighDR_run_5": {
-        "experiment": "xy2D_HighDR_run_5",
+    "velxy2d_HighDR_run_5": {
+        "experiment": "velxy2d_HighDR_run_5",
         "task": "MFP/MFP2D_TrackXYVelocity_ideal",
         "train": "MFP/MFP2D_PPOmulti_dict_MLP",
         "headless": "True",
