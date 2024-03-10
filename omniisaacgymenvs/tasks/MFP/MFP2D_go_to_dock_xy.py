@@ -1,9 +1,9 @@
 __author__ = "Antoine Richard, Matteo El Hariry"
 __copyright__ = (
-    "Copyright 2023, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
+    "Copyright 2023-24, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
 )
 __license__ = "GPL"
-__version__ = "1.0.0"
+__version__ = "2.1.0"
 __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
@@ -209,12 +209,8 @@ class GoToDockXYTask(Core):
         # Randomizes the starting position of the platform
         r = torch.rand((num_resets,), device=self._device) * (rmax - rmin) + rmin
         # lab width=3, height=5
-        initial_position[env_ids, 0] += 3/5 * r + self._target_positions[
-            env_ids, 0
-        ]
-        initial_position[env_ids, 1] += r + self._target_positions[
-            env_ids, 1
-        ]
+        initial_position[env_ids, 0] += 3 / 5 * r + self._target_positions[env_ids, 0]
+        initial_position[env_ids, 1] += r + self._target_positions[env_ids, 1]
         initial_position[env_ids, 2] += 0
 
         # Randomizes the heading of the platform
@@ -223,16 +219,15 @@ class GoToDockXYTask(Core):
         initial_orientation[env_ids, 3] = torch.sin(random_orient * 0.5)
         return initial_position, initial_orientation
 
-    def generate_target(self, path, position)->None:
+    def generate_target(self, path, position) -> None:
         """
         Generate a docking station where the FP will dock to."""
         Dock(
-            prim_path=path+"/dock", 
+            prim_path=path + "/dock",
             name="dock",
             position=position,
             usd_path=os.path.join(os.getcwd(), "robots/usd/docking_station.usd"),
         )
-
 
     def add_visual_marker_to_scene(self, scene):
         """
