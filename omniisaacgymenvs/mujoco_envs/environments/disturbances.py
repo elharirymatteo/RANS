@@ -12,6 +12,19 @@ from typing import Dict, Tuple
 import numpy as np
 import math
 
+from omniisaacgymenvs.tasks.MFP.MFP2D_disturbances_parameters import (
+    DisturbancesParameters,
+    MassDistributionDisturbanceParameters,
+    ForceDisturbanceParameters,
+    TorqueDisturbanceParameters,
+    NoisyObservationsParameters,
+    NoisyActionsParameters,
+)
+
+from omniisaacgymenvs.tasks.MFP.curriculum_helpers import (
+    CurriculumSampler,
+)
+
 
 class RandomSpawn:
     """
@@ -70,224 +83,268 @@ class RandomKillThrusters:
         self.killed_thrusters_id = self._rng.choice(
             8, self._num_thrusters_to_kill, replace=False
         )
-        self.killed_mask[self.killed_thrusters_id] = 0
-        # print("Killed thrusters: ", self.killed_thrusters_id)
 
 
-class UnevenFloorDisturbance:
+class MassDistributionDisturbances:
     """
-    Creates disturbances on the platform by simulating an uneven floor."""
+    Creates disturbances on the platform by simulating a mass distribution on the
+    platform.
+    """
 
-    def __init__(self, cfg: Dict[str, float]) -> None:
+    def __init__(
+        self,
+        rng: np.random.default_rng,
+        parameters: MassDistributionDisturbanceParameters,
+    ) -> None:
         """
-        Initialize the uneven floor disturbance.
+        Args:
+            parameters (MassDistributionDisturbanceParameters): The settings of the domain randomization.
+        """
+
+        self.rng = rng
+        self.mass_sampler = CurriculumSampler(parameters.mass_curriculum)
+        self.CoM_sampler = CurriculumSampler(parameters.com_curriculum)
+        self.parameters = parameters
+        self.platforms_mass = 5.32
+        self.platforms_CoM = np.zeros((2), dtype=np.float32)
+
+    def randomize_masses(self, step: int = 100000) -> None:
+        """
+        Randomizes the masses of the platforms.
 
         Args:
-            cfg (Dict[str,float]): A dictionary containing the configuration of the uneven floor disturbance.
+            env_ids (torch.Tensor): The ids of the environments to reset.
+            step (int): The current step of the learning process.
         """
 
-        self._rng = np.random.default_rng(seed=cfg["seed"])
-        self._use_uneven_floor = cfg["use_uneven_floor"]
-        self._use_sinusoidal_floor = cfg["use_sinusoidal_floor"]
-        self._min_freq = cfg["floor_min_freq"]
-        self._max_freq = cfg["floor_max_freq"]
-        self._min_offset = cfg["floor_min_offset"]
-        self._max_offset = cfg["floor_max_offset"]
-        self._max_floor_force = cfg["max_floor_force"]
-        self._min_floor_force = cfg["min_floor_force"]
-        self._max_floor_force = math.sqrt(self._max_floor_force**2 / 2)
-        self._min_floor_force = math.sqrt(self._min_floor_force**2 / 2)
+        self.platforms_mass = self.mass_sampler.sample(1, step).numpy()[0]
+        r = self.CoM_sampler.sample(1, step).numpy()[0]
+        theta = self.rand.uniform((1), dtype=np.float32) * math.pi * 2
+        self.platforms_CoM[0] = np.cos(theta) * r
+        self.platforms_CoM[1] = np.sin(theta) * r
 
-        self._floor_forces = np.zeros(3, dtype=np.float32)
+    def get_masses(self) -> Tuple[float, np.ndarray]:
+        """
+        Returns the masses and CoM of the platforms.
+
+        Returns:
+            Tuple(float, np.ndarray): The masses and CoM of the platforms.
+        """
+
+        return (self.platforms_mass, self.platforms_CoM)
+
+
+class ForceDisturbance:
+    """
+    Creates disturbances by applying random forces.
+    """
+
+    def __init__(
+        self,
+        rng: np.random.default_rng,
+        parameters: ForceDisturbanceParameters,
+    ) -> None:
+        """
+        Args:
+            parameters (ForceDisturbanceParameters): The settings of the domain randomization.
+        """
+
+        self.rng = rng
+        self.parameters = parameters
+        self.force_sampler = CurriculumSampler(self.parameters.force_curriculum)
+
+        self.forces = np.zeros(3, dtype=np.float32)
+        self.max_forces = 0
         self._floor_x_freq = 0
         self._floor_y_freq = 0
         self._floor_x_offset = 0
         self._floor_y_offset = 0
 
-    def generate_floor(self) -> None:
+    def generate_forces(self, step: int = 100000) -> None:
         """
-        Generates the uneven floor."""
+        Generates the forces using a sinusoidal pattern or not.
 
-        if self._use_uneven_floor:
-            if self._use_sinusoidal_floor:
-                self._floor_x_freq = self._rng.uniform(
-                    self._min_freq, self._max_freq, 1
+        Args:
+            step (int, optional): The current training step. Defaults to 0.
+        """
+
+        if self.parameters.enable:
+            if self.parameters.use_sinusoidal_patterns:
+                self._floor_x_freq = self.rng.uniform(
+                    self.parameters.min_freq, self.parameters.max_freq, 1
                 )
-                self._floor_y_freq = self._rng.uniform(
-                    self._min_freq, self._max_freq, 1
+                self._floor_y_freq = self.rng.uniform(
+                    self.parameters.min_freq, self.parameters.max_freq, 1
                 )
-                self._floor_x_offset = self._rng.uniform(
-                    self._min_offset, self._max_offset, 1
+                self._floor_x_offset = self.rng.uniform(
+                    self.parameters.min_offset, self.parameters.max_offset, 1
                 )
-                self._floor_y_offset = self._rng.uniform(
-                    self._min_offset, self._max_offset, 1
+                self._floor_y_offset = self.rng.uniform(
+                    self.parameters.min_offset, self.parameters.max_offset, 1
                 )
+                self._max_forces = self.force_sampler.sample(1, step).numpy()[0]
             else:
-                r = self._rng.uniform(self._min_floor_force, self._max_floor_force, 1)
-                theta = self._rng.uniform(0, 1, 1) * math.pi * 2
-                self._floor_forces[0] = np.cos(theta) * r
-                self._floor_forces[1] = np.sin(theta) * r
+                r = self.force_sampler.sample(1, step).numpy()[0]
+                theta = self.rng.uniform(0, 1, 1) * math.pi * 2
+                self.forces[0] = np.cos(theta) * r
+                self.forces[1] = np.sin(theta) * r
 
     def get_floor_forces(self, root_pos: np.ndarray) -> np.ndarray:
         """
-        Computes the floor forces for the current state of the robot.
+        Computes the forces given the current state of the robot.
 
         Args:
             root_pos (np.ndarray): The position of the root of the robot.
 
         Returns:
-            np.ndarray: The floor forces."""
+            np.ndarray: The floor forces.
+        """
 
-        if self._use_uneven_floor:
-            if self._use_sinusoidal_floor:
-                self._floor_forces[0] = (
-                    np.sin(root_pos[0] * self._floor_x_freq + self._floor_x_offset)
-                    * self._max_floor_force
-                )
-                self._floor_forces[1] = (
-                    np.sin(root_pos[1] * self._floor_y_freq + self._floor_y_offset)
-                    * self._max_floor_force
-                )
+        if self.parameters.use_sinusoidal_patterns:
+            self.forces[0] = (
+                np.sin(root_pos[0] * self._floor_x_freq + self._floor_x_offset)
+                * self._max_forces
+            )
+            self.forces[1] = (
+                np.sin(root_pos[1] * self._floor_y_freq + self._floor_y_offset)
+                * self._max_forces
+            )
 
-        return self._floor_forces
+        return self.forces
 
 
 class TorqueDisturbance:
     """
-    Creates disturbances on the platform by simulating a torque applied to its center.
+    Creates disturbances by applying a torque to its center.
     """
 
-    def __init__(self, cfg: Dict[str, float]) -> None:
+    def __init__(
+        self,
+        rng: np.random.default_rng,
+        parameters: TorqueDisturbanceParameters,
+    ) -> None:
         """
-        Initialize the torque disturbance.
+        Args:
+            parameters (TorqueDisturbanceParameters): The settings of the domain randomization.
+        """
+
+        self.rng = rng
+        self.parameters = parameters
+        self.torque_sampler = CurriculumSampler(self.parameters.torque_curriculum)
+
+        self.torques = np.zeros(3, dtype=np.float32)
+        self.max_torques = 0
+        self._freq = 0
+        self._offset = 0
+
+    def generate_torques(self, step: int = 100000) -> None:
+        """
+        Generates the torques using a sinusoidal pattern or not.
 
         Args:
-            cfg (Dict[str,float]): A dictionary containing the configuration of the torque disturbance.
+            step (int, optional): The current training step. Defaults to 0.
         """
 
-        self._rng = np.random.default_rng(seed=cfg["seed"])
-        # Uneven floor generation
-        self._use_torque_disturbance = cfg["use_torque_disturbance"]
-        self._use_sinusoidal_torque = cfg["use_sinusoidal_torque"]
-        self._max_torque = cfg["max_torque"]
-        self._min_torque = cfg["min_torque"]
-
-        # use the same min/max frequencies and offsets for the floor
-        self._min_freq = cfg["floor_min_freq"]
-        self._max_freq = cfg["floor_max_freq"]
-        self._min_offset = cfg["floor_min_offset"]
-        self._max_offset = cfg["floor_max_offset"]
-
-        self._torque_forces = np.zeros(3, dtype=np.float32)
-        self._torque_freq = 0
-        self._torque_offset = 0
-
-    def generate_torque(self) -> None:
-        """
-        Generates the torque disturbance."""
-
-        if self._use_torque_disturbance:
-            if self._use_sinusoidal_torque:
-                #  use the same min/max frequencies and offsets for the floor
-                self._torque_freq = self._rng.uniform(self._min_freq, self._max_freq, 1)
-                self._torque_offset = self._rng.uniform(
-                    self._min_offset, self._max_offset, 1
+        if self.parameters.enable:
+            if self.parameters.use_sinusoidal_patterns:
+                self._floor_x_freq = self.rng.uniform(
+                    self.parameters.min_freq, self.parameters.max_freq, 1
                 )
+                self._floor_x_offset = self.rng.uniform(
+                    self.parameters.min_offset, self.parameters.max_offset, 1
+                )
+                self._max_torques = self.torque_sampler.sample(1, step).numpy()[0]
             else:
-                r = self._rng.uniform(
-                    self._min_torque, self._max_torque, 1
-                ) * self._rng.choice([1, -1])
-                self._torque_forces[2] = r
+                r = self.torque_sampler.sample(1, step).numpy()[0]
+                self.torques[2] = r
 
     def get_torque_disturbance(self, root_pos: np.ndarray) -> np.ndarray:
         """
-        Computes the torque for the current state of the robot.
+        Computes the torques given the current state of the robot.
 
         Args:
-            root_pos (np.ndarray): The position of the root of the robot.
+            root_pos (torch.Tensor): The position of the root of the robot.
 
         Returns:
-            np.ndarray: The torque."""
+            torch.Tensor: The torque disturbance."""
 
-        if self._use_torque_disturbance:
-            if self._use_sinusoidal_torque:
-                self._torque_forces[2] = (
-                    np.sin(root_pos * self._torque_freq + self._torque_offset)
-                    * self._max_torque
-                )
+        if self.parameters.use_sinusoidal_patterns:
+            self.torques[:, 2] = (
+                np.sin(root_pos * self._freq + self._offset) * self._max_torques
+            )
 
-        return self._torque_forces
+        return self.torques
 
 
 class NoisyObservations:
     """
-    Adds noise to the observations of the robot."""
+    Adds noise to the observations of the robot.
+    """
 
-    def __init__(self, cfg: Dict[str, float]) -> None:
+    def __init__(
+        self,
+        rng: np.random.default_rng,
+        parameters: NoisyObservationsParameters,
+    ) -> None:
         """
-        Initialize the noisy observations strategy.
-
         Args:
-            cfg (Dict[str,float]): A dictionary containing the configuration of the noisy observations disturbance.
+            task_cfg (NoisyObservationParameters): The settings of the domain randomization.
+            num_envs (int): The number of environments.
+            device (str): The device on which the tensors are stored.
         """
 
-        self._rng = np.random.default_rng(seed=42)  # cfg["seed"])
-        self._add_noise_on_pos = cfg["add_noise_on_pos"]
-        self._position_noise_min = cfg["position_noise_min"]
-        self._position_noise_max = cfg["position_noise_max"]
-        self._add_noise_on_vel = cfg["add_noise_on_vel"]
-        self._velocity_noise_min = cfg["velocity_noise_min"]
-        self._velocity_noise_max = cfg["velocity_noise_max"]
-        self._add_noise_on_heading = cfg["add_noise_on_heading"]
-        self._heading_noise_min = cfg["heading_noise_min"]
-        self._heading_noise_max = cfg["heading_noise_max"]
+        self.rng = rng
+        self.position_sampler = CurriculumSampler(parameters.position_curriculum)
+        self.velocity_sampler = CurriculumSampler(parameters.velocity_curriculum)
+        self.orientation_sampler = CurriculumSampler(parameters.orientation_curriculum)
+        self.parameters = parameters
 
-    def add_noise_on_pos(self, pos: np.ndarray) -> np.ndarray:
+    def add_noise_on_pos(self, pos: np.ndarray, step: int = 100000) -> np.ndarray:
         """
         Adds noise to the position of the robot.
 
         Args:
             pos (np.ndarray): The position of the robot.
+            step (int, optional): The current step of the learning process. Defaults to 0.
 
         Returns:
-            np.ndarray: The position of the robot with noise added."""
+            np.ndarray: The position of the robot with noise.
+        """
 
-        if self._add_noise_on_pos:
-            pos += self._rng.uniform(
-                self._position_noise_min, self._position_noise_max, pos.shape
-            )
+        if self.parameters.enable_position_noise:
+            pos += self.position_sampler.sample(1, step).numpy()[0]
         return pos
 
-    def add_noise_on_vel(self, vel: np.ndarray) -> np.ndarray:
+    def add_noise_on_vel(self, vel: np.ndarray, step: int = 100000) -> np.ndarray:
         """
         Adds noise to the velocity of the robot.
 
         Args:
             vel (np.ndarray): The velocity of the robot.
+            step (int, optional): The current step of the learning process. Defaults to 0.
 
         Returns:
-            np.ndarray: The velocity of the robot with noise added."""
+            np.ndarray: The velocity of the robot with noise.
+        """
 
-        if self._add_noise_on_vel:
-            vel += self._rng.uniform(
-                self._velocity_noise_min, self._velocity_noise_max, vel.shape
-            )
+        if self.parameters.enable_velocity_noise:
+            vel += self.velocity_sampler.sample(1, step).numpy()[0]
         return vel
 
-    def add_noise_on_heading(self, heading: np.ndarray) -> np.ndarray:
+    def add_noise_on_heading(self, heading: np.ndarray, step: int = 0) -> np.ndarray:
         """
         Adds noise to the heading of the robot.
 
         Args:
             heading (np.ndarray): The heading of the robot.
+            step (int, optional): The current step of the learning process. Defaults to 0.
 
         Returns:
-            np.ndarray: The heading of the robot with noise added."""
+            np.ndarray: The heading of the robot with noise.
+        """
 
-        if self._add_noise_on_heading:
-            heading += self._rng.uniform(
-                self._heading_noise_min, self._heading_noise_max, heading.shape
-            )
+        if self.parameters.enable_orientation_noise:
+            heading += self.orientation_sampler.sample(1, step).numpy()[0]
         return heading
 
 
@@ -295,29 +352,69 @@ class NoisyActions:
     """
     Adds noise to the actions of the robot."""
 
-    def __init__(self, cfg: Dict[str, float]) -> None:
+    def __init__(
+        self,
+        rng: np.random.default_rng,
+        parameters: NoisyActionsParameters,
+    ) -> None:
         """
-        Initialize the noisy actions strategy.
-
         Args:
-            cfg (Dict[str,float]): A dictionary containing the configuration of the noisy actions disturbance.
+            parameters (NoisyActionParameters): The task configuration.
         """
 
-        self._rng = np.random.default_rng(seed=42)  # seed=cfg["seed"])
-        self._add_noise_on_act = cfg["add_noise_on_act"]
-        self._min_action_noise = cfg["min_action_noise"]
-        self._max_action_noise = cfg["max_action_noise"]
+        self.rng = rng
+        self.action_sampler = CurriculumSampler(parameters.action_curriculum)
+        self.parameters = parameters
 
-    def add_noise_on_act(self, act: np.ndarray) -> np.ndarray:
+    def add_noise_on_act(self, act: np.ndarray, step: int = 100000) -> np.ndarray:
         """
         Adds noise to the actions of the robot.
 
         Args:
             act (np.ndarray): The actions of the robot.
+            step (int, optional): The current step of the learning process. Defaults to 0.
 
         Returns:
-            np.ndarray: The actions of the robot with noise added."""
+            np.ndarray: The actions of the robot with noise.
+        """
 
-        if self._add_noise_on_act:
-            act += self._rng.uniform(self._min_action_noise, self._max_action_noise, 1)
+        if self.parameters.enable:
+            act += self.action_sampler.sample(1, step).numpy()[0]
         return act
+
+
+class Disturbances:
+    """
+    Class to create disturbances on the platform.
+    """
+
+    def __init__(self, parameters: dict, seed: int = 42) -> None:
+        """
+        Args:
+            parameters (dict): The settings of the domain randomization.
+        """
+
+        self.rng = np.random.default_rng(seed=seed)
+
+        self.parameters = DisturbancesParameters(**parameters)
+
+        self.mass_disturbances = MassDistributionDisturbances(
+            self.rng,
+            self.parameters.mass_disturbance,
+        )
+        self.force_disturbances = ForceDisturbance(
+            self.rng,
+            self.parameters.force_disturbance,
+        )
+        self.torque_disturbances = TorqueDisturbance(
+            self.rng,
+            self.parameters.torque_disturbance,
+        )
+        self.noisy_observations = NoisyObservations(
+            self.rng,
+            self.parameters.observations_disturbance,
+        )
+        self.noisy_actions = NoisyActions(
+            self.rng,
+            self.parameters.actions_disturbance,
+        )

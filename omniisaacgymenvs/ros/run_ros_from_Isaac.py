@@ -9,10 +9,26 @@ __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
 from omni.isaac.kit import SimulationApp
+
 from omniisaacgymenvs.utils.hydra_cfg.reformat import omegaconf_to_dict, print_dict
 from omniisaacgymenvs.utils.hydra_cfg.hydra_utils import *
 from omegaconf import DictConfig, OmegaConf
 import hydra
+import os
+
+from omniisaacgymenvs.mujoco_envs.controllers.discrete_LQR_controller import (
+    DiscreteController,
+    parseControllerConfig,
+)
+from omniisaacgymenvs.mujoco_envs.controllers.RL_games_model_4_mujoco import (
+    RLGamesModel,
+)
+from omniisaacgymenvs.mujoco_envs.environments.mujoco_base_env import (
+    MuJoCoFloatingPlatform,
+    parseEnvironmentConfig,
+)
+from omniisaacgymenvs.mujoco_envs.controllers.hl_controllers import hlControllerFactory
+from omniisaacgymenvs.ros.ros_utills import enable_ros_extension
 
 
 @hydra.main(config_name="config_mujoco", config_path="../cfg")
@@ -28,25 +44,8 @@ def run(cfg: DictConfig):
     cfg_dict = omegaconf_to_dict(cfg)
 
     simulation_app = SimulationApp({"headless": True})
-    import os
-
-    from omniisaacgymenvs.mujoco_envs.controllers.discrete_LQR_controller import (
-        DiscreteController,
-        parseControllerConfig,
-    )
-    from omniisaacgymenvs.mujoco_envs.controllers.RL_games_model_4_mujoco import (
-        RLGamesModel,
-    )
-    from omniisaacgymenvs.mujoco_envs.environments.mujoco_base_env import (
-        MuJoCoFloatingPlatform,
-        parseEnvironmentConfig,
-    )
-    from omniisaacgymenvs.mujoco_envs.controllers.hl_controllers import (
-        hlControllerFactory,
-    )
-    from omniisaacgymenvs.ros.ros_utills import enable_ros_extension
-
     enable_ros_extension()
+
     from omniisaacgymenvs.ros.ros_node import RLPlayerNode
     import rospy
 
@@ -73,16 +72,13 @@ def run(cfg: DictConfig):
     node = RLPlayerNode(
         hl_controller,
         cfg=cfg_dict,
-        # platform=cfg_dict["task"]["env"]["platform"],
-        # disturbances=cfg_dict["task"]["env"]["disturbances"],
         debug=True,
     )
     # Run the node.
     node.run()
-    # Close the simulationApp.
     hl_controller.saveSimulationData()
     hl_controller.plotSimulation()
-
+    # Close the simulationApp.
     simulation_app.close()
 
 

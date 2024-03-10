@@ -1,0 +1,10 @@
+name: "linear_velocity_heading"
+run_batch: 0
+trajectory_type: "circle"
+x_offset: 0
+y_offset: 0
+radius: 1.5
+closed: True
+lookahead_dist: 0.10
+target_tracking_velocity: 0.25
+save_dir: "mj_runs/vel_heading_circle"

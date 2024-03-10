@@ -1,0 +1,10 @@
+name: "linear_velocity_heading"
+run_batch: 0
+trajectory_type: "infinite" 
+x_offset: 0
+y_offset: 0
+a: 1.5  # 'a' controls the size of the lemniscate, analogous to 'radius' for the circle
+closed: True
+lookahead_dist: 0.1
+target_tracking_velocity: 0.2
+save_dir: "mj_runs/vel_heading_infinite" 

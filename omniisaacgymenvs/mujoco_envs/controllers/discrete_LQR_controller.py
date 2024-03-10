@@ -562,7 +562,7 @@ class DiscreteController:
         self,
         obs_state: Dict[str, np.ndarray],
         is_deterministic: bool = True,
-        mute: bool = True,
+        mute: bool = True,, **kwargs
     ) -> np.ndarray:
         """
         Get the action.

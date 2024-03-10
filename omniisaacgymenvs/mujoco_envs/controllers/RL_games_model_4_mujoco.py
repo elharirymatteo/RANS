@@ -47,6 +47,7 @@ class RLGamesModel:
                 "state": torch.zeros((1, 10), dtype=torch.float32, device="cuda"),
                 "transforms": torch.zeros(5, 8, device="cuda"),
                 "masks": torch.zeros(8, dtype=torch.float32, device="cuda"),
+                "masses": torch.zeros(3, dtype=torch.float32, device="cuda"),
             }
         )
 
@@ -77,6 +78,7 @@ class RLGamesModel:
                 "state": spaces.Box(np.ones(10) * -np.Inf, np.ones(10) * np.Inf),
                 "transforms": spaces.Box(low=-1, high=1, shape=(8, 5)),
                 "masks": spaces.Box(low=0, high=1, shape=(8,)),
+                "masses": spaces.Box(low=-np.Inf, high=np.Inf, shape=(3,)),
             }
         )
         self.player = BasicPpoPlayerDiscrete(

@@ -1,5 +1,5 @@
 name: "pose"
-run_batch: 256
+run_batch: 1024
 goals_x: [0]
 goals_y: [0]
 goals_theta: [0]

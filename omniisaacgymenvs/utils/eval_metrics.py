@@ -185,6 +185,124 @@ def get_GoToXY_success_rate(
     return {"position": success_rate_df}
 
 
+def get_GoToPose_results(
+    ep_data: dict,
+    position_threshold: float = 0.02,
+    heading_threshold: float = 0.087,
+    print_intermediate: bool = False,
+) -> None:
+    new_SR = get_GoToPose_success_rate_new(ep_data, print_intermediate=False)
+    old_SR = get_GoToPose_success_rate(ep_data, print_intermediate=False)
+    alv = compute_average_linear_velocity(ep_data)
+    aav = compute_average_angular_velocity(ep_data)
+    aac = compute_average_action_count(ep_data) / 8
+
+    ordered_metrics_keys = [
+        "PA1",
+        "PA2",
+        "PSA",
+        "OA1",
+        "OA2",
+        "OSA",
+        "ALV",
+        "AAV",
+        "AAC",
+        "PT5",
+        "PT2",
+        "PT1",
+        "OT5",
+        "OT2",
+        "OT1",
+    ]
+
+    ordered_metrics_descriptions = [
+        "Position reached below 0.02 m of the target",
+        "Position reached below 0.01 m of the target",
+        "Position success and stay within 0.15 m",
+        "Orientation reached below 0.087 rad of the target",
+        "Orientation reached below 0.0435 rad of the target",
+        "Orientation success and stay within 0.6525 rad",
+        "Average linear velocity",
+        "Average angular velocity",
+        "Average action count",
+        "Percentage of time spent within 0.05 m of the target",
+        "Percentage of time spent within 0.02 m of the target",
+        "Percentage of time spent within 0.01 m of the target",
+        "Percentage of time spent within 0.05 rad of the target",
+        "Percentage of time spent within 0.02 rad of the target",
+        "Percentage of time spent within 0.01 rad of the target",
+    ]
+
+    ordered_metrics_units = [
+        "%",
+        "%",
+        "%",
+        "%",
+        "%",
+        "%",
+        "m/s",
+        "rad/s",
+        "N",
+        "%",
+        "%",
+        "%",
+        "%",
+        "%",
+        "%",
+    ]
+
+    ordered_metrics_multipliers = [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+    ]
+
+    metrics = np.array(
+        [
+            old_SR["position"]["success_rate_0.02_m"][0],  # PA1
+            old_SR["position"]["success_rate_0.01_m"][0],  # PA2
+            old_SR["position"]["success_and_stay_within_0.15_m"][0],  # PSA
+            old_SR["heading"]["success_rate_0.087_rad"][0],  # OA1
+            old_SR["heading"]["success_rate_0.0435_rad"][0],  # OA2
+            old_SR["heading"]["success_and_stay_within_0.6525_rad"][0],  # OSA
+            alv,  # ALV
+            aav,  # AAV
+            aac,  # AAC
+            new_SR["pose"]["PT5"][0],  # PT5
+            new_SR["pose"]["PT2"][0],  # PT2
+            new_SR["pose"]["PT1"][0],  # PT1
+            new_SR["pose"]["OT5"][0],  # OT5
+            new_SR["pose"]["OT2"][0],  # OT2
+            new_SR["pose"]["OT1"][0],  # OT1
+        ]
+    )
+
+    # Print the metrics line by line
+    print(f"Metrics acquired using a sample of {ep_data['act'].shape[1]}:")
+    for i, (metric, unit, mult, desc) in enumerate(
+        zip(
+            ordered_metrics_keys,
+            ordered_metrics_units,
+            ordered_metrics_multipliers,
+            ordered_metrics_descriptions,
+        )
+    ):
+        print(f"  + {metric}: {metrics[i]*mult:.2f}{unit}. {desc}.")
+    return
+
+
 def get_GoToPose_success_rate(
     ep_data: dict,
     position_threshold: float = 0.02,

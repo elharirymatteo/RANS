@@ -9,35 +9,27 @@ __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
 from omniisaacgymenvs.tasks.base.rl_task import RLTask
-from omniisaacgymenvs.robots.articulations.MFP2D_virtual_thrusters import (
+from omniisaacgymenvs.robots.articulations.MFP2D_thrusters import (
     ModularFloatingPlatform,
 )
-from omniisaacgymenvs.robots.articulations.views.mfp2d_virtual_thrusters_view import (
+from omniisaacgymenvs.robots.articulations.views.MFP2D_view import (
     ModularFloatingPlatformView,
 )
 
 from omniisaacgymenvs.robots.sensors.proprioceptive.imu import IMUInterface
 from omniisaacgymenvs.robots.sensors.proprioceptive.Type import *
 
-from omniisaacgymenvs.utils.pin import VisualPin
-from omniisaacgymenvs.utils.arrow import VisualArrow
-
-from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_thruster_generator import (
+from omniisaacgymenvs.tasks.MFP.MFP2D_thruster_generator import (
     VirtualPlatform,
 )
-from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_factory import (
+from omniisaacgymenvs.tasks.MFP.MFP2D_task_factory import (
     task_factory,
 )
-from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_core import parse_data_dict
-from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_task_rewards import (
-    Penalties,
+from omniisaacgymenvs.tasks.MFP.MFP2D_penalties import (
+    EnvironmentPenalties,
 )
-from omniisaacgymenvs.tasks.virtual_floating_platform.MFP2D_disturbances import (
-    UnevenFloorDisturbance,
-    TorqueDisturbance,
-    NoisyObservations,
-    NoisyActions,
-    MassDistributionDisturbances,
+from omniisaacgymenvs.tasks.MFP.MFP2D_disturbances import (
+    Disturbances,
 )
 
 from omni.isaac.core.utils.torch.rotations import *
@@ -110,7 +102,7 @@ class MFP2DVirtual_IMU(RLTask):
         penalty_cfg = self._task_cfg["env"]["penalties_parameters"]
         # Instantiate the task, reward and platform
         self.task = task_factory.get(task_cfg, reward_cfg, self._num_envs, self._device)
-        self._penalties = parse_data_dict(Penalties(), penalty_cfg)
+        self._penalties = Penalties(**penalty_cfg)
         self.virtual_platform = VirtualPlatform(
             self._num_envs, self._platform_cfg, self._device
         )

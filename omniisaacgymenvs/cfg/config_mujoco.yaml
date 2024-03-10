@@ -34,6 +34,7 @@ solver_type: 1 # 0: pgs, 1: tgs
 # used to set checkpoint path
 checkpoint: ''
 
+wandb_activate: False
 use_rl: True
 
 # set default task and default training config based on task
