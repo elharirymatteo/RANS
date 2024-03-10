@@ -141,6 +141,7 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
                 ),
                 "transforms": spaces.Box(low=-1, high=1, shape=(self._max_actions, 5)),
                 "masks": spaces.Box(low=0, high=1, shape=(self._max_actions,)),
+                "masses": spaces.Box(low=-np.inf, high=np.inf, shape=(3,)),
                 "rgb": spaces.Box(
                     np.ones(
                         (
@@ -450,7 +451,7 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         rgb_obs, depth_obs = self.get_rgbd_data()
         self.obs_buf["rgb"] = rgb_obs
         self.obs_buf["depth"] = depth_obs
-        self.obs_buf["masses"] = self.DR.mass_disturbances.get_masses()
+        self.obs_buf["masses"] = self.DR.mass_disturbances.get_masses_and_com()
 
         observations = {self._platforms.name: {"obs_buf": self.obs_buf}}
         return observations
