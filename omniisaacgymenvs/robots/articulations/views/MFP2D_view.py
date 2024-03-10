@@ -38,6 +38,13 @@ class ModularFloatingPlatformView(ArticulationView):
 
     def get_CoM_indices(self):
         self.CoM_shifter_indices = [
-            self.get_dof_index("x_axis_joint"),
-            self.get_dof_index("y_axis_joint"),
+            self.get_dof_index("com_x_axis_joint"),
+            self.get_dof_index("com_y_axis_joint"),
+        ]
+
+    def get_plane_lock_indices(self):
+        self.lock_indices = [
+            self.get_dof_index("fp_world_joint_x"),
+            self.get_dof_index("fp_world_joint_y"),
+            self.get_dof_index("fp_world_joint_z"),
         ]

@@ -104,6 +104,9 @@ class CreatePlatform:
                 Gf.Vec3d(0, 0, 0),
                 0.0001,
             )
+        # Creates a set of joints to constrain the platform on the XY plane (3DoF).
+        self.createXYPlaneLock()
+        # Creates the movable CoM and the joints to control it.
         self.createMovableCoM(
             self.platform_path + "/movable_CoM",
             "CoM",
@@ -123,6 +126,63 @@ class CreatePlatform:
                 0.0001,
                 Gf.Vec3d([0, 0, 0]),
             )
+
+    def createXYPlaneLock(self) -> None:
+        """
+        Creates a set of joints to constrain the platform to the XY plane.
+        3DoF: translation on X and Y, rotation on Z."""
+
+        # Create anchor to world. It's fixed.
+        anchor_path, anchor_prim = createXform(
+            self.stage, self.platform_path + "/world_anchor"
+        )
+        setTranslate(anchor_prim, Gf.Vec3d(0, 0, 0))
+        setOrient(anchor_prim, Gf.Quatd(1, Gf.Vec3d(0, 0, 0)))
+        applyRigidBody(anchor_prim)
+        applyMass(anchor_prim, 0.0000001)
+        fixed_joint = createFixedJoint(
+            self.stage, self.joints_path, body_path2=anchor_path
+        )
+        # Create the bodies & joints allowing translation
+        x_tr_path, x_tr_prim = createXform(
+            self.stage, self.platform_path + "/x_translation_body"
+        )
+        y_tr_path, y_tr_prim = createXform(
+            self.stage, self.platform_path + "/y_translation_body"
+        )
+        setTranslate(x_tr_prim, Gf.Vec3d(0, 0, 0))
+        setOrient(x_tr_prim, Gf.Quatd(1, Gf.Vec3d(0, 0, 0)))
+        applyRigidBody(x_tr_prim)
+        applyMass(x_tr_prim, 0.0000001)
+        setTranslate(y_tr_prim, Gf.Vec3d(0, 0, 0))
+        setOrient(y_tr_prim, Gf.Quatd(1, Gf.Vec3d(0, 0, 0)))
+        applyRigidBody(y_tr_prim)
+        applyMass(y_tr_prim, 0.0000001)
+        tr_joint_x = createPrismaticJoint(
+            self.stage,
+            self.joints_path + "/fp_world_joint_x",
+            body_path1=anchor_path,
+            body_path2=x_tr_path,
+            axis="X",
+            enable_drive=False,
+        )
+        tr_joint_y = createPrismaticJoint(
+            self.stage,
+            self.joints_path + "/fp_world_joint_y",
+            body_path1=x_tr_path,
+            body_path2=y_tr_path,
+            axis="Y",
+            enable_drive=False,
+        )
+        # Adds the joint allowing for rotation
+        rv_joint_z = createRevoluteJoint(
+            self.stage,
+            self.joints_path + "/fp_world_joint_z",
+            body_path1=y_tr_path,
+            body_path2=self.core_path,
+            axis="Z",
+            enable_drive=False,
+        )
 
     def createMovableCoM(
         self, path: str, name: str, radius: float, CoM: Gf.Vec3d, mass: float
@@ -166,6 +226,7 @@ class CreatePlatform:
             cylinder_path,
             damping=1e6,
             stiffness=1e12,
+            prefix="com_",
             enable_drive=True,
         )
 

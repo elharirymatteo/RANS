@@ -104,6 +104,7 @@ class CreatePlatform:
                 Gf.Vec3d([0, 0, 0]),
                 0.0001,
             )
+        # Creates the movable CoM and the joints to control it.
         self.createMovableCoM(
             self.platform_path + "/movable_CoM",
             "CoM",
@@ -166,6 +167,7 @@ class CreatePlatform:
             cylinder_path,
             damping=1e6,
             stiffness=1e12,
+            prefix="com_",
             enable_drive=True,
         )
 

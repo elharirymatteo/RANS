@@ -1,26 +1,59 @@
-from typing import Optional
+__author__ = "Antoine Richard, Matteo El Hariry, Junnosuke Kamohara"
+__copyright__ = (
+    "Copyright 2023, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
+)
+__license__ = "GPL"
+__version__ = "1.0.0"
+__maintainer__ = "Antoine Richard"
+__email__ = "antoine.richard@uni.lu"
+__status__ = "development"
 
-from omni.isaac.core.robots.robot import Robot
 
-import numpy as np
-import torch
-import carb
-import dataclasses
-
-import omni
-import math
-from pxr import Gf
-
-from omniisaacgymenvs.robots.articulations.utils.MFP_utils import *
+from omniisaacgymenvs.robots.sensors.exteroceptive.camera_module_generator import (
+    sensor_module_factory,
+)
 from omniisaacgymenvs.tasks.MFP.MFP2D_thruster_generator import (
     compute_actions,
 )
 from omniisaacgymenvs.tasks.MFP.MFP2D_thruster_generator import (
     ConfigurationParameters,
 )
-from omniisaacgymenvs.robots.sensors.exteroceptive.camera_module_generator import (
-    sensor_module_factory,
-)
+from omniisaacgymenvs.robots.articulations.utils.MFP_utils import *
+
+from omni.isaac.core.robots.robot import Robot
+from dataclasses import dataclass, field
+from typing import Optional
+from pxr import Gf
+import numpy as np
+import torch
+import carb
+import omni
+import math
+import os
+
+
+@dataclass
+class PlatformParameters:
+    shape: str = "sphere"
+    radius: float = 0.31
+    height: float = 0.5
+    mass: float = 5.32
+    CoM: tuple = (0, 0, 0)
+    refinement: int = 2
+    usd_asset_path: str = "/None"
+
+    def __post_init__(self):
+        assert self.shape in [
+            "cylinder",
+            "sphere",
+            "asset",
+        ], "The shape must be 'cylinder', 'sphere' or 'asset'."
+        assert self.radius > 0, "The radius must be larger than 0."
+        assert self.height > 0, "The height must be larger than 0."
+        assert self.mass > 0, "The mass must be larger than 0."
+        assert len(self.CoM) == 3, "The length of the CoM coordinates must be 3."
+        assert self.refinement > 0, "The refinement level must be larger than 0."
+        self.refinement = int(self.refinement)
 
 
 class CreatePlatform:
@@ -34,53 +67,8 @@ class CreatePlatform:
         self.core_path = None
         self.stage = omni.usd.get_context().get_stage()
 
-        self.read_cfg(cfg)
-
-    def read_cfg(self, cfg: dict) -> None:
-        """
-        Reads the configuration file and sets the parameters for the platform."""
-
-        if "core" in cfg.keys():
-            if "shape" in cfg["core"].keys():
-                self.core_shape = cfg["core"]["shape"]
-                assert type(self.core_shape) is str
-                self.core_shape.lower()
-                assert (self.core_shape == "sphere") or (self.core_shape == "cylinder")
-            else:
-                self.core_shape = "sphere"
-            if self.core_shape == "sphere":
-                if "radius" in cfg["core"].keys():
-                    self.core_radius = cfg["core"]["radius"]
-                else:
-                    self.core_radius = 0.5
-            if self.core_shape == "cylinder":
-                if "radius" in cfg["core"].keys():
-                    self.core_radius = cfg["core"]["radius"]
-                else:
-                    self.core_radius = 0.5
-                if "height" in cfg["core"].keys():
-                    self.height_radius = cfg["core"]["radius"]
-                else:
-                    self.core_height = 0.5
-            if "CoM" in cfg["core"].keys():
-                self.core_CoM = Gf.Vec3d(list(cfg["core"]["CoM"]))
-            else:
-                self.core_CoM = Gf.Vec3d([0, 0, 0])
-            if "mass" in cfg["core"].keys():
-                self.core_mass = cfg["core"]["mass"]
-            else:
-                self.core_mass = 5.0
-            if "refinement" in cfg.keys():
-                self.refinement = cfg["refinement"]
-            else:
-                self.refinement = 2
-        else:
-            self.core_shape = "sphere"
-            self.core_radius = 0.5
-            self.core_CoM = Gf.Vec3d([0, 0, 0])
-            self.core_mass = 5.0
-            self.refinement = 2
         # Reads the thruster configuration and computes the number of virtual thrusters.
+        self.settings = PlatformParameters(**cfg["core"])
         thruster_cfg = ConfigurationParameters(**cfg["configuration"])
         self.num_virtual_thrusters = compute_actions(thruster_cfg)
         self.camera_cfg = cfg["camera"]
@@ -102,30 +90,33 @@ class CreatePlatform:
         # Creates a set of basic materials
         self.createBasicColors()
         # Creates the main body element and adds the position & heading markers.
-        if self.core_shape == "sphere":
+        if self.settings.shape == "sphere":
             self.core_path = self.createRigidSphere(
                 self.platform_path + "/core",
                 "body",
-                self.core_radius,
-                self.core_CoM,
-                self.core_mass,
+                self.settings.radius,
+                self.settings.CoM,
+                self.settings.mass,
             )
-        elif self.core_shape == "cylinder":
+        elif self.settings.shape == "cylinder":
             self.core_path = self.createRigidCylinder(
                 self.platform_path + "/core",
                 "body",
-                self.core_radius,
-                self.core_height,
-                self.core_CoM,
-                self.core_mass,
+                self.settings.radius,
+                self.settings.height,
+                self.settings.CoM,
+                self.settings.core_mass,
             )
-
         # Creates a set of joints to constrain the platform on the XY plane (3DoF).
         self.createXYPlaneLock()
-
-        # Visualization
-        self.createArrowXform(self.core_path + "/arrow")
-        self.createPositionMarkerXform(self.core_path + "/marker")
+        # Creates the movable CoM and the joints to control it.
+        self.createMovableCoM(
+            self.platform_path + "/movable_CoM",
+            "CoM",
+            self.settings.radius / 2,
+            self.settings.CoM,
+            self.settings.mass,
+        )
 
         for i in range(self.num_virtual_thrusters):
             self.createVirtualThruster(
@@ -194,9 +185,53 @@ class CreatePlatform:
             enable_drive=False,
         )
 
-        self.tr_x_axis = "fp_world_joint_x"
-        self.tr_y_axis = "fp_world_joint_y"
-        self.rv_z_axis = "fp_world_joint_z"
+    def createMovableCoM(
+        self, path: str, name: str, radius: float, CoM: Gf.Vec3d, mass: float
+    ) -> None:
+        """
+        Creates a movable Center of Mass (CoM).
+
+        Args:
+            path (str): The path to the movable CoM.
+            name (str): The name of the sphere used as CoM.
+            radius (float): The radius of the sphere used as CoM.
+            CoM (Gf.Vec3d): The resting position of the center of mass.
+            mass (float): The mass of the Floating Platform.
+
+        Returns:
+            str: The path to the movable CoM.
+        """
+
+        # Create Xform
+        CoM_path, CoM_prim = createXform(self.stage, path)
+        # Add shapes
+        cylinder_path = CoM_path + "/" + name
+        cylinder_path, cylinder_geom = createCylinder(
+            self.stage, CoM_path + "/" + name, radius, radius, self.settings.refinement
+        )
+        cylinder_prim = self.stage.GetPrimAtPath(cylinder_geom.GetPath())
+        applyRigidBody(cylinder_prim)
+        # Sets the collider
+        applyCollider(cylinder_prim)
+        # Sets the mass and CoM
+        applyMass(cylinder_prim, mass, Gf.Vec3d(0, 0, 0))
+
+        # Add dual prismatic joint
+        CoM_path, CoM_prim = createXform(
+            self.stage, os.path.join(self.joints_path, "/CoM_joints")
+        )
+        createP2Joint(
+            self.stage,
+            os.path.join(self.joints_path, "CoM_joints"),
+            self.core_path,
+            cylinder_path,
+            damping=1e6,
+            stiffness=1e12,
+            prefix="com_",
+            enable_drive=True,
+        )
+
+        return cylinder_path
 
     def createBasicColors(self) -> None:
         """
@@ -235,8 +270,8 @@ class CreatePlatform:
             self.arrow_path,
             0.1,
             0.5,
-            [self.core_radius, 0, 0],
-            self.refinement,
+            [self.settings.radius, 0, 0],
+            self.settings.refinement,
         )
         applyMaterial(self.arrow_prim, self.colors["blue"])
 
@@ -246,9 +281,12 @@ class CreatePlatform:
 
         self.marker_path, self.marker_prim = createXform(self.stage, path)
         sphere_path, sphere_geom = createSphere(
-            self.stage, self.marker_path + "/marker_sphere", 0.05, self.refinement
+            self.stage,
+            self.marker_path + "/marker_sphere",
+            0.05,
+            self.settings.refinement,
         )
-        setTranslate(sphere_geom, Gf.Vec3d([0, 0, self.core_radius]))
+        setTranslate(sphere_geom, Gf.Vec3d([0, 0, self.settings.radius]))
         applyMaterial(self.marker_prim, self.colors["green"])
 
     def createRigidSphere(
@@ -263,12 +301,12 @@ class CreatePlatform:
         # Creates a sphere
         sphere_path = path + "/" + name
         sphere_path, sphere_geom = createSphere(
-            self.stage, path + "/" + name, radius, self.refinement
+            self.stage, path + "/" + name, radius, self.settings.refinement
         )
         sphere_prim = self.stage.GetPrimAtPath(sphere_geom.GetPath())
         applyRigidBody(sphere_prim)
         # Sets the collider
-        applyCollider(sphere_prim)
+        applyCollider(sphere_prim, True)
         # Sets the mass and CoM
         applyMass(sphere_prim, mass, CoM)
         return sphere_path
@@ -285,12 +323,12 @@ class CreatePlatform:
         # Creates a sphere
         sphere_path = path + "/" + name
         sphere_path, sphere_geom = createCylinder(
-            self.stage, path + "/" + name, radius, height, self.refinement
+            self.stage, path + "/" + name, radius, height, self.settings.refinement
         )
         sphere_prim = self.stage.GetPrimAtPath(sphere_geom.GetPath())
         applyRigidBody(sphere_prim)
         # Sets the collider
-        applyCollider(sphere_prim)
+        applyCollider(sphere_prim, True)
         # Sets the mass and CoM
         applyMass(sphere_prim, mass, CoM)
         return sphere_path
@@ -350,9 +388,3 @@ class ModularFloatingPlatformWithCamera(Robot):
             orientation=orientation,
             scale=scale,
         )
-
-        self.joints = {
-            "x_tr_axis": fp.tr_x_axis,
-            "y_tr_axis": fp.tr_y_axis,
-            "z_rv_axis": fp.rv_z_axis,
-        }

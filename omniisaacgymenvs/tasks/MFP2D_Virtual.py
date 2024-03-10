@@ -234,7 +234,6 @@ class MFP2DVirtual(RLTask):
         self._platforms = ModularFloatingPlatformView(
             prim_paths_expr=root_path, name="modular_floating_platform_view"
         )
-
         # Add views to scene
         scene.add(self._platforms)
         scene.add(self._platforms.base)
@@ -249,7 +248,7 @@ class MFP2DVirtual(RLTask):
         Adds the floating platform to the scene.
         """
 
-        self._fp = ModularFloatingPlatform(
+        fp = ModularFloatingPlatform(
             prim_path=self.default_zero_env_path + "/Modular_floating_platform",
             name="modular_floating_platform",
             translation=self._fp_position,
@@ -257,7 +256,7 @@ class MFP2DVirtual(RLTask):
         )
         self._sim_config.apply_articulation_settings(
             "modular_floating_platform",
-            get_prim_at_path(self._fp.prim_path),
+            get_prim_at_path(fp.prim_path),
             self._sim_config.parse_actor_config("modular_floating_platform"),
         )
 
@@ -331,7 +330,7 @@ class MFP2DVirtual(RLTask):
         self.obs_buf["transforms"] = self.virtual_platform.current_transforms
         # Get the action masks
         self.obs_buf["masks"] = self.virtual_platform.action_masks
-        self.obs_buf["masses"] = self.DR.mass_disturbances.get_masses()
+        self.obs_buf["masses"] = self.DR.mass_disturbances.get_masses_and_com()
 
         observations = {self._platforms.name: {"obs_buf": self.obs_buf}}
         return observations
@@ -416,7 +415,10 @@ class MFP2DVirtual(RLTask):
         self.root_velocities = self._platforms.base.get_velocities()
         self.dof_pos = self._platforms.get_joint_positions()
         self.dof_vel = self._platforms.get_joint_velocities()
+
         self._platforms.get_CoM_indices()
+        self._platforms.get_plane_lock_indices()
+
         # Set initial conditions
         self.initial_root_pos, self.initial_root_rot = (
             self.root_pos.clone(),
@@ -481,25 +483,32 @@ class MFP2DVirtual(RLTask):
             env_ids, num_resets, step=self.step
         )
         self.DR.mass_disturbances.randomize_masses(env_ids, step=self.step)
+        CoM_shift = self.DR.mass_disturbances.get_CoM(env_ids)
+        random_mass = self.DR.mass_disturbances.get_masses(env_ids)
         # Randomizes the starting position of the platform
         pos, quat, vel = self.task.get_initial_conditions(env_ids, step=self.step)
-        # Resets the states of the joints & applies CoM shift
-        self.DR.mass_disturbances.set_masses(
-            self._platforms,
-            self._platforms.CoM,
-            env_ids,
-            self._platforms.CoM_shifter_indices,
+        siny_cosp = 2 * quat[:, 0] * quat[:, 3]
+        cosy_cosp = 1 - 2 * (quat[:, 3] * quat[:, 3])
+        h = torch.arctan2(siny_cosp, cosy_cosp)
+        # apply resets
+        dof_pos = torch.zeros(
+            (num_resets, self._platforms.num_dof), device=self._device
         )
+        # self._platforms.CoM.set_masses(random_mass, indices=env_ids)
+        dof_pos[:, self._platforms.lock_indices[0]] = pos[:, 0]
+        dof_pos[:, self._platforms.lock_indices[1]] = pos[:, 1]
+        dof_pos[:, self._platforms.lock_indices[2]] = h
+        dof_pos[:, self._platforms.CoM_shifter_indices[0]] = CoM_shift[:, 0]
+        dof_pos[:, self._platforms.CoM_shifter_indices[1]] = CoM_shift[:, 1]
+        self._platforms.set_joint_positions(dof_pos, indices=env_ids)
+
         dof_vel = torch.zeros(
             (num_resets, self._platforms.num_dof), device=self._device
         )
-        self.dof_vel[env_ids, :] = 0
-        # apply resets
+        dof_vel[:, self._platforms.lock_indices[0]] = vel[:, 0]
+        dof_vel[:, self._platforms.lock_indices[1]] = vel[:, 1]
+        dof_vel[:, self._platforms.lock_indices[2]] = vel[:, 5]
         self._platforms.set_joint_velocities(dof_vel, indices=env_ids)
-        self._platforms.set_world_poses(
-            pos + self.initial_root_pos[env_ids], quat, indices=env_ids
-        )
-        self._platforms.set_velocities(vel, indices=env_ids)
 
         # bookkeeping
         self.reset_buf[env_ids] = 0

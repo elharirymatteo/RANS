@@ -79,20 +79,39 @@ class MassDistributionDisturbances:
             step (int): The current step of the learning process.
         """
 
-        num_resets = len(env_ids)
-        self.platforms_mass[env_ids, 0] = self.mass_sampler.sample(
-            num_resets, step, device=self._device
-        )
-        r = self.CoM_sampler.sample(num_resets, step, device=self._device)
-        theta = (
-            torch.rand((num_resets), dtype=torch.float32, device=self._device)
-            * math.pi
-            * 2
-        )
-        self.platforms_CoM[env_ids, 0] = torch.cos(theta) * r
-        self.platforms_CoM[env_ids, 1] = torch.sin(theta) * r
+        if self.parameters.enable:
+            num_resets = len(env_ids)
+            self.platforms_mass[env_ids, 0] = self.mass_sampler.sample(
+                num_resets, step, device=self._device
+            )
+            r = self.CoM_sampler.sample(num_resets, step, device=self._device)
+            theta = (
+                torch.rand((num_resets), dtype=torch.float32, device=self._device)
+                * math.pi
+                * 2
+            )
+            self.platforms_CoM[env_ids, 0] = torch.cos(theta) * r
+            self.platforms_CoM[env_ids, 1] = torch.sin(theta) * r
 
-    def get_masses(self) -> Tuple[torch.Tensor, torch.Tensor]:
+    def get_masses(
+        self,
+        env_ids: torch.Tensor,
+    ) -> torch.Tensor:
+        """
+        Returns the masses and CoM of the platforms.
+
+        Args:
+            env_ids (torch.Tensor): The ids of the environments to reset.
+
+        Returns:
+            Tuple(torch.Tensor, torch.Tensor): The masses and CoM of the platforms.
+        """
+
+        return self.platforms_mass[:, 0]
+
+    def get_masses_and_com(
+        self,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Returns the masses and CoM of the platforms.
 
@@ -102,49 +121,18 @@ class MassDistributionDisturbances:
 
         return torch.cat((self.platforms_mass, self.platforms_CoM), axis=1)
 
-    def set_coms(
-        self,
-        body: omni.isaac.core.prims.XFormPrimView,
-        env_ids: torch.Tensor,
-        joints_idx: Tuple[int, int],
-    ) -> None:
+    def get_CoM(self, env_ids: torch.Tensor) -> torch.Tensor:
         """
-        Sets the CoM of the platforms.
+        Returns the CoM of the platforms.
 
         Args:
-            body (omni.isaac.core.XFormPrimView): The rigid bodies containing the prismatic joints controlling the position of the CoMs.
             env_ids (torch.Tensor): The ids of the environments to reset.
-            joints_idx (Tuple[int, int]): The ids of the x and y joints respectively.
+
+        Returns:
+            torch.Tensor: The CoM of the platforms.
         """
 
-        joints_position = torch.zeros(
-            (len(env_ids), 2), device=self._device, dtype=torch.float32
-        )
-        joints_position[:, joints_idx[0]] = self.platforms_CoM[env_ids, 0]
-        joints_position[:, joints_idx[1]] = self.platforms_CoM[env_ids, 1]
-        if self.parameters.enable:
-            body.set_joint_positions(joints_position, indices=env_ids)
-
-    def set_masses(
-        self,
-        articulation_body: omni.isaac.core.prims.XFormPrimView,
-        mass_body: omni.isaac.core.prims.XFormPrimView,
-        env_ids: torch.Tensor,
-        joints_idx: Tuple[int, int],
-    ) -> None:
-        """
-        Sets the masses and CoM of the platforms.
-
-        Args:
-            articulation_body (omni.isaac.core.XFormPrimView): The rigid bodies containing the prismatic joints controlling the position of the CoMs.
-            mass_body (omni.isaac.core.XFormPrimView): The rigid bodies containing the movable mass.
-            env_ids(torch.Tensor): The ids of the environments to reset.
-            joints_idx (Tuple[int, int]): The ids of the x and y joints respectively.
-        """
-
-        if self.parameters.enable:
-            mass_body.set_masses(self.platforms_mass[env_ids, 0], indices=env_ids)
-        self.set_coms(articulation_body, env_ids, joints_idx)
+        return self.platforms_CoM[env_ids]
 
     def get_image_logs(self, step: int) -> dict:
         """

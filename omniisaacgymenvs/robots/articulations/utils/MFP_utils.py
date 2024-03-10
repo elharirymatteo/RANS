@@ -699,6 +699,7 @@ def createP3Joint(
     damping: float = 1e3,
     stiffness: float = 1e6,
     articulation_root: str = None,
+    prefix: str = "",
     enable_drive: bool = False,
 ) -> Tuple[
     UsdPhysics.PrismaticJoint, UsdPhysics.PrismaticJoint, UsdPhysics.PrismaticJoint
@@ -756,13 +757,17 @@ def createP3Joint(
 
     # Create the 3 prismatic joints
     xaxis_joint = createPrismaticJoint(
-        stage, path + "/x_axis_joint", body_path1, xaxis_body_path, "X"
+        stage, path + "/" + prefix + "x_axis_joint", body_path1, xaxis_body_path, "X"
     )
     yaxis_joint = createPrismaticJoint(
-        stage, path + "/y_axis_joint", xaxis_body_path, yaxis_body_path, "Y"
+        stage,
+        path + "/" + prefix + "y_axis_joint",
+        xaxis_body_path,
+        yaxis_body_path,
+        "Y",
     )
     zaxis_joint = createPrismaticJoint(
-        stage, path + "/z_axis_joint", yaxis_body_path, body_path2, "Z"
+        stage, path + "/" + prefix + "z_axis_joint", yaxis_body_path, body_path2, "Z"
     )
 
     # Get the delta transform between the 1st and 2nd body
@@ -788,19 +793,19 @@ def createP3Joint(
     # Add drives to the joints
     if enable_drive:
         xaxis_drive = createDrive(
-            stage.GetPrimAtPath(path + "/x_axis_joint"),
+            stage.GetPrimAtPath(path + "/" + prefix + "x_axis_joint"),
             token="linear",
             damping=damping,
             stiffness=stiffness,
         )
         yaxis_drive = createDrive(
-            stage.GetPrimAtPath(path + "/y_axis_joint"),
+            stage.GetPrimAtPath(path + "/" + prefix + "y_axis_joint"),
             token="linear",
             damping=damping,
             stiffness=stiffness,
         )
         zaxis_drive = createDrive(
-            stage.GetPrimAtPath(path + "/z_axis_joint"),
+            stage.GetPrimAtPath(path + "/" + prefix + "z_axis_joint"),
             token="linear",
             damping=damping,
             stiffness=stiffness,
@@ -816,6 +821,7 @@ def createP2Joint(
     damping: float = 1e3,
     stiffness: float = 1e6,
     articulation_root: str = None,
+    prefix: str = "",
     enable_drive: bool = False,
 ) -> Tuple[UsdPhysics.PrismaticJoint, UsdPhysics.PrismaticJoint]:
     """
@@ -866,10 +872,10 @@ def createP2Joint(
 
     # Create the 3 prismatic joints
     xaxis_joint = createPrismaticJoint(
-        stage, path + "/x_axis_joint", body_path1, xaxis_body_path, "X"
+        stage, path + "/" + prefix + "x_axis_joint", body_path1, xaxis_body_path, "X"
     )
     yaxis_joint = createPrismaticJoint(
-        stage, path + "/y_axis_joint", xaxis_body_path, body_path2, "Y"
+        stage, path + "/" + prefix + "y_axis_joint", xaxis_body_path, body_path2, "Y"
     )
 
     # Get the delta transform between the 1st and 2nd body
@@ -891,13 +897,13 @@ def createP2Joint(
     # Add drives to the joints
     if enable_drive:
         xaxis_drive = createDrive(
-            stage.GetPrimAtPath(path + "/x_axis_joint"),
+            stage.GetPrimAtPath(path + "/" + prefix + "x_axis_joint"),
             token="linear",
             damping=damping,
             stiffness=stiffness,
         )
         yaxis_drive = createDrive(
-            stage.GetPrimAtPath(path + "/y_axis_joint"),
+            stage.GetPrimAtPath(path + "/" + prefix + "y_axis_joint"),
             token="linear",
             damping=damping,
             stiffness=stiffness,
