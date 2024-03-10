@@ -9,7 +9,7 @@ params:
 
   network:
     name: actor_critic_mlp_dict_thruster
-    separate: False
+    separate: True
     mlp:
       units: [128, 128]
       activation: tanh
