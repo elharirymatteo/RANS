@@ -71,7 +71,8 @@ class CreatePlatform:
         self.settings = PlatformParameters(**cfg["core"])
         thruster_cfg = ConfigurationParameters(**cfg["configuration"])
         self.num_virtual_thrusters = compute_actions(thruster_cfg)
-        self.camera_cfg = cfg["camera"]
+        self.camera_cfg = cfg.get("camera", None)
+        self.enable_arrow = cfg["arrow"]["enable"]
 
     def build(self) -> None:
         """
@@ -126,7 +127,11 @@ class CreatePlatform:
                 0.0001,
                 Gf.Vec3d([0, 0, 0]),
             )
-        self.createCamera()
+        if self.enable_arrow:
+            self.createArrowXform(self.core_path + "/arrow")
+            self.createPositionMarkerXform(self.core_path + "/marker")
+        if self.camera_cfg is not None:
+            self.createCamera()
 
     def createXYPlaneLock(self) -> None:
         """
@@ -362,7 +367,7 @@ class CreatePlatform:
         self.camera.build()
 
 
-class ModularFloatingPlatformWithCamera(Robot):
+class ModularFloatingPlatform(Robot):
     def __init__(
         self,
         prim_path: str,

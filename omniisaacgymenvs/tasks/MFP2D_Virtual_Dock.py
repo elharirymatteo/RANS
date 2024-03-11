@@ -12,9 +12,6 @@ from omniisaacgymenvs.tasks.base.rl_task import RLTask
 from omniisaacgymenvs.robots.articulations.MFP2D_thrusters_docking import (
     ModularFloatingPlatform,
 )
-from omniisaacgymenvs.robots.sensors.exteroceptive.camera import (
-    camera_factory, 
-)
 from omniisaacgymenvs.robots.articulations.views.MFP2D_view import (
     ModularFloatingPlatformView,
 )
@@ -48,8 +45,7 @@ import os
 
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
-
-class MFP2DVirtual_Dock_RGBD(RLTask):
+class MFP2DVirtual_Dock(RLTask):
     """
     The main class used to run tasks on the floating platform.
     Unlike other class in this repo, this class can be used to run different tasks.
@@ -75,7 +71,6 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         self._device = self._cfg["sim_device"]
         self.step = 0
         self.iteration = 0
-        self.save_image_counter = 0
 
         # Split the maximum amount of thrust across all thrusters.
         self.split_thrust = self._task_cfg["env"]["split_thrust"]
@@ -146,58 +141,6 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
                 "transforms": spaces.Box(low=-1, high=1, shape=(self._max_actions, 5)),
                 "masks": spaces.Box(low=0, high=1, shape=(self._max_actions,)),
                 "masses": spaces.Box(low=-np.inf, high=np.inf, shape=(3,)),
-                "rgb": spaces.Box(
-                    np.ones(
-                        (
-                            3,
-                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"][
-                                "resolution"
-                            ][-1],
-                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"][
-                                "resolution"
-                            ][0],
-                        )
-                    )
-                    * -np.Inf,
-                    np.ones(
-                        (
-                            3,
-                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"][
-                                "resolution"
-                            ][-1],
-                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"][
-                                "resolution"
-                            ][0],
-                        )
-                    )
-                    * np.Inf,
-                ),
-                "depth": spaces.Box(
-                    np.ones(
-                        (
-                            1,
-                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"][
-                                "resolution"
-                            ][-1],
-                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"][
-                                "resolution"
-                            ][0],
-                        )
-                    )
-                    * -np.Inf,
-                    np.ones(
-                        (
-                            1,
-                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"][
-                                "resolution"
-                            ][-1],
-                            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"][
-                                "resolution"
-                            ][0],
-                        )
-                    )
-                    * np.Inf,
-                ),
             }
         )
 
@@ -257,34 +200,6 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
                 device=self._device,
                 dtype=torch.float,
             ),
-            "rgb": torch.zeros(
-                (
-                    self._num_envs,
-                    3,
-                    self._task_cfg["env"]["sensors"]["camera"]["RLCamera"][
-                        "resolution"
-                    ][-1],
-                    self._task_cfg["env"]["sensors"]["camera"]["RLCamera"][
-                        "resolution"
-                    ][0],
-                ),
-                device=self._device,
-                dtype=torch.float,
-            ),
-            "depth": torch.zeros(
-                (
-                    self._num_envs,
-                    1,
-                    self._task_cfg["env"]["sensors"]["camera"]["RLCamera"][
-                        "resolution"
-                    ][-1],
-                    self._task_cfg["env"]["sensors"]["camera"]["RLCamera"][
-                        "resolution"
-                    ][0],
-                ),
-                device=self._device,
-                dtype=torch.float,
-            ),
         }
 
         self.states_buf = torch.zeros(
@@ -314,7 +229,7 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         self.get_target()
         if self._task_cfg["sim"]["add_lab"]:
             self.get_zero_g_lab()
-
+        
         RLTask.set_up_scene(self, scene, replicate_physics=False)
 
         # Collects the interactive elements in the scene
@@ -331,9 +246,6 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         
         # Add rigidprim view of docking station to the scene
         scene, self._dock_view = self.task.add_dock_to_scene(scene)
-
-        # Link replicator to existing onboard cameras
-        self.collect_camera()
         return
 
     def get_floating_platform(self):
@@ -368,24 +280,6 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         usd_path = os.path.join(os.getcwd(), self._task_cfg["lab_usd_path"])
         prim = add_reference_to_stage(usd_path, self._task_cfg["lab_path"])
         applyCollider(prim, True)
-
-    def collect_camera(self) -> None:
-        """
-        Collect active cameras to generate synthetic images in batch."""
-        active_sensors = []
-        active_camera_source_path = self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["prim_path"]
-        for i in range(self._num_envs):
-            # swap env_0 to env_i
-            sensor_path = active_camera_source_path.split("/")
-            sensor_path[3] = f"env_{i}"
-            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["prim_path"] = (
-                "/".join(sensor_path)
-            )
-            rl_sensor = camera_factory.get("RLCamera")(
-                self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]
-            )
-            active_sensors.append(rl_sensor)
-        self.active_sensors = active_sensors
 
     def update_state(self) -> None:
         """
@@ -455,33 +349,10 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         # Get the action masks
         self.obs_buf["masks"] = self.virtual_platform.action_masks
         self.obs_buf["masses"] = self.DR.mass_disturbances.get_masses()
-        # Get the camera data
-        rgb_obs, depth_obs = self.get_rgbd_data()
-        self.obs_buf["rgb"] = rgb_obs
-        self.obs_buf["depth"] = depth_obs
-        if self._task_cfg["env"]["sensors"]["camera"]["save_to_log"] and self._cfg["wandb_activate"]:
-            if self.save_image_counter % self._task_cfg["env"]["sensors"]["camera"]["save_frequency"] == 0:
-                rgb_grid = ToPILImage(make_grid(rgb_obs, nrow=5))
-                depth_grid = ToPILImage(make_grid(depth_obs, nrow=5))
-                wandb.log({"rgb": wandb.Image(rgb_grid, caption="rgb"), 
-                        "depth": wandb.Image(depth_grid, caption="depth")})
-        self.save_image_counter += 1
-
+        
         observations = {self._platforms.name: {"obs_buf": self.obs_buf}}
         return observations
-
-    def get_rgbd_data(self) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        return batched sensor data.
-        Returns:
-            rgb (torch.Tensor): batched rgb data
-            depth (torch.Tensor): batched depth data
-        """
-        rs_obs = [sensor.get_observation() for sensor in self.active_sensors]
-        rgb = torch.stack([ob["rgb"] for ob in rs_obs])
-        depth = torch.stack([ob["depth"] for ob in rs_obs])
-        return rgb, depth
-
+    
     def compute_contact_state(self)-> torch.Tensor:
         """
         Get the contact state of the platform.

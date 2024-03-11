@@ -286,3 +286,17 @@ class TrackXYVelocityHeadingReward:
         else:
             raise ValueError("Unknown reward type.")
         return velocity_reward, heading_reward
+
+@dataclass
+class CloseProximityDockReward(GoToPoseReward):
+    """
+    Reward function and parameters for the GoToDock task."""
+    clip_reward: bool = False
+    boundary_relative_angle: float = 0.17453
+    collision_scale: float = 1.0
+    goal_bonus_scale: float = 1.0
+
+    def compute_goal_bonus(self, is_goal_reached: torch.Tensor) -> torch.Tensor:
+        """
+        Computes the bonus for reaching the goal."""
+        return is_goal_reached * self.goal_bonus_scale

@@ -1,10 +1,22 @@
+import os
+from typing import Optional, Sequence
+from dataclasses import dataclass
+from omniisaacgymenvs.robots.articulations.utils.MFP_utils import *
+
 from omni.isaac.core.utils.stage import add_reference_to_stage, get_current_stage
 from omni.isaac.core.utils.prims import get_prim_at_path
-from omni.isaac.core.prims import XFormPrim
-from typing import Optional, Sequence
-from omniisaacgymenvs.robots.articulations.utils.MFP_utils import applyCollider, applyRigidBody, create3DOFJoint
+from omni.isaac.core.prims import RigidPrim
 
-class Dock(XFormPrim):
+@dataclass
+class DockParameters:
+    """
+    Platform physical parameters."""
+
+    usd_path: str = None
+    show_axis: bool = False
+    mass: float = 5.0
+
+class Dock(RigidPrim):
     """
     Class to create xform prim for a docking station.
     See parent class for more details about the arguments.
@@ -27,7 +39,11 @@ class Dock(XFormPrim):
             orientation: Optional[Sequence[float]] = None,
             scale: Optional[Sequence[float]] = None,
             visible: Optional[bool] = True,
-            usd_path:str = None):
+            dock_params: dict = None,
+            ):
+        self.dock_params = DockParameters(**dock_params)
+        self.stage = get_current_stage()
+        self.create_root_prim(prim_path)
         super().__init__(
             prim_path=prim_path,
             name=name,
@@ -37,14 +53,24 @@ class Dock(XFormPrim):
             scale=scale,
             visible=visible,
         )
-        self.usd_path = usd_path
         self.build()
         return
     
+    def create_root_prim(self, prim_path)->None:
+        """
+        Create a root xform and link usd to it."""
+        createXform(self.stage, prim_path)
+        add_reference_to_stage(os.path.join(os.getcwd(), self.dock_params.usd_path), prim_path)
+        axis_prim = get_prim_at_path(prim_path+"/dock/axis")
+        if self.dock_params.show_axis:
+            axis_prim.GetAttribute("visibility").Set("visible")
+        else:
+            axis_prim.GetAttribute("visibility").Set("invisible")
+
     def build(self)->None:
         """
-        Load a dock station prim and apply physics."""
-        add_reference_to_stage(self.usd_path, self.prim_path)
+        Apply RigidBody API, Collider, mass, and D6 joint."""
         applyRigidBody(self.prim)
         applyCollider(self.prim, True)
-        create3DOFJoint(get_current_stage(), self.prim_path+"/d6joint", "/World/envs/env_0", self.prim_path)
+        applyMass(self.prim, self.dock_params.mass)
+        create3DOFJoint(self.stage, self.prim_path+"/d6joint", "/World/envs/env_0", self.prim_path)
