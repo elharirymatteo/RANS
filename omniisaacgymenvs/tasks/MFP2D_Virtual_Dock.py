@@ -348,7 +348,7 @@ class MFP2DVirtual_Dock(RLTask):
         self.obs_buf["transforms"] = self.virtual_platform.current_transforms
         # Get the action masks
         self.obs_buf["masks"] = self.virtual_platform.action_masks
-        self.obs_buf["masses"] = self.DR.mass_disturbances.get_masses()
+        self.obs_buf["masses"] = self.DR.mass_disturbances.get_masses_and_com()
         
         observations = {self._platforms.name: {"obs_buf": self.obs_buf}}
         return observations
@@ -438,7 +438,7 @@ class MFP2DVirtual_Dock(RLTask):
         self.root_pos, self.root_rot = self._platforms.get_world_poses()
         self.root_velocities = self._platforms.get_velocities()
         self._platforms.get_CoM_indices()
-        self._platforms.get_FP_joint_indices()
+        self._platforms.get_plane_lock_indices()
 
         self.initial_root_pos, self.initial_root_rot = (
             self.root_pos.clone(),
@@ -534,7 +534,7 @@ class MFP2DVirtual_Dock(RLTask):
         joint_vel = torch.zeros(num_resets, self._platforms.num_dof, dtype=torch.float32, device=self._device)
 
         # apply resets
-        x_idx, y_idx, z_idx = self._platforms.FP_joint_indices
+        x_idx, y_idx, z_idx = self._platforms.lock_indices
         joint_pos[:, x_idx] = pos[:, 0]
         joint_pos[:, y_idx] = pos[:, 1]
         joint_pos[:, z_idx] = heading

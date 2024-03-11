@@ -313,7 +313,7 @@ class CreatePlatform:
         # Sets the collider
         applyCollider(sphere_prim, True)
         # Sets the mass and CoM
-        applyMass(sphere_prim, mass, CoM)
+        applyMass(sphere_prim, mass, Gf.Vec3d(*CoM))
         return sphere_path
 
     def createRigidCylinder(
@@ -335,7 +335,7 @@ class CreatePlatform:
         # Sets the collider
         applyCollider(sphere_prim, True)
         # Sets the mass and CoM
-        applyMass(sphere_prim, mass, CoM)
+        applyMass(sphere_prim, mass, Gf.Vec3d(*CoM))
         return sphere_path
 
     def createVirtualThruster(

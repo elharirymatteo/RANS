@@ -15,7 +15,9 @@ from omni.isaac.core.prims import RigidPrimView
 
 class ModularFloatingPlatformView(ArticulationView):
     def __init__(
-        self, prim_paths_expr: str, name: Optional[str] = "ModularFloatingPlatformView"
+        self, prim_paths_expr: str, 
+        name: Optional[str] = "ModularFloatingPlatformView", 
+        track_contact_force:bool = False,
     ) -> None:
         """[summary]"""
 
@@ -26,6 +28,7 @@ class ModularFloatingPlatformView(ArticulationView):
         self.base = RigidPrimView(
             prim_paths_expr=f"/World/envs/.*/Modular_floating_platform/core/body",
             name="base_view",
+            track_contact_forces=track_contact_force,
         )
         self.CoM = RigidPrimView(
             prim_paths_expr=f"/World/envs/.*/Modular_floating_platform/movable_CoM/CoM",

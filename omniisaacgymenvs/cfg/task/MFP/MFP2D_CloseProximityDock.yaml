@@ -319,7 +319,6 @@ env:
       max_thruster_kill: 2
     core:
       mass: 5.32
-      # mass: 10.92
       CoM: [0,0,0]
       radius: 0.31
       shape: "sphere"
