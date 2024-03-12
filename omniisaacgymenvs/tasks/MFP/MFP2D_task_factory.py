@@ -21,6 +21,7 @@ from omniisaacgymenvs.tasks.MFP.MFP2D_track_xyo_velocity import (
 from omniisaacgymenvs.tasks.MFP.MFP2D_track_xy_velocity_heading import (
     TrackXYVelocityHeadingTask,
 )
+from omniisaacgymenvs.tasks.MFP.MFP2D_capture import CaptureTask
 
 
 class TaskFactory:
@@ -54,3 +55,4 @@ task_factory.register("GoToPose", GoToPoseTask)
 task_factory.register("TrackXYVelocity", TrackXYVelocityTask)
 task_factory.register("TrackXYOVelocity", TrackXYOVelocityTask)
 task_factory.register("TrackXYVelocityHeading", TrackXYVelocityHeadingTask)
+task_factory.register("Capture", CaptureTask)

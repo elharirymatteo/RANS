@@ -24,6 +24,9 @@ class CaptureReward:
     velocity_reward_mode: str = "linear"
     heading_exponential_reward_coeff: float = 0.25
     velocity_exponential_reward_coeff: float = 0.25
+    time_penalty: float = 1.0
+    dt: float = 0.02
+    action_repeat: int = 10
     position_scale: float = 1.0
     heading_scale: float = 1.0
     velocity_scale: float = 1.0
@@ -33,7 +36,7 @@ class CaptureReward:
         """
         Checks that the reward parameters are valid."""
 
-        assert self.position_reward_mode.lower() in [
+        assert self.velocity_reward_mode.lower() in [
             "linear",
             "square",
             "exponential",
@@ -43,6 +46,8 @@ class CaptureReward:
             "square",
             "exponential",
         ], "Linear, Square and Exponential are the only currently supported mode."
+
+        self.dt = self.dt * self.action_repeat
 
     def compute_reward(
         self,
@@ -55,7 +60,7 @@ class CaptureReward:
         """
         Defines the function used to compute the reward for the GoToPose task."""
 
-        position_reward = position_progress * self.position_scale
+        position_reward = self.position_scale * position_progress / self.dt
 
         if self.heading_reward_mode.lower() == "linear":
             heading_reward = 1.0 / (1.0 + heading_error) * self.heading_scale
@@ -81,7 +86,7 @@ class CaptureReward:
         else:
             raise ValueError("Unknown reward type.")
 
-        return position_reward, heading_reward, velocity_reward
+        return position_reward, heading_reward, velocity_reward, self.time_penalty
 
 
 @dataclass

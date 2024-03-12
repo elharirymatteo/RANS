@@ -89,6 +89,9 @@ class CaptureTask(Core):
         self._target_headings = torch.zeros(
             (self._num_envs), device=self._device, dtype=torch.float32
         )
+        self._target_velocities = torch.zeros(
+            (self._num_envs), device=self._device, dtype=torch.float32
+        )
         self._delta_headings = torch.zeros(
             (self._num_envs), device=self._device, dtype=torch.float32
         )
@@ -146,8 +149,8 @@ class CaptureTask(Core):
         # position distance
         self._position_error = self._target_positions - current_state["position"]
         # linear velocity error (normed velocity)
-        self.linear_velocity_dist = self._target_velocity - torch.norm(
-            current_state["velocity"], axis=-1
+        self.linear_velocity_err = self._target_velocities - torch.norm(
+            current_state["linear_velocity"], dim=-1
         )
         # heading distance
         heading = torch.arctan2(
@@ -162,10 +165,14 @@ class CaptureTask(Core):
             torch.cos(self._target_headings - heading),
         )
         # Encode task data
+        # print("=====================================")
+        # print("position error:", self._position_error[:5])
+        # print("heading error:", self._heading_error[:5])
+        # print("linear velocity error:", self.linear_velocity_err[:5])
         self._task_data[:, :2] = self._position_error
         self._task_data[:, 2] = torch.cos(self._heading_error)
         self._task_data[:, 3] = torch.sin(self._heading_error)
-        self._task_data[:, 4] = self.linear_velocity_dist
+        self._task_data[:, 4] = self.linear_velocity_err
         return self.update_observation_tensor(current_state)
 
     def compute_reward(
@@ -186,10 +193,17 @@ class CaptureTask(Core):
             torch.Tensor: The reward for the current state of the robot.
         """
 
-        # position error
+        # Compute progress and normalize by the target velocity
         self.position_dist = torch.sqrt(torch.square(self._position_error).sum(-1))
-        self.heading_dist = torch.abs(self._heading_error)
+        self.linear_velocity_dist = torch.abs(self.linear_velocity_err)
+        position_progress = (
+            self._previous_position_dist - self.position_dist
+        ) / torch.abs(self._target_velocities)
+        was_killed = (self._previous_position_dist == 0).float()
+        position_progress = position_progress * (1 - was_killed)
+
         # boundary penalty
+        self.heading_dist = torch.abs(self._heading_error)
         self.boundary_dist = torch.abs(
             self._task_parameters.kill_dist - self.position_dist
         )
@@ -198,36 +212,38 @@ class CaptureTask(Core):
         )
 
         # Checks if the goal is reached
-        position_goal_is_reached = (
+        self._goal_reached = (
             self.position_dist < self._task_parameters.position_tolerance
         ).int()
-        heading_goal_is_reached = (
-            self.heading_dist < self._task_parameters.heading_tolerance
-        ).int()
-        velocity_goal_is_reached = (
-            self.linear_velocity_dist < self._task_parameters.linear_velocity_tolerance
-        ).int()
-        goal_is_reached = (
-            position_goal_is_reached
-            * heading_goal_is_reached
-            * velocity_goal_is_reached
-        )
-        self._goal_reached *= goal_is_reached  # if not set the value to 0
-        self._goal_reached += goal_is_reached  # if it is add 1
+
+        # print("velocity distance:", self.linear_velocity_dist[:5])
+        # print("heading distance:", self.heading_dist[:5])
+        # print("position_distance:", self.position_dist[:5])
+        # print("progress:", position_progress[:5])
 
         # rewards
         (
-            self.position_reward,
+            self.progress_reward,
             self.heading_reward,
+            self.linear_velocity_reward,
+            time_penalty,
         ) = self._reward_parameters.compute_reward(
             current_state,
             actions,
-            self._previous_position_dist - self.position_dist,
+            position_progress,
             self.heading_dist,
             self.linear_velocity_dist,
         )
-
-        return self.position_reward + self.heading_reward - self.boundary_penalty
+        # print("velocity reward:", self.linear_velocity_reward[:5])
+        # print("heading reward:", self.heading_reward[:5])
+        # print("progress reward", self.progress_reward[:5])
+        self._previous_position_dist = self.position_dist.clone()
+        return (
+            self.progress_reward
+            + self.heading_reward
+            - self.boundary_penalty
+            - time_penalty
+        )
 
     def update_kills(self) -> torch.Tensor:
         """
@@ -242,11 +258,7 @@ class CaptureTask(Core):
         die = torch.where(
             self.position_dist > self._task_parameters.kill_dist, ones, die
         )
-        die = torch.where(
-            self._goal_reached > self._task_parameters.kill_after_n_steps_in_tolerance,
-            ones,
-            die,
-        )
+        die = torch.where(self._goal_reached > 0, ones, die)
         return die
 
     def update_statistics(self, stats: dict) -> dict:
@@ -260,7 +272,7 @@ class CaptureTask(Core):
             dict: The statistics of the training
         """
 
-        stats["position_reward"] += self.position_reward
+        stats["progress_reward"] += self.progress_reward
         stats["heading_reward"] += self.heading_reward
         stats["linear_velocity_reward"] += self.linear_velocity_reward
         stats["position_error"] += self.position_dist
@@ -314,6 +326,11 @@ class CaptureTask(Core):
         self._delta_headings[env_ids] = self._spawn_heading_sampler.sample(
             num_goals, step, device=self._device
         )
+        # Randomizes the target linear velocity
+        r = self._target_linear_velocity_sampler.sample(
+            num_goals, step=step, device=self._device
+        )
+        self._target_velocities[env_ids] = r
 
         return target_positions, target_orientations
 
@@ -421,9 +438,9 @@ class CaptureTask(Core):
             Tuple[Usd.Stage, XFormPrimView]: The scene and the visual marker.
         """
 
-        arrows = XFormPrimView(prim_paths_expr="/World/envs/.*/arrow")
-        scene.add(arrows)
-        return scene, arrows
+        pins = XFormPrimView(prim_paths_expr="/World/envs/.*/pin")
+        scene.add(pins)
+        return scene, pins
 
     def log_spawn_data(self, step: int) -> dict:
         """
