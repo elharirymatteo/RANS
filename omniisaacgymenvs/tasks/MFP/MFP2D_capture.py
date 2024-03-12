@@ -22,7 +22,7 @@ from omniisaacgymenvs.tasks.MFP.curriculum_helpers import (
     CurriculumSampler,
 )
 
-from omniisaacgymenvs.utils.arrow import VisualArrow
+from omniisaacgymenvs.utils.pin import VisualPin
 from omni.isaac.core.prims import XFormPrimView
 from pxr import Usd
 
@@ -66,6 +66,9 @@ class CaptureTask(Core):
         self._spawn_position_sampler = CurriculumSampler(
             self._task_parameters.spawn_position_curriculum
         )
+        self._target_linear_velocity_sampler = CurriculumSampler(
+            self._task_parameters.target_linear_velocity_curriculum,
+        )
         self._spawn_heading_sampler = CurriculumSampler(
             self._task_parameters.spawn_heading_curriculum
         )
@@ -86,6 +89,12 @@ class CaptureTask(Core):
         self._target_headings = torch.zeros(
             (self._num_envs), device=self._device, dtype=torch.float32
         )
+        self._delta_headings = torch.zeros(
+            (self._num_envs), device=self._device, dtype=torch.float32
+        )
+        self._previous_position_dist = torch.zeros(
+            (self._num_envs), device=self._device, dtype=torch.float32
+        )
         self._task_label = self._task_label * 1
 
     def create_stats(self, stats: dict) -> dict:
@@ -95,7 +104,7 @@ class CaptureTask(Core):
         Args:
             stats (dict): The dictionary to store the statistics.
 
-        Returns:
+        Returns:used
             dict: The dictionary containing the statistics.
         """
 
@@ -136,9 +145,17 @@ class CaptureTask(Core):
 
         # position distance
         self._position_error = self._target_positions - current_state["position"]
+        # linear velocity error (normed velocity)
+        self.linear_velocity_dist = self._target_velocity - torch.norm(
+            current_state["velocity"], axis=-1
+        )
         # heading distance
         heading = torch.arctan2(
             current_state["orientation"][:, 1], current_state["orientation"][:, 0]
+        )
+        # Compute target heading as the angle required to be looking at the target
+        self._target_headings = torch.arctan2(
+            self._position_error[:, 1], self._position_error[:, 0]
         )
         self._heading_error = torch.arctan2(
             torch.sin(self._target_headings - heading),
@@ -148,6 +165,7 @@ class CaptureTask(Core):
         self._task_data[:, :2] = self._position_error
         self._task_data[:, 2] = torch.cos(self._heading_error)
         self._task_data[:, 3] = torch.sin(self._heading_error)
+        self._task_data[:, 4] = self.linear_velocity_dist
         return self.update_observation_tensor(current_state)
 
     def compute_reward(
@@ -186,7 +204,14 @@ class CaptureTask(Core):
         heading_goal_is_reached = (
             self.heading_dist < self._task_parameters.heading_tolerance
         ).int()
-        goal_is_reached = position_goal_is_reached * heading_goal_is_reached
+        velocity_goal_is_reached = (
+            self.linear_velocity_dist < self._task_parameters.linear_velocity_tolerance
+        ).int()
+        goal_is_reached = (
+            position_goal_is_reached
+            * heading_goal_is_reached
+            * velocity_goal_is_reached
+        )
         self._goal_reached *= goal_is_reached  # if not set the value to 0
         self._goal_reached += goal_is_reached  # if it is add 1
 
@@ -195,7 +220,11 @@ class CaptureTask(Core):
             self.position_reward,
             self.heading_reward,
         ) = self._reward_parameters.compute_reward(
-            current_state, actions, self.position_dist, self.heading_dist
+            current_state,
+            actions,
+            self._previous_position_dist - self.position_dist,
+            self.heading_dist,
+            self.linear_velocity_dist,
         )
 
         return self.position_reward + self.heading_reward - self.boundary_penalty
@@ -233,8 +262,10 @@ class CaptureTask(Core):
 
         stats["position_reward"] += self.position_reward
         stats["heading_reward"] += self.heading_reward
+        stats["linear_velocity_reward"] += self.linear_velocity_reward
         stats["position_error"] += self.position_dist
         stats["heading_error"] += self.heading_dist
+        stats["linear_velocity_error"] += self.linear_velocity_dist
         stats["boundary_dist"] += self.boundary_dist
         stats = self._task_parameters.boundary_penalty.update_statistics(stats)
         return stats
@@ -248,6 +279,7 @@ class CaptureTask(Core):
         """
 
         self._goal_reached[env_ids] = 0
+        self._previous_position_dist[env_ids] = 0
 
     def get_goals(
         self,
@@ -279,14 +311,8 @@ class CaptureTask(Core):
         )
         target_positions[env_ids, :2] += self._target_positions[env_ids]
         # Randomize heading
-        self._target_headings[env_ids] = (
-            torch.rand(num_goals, device=self._device) * math.pi * 2
-        )
-        target_orientations[env_ids, 0] = torch.cos(
-            self._target_headings[env_ids] * 0.5
-        )
-        target_orientations[env_ids, 3] = torch.sin(
-            self._target_headings[env_ids] * 0.5
+        self._delta_headings[env_ids] = self._spawn_heading_sampler.sample(
+            num_goals, step, device=self._device
         )
 
         return target_positions, target_orientations
@@ -327,10 +353,13 @@ class CaptureTask(Core):
         initial_orientation = torch.zeros(
             (num_resets, 4), device=self._device, dtype=torch.float32
         )
-        theta = (
-            self._spawn_heading_sampler.sample(num_resets, step, device=self._device)
-            + self._target_headings[env_ids]
+        target_position_local = (
+            self._target_positions[env_ids, :2] - initial_position[:, :2]
         )
+        target_heading = torch.arctan2(
+            target_position_local[:, 1], target_position_local[:, 0]
+        )
+        theta = target_heading + self._delta_headings[env_ids]
         initial_orientation[:, 0] = torch.cos(theta * 0.5)
         initial_orientation[:, 3] = torch.sin(theta * 0.5)
         # Randomizes the linear velocity of the platform
@@ -366,22 +395,16 @@ class CaptureTask(Core):
         """
 
         color = torch.tensor([1, 0, 0])
-        body_radius = 0.1
-        body_length = 0.5
-        head_radius = 0.2
-        head_length = 0.5
+        ball_radius = 0.2
         poll_radius = 0.025
         poll_length = 2
-        VisualArrow(
-            prim_path=path + "/arrow",
+        VisualPin(
+            prim_path=path + "/pin",
             translation=position,
             name="target_0",
-            body_radius=body_radius,
-            body_length=body_length,
+            ball_radius=ball_radius,
             poll_radius=poll_radius,
             poll_length=poll_length,
-            head_radius=head_radius,
-            head_length=head_length,
             color=color,
         )
 
@@ -506,7 +529,33 @@ class CaptureTask(Core):
             dict: The target data.
         """
 
-        return {}
+        dict = {}
+
+        num_resets = self._num_envs
+        # Randomizes the target linear velocity of the platform
+        r = self._target_linear_velocity_sampler.sample(
+            num_resets, step=step, device=self._device
+        )
+
+        r = r.cpu().numpy()
+
+        fig, ax = plt.subplots(dpi=100, figsize=(8, 8), sharey=True)
+        ax.hist(r, bins=32)
+        ax.set_title("Target normed linear velocity")
+        ax.set_xlim(
+            self._target_linear_velocity_sampler.get_min_bound(),
+            self._target_linear_velocity_sampler.get_max_bound(),
+        )
+        ax.set_xlabel("vel (m/s)")
+        ax.set_ylabel("count")
+        fig.tight_layout()
+
+        fig.canvas.draw()
+        data = np.array(fig.canvas.renderer.buffer_rgba())
+        plt.close(fig)
+
+        dict["curriculum/target_velocities"] = wandb.Image(data)
+        return dict
 
     def get_logs(self, step: int) -> dict:
         """
