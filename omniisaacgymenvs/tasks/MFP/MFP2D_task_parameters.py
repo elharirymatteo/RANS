@@ -103,12 +103,12 @@ class GoToPoseParameters:
 
 
 @dataclass
-class CaptureParameters:
+class GoThroughXYParameters:
     """
     Parameters for the GoToPose task.
     """
 
-    name: str = "GoToPose"
+    name: str = "GoToThroughXY"
     position_tolerance: float = 0.01
     heading_tolerance: float = 0.025
     linear_velocity_tolerance: float = 0.01
@@ -138,6 +138,63 @@ class CaptureParameters:
         ), "Kill after n steps in tolerance must be positive."
         assert self.goal_random_position >= 0, "Goal random position must be positive."
         assert self.kill_dist > 0, "Kill distance must be positive."
+
+        self.boundary_penalty = BoundaryPenalty(**self.boundary_penalty)
+        self.target_linear_velocity_curriculum = CurriculumParameters(
+            **self.target_linear_velocity_curriculum
+        )
+        self.spawn_position_curriculum = CurriculumParameters(
+            **self.spawn_position_curriculum
+        )
+        self.spawn_heading_curriculum = CurriculumParameters(
+            **self.spawn_heading_curriculum
+        )
+        self.spawn_linear_velocity_curriculum = CurriculumParameters(
+            **self.spawn_linear_velocity_curriculum
+        )
+        self.spawn_angular_velocity_curriculum = CurriculumParameters(
+            **self.spawn_angular_velocity_curriculum
+        )
+
+
+@dataclass
+class GoThroughXYSequenceParameters:
+    """
+    Parameters for the GoToPose task.
+    """
+
+    name: str = "GoToThroughXYSequence"
+    position_tolerance: float = 0.01
+    heading_tolerance: float = 0.025
+    linear_velocity_tolerance: float = 0.01
+    kill_after_n_steps_in_tolerance: int = 50
+    goal_random_position: float = 0.0
+    kill_dist: float = 10.0
+    num_points: int = 5
+
+    target_linear_velocity_curriculum: CurriculumParameters = field(
+        default_factory=dict
+    )
+    spawn_position_curriculum: CurriculumParameters = field(default_factory=dict)
+    boundary_penalty: BoundaryPenalty = field(default_factory=dict)
+    spawn_heading_curriculum: CurriculumParameters = field(default_factory=dict)
+    spawn_linear_velocity_curriculum: CurriculumParameters = field(default_factory=dict)
+    spawn_angular_velocity_curriculum: CurriculumParameters = field(
+        default_factory=dict
+    )
+
+    def __post_init__(self) -> None:
+        assert self.position_tolerance > 0, "Position tolerance must be positive."
+        assert self.heading_tolerance > 0, "Heading tolerance must be positive."
+        assert (
+            self.linear_velocity_tolerance > 0
+        ), "Velocity tolerance must be positive."
+        assert (
+            self.kill_after_n_steps_in_tolerance > 0
+        ), "Kill after n steps in tolerance must be positive."
+        assert self.goal_random_position >= 0, "Goal random position must be positive."
+        assert self.kill_dist > 0, "Kill distance must be positive."
+        assert self.num_points > 0, "Number of points must be positive."
 
         self.boundary_penalty = BoundaryPenalty(**self.boundary_penalty)
         self.target_linear_velocity_curriculum = CurriculumParameters(

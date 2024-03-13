@@ -13,10 +13,10 @@ from omniisaacgymenvs.tasks.MFP.MFP2D_core import (
     Core,
 )
 from omniisaacgymenvs.tasks.MFP.MFP2D_task_rewards import (
-    CaptureReward,
+    GoThroughXYReward,
 )
 from omniisaacgymenvs.tasks.MFP.MFP2D_task_parameters import (
-    CaptureParameters,
+    GoThroughXYParameters,
 )
 from omniisaacgymenvs.tasks.MFP.curriculum_helpers import (
     CurriculumSampler,
@@ -36,9 +36,11 @@ import math
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
 
-class CaptureTask(Core):
+class GoThroughXYTask(Core):
     """
-    Implements the GoToPose task. The robot has to reach a target position and heading.
+    Implements the GoThroughXYSequence task. The robot has to reach a point in the 2D plane
+    at a given velocity, it must do so while looking at the target. Unlike the GoToXY task,
+    the robot has to go through the target point and keep moving.
     """
 
     def __init__(
@@ -58,10 +60,10 @@ class CaptureTask(Core):
             device (str): The device to run the task on.
         """
 
-        super(CaptureTask, self).__init__(num_envs, device)
+        super(GoThroughXYTask, self).__init__(num_envs, device)
         # Task and reward parameters
-        self._task_parameters = CaptureParameters(**task_param)
-        self._reward_parameters = CaptureReward(**reward_param)
+        self._task_parameters = GoThroughXYParameters(**task_param)
+        self._reward_parameters = GoThroughXYReward(**reward_param)
         # Curriculum samplers
         self._spawn_position_sampler = CurriculumSampler(
             self._task_parameters.spawn_position_curriculum
@@ -165,10 +167,6 @@ class CaptureTask(Core):
             torch.cos(self._target_headings - heading),
         )
         # Encode task data
-        # print("=====================================")
-        # print("position error:", self._position_error[:5])
-        # print("heading error:", self._heading_error[:5])
-        # print("linear velocity error:", self.linear_velocity_err[:5])
         self._task_data[:, :2] = self._position_error
         self._task_data[:, 2] = torch.cos(self._heading_error)
         self._task_data[:, 3] = torch.sin(self._heading_error)
@@ -216,17 +214,11 @@ class CaptureTask(Core):
             self.position_dist < self._task_parameters.position_tolerance
         ).int()
 
-        # print("velocity distance:", self.linear_velocity_dist[:5])
-        # print("heading distance:", self.heading_dist[:5])
-        # print("position_distance:", self.position_dist[:5])
-        # print("progress:", position_progress[:5])
-
         # rewards
         (
             self.progress_reward,
             self.heading_reward,
             self.linear_velocity_reward,
-            time_penalty,
         ) = self._reward_parameters.compute_reward(
             current_state,
             actions,
@@ -234,15 +226,13 @@ class CaptureTask(Core):
             self.heading_dist,
             self.linear_velocity_dist,
         )
-        # print("velocity reward:", self.linear_velocity_reward[:5])
-        # print("heading reward:", self.heading_reward[:5])
-        # print("progress reward", self.progress_reward[:5])
         self._previous_position_dist = self.position_dist.clone()
         return (
             self.progress_reward
             + self.heading_reward
             - self.boundary_penalty
-            - time_penalty
+            - self._reward_parameters.time_penalty
+            + self._reward_parameters.terminal_reward * self._goal_reached
         )
 
     def update_kills(self) -> torch.Tensor:
