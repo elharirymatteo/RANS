@@ -90,14 +90,15 @@ class CreatePlatform:
         )
         # Creates a set of basic materials
         self.createBasicColors()
+
         # Creates the main body element and adds the position & heading markers.
         if self.settings.shape == "sphere":
             self.core_path = self.createRigidSphere(
                 self.platform_path + "/core",
                 "body",
                 self.settings.radius,
-                self.settings.CoM,
-                self.settings.mass,
+                Gf.Vec3d(0, 0, 0),
+                0.0001,
             )
         elif self.settings.shape == "cylinder":
             self.core_path = self.createRigidCylinder(
@@ -105,9 +106,10 @@ class CreatePlatform:
                 "body",
                 self.settings.radius,
                 self.settings.height,
-                self.settings.CoM,
-                self.settings.core_mass,
+                Gf.Vec3d(0, 0, 0),
+                0.0001,
             )
+
         # Creates a set of joints to constrain the platform on the XY plane (3DoF).
         self.createXYPlaneLock()
         # Creates the movable CoM and the joints to control it.
@@ -119,6 +121,12 @@ class CreatePlatform:
             self.settings.mass,
         )
 
+        if self.enable_arrow:
+            self.createArrowXform(self.core_path + "/arrow")
+            self.createPositionMarkerXform(self.core_path + "/marker")
+        if self.camera_cfg is not None:
+            self.createCamera()
+            
         for i in range(self.num_virtual_thrusters):
             self.createVirtualThruster(
                 self.platform_path + "/v_thruster_" + str(i),
@@ -127,11 +135,6 @@ class CreatePlatform:
                 0.0001,
                 Gf.Vec3d([0, 0, 0]),
             )
-        if self.enable_arrow:
-            self.createArrowXform(self.core_path + "/arrow")
-            self.createPositionMarkerXform(self.core_path + "/marker")
-        if self.camera_cfg is not None:
-            self.createCamera()
 
     def createXYPlaneLock(self) -> None:
         """
