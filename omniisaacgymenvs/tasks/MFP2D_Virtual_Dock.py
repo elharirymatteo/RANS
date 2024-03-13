@@ -510,41 +510,32 @@ class MFP2DVirtual_Dock(RLTask):
             env_ids, num_resets, step=self.step
         )
         self.DR.mass_disturbances.randomize_masses(env_ids, step=self.step)
+        CoM_shift = self.DR.mass_disturbances.get_CoM(env_ids)
+        random_mass = self.DR.mass_disturbances.get_masses(env_ids)
         # Randomizes the starting position of the platform
         pos, quat, vel = self.task.get_initial_conditions(env_ids, step=self.step)
         siny_cosp = 2 * quat[:, 0] * quat[:, 3]
         cosy_cosp = 1 - 2 * (quat[:, 3] * quat[:, 3])
-        heading = torch.arctan2(siny_cosp, cosy_cosp)
-
-        # Resets the states of the joints & applies CoM shift
-        self.DR.mass_disturbances.set_masses(
-           self._platforms,
-           self._platforms.CoM,
-           env_ids,
-           self._platforms.CoM_shifter_indices,
-        )
-        
-        # Randomize dock mass
-        if hasattr(self.task._task_parameters, "spawn_dock_mass_curriculum"):
-            dock_mass = self.task.get_dock_masses(env_ids, step=self.step)
-            self._dock_view.set_masses(dock_mass, env_ids)
-
-        # initialize joint pos and vel with zero tensors
-        joint_pos = torch.zeros(num_resets, self._platforms.num_dof, dtype=torch.float32, device=self._device)
-        joint_vel = torch.zeros(num_resets, self._platforms.num_dof, dtype=torch.float32, device=self._device)
-
+        h = torch.arctan2(siny_cosp, cosy_cosp)
         # apply resets
-        x_idx, y_idx, z_idx = self._platforms.lock_indices
-        joint_pos[:, x_idx] = pos[:, 0]
-        joint_pos[:, y_idx] = pos[:, 1]
-        joint_pos[:, z_idx] = heading
+        dof_pos = torch.zeros(
+            (num_resets, self._platforms.num_dof), device=self._device
+        )
+        # self._platforms.CoM.set_masses(random_mass, indices=env_ids)
+        dof_pos[:, self._platforms.lock_indices[0]] = pos[:, 0]
+        dof_pos[:, self._platforms.lock_indices[1]] = pos[:, 1]
+        dof_pos[:, self._platforms.lock_indices[2]] = h
+        dof_pos[:, self._platforms.CoM_shifter_indices[0]] = CoM_shift[:, 0]
+        dof_pos[:, self._platforms.CoM_shifter_indices[1]] = CoM_shift[:, 1]
+        self._platforms.set_joint_positions(dof_pos, indices=env_ids)
 
-        joint_vel[:, x_idx] = vel[:, 0]
-        joint_vel[:, y_idx] = vel[:, 1]
-        joint_vel[:, z_idx] = vel[:, 5]
-
-        self._platforms.set_joint_positions(joint_pos, indices=env_ids)
-        self._platforms.set_joint_velocities(joint_vel, indices=env_ids)
+        dof_vel = torch.zeros(
+            (num_resets, self._platforms.num_dof), device=self._device
+        )
+        dof_vel[:, self._platforms.lock_indices[0]] = vel[:, 0]
+        dof_vel[:, self._platforms.lock_indices[1]] = vel[:, 1]
+        dof_vel[:, self._platforms.lock_indices[2]] = vel[:, 5]
+        self._platforms.set_joint_velocities(dof_vel, indices=env_ids)
         
         # reset contact state
         self.contact_state[env_ids] = torch.zeros(num_resets, device=self._device, dtype=torch.float32)
