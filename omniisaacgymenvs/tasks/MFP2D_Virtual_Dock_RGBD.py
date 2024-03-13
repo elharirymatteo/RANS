@@ -648,12 +648,12 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         heading = torch.arctan2(siny_cosp, cosy_cosp)
 
         # Resets the states of the joints & applies CoM shift
-        #self.DR.mass_disturbances.set_masses(
-        #    self._platforms,
-        #    self._platforms.CoM,
-        #    env_ids,
-        #    self._platforms.CoM_shifter_indices,
-        #)
+        self.DR.mass_disturbances.set_masses(
+           self._platforms,
+           self._platforms.CoM,
+           env_ids,
+           self._platforms.CoM_shifter_indices,
+        )
         
         # Randomize dock mass
         if hasattr(self.task._task_parameters, "spawn_dock_mass_curriculum"):

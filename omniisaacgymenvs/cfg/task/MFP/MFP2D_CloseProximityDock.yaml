@@ -171,7 +171,7 @@ env:
     kill_dist: 8.0
     collision_force_tolerance: 1e-5
     dock_footprint_diameter: 0.80
-    fp_footprint_diameter: 1.02 # 0.62+0.2 (20cm margin)
+    fp_footprint_diameter: 1.02 # 0.62+0.4 (20cm margin)
     goal_to_penalty_anchor_dist: 0.4
     relative_angle_penalty:
       enable: True
