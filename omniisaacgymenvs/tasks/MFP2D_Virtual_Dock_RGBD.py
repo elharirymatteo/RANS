@@ -108,7 +108,7 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         self.set_action_and_observation_spaces()
         # Sets the initial positions of the target and platform
         self._fp_position = torch.tensor([0, 0.0, 0.5])
-        self._default_marker_position = torch.tensor([0, 0, 0.3])
+        self._default_marker_position = torch.tensor([0, 0, 0.45])
         self._dock_view = None
         # Preallocate tensors
         self.actions = torch.zeros(
@@ -439,7 +439,7 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         """
         Updates the goal state of the task."""
 
-        target_positions, target_orientations = self._dock_view.get_world_poses(clone=True)
+        target_positions, target_orientations = self._dock_view.base.get_world_poses(clone=True)
         self.task.set_goals(self.all_indices.long(), target_positions-self._env_pos, target_orientations)
 
     def get_observations(self) -> Dict[str, torch.Tensor]:
@@ -570,6 +570,7 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         self.root_velocities = self._platforms.get_velocities()
         self._platforms.get_CoM_indices()
         self._platforms.get_plane_lock_indices()
+        self._dock_view.get_plane_lock_indices()
 
         self.initial_root_pos, self.initial_root_rot = (
             self.root_pos.clone(),
@@ -603,27 +604,36 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
             env_ids (torch.Tensor): the indices of the environments for which to set the targets.
         """
 
-        num_sets = len(env_ids)
+        num_resets = len(env_ids)
         env_long = env_ids.long()
-        # Randomizes the position of the ball on the x y axis
+
+        # Randomizes the position and orientation of the dock on the x y axis
         target_positions, target_orientation = self.task.get_goals(
-            env_long, 
-            self.initial_pin_pos.clone(), 
-            self.initial_pin_rot.clone(), 
+            env_long,
             self.step,
         )
-        target_positions[env_long, 2] = torch.ones(num_sets, device=self._device) * 0.45
-        # Apply the new goals
-        if self._dock_view: # NOTE This is the stuff generating warnings
-            self._dock_view.set_world_poses(
-                target_positions[env_long],
-                target_orientation[env_long],
-                indices=env_long,
-            )
-            self._dock_view.set_velocities(
-                torch.zeros(num_sets, 6, device=self._device),
-                indices=env_long,
-            )
+
+        siny_cosp = 2 * target_orientation[:, 0] * target_orientation[:, 3]
+        cosy_cosp = 1 - 2 * (target_orientation[:, 3] * target_orientation[:, 3])
+        h = torch.arctan2(siny_cosp, cosy_cosp)
+
+        # apply resets
+        dof_pos = torch.zeros(
+            (num_resets, self._dock_view.num_dof), device=self._device
+        )
+
+        dof_pos[:, self._dock_view.lock_indices[0]] = target_positions[:, 0]
+        dof_pos[:, self._dock_view.lock_indices[1]] = target_positions[:, 1]
+        dof_pos[:, self._dock_view.lock_indices[2]] = h
+        self._dock_view.set_joint_positions(dof_pos, indices=env_ids)
+
+        dof_vel = torch.zeros(
+            (num_resets, self._dock_view.num_dof), device=self._device
+        )
+        dof_vel[:, self._dock_view.lock_indices[0]] = 0.0
+        dof_vel[:, self._dock_view.lock_indices[1]] = 0.0
+        dof_vel[:, self._dock_view.lock_indices[2]] = 0.0
+        self._dock_view.set_joint_velocities(dof_vel, indices=env_ids)
 
     def reset_idx(self, env_ids: torch.Tensor) -> None:
         """
@@ -643,12 +653,19 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         self.DR.mass_disturbances.randomize_masses(env_ids, step=self.step)
         CoM_shift = self.DR.mass_disturbances.get_CoM(env_ids)
         random_mass = self.DR.mass_disturbances.get_masses(env_ids)
+
         # Randomizes the starting position of the platform
         pos, quat, vel = self.task.get_initial_conditions(env_ids, step=self.step)
         siny_cosp = 2 * quat[:, 0] * quat[:, 3]
         cosy_cosp = 1 - 2 * (quat[:, 3] * quat[:, 3])
         h = torch.arctan2(siny_cosp, cosy_cosp)
-        # apply resets
+
+        # Randomizes mass of the dock
+        if hasattr(self.task._task_parameters, "spawn_dock_mass_curriculum"):
+            mass = self.task.get_dock_masses(env_ids, step=self.step)
+            self._dock_view.base.set_masses(mass, indices=env_ids)
+
+        # apply joint resets
         dof_pos = torch.zeros(
             (num_resets, self._platforms.num_dof), device=self._device
         )

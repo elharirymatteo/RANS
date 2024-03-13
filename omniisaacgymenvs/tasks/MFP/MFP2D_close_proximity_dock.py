@@ -22,8 +22,8 @@ from omniisaacgymenvs.tasks.MFP.curriculum_helpers import (
     CurriculumSampler,
 )
 
-from omniisaacgymenvs.utils.dock import Dock
-from omni.isaac.core.prims import RigidPrimView
+from omniisaacgymenvs.utils.dock import Dock, DockView
+from omni.isaac.core.articulations import ArticulationView
 from pxr import Usd
 
 from matplotlib import pyplot as plt
@@ -37,7 +37,7 @@ EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
 class CloseProximityDockTask(Core):
     """
-    Implements the GoToPose task. The robot has to reach a target position and heading.
+    Implements the CloseProximityDock task. The robot has to reach a target position and heading.
     """
 
     def __init__(
@@ -81,6 +81,9 @@ class CloseProximityDockTask(Core):
         self._target_positions = torch.zeros(
             (self._num_envs, 2), device=self._device, dtype=torch.float32
         )
+        self._target_orientations = torch.zeros(
+            (self._num_envs, 4), device=self._device, dtype=torch.float32
+        )
         self._target_headings = torch.zeros(
             (self._num_envs), device=self._device, dtype=torch.float32
         )
@@ -91,7 +94,10 @@ class CloseProximityDockTask(Core):
 
     def create_stats(self, stats: dict) -> dict:
         """
-        Creates a dictionary to store the training statistics for the task."""
+        Creates a dictionary to store the training statistics for the task.
+        Args:
+            stats (dict): The dictionary to store the statistics.
+        """
 
         torch_zeros = lambda: torch.zeros(
             self._num_envs, dtype=torch.float, device=self._device, requires_grad=False
@@ -115,7 +121,12 @@ class CloseProximityDockTask(Core):
 
     def get_state_observations(self, current_state: dict) -> torch.Tensor:
         """
-        Computes the observation tensor from the current state of the robot.""" ""
+        Computes the observation tensor from the current state of the robot.
+        Args:
+            current_state (dict): The current state of the robot.
+        Returns:
+            torch.Tensor: The observation tensor.
+        """
 
         # position distance
         self._position_error = self._target_positions - current_state["position"]
@@ -137,7 +148,12 @@ class CloseProximityDockTask(Core):
     
     def compute_relative_angle(self, fp_position:torch.Tensor):
         """
-        Compute relative angle between FP and anchor point (bit behind goal)."""
+        Compute relative angle between FP and anchor point, where is behind target location.
+        Args:
+            fp_position: position of the FP in env coordinate.
+        Returns:
+            relative_angle: relative angle between FP and anchor point. 0 is the anchor point is in front of the FP.
+        """
         anchor_point = self._target_positions
         anchor_point[:, 0] -= self._task_parameters.goal_to_penalty_anchor_dist * torch.cos(self._target_headings)
         anchor_point[:, 1] -= self._task_parameters.goal_to_penalty_anchor_dist * torch.sin(self._target_headings)
@@ -153,7 +169,12 @@ class CloseProximityDockTask(Core):
     def compute_relative_angle_mask(self, relative_angle:torch.Tensor):
         """
         Computes the reward reward mask of relative angle.
-        If it exceeds boundary_angle, no reward is given."""
+        If it exceeds boundary_angle, no reward is given.
+        Args:
+            relative_angle (torch.Tensor): relative angle between FP and anchor point.
+        Returns:
+            rward mask (torch.Tensor) : reward mask for relative angle.
+        """
         if self._reward_parameters.clip_reward:
             return (torch.abs(relative_angle) <= self._reward_parameters.boundary_relative_angle).to(torch.float32)
         else:
@@ -175,7 +196,8 @@ class CloseProximityDockTask(Core):
             step (int, optional): The current step. Defaults to 0.
 
         Returns:
-            torch.Tensor: The reward for the current state of the robot."""
+            torch.Tensor: The reward for the current state of the robot.
+        """
             
         # compute reward mask
         self.relative_angle = self.compute_relative_angle(current_state["position"])
@@ -219,7 +241,11 @@ class CloseProximityDockTask(Core):
 
     def update_kills(self) -> torch.Tensor:
         """
-        Updates if the platforms should be killed or not."""
+        Updates if the platforms should be killed or not.
+
+        Returns:
+            torch.Tensor: Wether the platforms should be killed or not.
+        """
 
         die = torch.zeros_like(self._goal_reached, dtype=torch.long)
         ones = torch.ones_like(self._goal_reached, dtype=torch.long)
@@ -234,13 +260,30 @@ class CloseProximityDockTask(Core):
         return die
     
     def update_collision_termination(self, die:torch.Tensor, contact_state:torch.Tensor):
+        """
+        Updates if the platforms should be killed or not based on collision status. 
+
+        Args: 
+            die(torch.Tensor): Wether the platforms should be killed or not (from update_kills method).
+            contact_state (torch.Tensor): norm of contact force.
+            
+        Returns:
+            torch.Tensor: Wether the platforms should be killed or not.
+        """
         ones = torch.ones_like(die)
         die = torch.where(contact_state > self._task_parameters.collision_force_tolerance, ones, die)
         return die
 
     def update_statistics(self, stats: dict) -> dict:
         """
-        Updates the training statistics."""
+        Updates the training statistics.
+
+        Args:
+            stats (dict):The new stastistics to be logged.
+
+        Returns:
+            dict: The statistics of the training
+        """
 
         # stats["position_reward"] += self.reward_mask * self.position_reward
         # stats["heading_reward"] += self.reward_mask * self.heading_reward
@@ -261,8 +304,6 @@ class CloseProximityDockTask(Core):
     def get_goals(
         self,
         env_ids: torch.Tensor,
-        target_positions: torch.Tensor,
-        target_orientations: torch.Tensor,
         step: int = 0,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
@@ -270,14 +311,18 @@ class CloseProximityDockTask(Core):
 
         Args:
             env_ids (torch.Tensor): The ids of the environments.
-            target_positions (torch.Tensor): Position of each env origin in global world coordinate.
-            target_orientations (torch.Tensor): Orientation of each env origin in global world coordinate.
             step (int, optional): The current step. Defaults to 0.
 
         Returns:
-            Tuple[torch.Tensor, torch.Tensor]: The target positions and orientations in global world coordinate.
+            Tuple[torch.Tensor, torch.Tensor]: The target positions and orientations in env coordinate.
         """
         num_goals = len(env_ids)
+        target_positions = torch.zeros(
+            (num_goals, 3), device=self._device, dtype=torch.float32
+        )
+        target_orientations = torch.zeros(
+            (num_goals, 4), device=self._device, dtype=torch.float32
+        )
         
         # Randomizes the target position (completely random)
         dock_space = self._spawn_dock_space_sampler.sample(num_goals, step, device=self._device) # space between dock face close to wall and wall surface (free space)
@@ -288,18 +333,21 @@ class CloseProximityDockTask(Core):
         self._target_positions[env_ids, 1] = \
             2*(self._task_parameters.env_y/2 - self._task_parameters.dock_footprint_diameter - dock_space) * torch.rand((num_goals,), device=self._device) \
                 - (self._task_parameters.env_y/2 - self._task_parameters.dock_footprint_diameter - dock_space)
-                
-        target_positions[env_ids, :2] += self._target_positions[env_ids]
         
         # Randomizes the target heading
         # First, make dock face the center of environment.
         self._target_headings[env_ids] = torch.atan2(self._target_positions[env_ids, 1], self._target_positions[env_ids, 0]) + math.pi # facing center
-        target_orientations[env_ids, 0] = torch.cos(
+        self._target_orientations[env_ids, 0] = torch.cos(
             self._target_headings[env_ids] * 0.5
         )
-        target_orientations[env_ids, 3] = torch.sin(
+        self._target_orientations[env_ids, 3] = torch.sin(
             self._target_headings[env_ids] * 0.5
         )
+
+        # Retrieve the target positions and orientations at batch index = env_ids
+        target_positions[:, :2] = self._target_positions[env_ids]
+        target_positions[:, 2] = torch.ones(num_goals, device=self._device) * 0.45
+        target_orientations[:] = self._target_orientations[env_ids]
         
         # Add offset to the local target position
         self._target_positions[env_ids, 0] += self.fp_radius * torch.cos(self._target_headings[env_ids])
@@ -405,9 +453,14 @@ class CloseProximityDockTask(Core):
         mass = self._spawn_dock_mass_sampler.sample(len(env_ids), step, device=self._device)
         return mass
 
-    def generate_target(self, path, position, dock_param: dict = None):
+    def generate_target(self, path, position: torch.Tensor, dock_param: dict = None):
         """
-        Generate a docking station where the FP will dock to."""
+        Generate a docking station where the FP will dock to.
+        Args:
+            path (str): path to the prim
+            position (torch.Tensor): position of the docking station
+            dock_param (dict, optional): dictionary of DockParameters. Defaults to None.
+        """
         Dock(
             prim_path=path+"/dock", 
             name="dock",
@@ -417,14 +470,16 @@ class CloseProximityDockTask(Core):
     
     def add_dock_to_scene(
         self, scene: Usd.Stage
-        )->Tuple[Usd.Stage, RigidPrimView]:
+        )->Tuple[Usd.Stage, ArticulationView]:
         """
-        Adds the visual marker to the scene.
-        It's not a marker, but using a same method name."""
+        Adds articulation view and rigiprim view of docking station to the scene.
+        Args:
+            scene (Usd.Stage): The scene to add the docking station to."""
 
-        dock_view = RigidPrimView(prim_paths_expr="/World/envs/.*/dock")
-        scene.add(dock_view)
-        return scene, dock_view
+        dock = DockView(prim_paths_expr="/World/envs/.*/dock")
+        scene.add(dock)
+        scene.add(dock.base)
+        return scene, dock
     
     def log_spawn_data(self, step: int) -> dict:
         """
