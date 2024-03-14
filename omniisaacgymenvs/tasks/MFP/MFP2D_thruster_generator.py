@@ -34,11 +34,14 @@ class PlatformParameters:
     """
     Platform physical parameters."""
 
-    mass: float = 5.0
-    radius: float = 0.25
-    refinement: int = 2
-    CoM: tuple = (0, 0, 0)
     shape: str = "sphere"
+    radius: float = 0.31
+    height: float = 0.5
+    mass: float = 5.32
+    CoM: tuple = (0, 0, 0)
+    refinement: int = 2
+    usd_asset_path: str = "/None"
+    enable_collision: bool = False
 
 
 @dataclass
