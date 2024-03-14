@@ -13,16 +13,16 @@ from omniisaacgymenvs.tasks.MFP.MFP2D_core import (
     Core,
 )
 from omniisaacgymenvs.tasks.MFP.MFP2D_task_rewards import (
-    GoThroughXYSequenceReward,
+    GoThroughPoseSequenceReward,
 )
 from omniisaacgymenvs.tasks.MFP.MFP2D_task_parameters import (
-    GoThroughXYSequenceParameters,
+    GoThroughPoseSequenceParameters,
 )
 from omniisaacgymenvs.tasks.MFP.curriculum_helpers import (
     CurriculumSampler,
 )
 
-from omniisaacgymenvs.utils.pin import VisualPin
+from omniisaacgymenvs.utils.arrow import VisualArrow
 from omni.isaac.core.prims import XFormPrimView
 from pxr import Usd
 
@@ -37,7 +37,7 @@ import math
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
 
-class GoThroughXYSequenceTask(Core):
+class GoThroughPoseSequenceTask(Core):
     """
     Implements the GoThroughXYSequence task. The robot has to reach a sequence of points in the 2D plane
     at a given velocity, it must do so while looking at the target. Unlike the GoThroughXY task, the robot
@@ -61,10 +61,10 @@ class GoThroughXYSequenceTask(Core):
             device (str): The device to run the task on.
         """
 
-        super(GoThroughXYSequenceTask, self).__init__(num_envs, device)
+        super(GoThroughPoseSequenceTask, self).__init__(num_envs, device)
         # Task and reward parameters
-        self._task_parameters = GoThroughXYSequenceParameters(**task_param)
-        self._reward_parameters = GoThroughXYSequenceReward(**reward_param)
+        self._task_parameters = GoThroughPoseSequenceParameters(**task_param)
+        self._reward_parameters = GoThroughPoseSequenceReward(**reward_param)
         # Curriculum samplers
         self._spawn_position_sampler = CurriculumSampler(
             self._task_parameters.spawn_position_curriculum
@@ -92,11 +92,13 @@ class GoThroughXYSequenceTask(Core):
             device=self._device,
             dtype=torch.float32,
         )
+        self._target_headings = torch.zeros(
+            (self._num_envs, self._task_parameters.num_points),
+            device=self._device,
+            dtype=torch.float32,
+        )
         self._target_index = torch.zeros(
             (self._num_envs), device=self._device, dtype=torch.long
-        )
-        self._target_headings = torch.zeros(
-            (self._num_envs), device=self._device, dtype=torch.float32
         )
         self._target_velocities = torch.zeros(
             (self._num_envs), device=self._device, dtype=torch.float32
@@ -168,13 +170,9 @@ class GoThroughXYSequenceTask(Core):
         heading = torch.arctan2(
             current_state["orientation"][:, 1], current_state["orientation"][:, 0]
         )
-        # Compute target heading as the angle required to be looking at the target
-        self._target_headings = torch.arctan2(
-            self._position_error[:, 1], self._position_error[:, 0]
-        )
         self._heading_error = torch.arctan2(
-            torch.sin(self._target_headings - heading),
-            torch.cos(self._target_headings - heading),
+            torch.sin(self._target_headings[self._all, self._target_index] - heading),
+            torch.cos(self._target_headings[self._all, self._target_index] - heading),
         )
 
         # Encode task data
@@ -184,11 +182,23 @@ class GoThroughXYSequenceTask(Core):
         self._task_data[:, 4] = self.linear_velocity_err
         # position of the other points in the sequence
         for i in range(self._task_parameters.num_points - 1):
-            overflowing = self._target_index + i + 1 >= self._task_parameters.num_points
-            indices = self._target_index + (i + 1) * (1 - overflowing.int())
-            self._task_data[:, 5 + 2 * i : 5 + 2 * i + 2] = (
+            overflowing = (
+                self._target_index + i + 1 >= self._task_parameters.num_points
+            ).int()
+            indices = self._target_index + (i + 1) * (1 - overflowing)
+            self._task_data[:, 5 + 4 * i : 5 + 4 * i + 2] = (
                 self._target_positions[self._all, indices] - current_state["position"]
-            ) * (1 - overflowing.int()).view(-1, 1)
+            ) * (1 - overflowing).view(-1, 1)
+            self._heading_error = torch.arctan2(
+                torch.sin(self._target_headings[self._all, indices] - heading),
+                torch.cos(self._target_headings[self._all, indices] - heading),
+            )
+            self._task_data[:, 5 + 4 * i + 2] = torch.cos(self._heading_error) * (
+                1 - overflowing
+            )
+            self._task_data[:, 5 + 4 * i + 3] = torch.cos(self._heading_error) * (
+                1 - overflowing
+            )
 
         return self.update_observation_tensor(current_state)
 
@@ -346,6 +356,9 @@ class GoThroughXYSequenceTask(Core):
                 self._target_positions[env_ids, i] = (
                     self._target_positions[env_ids, i - 1] + point
                 )
+            self._target_headings[env_ids, i] = (
+                torch.rand(num_goals, device=self._device) * math.pi * 2
+            )
 
         # Randomize heading
         self._delta_headings[env_ids] = self._spawn_heading_sampler.sample(
@@ -366,7 +379,8 @@ class GoThroughXYSequenceTask(Core):
             device=self._device,
             dtype=torch.float32,
         )
-        q[:, :, 0] = 1
+        q[:, :, 0] = torch.cos(self._target_headings[env_ids] * 0.5)
+        q[:, :, 3] = torch.sin(self._target_headings[env_ids] * 0.5)
         p[:, :, :2] = self._target_positions[env_ids]
         p[:, :, 2] = 2
 
@@ -453,16 +467,22 @@ class GoThroughXYSequenceTask(Core):
             color = torch.tensor(
                 colorsys.hsv_to_rgb(i / self._task_parameters.num_points, 1, 1)
             )
-            ball_radius = 0.2
+            body_radius = 0.1
+            body_length = 0.5
+            head_radius = 0.2
+            head_length = 0.5
             poll_radius = 0.025
             poll_length = 2
-            VisualPin(
-                prim_path=path + "/pin_" + str(i),
+            VisualArrow(
+                prim_path=path + "/arrow_" + str(i),
                 translation=position,
                 name="target_" + str(i),
-                ball_radius=ball_radius,
+                body_radius=body_radius,
+                body_length=body_length,
                 poll_radius=poll_radius,
                 poll_length=poll_length,
+                head_radius=head_radius,
+                head_length=head_length,
                 color=color,
             )
 
@@ -479,7 +499,7 @@ class GoThroughXYSequenceTask(Core):
             Tuple[Usd.Stage, XFormPrimView]: The scene and the visual marker.
         """
 
-        pins = XFormPrimView(prim_paths_expr="/World/envs/.*/pin_[0-5]")
+        pins = XFormPrimView(prim_paths_expr="/World/envs/.*/arrow_[0-5]")
         scene.add(pins)
         return scene, pins
 

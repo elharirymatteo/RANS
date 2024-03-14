@@ -68,10 +68,10 @@ class Core:
         self._dim_velocity = 2  # velocity in the world (x_dot, y_dot) [2:4]
         self._dim_omega = 1  # rotation velocity (theta_dot) [4]
         self._dim_task_label = 1  # label of the task to be executed (int) [5]
-        self._dim_task_data = 20  # data to be used to fullfil the task (floats) [6:16]
+        self._dim_task_data = 22  # data to be used to fullfil the task (floats) [6:16]
 
         # Observation buffers
-        self._num_observations = 26
+        self._num_observations = 28
         self._obs_buffer = torch.zeros(
             (self._num_envs, self._num_observations),
             device=self._device,
@@ -101,7 +101,7 @@ class Core:
         self._obs_buffer[:, 2:4] = current_state["linear_velocity"]
         self._obs_buffer[:, 4] = current_state["angular_velocity"]
         self._obs_buffer[:, 5] = self._task_label
-        self._obs_buffer[:, 6:26] = self._task_data
+        self._obs_buffer[:, 6:28] = self._task_data
         return self._obs_buffer
 
     def create_stats(self, stats: dict) -> dict:
