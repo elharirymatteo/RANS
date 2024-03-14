@@ -251,12 +251,12 @@ class CloseProximityDockParameters:
     kill_after_n_steps_in_tolerance: int = 50
     kill_dist: float = 10.0
     collision_force_tolerance: float = 0.25
-    collision_force_coef: float = 0.5
     dock_footprint_diameter: float = 0.8
     fp_footprint_diameter: float = 0.7
     goal_to_penalty_anchor_dist: float = 0.4
     env_x: float = 3.0
     env_y: float = 5.0
+    kill_relative_angle: float = 1.571 #pi/2
     
     boundary_penalty: BoundaryPenalty = field(default_factory=dict)
     relative_angle_penalty: ConeShapePenalty = field(default_factory=dict)
@@ -276,6 +276,13 @@ class CloseProximityDockParameters:
             self.kill_after_n_steps_in_tolerance > 0
         ), "Kill after n steps in tolerance must be positive."
         assert self.kill_dist > 0, "Kill distance must be positive."
+        assert self.collision_force_tolerance > 0, "Collision force tolerance must be positive."
+        assert self.dock_footprint_diameter > 0, "Dock footprint diameter must be positive."
+        assert self.fp_footprint_diameter > 0, "FP footprint diameter must be positive."
+        assert self.goal_to_penalty_anchor_dist > 0, "Goal to penalty anchor distance must be positive."
+        assert self.env_x > 0, "Environment x dimension must be positive."
+        assert self.env_y > 0, "Environment y dimension must be positive."
+        assert self.kill_relative_angle > 0, "Kill relative angle must be positive."
         
         self.boundary_penalty = BoundaryPenalty(**self.boundary_penalty)
         self.relative_angle_penalty = ConeShapePenalty(**self.relative_angle_penalty)

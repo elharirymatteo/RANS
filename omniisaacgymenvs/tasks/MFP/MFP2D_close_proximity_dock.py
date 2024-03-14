@@ -87,6 +87,9 @@ class CloseProximityDockTask(Core):
         self._target_headings = torch.zeros(
             (self._num_envs), device=self._device, dtype=torch.float32
         )
+        self.relative_angle = torch.zeros(
+            (self._num_envs), device=self._device, dtype=torch.float32
+        )
         self._task_label = self._task_label * 1
         
         # other params
@@ -114,7 +117,11 @@ class CloseProximityDockTask(Core):
             stats["boundary_dist"] = torch_zeros()
         self.log_with_wandb = []
         self.log_with_wandb += self._task_parameters.boundary_penalty.get_stats_name()
+        self.log_with_wandb += self._task_parameters.relative_angle_penalty.get_stats_name()
         for name in self._task_parameters.boundary_penalty.get_stats_name():
+            if not name in stats.keys():
+                stats[name] = torch_zeros()
+        for name in self._task_parameters.relative_angle_penalty.get_stats_name():
             if not name in stats.keys():
                 stats[name] = torch_zeros()
         return stats
@@ -273,6 +280,20 @@ class CloseProximityDockTask(Core):
         ones = torch.ones_like(die)
         die = torch.where(contact_state > self._task_parameters.collision_force_tolerance, ones, die)
         return die
+    
+    def update_relative_angle_termination(self, die:torch.Tensor):
+        """
+        Updates if the platforms should be killed or not based on relative angle status. 
+
+        Args: 
+            die(torch.Tensor): Wether the platforms should be killed or not (from update_kills method).
+            
+        Returns:
+            torch.Tensor: Wether the platforms should be killed or not.
+        """
+        ones = torch.ones_like(die)
+        die = torch.where(torch.abs(self.relative_angle) > self._task_parameters.kill_relative_angle, ones, die)
+        return die
 
     def update_statistics(self, stats: dict) -> dict:
         """
@@ -293,6 +314,7 @@ class CloseProximityDockTask(Core):
         stats["heading_error"] += self.heading_dist
         stats["boundary_dist"] += self.boundary_dist
         stats = self._task_parameters.boundary_penalty.update_statistics(stats)
+        stats = self._task_parameters.relative_angle_penalty.update_statistics(stats)
         return stats
 
     def reset(self, env_ids: torch.Tensor) -> None:

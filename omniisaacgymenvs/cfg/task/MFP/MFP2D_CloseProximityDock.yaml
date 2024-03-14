@@ -168,11 +168,12 @@ env:
     position_tolerance: 0.05
     heading_tolerance: 0.02
     kill_after_n_steps_in_tolerance: 50 # 10seconds
-    kill_dist: 8.0
+    kill_dist: 4.0
     collision_force_tolerance: 1e-5
     dock_footprint_diameter: 0.80
     fp_footprint_diameter: 1.02 # 0.62+0.4 (20cm margin)
-    goal_to_penalty_anchor_dist: 0.4
+    goal_to_penalty_anchor_dist: 0.2
+    kill_relative_angle: 1.0472 #pi/3
     relative_angle_penalty:
       enable: True
       weight: 0.5
@@ -228,7 +229,7 @@ env:
         start_mean: 0.0
         start_std: 0.01 #super small angle
         end_mean: 0.0
-        end_std: 0.523 #pi/3
+        end_std: 0.524 #pi/6
     spawn_heading_curriculum:
       rate_parameters:
         function: sigmoid
@@ -240,7 +241,7 @@ env:
         start_mean: 0.0
         start_std: 0.01 #super small angle
         end_mean: 0.0
-        end_std: 3.1415 #pi/2
+        end_std: 3.1415 #pi
     spawn_linear_velocity_curriculum:
       rate_parameters:
         function: none

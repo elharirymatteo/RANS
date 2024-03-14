@@ -632,6 +632,9 @@ class MFP2DVirtual_Dock(RLTask):
         # resets due to collision
         die = self.task.update_collision_termination(die, self.contact_state)
 
+        # resets due to overshooting of relative angle
+        die = self.task.update_relative_angle_termination(die)
+
         # resets due to episode length
         self.reset_buf[:] = torch.where(
             self.progress_buf >= self._max_episode_length - 1, ones, die

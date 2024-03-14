@@ -446,3 +446,38 @@ class ConeShapePenalty(BasePenalty):
             return torch.zeros(
                 [relative_angle.shape[0]], dtype=torch.float32, device=relative_angle.device
             )
+    def get_stats_name(self) -> list:
+        """
+        Returns the names of the statistics to be computed.
+
+        Returns:
+            list: Names of the statistics to be tracked.
+        """
+
+        return ["penalties/" + self.name]
+
+    def update_statistics(self, stats: dict) -> dict:
+        """
+        Updates the training statistics.
+
+        Args:
+            stats (dict): Current statistics.
+
+        Returns:
+            dict: Updated statistics.
+        """
+
+        stats["penalties/" + self.name] += self.get_unweigthed_penalties()
+        return stats
+
+    def get_logs(self) -> dict:
+        """
+        Logs the penalty.
+
+        Returns:
+            dict: Dictionary containing the penalty.
+        """
+
+        return {
+            "penalties/" + self.name + "_weight": self.get_last_rate() * self.weight
+        }
