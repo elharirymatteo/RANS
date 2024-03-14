@@ -203,12 +203,10 @@ class TrackXYVelocityTask(Core):
         Generates a random goal for the task.
         Args:
             env_ids (torch.Tensor): The ids of the environments.
-            target_positions (torch.Tensor): The target positions.
-            target_orientations (torch.Tensor): The target orientations.
             step (int, optional): The current step. Defaults to 0.
 
         Returns:
-            list: The target positions and orientations.
+            Tuple[torch.Tensor, torch.Tensor]: The target positions and orientations.
         """
 
         num_goals = len(env_ids)
