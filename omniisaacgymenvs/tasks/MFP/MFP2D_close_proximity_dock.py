@@ -91,9 +91,6 @@ class CloseProximityDockTask(Core):
             (self._num_envs), device=self._device, dtype=torch.float32
         )
         self._task_label = self._task_label * 1
-        
-        # other params
-        self.fp_radius = self._task_parameters.fp_footprint_diameter / 2
 
     def create_stats(self, stats: dict) -> dict:
         """
@@ -155,22 +152,17 @@ class CloseProximityDockTask(Core):
     
     def compute_relative_angle(self, fp_position:torch.Tensor):
         """
-        Compute relative angle between FP and anchor point, where is behind target location.
+        Compute relative angle between FP and anchor point, where is bit behind target location.
         Args:
             fp_position: position of the FP in env coordinate.
         Returns:
-            relative_angle: relative angle between FP and anchor point. 0 is the anchor point is in front of the FP.
+            relative_angle: relative angle between FP and anchor point.
         """
         anchor_point = self._target_positions
         anchor_point[:, 0] -= self._task_parameters.goal_to_penalty_anchor_dist * torch.cos(self._target_headings)
         anchor_point[:, 1] -= self._task_parameters.goal_to_penalty_anchor_dist * torch.sin(self._target_headings)
-        T_env_to_anchor = torch.stack([
-            torch.stack([torch.cos(self._target_headings), -torch.sin(self._target_headings), torch.zeros_like(self._target_headings)], dim=-1),
-            torch.stack([torch.sin(self._target_headings), torch.cos(self._target_headings), torch.zeros_like(self._target_headings)], dim=-1),
-            torch.stack([-anchor_point[:, 0], -anchor_point[:, 1], torch.ones_like(self._target_headings)], dim=-1), 
-        ], dim=-1)
-        fp_pos_in_anchor_coord = torch.bmm(T_env_to_anchor, torch.stack([fp_position[:, 0], fp_position[:, 1], torch.ones_like(fp_position[:, 1])], dim=-1).unsqueeze(-1)).squeeze(-1)[:, :2]
-        relative_angle = torch.atan2(fp_pos_in_anchor_coord[:, 1], fp_pos_in_anchor_coord[:, 0])
+        relative_angle = torch.atan2((fp_position - anchor_point)[:, 1], (fp_position - anchor_point)[:, 0]) - self._target_headings
+        relative_angle = torch.atan2(torch.sin(relative_angle), torch.cos(relative_angle)) # normalize angle within (-pi, pi)
         return relative_angle
     
     def compute_relative_angle_mask(self, relative_angle:torch.Tensor):
@@ -224,7 +216,7 @@ class CloseProximityDockTask(Core):
             self.boundary_dist, step
         )
         
-        # cone shape penalty for fp-dock relative angle
+        # cone shape penalty on fp-dock relative angle
         self.relative_angle_penalty = self._task_parameters.relative_angle_penalty.compute_penalty(self.relative_angle, step)
 
         # Checks if the goal is reached
@@ -373,8 +365,8 @@ class CloseProximityDockTask(Core):
         target_orientations[:] = self._target_orientations[env_ids]
         
         # Add offset to the local target position
-        self._target_positions[env_ids, 0] += self.fp_radius * torch.cos(self._target_headings[env_ids])
-        self._target_positions[env_ids, 1] += self.fp_radius * torch.sin(self._target_headings[env_ids])
+        self._target_positions[env_ids, 0] += (self._task_parameters.fp_footprint_diameter / 2) * torch.cos(self._target_headings[env_ids])
+        self._target_positions[env_ids, 1] += (self._task_parameters.fp_footprint_diameter / 2) * torch.sin(self._target_headings[env_ids])
 
         return target_positions, target_orientations
     
@@ -390,8 +382,8 @@ class CloseProximityDockTask(Core):
         cosy_cosp = 1 - 2 * (target_orientations[env_ids, 3] * target_orientations[env_ids, 3])
         self._target_headings[env_ids] = torch.arctan2(siny_cosp, cosy_cosp)
         # Add offset to the local target position
-        self._target_positions[env_ids, 0] += self.fp_radius * torch.cos(self._target_headings[env_ids])
-        self._target_positions[env_ids, 1] += self.fp_radius * torch.sin(self._target_headings[env_ids])
+        self._target_positions[env_ids, 0] += (self._task_parameters.fp_footprint_diameter / 2) * torch.cos(self._target_headings[env_ids])
+        self._target_positions[env_ids, 1] += (self._task_parameters.fp_footprint_diameter / 2) * torch.sin(self._target_headings[env_ids])
     
     def get_initial_conditions(
         self,
@@ -411,34 +403,24 @@ class CloseProximityDockTask(Core):
         # Resets the counter of steps for which the goal was reached
         self.reset(env_ids)
         
+        # Randomizes the initial position and orientation
         initial_position = torch.zeros(
             (num_resets, 3), device=self._device, dtype=torch.float32
         )
-        
-        ### Ramdomize position and orientation ###
         r = self._spawn_position_sampler.sample(num_resets, step, device=self._device)
-        delta_angle = self.spawn_relative_angle_sampler.sample(num_resets, step, device=self._device)
-
-        # transform from dock to env
-        T_dock_to_env = torch.stack([
-            torch.stack([torch.cos(self._target_headings[env_ids]), torch.sin(self._target_headings[env_ids]), torch.zeros_like(self._target_headings[env_ids])], dim=-1),
-            torch.stack([-torch.sin(self._target_headings[env_ids]), torch.cos(self._target_headings[env_ids]), torch.zeros_like(self._target_headings[env_ids])], dim=-1),
-            torch.stack([self._target_positions[env_ids, 0], self._target_positions[env_ids, 1], torch.ones_like(self._target_headings[env_ids])], dim=-1), 
-        ], dim=-1)
-
-        initial_position[:, :2] = torch.bmm(
-            T_dock_to_env, 
-            torch.stack([r*torch.cos(delta_angle), r*torch.sin(delta_angle), torch.ones_like(delta_angle)], dim=-1).unsqueeze(-1)
-            ).squeeze(-1)[:, :2]
+        relative_angle = self.spawn_relative_angle_sampler.sample(num_resets, step, device=self._device)
+        
+        initial_position[:, 0] = self._target_positions[env_ids, 0] + r * torch.cos(self._target_headings[env_ids] + relative_angle)
+        initial_position[:, 1] = self._target_positions[env_ids, 1] + r * torch.sin(self._target_headings[env_ids] + relative_angle)
         
         initial_orientation = torch.zeros(
             (num_resets, 4), device=self._device, dtype=torch.float32
         )
         heading_noise = self._spawn_heading_sampler.sample(num_resets, step, device=self._device)
+        heading_angle = self._target_headings[env_ids] + relative_angle + math.pi + heading_noise
         
-        theta = self._target_headings[env_ids] + delta_angle + math.pi + heading_noise
-        initial_orientation[:, 0] = torch.cos(theta * 0.5)
-        initial_orientation[:, 3] = torch.sin(theta * 0.5)
+        initial_orientation[:, 0] = torch.cos(heading_angle * 0.5)
+        initial_orientation[:, 3] = torch.sin(heading_angle * 0.5)
         
         ### Randomize linear and angular velocity ###
         initial_velocity = torch.zeros(
