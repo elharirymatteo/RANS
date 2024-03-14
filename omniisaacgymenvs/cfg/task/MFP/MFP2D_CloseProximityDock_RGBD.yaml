@@ -325,6 +325,7 @@ env:
       radius: 0.31
       shape: "sphere"
       refinement: 2
+      enable_collision: True
     configuration:
       use_four_configurations: False
       num_anchors: 4

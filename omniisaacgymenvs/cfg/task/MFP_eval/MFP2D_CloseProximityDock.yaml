@@ -173,7 +173,7 @@ env:
     dock_footprint_diameter: 0.80
     fp_footprint_diameter: 0.82 # 0.62+0.2 (10cm margin)
     goal_to_penalty_anchor_dist: 0.2
-    kill_relative_angle: 1.0472 #pi/3
+    kill_relative_angle: 1.571 #pi/2
     relative_angle_penalty:
       enable: True
       weight: 0.5
@@ -227,9 +227,9 @@ env:
       sampling_parameters:
         distribution: normal
         start_mean: 0.0
-        start_std: 0.524 #pi/6
+        start_std: 1.0472 #pi/3
         end_mean: 0.0
-        end_std: 0.524 #pi/6
+        end_std: 1.0472 #pi/3
     spawn_heading_curriculum:
       rate_parameters:
         function: sigmoid
@@ -239,9 +239,9 @@ env:
       sampling_parameters:
         distribution: normal
         start_mean: 0.0
-        start_std: 3.1415 #pi
+        start_std: 0.1
         end_mean: 0.0
-        end_std: 3.1415 #pi
+        end_std: 0.1
     spawn_linear_velocity_curriculum:
       rate_parameters:
         function: none
@@ -324,6 +324,7 @@ env:
       radius: 0.31
       shape: "sphere"
       refinement: 2
+      enable_collision: True
     configuration:
       use_four_configurations: False
       num_anchors: 4

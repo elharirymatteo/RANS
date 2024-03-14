@@ -9,7 +9,7 @@ __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
 from omniisaacgymenvs.tasks.base.rl_task import RLTask
-from omniisaacgymenvs.robots.articulations.MFP2D_thrusters_docking import (
+from omniisaacgymenvs.robots.articulations.MFP2D_thrusters import (
     ModularFloatingPlatform,
 )
 from omniisaacgymenvs.robots.articulations.views.MFP2D_view import (
