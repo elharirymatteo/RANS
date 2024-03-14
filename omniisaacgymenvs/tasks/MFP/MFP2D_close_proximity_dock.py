@@ -183,7 +183,8 @@ class CloseProximityDockTask(Core):
             rward mask (torch.Tensor) : reward mask for relative angle.
         """
         if self._reward_parameters.clip_reward:
-            return (torch.abs(relative_angle) <= self._reward_parameters.boundary_relative_angle).to(torch.float32)
+            return (1 - torch.abs(relative_angle)/self._reward_parameters.boundary_relative_angle) * \
+                (torch.abs(relative_angle) <= self._reward_parameters.boundary_relative_angle).to(torch.float32)
         else:
             return torch.ones_like(relative_angle, dtype=torch.float32)
 

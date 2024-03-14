@@ -171,7 +171,7 @@ env:
     kill_dist: 4.0
     collision_force_tolerance: 1e-5
     dock_footprint_diameter: 0.80
-    fp_footprint_diameter: 1.02 # 0.62+0.4 (20cm margin)
+    fp_footprint_diameter: 0.82 # 0.62+0.2 (10cm margin)
     goal_to_penalty_anchor_dist: 0.2
     kill_relative_angle: 1.0472 #pi/3
     relative_angle_penalty:
@@ -269,8 +269,8 @@ env:
     heading_exponential_reward_coeff: 0.25
     position_scale: 0.666
     heading_scale: 0.333
-    boundary_relative_angle: 0.17453
-    clip_reward: False
+    boundary_relative_angle: 0.17453 #pi/18
+    clip_reward: True
     collision_scale: 10.0
   
   penalties_parameters:
