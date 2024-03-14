@@ -368,6 +368,7 @@ class GoThroughXYSequenceTask(Core):
         )
         q[:, :, 0] = 1
         p[:, :, :2] = self._target_positions[env_ids]
+        p[:, :, 2] = 2
 
         return p, q
 

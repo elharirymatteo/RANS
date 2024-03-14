@@ -248,8 +248,6 @@ class GoToPoseTask(Core):
     def get_goals(
         self,
         env_ids: torch.Tensor,
-        target_positions: torch.Tensor,
-        target_orientations: torch.Tensor,
         step: int = 0,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
@@ -257,8 +255,6 @@ class GoToPoseTask(Core):
 
         Args:
             env_ids (torch.Tensor): The ids of the environments.
-            target_positions (torch.Tensor): The target positions.
-            target_orientations (torch.Tensor): The target orientations.
             step (int, optional): The current step. Defaults to 0.
 
         Returns:
@@ -273,19 +269,19 @@ class GoToPoseTask(Core):
             * 2
             - self._task_parameters.goal_random_position
         )
-        target_positions[env_ids, :2] += self._target_positions[env_ids]
+        p = torch.zeros((num_goals, 3), dtype=torch.float32, device=self._device)
+        p[:, :2] += self._target_positions[env_ids]
+        p[:, 2] = 2
         # Randomize heading
         self._target_headings[env_ids] = (
             torch.rand(num_goals, device=self._device) * math.pi * 2
         )
-        target_orientations[env_ids, 0] = torch.cos(
-            self._target_headings[env_ids] * 0.5
-        )
-        target_orientations[env_ids, 3] = torch.sin(
-            self._target_headings[env_ids] * 0.5
-        )
+        q = torch.zeros((num_goals, 4), dtype=torch.float32, device=self._device)
+        q[:, 0] = 1
+        q[:, 0] = torch.cos(self._target_headings[env_ids] * 0.5)
+        q[:, 3] = torch.sin(self._target_headings[env_ids] * 0.5)
 
-        return target_positions, target_orientations
+        return p, q
 
     def get_initial_conditions(
         self,

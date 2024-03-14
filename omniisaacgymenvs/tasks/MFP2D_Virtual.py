@@ -27,6 +27,7 @@ from omniisaacgymenvs.tasks.MFP.MFP2D_penalties import (
 from omniisaacgymenvs.tasks.MFP.MFP2D_disturbances import (
     Disturbances,
 )
+from omniisaacgymenvs.tasks.MFP.MFP2D_core import quat_addition
 
 from omni.isaac.core.utils.prims import get_prim_at_path
 from omni.isaac.core.utils.torch.rotations import *
@@ -452,16 +453,31 @@ class MFP2DVirtual(RLTask):
         # Randomizes the position of the ball on the x y axes
         target_positions, target_orientation = self.task.get_goals(
             env_long,
-            self.initial_pin_pos.clone(),
-            self.initial_pin_rot.clone(),
             step=self.step,
         )
-        target_positions[env_long, 2] = torch.ones(num_sets, device=self._device) * 2.0
-        # Apply the new goals
+        if len(target_positions.shape) == 3:
+            position = (
+                target_positions
+                + self.initial_pin_pos[env_long]
+                .view(num_sets, 1, 3)
+                .expand(*target_positions.shape)
+            ).reshape(-1, 3)
+            a = (env_long * target_positions.shape[1]).repeat_interleave(
+                target_positions.shape[1]
+            )
+            b = torch.arange(target_positions.shape[1], device=self._device).repeat(
+                target_positions.shape[0]
+            )
+            env_long = a + b
+            target_orientation = target_orientation.reshape(-1, 4)
+        else:
+            position = target_positions + self.initial_pin_pos[env_long]
+
+        ## Apply the new goals
         if self._marker:
             self._marker.set_world_poses(
-                target_positions[env_long],
-                target_orientation[env_long],
+                position,
+                target_orientation,
                 indices=env_long,
             )
 

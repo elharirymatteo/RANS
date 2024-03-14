@@ -238,8 +238,6 @@ class TrackXYVelocityHeadingTask(Core):
     def get_goals(
         self,
         env_ids: torch.Tensor,
-        target_positions: torch.Tensor,
-        target_orientations: torch.Tensor,
         step: int = 0,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
@@ -267,14 +265,14 @@ class TrackXYVelocityHeadingTask(Core):
         self._target_headings[env_ids] = (
             torch.rand(num_goals, device=self._device) * math.pi * 2
         )
-        target_orientations[env_ids, 0] = torch.cos(
-            self._target_headings[env_ids] * 0.5
-        )
-        target_orientations[env_ids, 3] = torch.sin(
-            self._target_headings[env_ids] * 0.5
-        )
+        p = torch.zeros((num_goals, 3), dtype=torch.float32, device=self._device)
+        p[:, 2] = 2
+        q = torch.zeros((num_goals, 4), dtype=torch.float32, device=self._device)
+        q[:, 0] = 1
+        q[:, 0] = torch.cos(self._target_headings[env_ids] * 0.5)
+        q[:, 3] = torch.sin(self._target_headings[env_ids] * 0.5)
 
-        return target_positions, target_orientations
+        return p, q
 
     def get_initial_conditions(
         self,

@@ -216,8 +216,6 @@ class GoToXYTask(Core):
     def get_goals(
         self,
         env_ids: torch.Tensor,
-        targets_position: torch.Tensor,
-        targets_orientation: torch.Tensor,
         step: int = 0,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
@@ -225,8 +223,6 @@ class GoToXYTask(Core):
 
         Args:
             env_ids (torch.Tensor): The ids of the environments.
-            target_positions (torch.Tensor): The target positions.
-            target_orientations (torch.Tensor): The target orientations.
             step (int, optional): The current step. Defaults to 0.
 
         Returns:
@@ -240,9 +236,13 @@ class GoToXYTask(Core):
             * 2
             - self._task_parameters.goal_random_position
         )
-        targets_position[env_ids, :2] += self._target_positions[env_ids]
+        p = torch.zeros((num_goals, 3), dtype=torch.float32, device=self._device)
+        p[:, :2] += self._target_positions[env_ids]
+        p[:, 2] = 2
+        q = torch.zeros((num_goals, 4), dtype=torch.float32, device=self._device)
+        q[:, 0] = 1
 
-        return targets_position, targets_orientation
+        return p, q
 
     def get_initial_conditions(
         self,

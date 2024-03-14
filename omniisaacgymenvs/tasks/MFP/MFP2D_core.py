@@ -15,6 +15,35 @@ import torch
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
 
+def quat_addition(q1, q2):
+    q3 = torch.zeros_like(q1)
+    q3[:, 0] = (
+        q1[:, 0] * q2[:, 0]
+        - q1[:, 1] * q2[:, 1]
+        - q1[:, 2] * q2[:, 2]
+        - q1[:, 3] * q2[:, 3]
+    )
+    q3[:, 1] = (
+        q1[:, 0] * q2[:, 1]
+        + q1[:, 1] * q2[:, 0]
+        + q1[:, 2] * q2[:, 3]
+        - q1[:, 3] * q2[:, 2]
+    )
+    q3[:, 2] = (
+        q1[:, 0] * q2[:, 2]
+        - q1[:, 1] * q2[:, 3]
+        + q1[:, 2] * q2[:, 0]
+        + q1[:, 3] * q2[:, 1]
+    )
+    q3[:, 3] = (
+        q1[:, 0] * q2[:, 3]
+        + q1[:, 1] * q2[:, 2]
+        - q1[:, 2] * q2[:, 1]
+        + q1[:, 3] * q2[:, 0]
+    )
+    q3 /= torch.norm(q3 + EPS, dim=-1, keepdim=True)
+
+
 class Core:
     """
     The base class that implements the core of the task.

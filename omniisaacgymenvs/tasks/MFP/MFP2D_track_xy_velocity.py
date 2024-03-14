@@ -197,8 +197,6 @@ class TrackXYVelocityTask(Core):
     def get_goals(
         self,
         env_ids: torch.Tensor,
-        target_positions: torch.Tensor,
-        target_orientations: torch.Tensor,
         step: int = 0,
     ) -> list:
         """
@@ -222,8 +220,11 @@ class TrackXYVelocityTask(Core):
         self._target_velocities[env_ids, 0] = r * torch.cos(theta)
         self._target_velocities[env_ids, 1] = r * torch.sin(theta)
 
-        # This does not matter
-        return target_positions, target_orientations
+        p = torch.zeros((num_goals, 3), dtype=torch.float32, device=self._device)
+        p[:, 2] = 2
+        q = torch.zeros((num_goals, 4), dtype=torch.float32, device=self._device)
+        q[:, 0] = 1
+        return p, q
 
     def get_initial_conditions(
         self, env_ids: torch.Tensor, step: int = 0

@@ -286,8 +286,6 @@ class GoThroughXYTask(Core):
     def get_goals(
         self,
         env_ids: torch.Tensor,
-        target_positions: torch.Tensor,
-        target_orientations: torch.Tensor,
         step: int = 0,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
@@ -295,8 +293,6 @@ class GoThroughXYTask(Core):
 
         Args:
             env_ids (torch.Tensor): The ids of the environments.
-            target_positions (torch.Tensor): The target positions.
-            target_orientations (torch.Tensor): The target orientations.
             step (int, optional): The current step. Defaults to 0.
 
         Returns:
@@ -311,18 +307,22 @@ class GoThroughXYTask(Core):
             * 2
             - self._task_parameters.goal_random_position
         )
-        target_positions[env_ids, :2] += self._target_positions[env_ids]
+        p = torch.zeros((num_goals, 3), dtype=torch.float32, device=self._device)
+        p[:, :2] += self._target_positions[env_ids]
+        p[:, 2] = 2
         # Randomize heading
         self._delta_headings[env_ids] = self._spawn_heading_sampler.sample(
             num_goals, step, device=self._device
         )
+        q = torch.zeros((num_goals, 4), dtype=torch.float32, device=self._device)
+        q[:, 0] = 1
         # Randomizes the target linear velocity
         r = self._target_linear_velocity_sampler.sample(
             num_goals, step=step, device=self._device
         )
         self._target_velocities[env_ids] = r
 
-        return target_positions, target_orientations
+        return p, q
 
     def get_initial_conditions(
         self,
