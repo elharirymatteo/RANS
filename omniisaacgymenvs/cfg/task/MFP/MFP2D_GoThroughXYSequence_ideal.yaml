@@ -187,8 +187,8 @@ env:
         extent: 4.5
       sampling_parameters:
         distribution: truncated_normal
-        start_mean: 6.0
-        start_std: 3.0
+        start_mean: 3.0
+        start_std: 1.5
         end_mean: 6.0
         end_std: 3.0
         min_value: 1.0
@@ -202,7 +202,7 @@ env:
       sampling_parameters:
         distribution: truncated_normal
         start_mean: 0.0
-        start_std: 4.72
+        start_std: 0.25
         end_mean: 0.0 #2pi
         end_std: 4.71238898038469 #3/2 pi
         min_value: -3.141592653589793 # -pi
