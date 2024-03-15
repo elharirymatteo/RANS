@@ -19,7 +19,7 @@ env:
   numQuantizedActions: 1
   horizon_length: ${...train.params.config.horizon_length}
 
-  controlFrequencyInv: 10
+  controlFrequencyInv: 5
 
   clipObservations: {state: 8.0}
   clipActions: 1.0
@@ -169,7 +169,7 @@ env:
     heading_tolerance: 0.02
     kill_after_n_steps_in_tolerance: 50 # 10seconds
     kill_dist: 4.0
-    collision_force_tolerance: 1e-5
+    collision_force_tolerance: 0.1 #0.1N
     dock_footprint_diameter: 0.80
     fp_footprint_diameter: 0.82 # 0.62+0.2 (10cm margin)
     goal_to_penalty_anchor_dist: 0.2
@@ -190,9 +190,9 @@ env:
         extent: 4.5
       sampling_parameters:
         distribution: normal
-        start_mean: 50.0
+        start_mean: 100.0
         start_std: 0.01
-        end_mean: 5.32
+        end_mean: 100.0
         end_std: 0.01
     spawn_dock_space_curriculum:
       rate_parameters:
@@ -298,12 +298,11 @@ env:
       weight: 0.5
       scaling_function: linear
       min_value: 0.5
-      max_value: 2.0
+      max_value: 20.0
       curriculum:
-        function: sigmoid
-        start: 0
-        end: 250
-        extent: 4.5
+        function: linear
+        start: 25
+        end: 200
 
   platform:
     randomization:
@@ -337,7 +336,7 @@ env:
   
   dock:
     usd_path: robots/usd/docking_station.usd
-    mass: 50.0
+    mass: 100.0
     show_axis: False
 
 sim:

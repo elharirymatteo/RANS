@@ -90,6 +90,11 @@ class CloseProximityDockTask(Core):
         self.relative_angle = torch.zeros(
             (self._num_envs), device=self._device, dtype=torch.float32
         )
+        
+        self._goal_headings = torch.zeros(
+            (self._num_envs), device=self._device, dtype=torch.float32
+        )
+        
         self._task_label = self._task_label * 1
 
     def create_stats(self, stats: dict) -> dict:
@@ -135,13 +140,16 @@ class CloseProximityDockTask(Core):
         # position distance
         self._position_error = self._target_positions - current_state["position"]
         # heading distance
+        self._goal_headings = torch.atan2(
+            self._position_error[:, 1], self._position_error[:, 0]
+        )
         heading = torch.arctan2(
             current_state["orientation"][:, 1], current_state["orientation"][:, 0]
         )
         self._heading_error = torch.abs(
             torch.arctan2(
-                torch.sin(self._target_headings - heading),
-                torch.cos(self._target_headings - heading),
+                torch.sin(self._goal_headings - heading),
+                torch.cos(self._goal_headings - heading),
             )
         )
         # Encode task data
@@ -201,7 +209,6 @@ class CloseProximityDockTask(Core):
             
         # compute reward mask
         self.relative_angle = self.compute_relative_angle(current_state["position"])
-        self.reward_mask = self.compute_relative_angle_mask(self.relative_angle)
         
         # position error
         self.position_dist = torch.sqrt(torch.square(self._position_error).sum(-1))
@@ -237,7 +244,7 @@ class CloseProximityDockTask(Core):
         ) = self._reward_parameters.compute_reward(
             current_state, actions, self.position_dist, self.heading_dist
         )
-        return self.reward_mask * (self.position_reward + self.heading_reward) - self.boundary_penalty - self.relative_angle_penalty
+        return self.position_reward + self.heading_reward - self.boundary_penalty - self.relative_angle_penalty
 
     def update_kills(self) -> torch.Tensor:
         """
