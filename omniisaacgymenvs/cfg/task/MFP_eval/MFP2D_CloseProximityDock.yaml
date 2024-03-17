@@ -338,6 +338,7 @@ env:
     usd_path: robots/usd/docking_station.usd
     mass: 5.32
     show_axis: False
+    enable_collision: True
 
 sim:
   dt: 0.02

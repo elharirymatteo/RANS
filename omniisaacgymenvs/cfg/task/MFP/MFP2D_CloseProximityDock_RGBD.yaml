@@ -363,6 +363,7 @@ env:
     usd_path: robots/usd/docking_station.usd
     mass: 50.0
     show_axis: False
+    enable_collision: True
   
   sensors:
     camera:

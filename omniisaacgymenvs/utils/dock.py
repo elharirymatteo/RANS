@@ -21,6 +21,7 @@ class DockParameters:
     usd_path: str = None
     show_axis: bool = False
     mass: float = 5.0
+    enable_collision: bool = True
 
 class Dock(Articulation):
     """
@@ -152,7 +153,7 @@ class Dock(Articulation):
         self.core_path = self.prim_path+"/dock"
         core = get_prim_at_path(self.core_path)
         applyRigidBody(core)
-        applyCollider(core, True)
+        applyCollider(core, self.dock_params.enable_collision)
         applyMass(core, self.dock_params.mass)
 
 class DockView(ArticulationView):
