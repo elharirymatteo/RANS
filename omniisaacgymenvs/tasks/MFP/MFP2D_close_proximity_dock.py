@@ -173,20 +173,20 @@ class CloseProximityDockTask(Core):
         relative_angle = torch.atan2(torch.sin(relative_angle), torch.cos(relative_angle)) # normalize angle within (-pi, pi)
         return relative_angle
     
-    def compute_relative_angle_mask(self, relative_angle:torch.Tensor):
-        """
-        Computes the reward reward mask of relative angle.
-        If it exceeds boundary_angle, no reward is given.
-        Args:
-            relative_angle (torch.Tensor): relative angle between FP and anchor point.
-        Returns:
-            rward mask (torch.Tensor) : reward mask for relative angle.
-        """
-        if self._reward_parameters.clip_reward:
-            return (1 - torch.abs(relative_angle)/self._reward_parameters.boundary_relative_angle) * \
-                (torch.abs(relative_angle) <= self._reward_parameters.boundary_relative_angle).to(torch.float32)
-        else:
-            return torch.ones_like(relative_angle, dtype=torch.float32)
+    # def compute_relative_angle_mask(self, relative_angle:torch.Tensor):
+    #     """
+    #     Computes the reward reward mask of relative angle.
+    #     If it exceeds boundary_angle, no reward is given.
+    #     Args:
+    #         relative_angle (torch.Tensor): relative angle between FP and anchor point.
+    #     Returns:
+    #         rward mask (torch.Tensor) : reward mask for relative angle.
+    #     """
+    #     if self._reward_parameters.clip_reward:
+    #         return (1 - torch.abs(relative_angle)/self._reward_parameters.boundary_relative_angle) * \
+    #             (torch.abs(relative_angle) <= self._reward_parameters.boundary_relative_angle).to(torch.float32)
+    #     else:
+    #         return torch.ones_like(relative_angle, dtype=torch.float32)
 
     def compute_reward(
         self, 

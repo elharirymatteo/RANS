@@ -168,20 +168,22 @@ env:
     position_tolerance: 0.05
     heading_tolerance: 0.02
     kill_after_n_steps_in_tolerance: 50 # 10seconds
-    kill_dist: 4.0
+    kill_dist: 5.0
     collision_force_tolerance: 0.1 #0.1N
     dock_footprint_diameter: 0.80
     fp_footprint_diameter: 0.82 # 0.62+0.2 (10cm margin)
-    goal_to_penalty_anchor_dist: 0.2
-    kill_relative_angle: 1.571 #pi/2
+    goal_to_penalty_anchor_dist: 0.2 # offset from goal position to penalty anchor
+    kill_relative_angle: 2.094 #2pi/3
     relative_angle_penalty:
       enable: True
-      weight: 0.5
+      weight: 1.0
       scaling_function: linear
       min_value: 0.1745 #pi/18
       max_value: 3.1415
       curriculum:
-        function: none
+        function: linear
+        start: 25
+        end: 200
     spawn_dock_mass_curriculum:
       rate_parameters:
         function: sigmoid
@@ -269,9 +271,7 @@ env:
     heading_exponential_reward_coeff: 0.25
     position_scale: 0.666
     heading_scale: 0.333
-    boundary_relative_angle: 0.17453 #pi/18
-    clip_reward: True
-    collision_scale: 10.0
+    collision_scale: 100.0
   
   penalties_parameters:
     energy_penalty:
@@ -374,7 +374,7 @@ sim:
     gpu_found_lost_pairs_capacity: 7200
     gpu_found_lost_aggregate_pairs_capacity: 262144
     # gpu_total_aggregate_pairs_capacity: 1024
-    gpu_total_aggregate_pairs_capacity: 8000
+    gpu_total_aggregate_pairs_capacity: 10000
     gpu_max_soft_body_contacts: 1048576
     gpu_max_particle_contacts: 1048576
     gpu_heap_capacity: 67108864
