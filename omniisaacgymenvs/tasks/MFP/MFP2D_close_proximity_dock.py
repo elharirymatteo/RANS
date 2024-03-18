@@ -52,6 +52,9 @@ class CloseProximityDockTask(Core):
         self._task_parameters = CloseProximityDockParameters(**task_param)
         self._reward_parameters = CloseProximityDockReward(**reward_param)
         # Curriculum samplers
+        self._fp_footprint_diameter_sampler = CurriculumSampler(
+            self._task_parameters.fp_footprint_diameter_curriculum
+        )
         self._spawn_dock_mass_sampler = CurriculumSampler(
             self._task_parameters.spawn_dock_mass_curriculum
         )
@@ -372,7 +375,7 @@ class CloseProximityDockTask(Core):
         target_orientations[:] = self._target_orientations[env_ids]
         
         # Add offset to the local target position
-        fp_foot_print_diameter = self._task_parameters.fp_footprint_diameter_curriculum.sample(num_goals, step, device=self._device)
+        fp_foot_print_diameter = self._fp_footprint_diameter_sampler.sample(num_goals, step, device=self._device)
         self._target_positions[env_ids, 0] += (fp_foot_print_diameter / 2) * torch.cos(self._target_headings[env_ids])
         self._target_positions[env_ids, 1] += (fp_foot_print_diameter / 2) * torch.sin(self._target_headings[env_ids])
 
@@ -394,7 +397,7 @@ class CloseProximityDockTask(Core):
         cosy_cosp = 1 - 2 * (target_orientations[env_ids, 3] * target_orientations[env_ids, 3])
         self._target_headings[env_ids] = torch.arctan2(siny_cosp, cosy_cosp)
         # Add offset to the local target position
-        fp_foot_print_diameter = self._task_parameters.fp_footprint_diameter_curriculum.sample(len(env_ids), step, device=self._device)
+        fp_foot_print_diameter = self._fp_footprint_diameter_sampler.sample(len(env_ids), step, device=self._device)
         self._target_positions[env_ids, 0] += (fp_foot_print_diameter / 2) * torch.cos(self._target_headings[env_ids])
         self._target_positions[env_ids, 1] += (fp_foot_print_diameter / 2) * torch.sin(self._target_headings[env_ids])
     
