@@ -11,7 +11,7 @@ lab_usd_path: robots/usd/zero_g_lab.usd
 
 # if given, will override the device setting in gym. 
 env:
-  numEnvs: ${resolve_default:24,${...num_envs}}
+  numEnvs: ${resolve_default:64,${...num_envs}}
   envSpacing: 12
   maxEpisodeLength: 450
   enableDebugVis: False
@@ -332,8 +332,6 @@ env:
       thrust_force: 1.0
       visualize: False
       save_path: "config.png"
-    arrow:
-      enable: False
     camera:
       structure:
         module_name: "D455"

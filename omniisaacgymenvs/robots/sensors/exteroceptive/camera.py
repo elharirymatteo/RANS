@@ -28,12 +28,12 @@ class RLCamera:
                 sensor_param (dict): parameters for the sensor
                 override_param (bool): if True, the sensor parameters will be overriden
         """
-        self.sensor_param = sensor_cfg["params"]
         self.is_override = sensor_cfg["is_override"]
         self.prim_path = sensor_cfg["prim_path"]
 
         if self.is_override:
-            self.override_params(get_current_stage(), self.prim_path, self.sensor_param)
+            assert "params" in sensor_cfg.keys(), "params must be provided if override is True."
+            self.override_params(get_current_stage(), self.prim_path, sensor_cfg["params"])
         
         self.render_product = rep.create.render_product(
             self.prim_path, 

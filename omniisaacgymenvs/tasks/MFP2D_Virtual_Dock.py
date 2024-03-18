@@ -27,6 +27,9 @@ from omniisaacgymenvs.tasks.MFP.MFP2D_penalties import (
 from omniisaacgymenvs.tasks.MFP.MFP2D_disturbances import (
     Disturbances,
 )
+from omniisaacgymenvs.robots.sensors.exteroceptive.camera import (
+    camera_factory, 
+)
 from omniisaacgymenvs.robots.articulations.utils.MFP_utils import *
 
 from omni.isaac.core.utils.stage import add_reference_to_stage
@@ -246,6 +249,10 @@ class MFP2DVirtual_Dock(RLTask):
         
         # Add rigidprim view of docking station to the scene
         scene, self._dock_view = self.task.add_dock_to_scene(scene)
+
+        # Collects replicator camera
+        if self._task_cfg["env"].get("sensors", None) is not None:
+            self.collect_camera()
         return
 
     def get_floating_platform(self):
@@ -280,6 +287,24 @@ class MFP2DVirtual_Dock(RLTask):
         usd_path = os.path.join(os.getcwd(), self._task_cfg["lab_usd_path"])
         prim = add_reference_to_stage(usd_path, self._task_cfg["lab_path"])
         applyCollider(prim, True)
+    
+    def collect_camera(self) -> None:
+        """
+        Collect active cameras to generate synthetic images in batch."""
+        active_sensors = []
+        active_camera_source_path = self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["prim_path"]
+        for i in range(self._num_envs):
+            # swap env_0 to env_i
+            sensor_path = active_camera_source_path.split("/")
+            sensor_path[3] = f"env_{i}"
+            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["prim_path"] = (
+                "/".join(sensor_path)
+            )
+            rl_sensor = camera_factory.get("RLCamera")(
+                self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]
+            )
+            active_sensors.append(rl_sensor)
+        self.active_sensors = active_sensors
 
     def update_state(self) -> None:
         """
@@ -352,6 +377,18 @@ class MFP2DVirtual_Dock(RLTask):
         
         observations = {self._platforms.name: {"obs_buf": self.obs_buf}}
         return observations
+    
+    def get_rgbd_data(self) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        return batched sensor data.
+        Returns:
+            rgb (torch.Tensor): batched rgb data
+            depth (torch.Tensor): batched depth data
+        """
+        rs_obs = [sensor.get_observation() for sensor in self.active_sensors]
+        rgb = torch.stack([ob["rgb"] for ob in rs_obs])
+        depth = torch.stack([ob["depth"] for ob in rs_obs])
+        return rgb, depth
     
     def compute_contact_state(self)-> torch.Tensor:
         """
