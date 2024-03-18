@@ -168,12 +168,12 @@ env:
     position_tolerance: 0.05
     heading_tolerance: 0.02
     kill_after_n_steps_in_tolerance: 50 # 10seconds
-    kill_dist: 8.0
-    collision_force_tolerance: 1e-5
+    kill_dist: 5.0
+    collision_force_tolerance: 0.1 #0.1N
     dock_footprint_diameter: 0.80
     fp_footprint_diameter: 0.82 # 0.62+0.2 (10cm margin)
-    goal_to_penalty_anchor_dist: 0.4
-    kill_relative_angle: 1.0472 #pi/3
+    goal_to_penalty_anchor_dist: 0.2 # offset from goal position to penalty anchor
+    kill_relative_angle: 2.094 #2pi/3
     relative_angle_penalty:
       enable: True
       weight: 0.5
@@ -181,18 +181,20 @@ env:
       min_value: 0.1745 #pi/18
       max_value: 3.1415
       curriculum:
-        function: none
+        function: linear
+        start: 25
+        end: 200
     spawn_dock_mass_curriculum:
       rate_parameters:
         function: sigmoid
-        start: 25
+        start: 100
         end: 1000
         extent: 4.5
       sampling_parameters:
         distribution: normal
-        start_mean: 50.0
+        start_mean: 100.0
         start_std: 0.01
-        end_mean: 5.0
+        end_mean: 100.0
         end_std: 0.01
     spawn_dock_space_curriculum:
       rate_parameters:
@@ -229,7 +231,7 @@ env:
         start_mean: 0.0
         start_std: 0.01 #super small angle
         end_mean: 0.0
-        end_std: 0.523 #pi/3
+        end_std: 1.0472 #pi/3
     spawn_heading_curriculum:
       rate_parameters:
         function: sigmoid
@@ -241,7 +243,7 @@ env:
         start_mean: 0.0
         start_std: 0.01 #super small angle
         end_mean: 0.0
-        end_std: 3.1415 #pi/2
+        end_std: 3.14
     spawn_linear_velocity_curriculum:
       rate_parameters:
         function: none
@@ -267,11 +269,9 @@ env:
     heading_reward_mode: exponential
     position_exponential_reward_coeff: 0.50
     heading_exponential_reward_coeff: 0.25
-    position_scale: 0.666
-    heading_scale: 0.333
-    boundary_relative_angle: 0.17453
-    clip_reward: False
-    collision_scale: 10.0
+    position_scale: 0.5
+    heading_scale: 0.5
+    collision_scale: 100.0
   
   penalties_parameters:
     energy_penalty:
@@ -283,10 +283,10 @@ env:
         end: 1000
         extent: 4.5
     linear_velocity_penalty:
-      enable: False
-      weight: 0.1
+      enable: True
+      weight: 0.5
       scaling_function: linear
-      min_value: 0.3
+      min_value: 0.2
       max_value: 1.0
       curriculum:
         function: sigmoid
@@ -298,12 +298,11 @@ env:
       weight: 0.5
       scaling_function: linear
       min_value: 0.5
-      max_value: 2.0
+      max_value: 20.0
       curriculum:
-        function: sigmoid
-        start: 0
-        end: 250
-        extent: 4.5
+        function: linear
+        start: 25
+        end: 200
 
   platform:
     randomization:
@@ -359,12 +358,6 @@ env:
             horizontalAperture: 3.60
             verticalAperture: 2.70
   
-  dock:
-    usd_path: robots/usd/docking_station.usd
-    mass: 50.0
-    show_axis: False
-    enable_collision: True
-  
   sensors:
     camera:
       RLCamera:
@@ -379,6 +372,12 @@ env:
           verticalAperture: 2.70
       save_to_log: True
       save_frequency: 1000
+  
+  dock:
+    usd_path: robots/usd/docking_station.usd
+    mass: 100.0
+    show_axis: False
+    enable_collision: True
 
 sim:
   dt: 0.02
@@ -411,9 +410,11 @@ sim:
     # GPU buffers
     gpu_max_rigid_contact_count: 524288
     gpu_max_rigid_patch_count: 81920
-    gpu_found_lost_pairs_capacity: 1024
+    # gpu_found_lost_pairs_capacity: 1024
+    gpu_found_lost_pairs_capacity: 7200
     gpu_found_lost_aggregate_pairs_capacity: 262144
-    gpu_total_aggregate_pairs_capacity: 1024
+    # gpu_total_aggregate_pairs_capacity: 1024
+    gpu_total_aggregate_pairs_capacity: 20000
     gpu_max_soft_body_contacts: 1048576
     gpu_max_particle_contacts: 1048576
     gpu_heap_capacity: 67108864

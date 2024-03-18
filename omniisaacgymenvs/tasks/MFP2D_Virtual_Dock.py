@@ -414,7 +414,7 @@ class MFP2DVirtual_Dock(RLTask):
         """
         Applies all the forces to the platform and its thrusters."""
 
-         # Applies actions from the thrusters
+        # Applies actions from the thrusters
         self._platforms.thrusters.apply_forces_and_torques_at_pos(
             forces=self.forces, positions=self.positions, is_global=False
         )
