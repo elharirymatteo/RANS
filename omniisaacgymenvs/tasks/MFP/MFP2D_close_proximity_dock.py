@@ -154,8 +154,8 @@ class CloseProximityDockTask(Core):
         )
         # Encode task data
         self._task_data[:, :2] = self._position_error
-        self._task_data[:, 2] = torch.cos(self._heading_error - math.pi)
-        self._task_data[:, 3] = torch.sin(self._heading_error - math.pi)
+        self._task_data[:, 2] = torch.cos(self._heading_error)
+        self._task_data[:, 3] = torch.sin(self._heading_error)
         return self.update_observation_tensor(current_state)
     
     def compute_relative_angle(self, fp_position:torch.Tensor):
@@ -212,8 +212,8 @@ class CloseProximityDockTask(Core):
         
         # position error
         self.position_dist = torch.sqrt(torch.square(self._position_error).sum(-1))
-        # heading error (force heading error to be close to pi)
-        self.heading_dist = torch.abs(self._heading_error - math.pi)
+        # heading error
+        self.heading_dist = self._heading_error
         
         # boundary penalty
         self.boundary_dist = torch.abs(

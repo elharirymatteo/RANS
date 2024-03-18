@@ -176,7 +176,7 @@ env:
     kill_relative_angle: 2.094 #2pi/3
     relative_angle_penalty:
       enable: True
-      weight: 1.0
+      weight: 0.5
       scaling_function: linear
       min_value: 0.1745 #pi/18
       max_value: 3.1415
@@ -269,8 +269,8 @@ env:
     heading_reward_mode: exponential
     position_exponential_reward_coeff: 0.50
     heading_exponential_reward_coeff: 0.25
-    position_scale: 0.666
-    heading_scale: 0.333
+    position_scale: 0.5
+    heading_scale: 0.5
     collision_scale: 100.0
   
   penalties_parameters:
