@@ -11,7 +11,7 @@ lab_usd_path: robots/usd/zero_g_lab.usd
 
 # if given, will override the device setting in gym. 
 env:
-  numEnvs: ${resolve_default:64,${...num_envs}}
+  numEnvs: ${resolve_default:24,${...num_envs}}
   envSpacing: 12
   maxEpisodeLength: 450
   enableDebugVis: False
@@ -19,7 +19,7 @@ env:
   numQuantizedActions: 1
   horizon_length: ${...train.params.config.horizon_length}
 
-  controlFrequencyInv: 10
+  controlFrequencyInv: 5
 
   clipObservations: {state: 8.0}
   clipActions: 1.0
