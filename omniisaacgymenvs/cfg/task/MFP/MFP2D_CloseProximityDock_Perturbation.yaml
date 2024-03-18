@@ -29,7 +29,7 @@ env:
 
   disturbances:
     force_disturbance:
-      enable: True
+      enable: False
       use_sinusoidal_patterns: False
       min_freq: 0.25
       max_freq: 3
@@ -50,7 +50,7 @@ env:
           min_value: 0.0
           max_value: 0.5
     torque_disturbance:
-      enable: True
+      enable: False
       use_sinusoidal_patterns: False
       min_freq: 0.25
       max_freq: 3
@@ -71,9 +71,9 @@ env:
           min_value: -0.1
           max_value: 0.1
     observations_disturbance:
-      enable_position_noise: True
-      enable_velocity_noise: True
-      enable_orientation_noise: True
+      enable_position_noise: False
+      enable_velocity_noise: False
+      enable_orientation_noise: False
       position_curriculum:
         rate_parameters:
           function: sigmoid
@@ -171,8 +171,8 @@ env:
     kill_dist: 5.0
     collision_force_tolerance: 0.1 #0.1N
     dock_footprint_diameter: 0.80
-    goal_to_penalty_anchor_dist: 0.2 # offset from goal position to penalty anchor
-    kill_relative_angle: 2.094 #2pi/3
+    goal_to_penalty_anchor_dist: 1.0 # offset from goal position to penalty anchor
+    kill_relative_angle: 3.15 # never kill
     relative_angle_penalty:
       enable: True
       weight: 0.5
@@ -227,9 +227,9 @@ env:
         extent: 4.5
       sampling_parameters:
         distribution: normal
-        start_mean: 0.3
+        start_mean: 0.6
         start_std: 0.05
-        end_mean: 1.5
+        end_mean: 2.0
         end_std: 0.05
     spawn_relative_angle_curriculum:
       rate_parameters:
@@ -278,7 +278,7 @@ env:
     name: CloseProximityDock
     position_reward_mode: exponential
     heading_reward_mode: exponential
-    position_exponential_reward_coeff: 0.50
+    position_exponential_reward_coeff: 0.25
     heading_exponential_reward_coeff: 0.25
     position_scale: 0.5
     heading_scale: 0.5

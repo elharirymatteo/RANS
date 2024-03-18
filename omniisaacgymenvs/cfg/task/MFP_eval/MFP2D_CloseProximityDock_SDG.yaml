@@ -180,9 +180,7 @@ env:
       min_value: 0.1745 #pi/18
       max_value: 3.1415
       curriculum:
-        function: linear
-        start: 25
-        end: 200
+        function: none
     fp_footprint_diameter_curriculum:
       rate_parameters:
         function: sigmoid

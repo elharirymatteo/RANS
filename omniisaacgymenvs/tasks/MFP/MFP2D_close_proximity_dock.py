@@ -163,34 +163,19 @@ class CloseProximityDockTask(Core):
     
     def compute_relative_angle(self, fp_position:torch.Tensor):
         """
-        Compute relative angle between FP and anchor point, where is bit behind target location.
+        Compute relative angle between FP and anchor point of cone-shape penalty.
         Args:
             fp_position: position of the FP in env coordinate.
         Returns:
             relative_angle: relative angle between FP and anchor point.
         """
         anchor_point = self._target_positions.clone()
-        anchor_point[:, 0] -= self._task_parameters.goal_to_penalty_anchor_dist * torch.cos(self._target_headings)
-        anchor_point[:, 1] -= self._task_parameters.goal_to_penalty_anchor_dist * torch.sin(self._target_headings)
+        anchor_point[:, 0] += self._task_parameters.goal_to_penalty_anchor_dist * torch.cos(self._target_headings)
+        anchor_point[:, 1] += self._task_parameters.goal_to_penalty_anchor_dist * torch.sin(self._target_headings)
         relative_angle = torch.atan2((fp_position - anchor_point)[:, 1], (fp_position - anchor_point)[:, 0]) - self._target_headings
         relative_angle = torch.atan2(torch.sin(relative_angle), torch.cos(relative_angle)) # normalize angle within (-pi, pi)
         return relative_angle
     
-    # def compute_relative_angle_mask(self, relative_angle:torch.Tensor):
-    #     """
-    #     Computes the reward reward mask of relative angle.
-    #     If it exceeds boundary_angle, no reward is given.
-    #     Args:
-    #         relative_angle (torch.Tensor): relative angle between FP and anchor point.
-    #     Returns:
-    #         rward mask (torch.Tensor) : reward mask for relative angle.
-    #     """
-    #     if self._reward_parameters.clip_reward:
-    #         return (1 - torch.abs(relative_angle)/self._reward_parameters.boundary_relative_angle) * \
-    #             (torch.abs(relative_angle) <= self._reward_parameters.boundary_relative_angle).to(torch.float32)
-    #     else:
-    #         return torch.ones_like(relative_angle, dtype=torch.float32)
-
     def compute_reward(
         self, 
         current_state: dict, 

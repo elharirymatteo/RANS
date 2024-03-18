@@ -180,9 +180,7 @@ env:
       min_value: 0.1745 #pi/18
       max_value: 3.1415
       curriculum:
-        function: linear
-        start: 25
-        end: 200
+        function: none
     fp_footprint_diameter_curriculum:
       rate_parameters:
         function: sigmoid
@@ -279,7 +277,7 @@ env:
     name: CloseProximityDock
     position_reward_mode: exponential
     heading_reward_mode: exponential
-    position_exponential_reward_coeff: 0.50
+    position_exponential_reward_coeff: 0.25
     heading_exponential_reward_coeff: 0.25
     position_scale: 0.500
     heading_scale: 0.500

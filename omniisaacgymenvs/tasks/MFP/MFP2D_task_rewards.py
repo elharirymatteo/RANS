@@ -291,7 +291,6 @@ class TrackXYVelocityHeadingReward:
 class CloseProximityDockReward(GoToPoseReward):
     """
     Reward function and parameters for the GoToDock task."""
-    clip_reward: bool = False
     boundary_relative_angle: float = 0.17453
     collision_scale: float = 1.0
     goal_bonus_scale: float = 1.0
