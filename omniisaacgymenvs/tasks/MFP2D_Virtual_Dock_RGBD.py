@@ -440,7 +440,16 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         Updates the goal state of the task."""
 
         target_positions, target_orientations = self._dock_view.base.get_world_poses(clone=True)
-        self.task.set_goals(self.all_indices.long(), target_positions-self._env_pos, target_orientations)
+        self.task.set_goals(self.all_indices.long(), target_positions-self._env_pos, target_orientations, self.step)
+    
+    def compute_contact_state(self)-> torch.Tensor:
+        """
+        Get the contact state of the platform.
+        Returns:
+            net_contact_forces_norm (torch.Tensor): the norm of the net contact forces."""
+        net_contact_forces = self._platforms.base.get_net_contact_forces(clone=False)
+        net_contact_forces_norm = torch.norm(net_contact_forces, dim=-1)
+        self.contact_state = net_contact_forces_norm
 
     def get_observations(self) -> Dict[str, torch.Tensor]:
         """
@@ -483,15 +492,6 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         rgb = torch.stack([ob["rgb"] for ob in rs_obs])
         depth = torch.stack([ob["depth"] for ob in rs_obs])
         return rgb, depth
-
-    def compute_contact_state(self)-> torch.Tensor:
-        """
-        Get the contact state of the platform.
-        Returns:
-            net_contact_forces_norm (torch.Tensor): the norm of the net contact forces."""
-        net_contact_forces = self._platforms.base.get_net_contact_forces(clone=False)
-        net_contact_forces_norm = torch.norm(net_contact_forces, dim=-1)
-        self.contact_state = net_contact_forces_norm
 
     def pre_physics_step(self, actions: torch.Tensor) -> None:
         """

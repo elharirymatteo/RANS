@@ -171,7 +171,6 @@ env:
     kill_dist: 5.0
     collision_force_tolerance: 0.1 #0.1N
     dock_footprint_diameter: 0.80
-    fp_footprint_diameter: 0.82 # 0.62+0.2 (10cm margin)
     goal_to_penalty_anchor_dist: 0.2 # offset from goal position to penalty anchor
     kill_relative_angle: 2.094 #2pi/3
     relative_angle_penalty:
@@ -184,6 +183,18 @@ env:
         function: linear
         start: 25
         end: 200
+    fp_footprint_diameter_curriculum:
+      rate_parameters:
+        function: sigmoid
+        start: 100
+        end: 1000
+        extent: 4.5
+      sampling_parameters:
+        distribution: normal
+        start_mean: 1.02 # 0.62+0.4 (20cm margin)
+        start_std: 0.01
+        end_mean: 0.72 # 0.62 + 0.1 (5cm margin)
+        end_std: 0.01
     spawn_dock_mass_curriculum:
       rate_parameters:
         function: sigmoid

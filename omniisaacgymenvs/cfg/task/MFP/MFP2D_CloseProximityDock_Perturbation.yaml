@@ -29,7 +29,7 @@ env:
 
   disturbances:
     force_disturbance:
-      enable: False
+      enable: True
       use_sinusoidal_patterns: False
       min_freq: 0.25
       max_freq: 3
@@ -50,7 +50,7 @@ env:
           min_value: 0.0
           max_value: 0.5
     torque_disturbance:
-      enable: False
+      enable: True
       use_sinusoidal_patterns: False
       min_freq: 0.25
       max_freq: 3
@@ -71,9 +71,9 @@ env:
           min_value: -0.1
           max_value: 0.1
     observations_disturbance:
-      enable_position_noise: False
-      enable_velocity_noise: False
-      enable_orientation_noise: False
+      enable_position_noise: True
+      enable_velocity_noise: True
+      enable_orientation_noise: True
       position_curriculum:
         rate_parameters:
           function: sigmoid
@@ -169,7 +169,7 @@ env:
     heading_tolerance: 0.02
     kill_after_n_steps_in_tolerance: 50 # 10seconds
     kill_dist: 5.0
-    collision_force_tolerance: 0.1
+    collision_force_tolerance: 0.1 #0.1N
     dock_footprint_diameter: 0.80
     goal_to_penalty_anchor_dist: 0.2 # offset from goal position to penalty anchor
     kill_relative_angle: 2.094 #2pi/3
@@ -227,9 +227,9 @@ env:
         extent: 4.5
       sampling_parameters:
         distribution: normal
-        start_mean: 1.0
+        start_mean: 0.3
         start_std: 0.05
-        end_mean: 1.0
+        end_mean: 1.5
         end_std: 0.05
     spawn_relative_angle_curriculum:
       rate_parameters:
@@ -240,7 +240,7 @@ env:
       sampling_parameters:
         distribution: normal
         start_mean: 0.0
-        start_std: 1.0472 #pi/3
+        start_std: 0.01 #super small angle
         end_mean: 0.0
         end_std: 1.0472 #pi/3
     spawn_heading_curriculum:
@@ -252,9 +252,9 @@ env:
       sampling_parameters:
         distribution: normal
         start_mean: 0.0
-        start_std: 0.1
+        start_std: 0.01 #super small angle
         end_mean: 0.0
-        end_std: 0.1
+        end_std: 3.14
     spawn_linear_velocity_curriculum:
       rate_parameters:
         function: none
@@ -280,8 +280,8 @@ env:
     heading_reward_mode: exponential
     position_exponential_reward_coeff: 0.50
     heading_exponential_reward_coeff: 0.25
-    position_scale: 0.500
-    heading_scale: 0.500
+    position_scale: 0.5
+    heading_scale: 0.5
     collision_scale: 100.0
   
   penalties_parameters:
@@ -342,35 +342,8 @@ env:
       thrust_force: 1.0
       visualize: False
       save_path: "config.png"
-    camera:
-      structure:
-        module_name: "D455"
-        root_prim:
-          prim_path: "${......fp_path}/core/body/${..module_name}"
-          pose: [0.3, 0, 0, 0, 0, -90] #camera root pose relative to FP body [x, y, z, roll, pitch, yaw]
-        sensor_base:
-          prim_name: "camera_link"
-          usd_path: "robots/usd/${..module_name}.usd"
-        # [link_name, relative transform from sensor base prim]
-        links: [
-          ["camera_color_frame", [0.011, 0, 0, 0, 0, 0]], 
-          ["camera_color_optical_frame", [0.011, 0, 0, -90, 0, 0]],
-        ]
-        camera_sensor:
-          prim_path: "${......fp_path}/core/body/${..module_name}/camera_color_optical_frame/Camera"
-          rotation: [180, 0, 0] # optical frame to camera prim rotation (due to the fact that OV assumes OpenGL convention)
-          params:
-            focalLength: 1.93
-            focusDistance: 20.0
-            clippingRange: [0.01, 20.0]
-            horizontalAperture: 3.60
-            verticalAperture: 2.70
-  sensors:
-    camera:
-      RLCamera:
-        prim_path: "${.....fp_path}/core/body/${....platform.camera.structure.module_name}/camera_color_optical_frame/Camera"
-        resolution: [150, 100] # [width, height]
-        is_override: False
+    arrow:
+      enable: True
   
   dock:
     usd_path: robots/usd/docking_station.usd
@@ -383,12 +356,12 @@ sim:
   use_gpu_pipeline: ${eq:${...pipeline},"gpu"}
   gravity: [0.0, 0.0, 0.0]
   add_ground_plane: False
-  add_lab: True
+  add_lab: False
   add_distant_light: True
   use_flatcache: True
   enable_scene_query_support: False
   # set to True if you use camera sensors in the environment
-  enable_cameras: True
+  enable_cameras: False
   disable_contact_processing: False
 
   physx:
@@ -413,7 +386,7 @@ sim:
     gpu_found_lost_pairs_capacity: 7200
     gpu_found_lost_aggregate_pairs_capacity: 262144
     # gpu_total_aggregate_pairs_capacity: 1024
-    gpu_total_aggregate_pairs_capacity: 8000
+    gpu_total_aggregate_pairs_capacity: 20000
     gpu_max_soft_body_contacts: 1048576
     gpu_max_particle_contacts: 1048576
     gpu_heap_capacity: 67108864

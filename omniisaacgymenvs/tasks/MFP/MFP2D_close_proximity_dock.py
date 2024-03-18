@@ -95,7 +95,7 @@ class CloseProximityDockTask(Core):
             (self._num_envs), device=self._device, dtype=torch.float32
         )
         
-        self._task_label = self._task_label * 1
+        self._task_label = self._task_label * 6
 
     def create_stats(self, stats: dict) -> dict:
         """
@@ -166,7 +166,7 @@ class CloseProximityDockTask(Core):
         Returns:
             relative_angle: relative angle between FP and anchor point.
         """
-        anchor_point = self._target_positions
+        anchor_point = self._target_positions.clone()
         anchor_point[:, 0] -= self._task_parameters.goal_to_penalty_anchor_dist * torch.cos(self._target_headings)
         anchor_point[:, 1] -= self._task_parameters.goal_to_penalty_anchor_dist * torch.sin(self._target_headings)
         relative_angle = torch.atan2((fp_position - anchor_point)[:, 1], (fp_position - anchor_point)[:, 0]) - self._target_headings
@@ -372,12 +372,17 @@ class CloseProximityDockTask(Core):
         target_orientations[:] = self._target_orientations[env_ids]
         
         # Add offset to the local target position
-        self._target_positions[env_ids, 0] += (self._task_parameters.fp_footprint_diameter / 2) * torch.cos(self._target_headings[env_ids])
-        self._target_positions[env_ids, 1] += (self._task_parameters.fp_footprint_diameter / 2) * torch.sin(self._target_headings[env_ids])
+        fp_foot_print_diameter = self._task_parameters.fp_footprint_diameter_curriculum.sample(num_goals, step, device=self._device)
+        self._target_positions[env_ids, 0] += (fp_foot_print_diameter / 2) * torch.cos(self._target_headings[env_ids])
+        self._target_positions[env_ids, 1] += (fp_foot_print_diameter / 2) * torch.sin(self._target_headings[env_ids])
 
         return target_positions, target_orientations
     
-    def set_goals(self, env_ids: torch.Tensor, target_positions: torch.Tensor, target_orientations: torch.Tensor) -> None:
+    def set_goals(self, 
+                  env_ids: torch.Tensor, 
+                  target_positions: torch.Tensor, 
+                  target_orientations: torch.Tensor, 
+                  step:int = 0) -> None:
         """
         Update goal attribute of task class.
         Args:
@@ -389,8 +394,9 @@ class CloseProximityDockTask(Core):
         cosy_cosp = 1 - 2 * (target_orientations[env_ids, 3] * target_orientations[env_ids, 3])
         self._target_headings[env_ids] = torch.arctan2(siny_cosp, cosy_cosp)
         # Add offset to the local target position
-        self._target_positions[env_ids, 0] += (self._task_parameters.fp_footprint_diameter / 2) * torch.cos(self._target_headings[env_ids])
-        self._target_positions[env_ids, 1] += (self._task_parameters.fp_footprint_diameter / 2) * torch.sin(self._target_headings[env_ids])
+        fp_foot_print_diameter = self._task_parameters.fp_footprint_diameter_curriculum.sample(len(env_ids), step, device=self._device)
+        self._target_positions[env_ids, 0] += (fp_foot_print_diameter / 2) * torch.cos(self._target_headings[env_ids])
+        self._target_positions[env_ids, 1] += (fp_foot_print_diameter / 2) * torch.sin(self._target_headings[env_ids])
     
     def get_initial_conditions(
         self,
