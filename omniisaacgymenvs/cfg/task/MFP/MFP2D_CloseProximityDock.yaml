@@ -171,8 +171,8 @@ env:
     kill_dist: 5.0
     collision_force_tolerance: 0.1 #0.1N
     dock_footprint_diameter: 0.80
-    goal_to_penalty_anchor_dist: 1.0 # offset from goal position to penalty anchor
-    kill_relative_angle: 3.15 # never kill
+    goal_to_penalty_anchor_dist: 0.0 # offset from goal position to penalty anchor
+    kill_relative_angle: 3.141 # never kill
     relative_angle_penalty:
       enable: True
       weight: 0.5

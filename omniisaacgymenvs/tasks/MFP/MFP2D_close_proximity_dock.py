@@ -149,12 +149,22 @@ class CloseProximityDockTask(Core):
         heading = torch.arctan2(
             current_state["orientation"][:, 1], current_state["orientation"][:, 0]
         )
+        # relaxed heading error
         self._heading_error = torch.abs(
             torch.arctan2(
                 torch.sin(self._goal_headings - heading),
                 torch.cos(self._goal_headings - heading),
             )
         )
+        
+        # tight heading error
+        # self._heading_error = torch.abs(
+        #     torch.arctan2(
+        #         torch.sin(self._target_headings + math.pi - heading),
+        #         torch.cos(self._target_headings + math.pi - heading),
+        #     )
+        # )
+        
         # Encode task data
         self._task_data[:, :2] = self._position_error
         self._task_data[:, 2] = torch.cos(self._heading_error)

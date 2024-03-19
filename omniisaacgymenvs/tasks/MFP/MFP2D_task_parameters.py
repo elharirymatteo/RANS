@@ -278,7 +278,6 @@ class CloseProximityDockParameters:
         assert self.kill_dist > 0, "Kill distance must be positive."
         assert self.collision_force_tolerance > 0, "Collision force tolerance must be positive."
         assert self.dock_footprint_diameter > 0, "Dock footprint diameter must be positive."
-        assert self.goal_to_penalty_anchor_dist > 0, "Goal to penalty anchor distance must be positive."
         assert self.env_x > 0, "Environment x dimension must be positive."
         assert self.env_y > 0, "Environment y dimension must be positive."
         assert self.kill_relative_angle > 0, "Kill relative angle must be positive."
