@@ -171,8 +171,8 @@ env:
     kill_dist: 5.0
     collision_force_tolerance: 0.1 #0.1N
     dock_footprint_diameter: 0.80
-    goal_to_penalty_anchor_dist: 0.0 # offset from goal position to penalty anchor
-    kill_relative_angle: 3.141 # never kill
+    goal_to_penalty_anchor_dist: -2.0 # offset from goal position to penalty anchor
+    kill_relative_angle: 1.57
     relative_angle_penalty:
       enable: True
       weight: 0.5
@@ -280,8 +280,8 @@ env:
     heading_reward_mode: exponential
     position_exponential_reward_coeff: 0.25
     heading_exponential_reward_coeff: 0.25
-    position_scale: 0.5
-    heading_scale: 0.5
+    position_scale: 0.666
+    heading_scale: 0.333
     collision_scale: 100.0
   
   penalties_parameters:
@@ -342,8 +342,6 @@ env:
       thrust_force: 1.0
       visualize: False
       save_path: "config.png"
-    arrow:
-      enable: True
   
   dock:
     usd_path: robots/usd/docking_station.usd

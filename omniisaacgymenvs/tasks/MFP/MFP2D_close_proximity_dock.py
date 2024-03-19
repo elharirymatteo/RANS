@@ -81,6 +81,9 @@ class CloseProximityDockTask(Core):
         self._goal_reached = torch.zeros(
             (self._num_envs), device=self._device, dtype=torch.int32
         )
+        self._anchor_positions = torch.zeros(
+            (self._num_envs, 2), device=self._device, dtype=torch.float32
+        )
         self._target_positions = torch.zeros(
             (self._num_envs, 2), device=self._device, dtype=torch.float32
         )
@@ -143,8 +146,12 @@ class CloseProximityDockTask(Core):
         # position distance
         self._position_error = self._target_positions - current_state["position"]
         # heading distance
+        self._anchor_positions = self._target_positions.clone()
+        self._anchor_positions[:, 0] += self._task_parameters.goal_to_penalty_anchor_dist * torch.cos(self._target_headings)
+        self._anchor_positions[:, 1] += self._task_parameters.goal_to_penalty_anchor_dist * torch.sin(self._target_headings)
         self._goal_headings = torch.atan2(
-            self._position_error[:, 1], self._position_error[:, 0]
+            (self._anchor_positions - current_state["position"])[:, 1], 
+            (self._anchor_positions - current_state["position"])[:, 0]
         )
         heading = torch.arctan2(
             current_state["orientation"][:, 1], current_state["orientation"][:, 0]
@@ -156,14 +163,6 @@ class CloseProximityDockTask(Core):
                 torch.cos(self._goal_headings - heading),
             )
         )
-        
-        # tight heading error
-        # self._heading_error = torch.abs(
-        #     torch.arctan2(
-        #         torch.sin(self._target_headings + math.pi - heading),
-        #         torch.cos(self._target_headings + math.pi - heading),
-        #     )
-        # )
         
         # Encode task data
         self._task_data[:, :2] = self._position_error
@@ -179,10 +178,10 @@ class CloseProximityDockTask(Core):
         Returns:
             relative_angle: relative angle between FP and anchor point.
         """
-        anchor_point = self._target_positions.clone()
-        anchor_point[:, 0] += self._task_parameters.goal_to_penalty_anchor_dist * torch.cos(self._target_headings)
-        anchor_point[:, 1] += self._task_parameters.goal_to_penalty_anchor_dist * torch.sin(self._target_headings)
-        relative_angle = torch.atan2((fp_position - anchor_point)[:, 1], (fp_position - anchor_point)[:, 0]) - self._target_headings
+        self._anchor_positions = self._target_positions.clone()
+        self._anchor_positions[:, 0] += self._task_parameters.goal_to_penalty_anchor_dist * torch.cos(self._target_headings)
+        self._anchor_positions[:, 1] += self._task_parameters.goal_to_penalty_anchor_dist * torch.sin(self._target_headings)
+        relative_angle = torch.atan2((fp_position - self._anchor_positions)[:, 1], (fp_position - self._anchor_positions)[:, 0]) - self._target_headings
         relative_angle = torch.atan2(torch.sin(relative_angle), torch.cos(relative_angle)) # normalize angle within (-pi, pi)
         return relative_angle
     
