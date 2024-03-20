@@ -17,6 +17,7 @@ from pxr import Gf
 
 from omniisaacgymenvs.robots.sensors.exteroceptive.camera_interface import camera_interface_factory
 
+@dataclass
 class CameraCalibrationParam:
     """
     Camera calibration params class.

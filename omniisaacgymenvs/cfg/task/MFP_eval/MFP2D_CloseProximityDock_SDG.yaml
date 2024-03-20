@@ -336,7 +336,7 @@ env:
     camera:
       module_name: "D455"
       root_prim:
-        prim_path: "${......fp_path}/core/body/${..module_name}"
+        prim_path: "${.....fp_path}/core/body/${..module_name}"
         translation: [0.3, 0, 0] #camera root translation relative to FP body [x, y, z]
         rotation: [0, 0, -90] #camera root orientation relative to FP body [roll, pitch, yaw]
       sensor_base:
@@ -357,7 +357,7 @@ env:
           verticalAperture: 2.70
   sensors:
     RLCamera:
-      prim_path: "${.....fp_path}/core/body/${....platform.camera.structure.module_name}/camera_color_optical_frame/Camera"
+      prim_path: "${...platform.camera.camera_sensor.prim_path}"
       resolution: [150, 100] # [width, height]
       is_override: False
   

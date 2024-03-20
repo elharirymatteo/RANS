@@ -367,7 +367,7 @@ class CreatePlatform:
         Creates a camera module prim.
         """
         self.camera = sensor_module_factory.get(
-            self.camera_cfg["structure"]["module_name"]
+            self.camera_cfg["module_name"]
         )(self.camera_cfg)
         self.camera.build()
 

@@ -33,6 +33,7 @@ class RootPrimParams:
         assert len(self.translation) == 3, f"translation should be a list of 3 floats, got {self.translation}"
         assert len(self.rotation) == 3, f"rotation should be a list of 3 floats, got {self.rotation}"
 
+@dataclass
 class SensorBaseParams:
     """
     Sensor base params class.
@@ -42,7 +43,8 @@ class SensorBaseParams:
     """
     prim_name: str
     usd_path: str
-    
+
+@dataclass
 class CameraCalibrationParam:
     """
     Camera calibration params class.
@@ -59,6 +61,7 @@ class CameraCalibrationParam:
     horizontalAperture: float
     verticalAperture: float
 
+@dataclass
 class CameraParams:
     """
     Camera params class.
@@ -83,13 +86,13 @@ class CameraModuleParams:
         module_name (str): name of the module.
         root_prim (RootPrimParams): root prim params.
         sensor_base (SensorBaseParams): sensor base params.
-        links (List[List[str, List[float]]]): list of links and their transforms.
+        links (list): list of links and their transforms.
         camera_sensor (CameraParams): camera params.
     """
     module_name: str
     root_prim: RootPrimParams = field(default_factory=dict)
     sensor_base: SensorBaseParams = field(default_factory=dict)
-    links: List[List[str, List[float]]] = field(default_factory=list)
+    links: list = field(default_factory=list)
     camera_sensor: CameraParams = field(default_factory=dict)
     
     def __post_init__(self):
