@@ -172,7 +172,6 @@ env:
     collision_force_tolerance: 0.1 #0.1N
     dock_footprint_diameter: 0.80
     goal_to_penalty_anchor_dist: -2.0 # offset from goal position to penalty anchor
-    kill_relative_angle: 1.57
     relative_angle_penalty:
       enable: True
       weight: 0.5
@@ -193,7 +192,7 @@ env:
         distribution: normal
         start_mean: 1.02 # 0.62+0.4 (20cm margin)
         start_std: 0.01
-        end_mean: 0.72 # 0.62 + 0.1 (5cm margin)
+        end_mean: 0.64 # 0.62 + 0.02 (1cm margin)
         end_std: 0.01
     spawn_dock_mass_curriculum:
       rate_parameters:
@@ -205,7 +204,7 @@ env:
         distribution: normal
         start_mean: 100.0
         start_std: 0.01
-        end_mean: 100.0
+        end_mean: 5.32
         end_std: 0.01
     spawn_dock_space_curriculum:
       rate_parameters:
@@ -242,7 +241,7 @@ env:
         start_mean: 0.0
         start_std: 0.01 #super small angle
         end_mean: 0.0
-        end_std: 1.0472 #pi/3
+        end_std: 2.0943 #2pi/3
     spawn_heading_curriculum:
       rate_parameters:
         function: sigmoid

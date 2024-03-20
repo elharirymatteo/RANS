@@ -277,20 +277,6 @@ class CloseProximityDockTask(Core):
         ones = torch.ones_like(die)
         die = torch.where(contact_state > self._task_parameters.collision_force_tolerance, ones, die)
         return die
-    
-    def update_relative_angle_termination(self, die:torch.Tensor):
-        """
-        Updates if the platforms should be killed or not based on relative angle status. 
-
-        Args: 
-            die(torch.Tensor): Wether the platforms should be killed or not (from update_kills method).
-            
-        Returns:
-            torch.Tensor: Wether the platforms should be killed or not.
-        """
-        ones = torch.ones_like(die)
-        die = torch.where(torch.abs(self.relative_angle) > self._task_parameters.kill_relative_angle, ones, die)
-        return die
 
     def update_statistics(self, stats: dict) -> dict:
         """

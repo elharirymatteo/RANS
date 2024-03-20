@@ -255,7 +255,6 @@ class CloseProximityDockParameters:
     goal_to_penalty_anchor_dist: float = 0.4
     env_x: float = 3.0
     env_y: float = 5.0
-    kill_relative_angle: float = 1.571 #pi/2
     
     boundary_penalty: BoundaryPenalty = field(default_factory=dict)
     relative_angle_penalty: ConeShapePenalty = field(default_factory=dict)
@@ -280,7 +279,6 @@ class CloseProximityDockParameters:
         assert self.dock_footprint_diameter > 0, "Dock footprint diameter must be positive."
         assert self.env_x > 0, "Environment x dimension must be positive."
         assert self.env_y > 0, "Environment y dimension must be positive."
-        assert self.kill_relative_angle > 0, "Kill relative angle must be positive."
         
         self.boundary_penalty = BoundaryPenalty(**self.boundary_penalty)
         self.relative_angle_penalty = ConeShapePenalty(**self.relative_angle_penalty)

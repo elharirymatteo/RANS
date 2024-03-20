@@ -314,7 +314,7 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         # Add the floating platform, and the marker
         self.get_floating_platform()
         self.get_target()
-        if self._task_cfg["sim"]["add_lab"]:
+        if self._task_cfg["sim"].get("add_lab", False):
             self.get_zero_g_lab()
 
         RLTask.set_up_scene(self, scene, replicate_physics=False)
@@ -762,9 +762,6 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
 
         # resets due to collision
         die = self.task.update_collision_termination(die, self.contact_state)
-
-        # resets due to overshooting of relative angle
-        die = self.task.update_relative_angle_termination(die)
 
         # resets due to episode length
         self.reset_buf[:] = torch.where(
