@@ -375,16 +375,16 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         """
         Collect active cameras to generate synthetic images in batch."""
         active_sensors = []
-        active_camera_source_path = self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["prim_path"]
+        active_camera_source_path = self._task_cfg["env"]["sensors"]["RLCamera"]["prim_path"]
         for i in range(self._num_envs):
             # swap env_0 to env_i
             sensor_path = active_camera_source_path.split("/")
             sensor_path[3] = f"env_{i}"
-            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["prim_path"] = (
+            self._task_cfg["env"]["sensors"]["RLCamera"]["prim_path"] = (
                 "/".join(sensor_path)
             )
             rl_sensor = camera_factory.get("RLCamera")(
-                self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]
+                self._task_cfg["env"]["sensors"]["RLCamera"]
             )
             active_sensors.append(rl_sensor)
         self.active_sensors = active_sensors
@@ -470,8 +470,8 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         rgb_obs, depth_obs = self.get_rgbd_data()
         self.obs_buf["rgb"] = rgb_obs
         self.obs_buf["depth"] = depth_obs
-        if self._task_cfg["env"]["sensors"]["camera"]["save_to_log"] and self._cfg["wandb_activate"]:
-            if self.save_image_counter % self._task_cfg["env"]["sensors"]["camera"]["save_frequency"] == 0:
+        if self._task_cfg["env"]["sensors"]["save_to_log"] and self._cfg["wandb_activate"]:
+            if self.save_image_counter % self._task_cfg["env"]["sensors"]["save_frequency"] == 0:
                 rgb_grid = ToPILImage(make_grid(rgb_obs, nrow=5))
                 depth_grid = ToPILImage(make_grid(depth_obs, nrow=5))
                 wandb.log({"rgb": wandb.Image(rgb_grid, caption="rgb"), 

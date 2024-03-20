@@ -1,19 +1,101 @@
 __author__ = "Antoine Richard, Matteo El Hariry, Junnosuke Kamohara"
 __copyright__ = (
-    "Copyright 2023, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
+    "Copyright 2023-2024, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
 )
 __license__ = "GPL"
-__version__ = "1.0.0"
+__version__ = "2.1.0"
 __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
+import os
+from dataclasses import dataclass, field
 from omni.isaac.core.utils.stage import get_current_stage, add_reference_to_stage
 from omni.isaac.core.utils.prims import get_prim_at_path
 from pxr import Gf
-import os
 
 from omniisaacgymenvs.robots.articulations.utils.MFP_utils import *
+
+@dataclass
+class RootPrimParams:
+    """
+    Root prim params class.
+    Args:
+        prim_path (str): path to the prim.
+        translation (List[float]): translation of the prim.
+        rotation (List[float]): rotation of the prim.
+    """
+    prim_path: str
+    translation: List[float]
+    rotation: List[float]
+    
+    def __post_init__(self):
+        assert len(self.translation) == 3, f"translation should be a list of 3 floats, got {self.translation}"
+        assert len(self.rotation) == 3, f"rotation should be a list of 3 floats, got {self.rotation}"
+
+class SensorBaseParams:
+    """
+    Sensor base params class.
+    Args:
+        prim_name (str): name of the prim.
+        usd_path (str): path to the usd file. none if you do not link a usd file.
+    """
+    prim_name: str
+    usd_path: str
+    
+class CameraCalibrationParam:
+    """
+    Camera calibration params class.
+    Args:
+        focalLength (float): focal length of the camera.
+        focusDistance (float): focus distance of the camera.
+        clippingRange (List[float]): clipping range of the camera.
+        horizontalAperture (float): horizontal aperture of the camera.
+        verticalAperture (float): vertical aperture of the camera.
+    """
+    focalLength: float
+    focusDistance: float
+    clippingRange: List[float]
+    horizontalAperture: float
+    verticalAperture: float
+
+class CameraParams:
+    """
+    Camera params class.
+    Args:
+        prim_path (str): path to the prim.
+        rotation (List[float]): rotation of the prim.
+        params (CameraCalibrationParam): camera calibration params.
+    """
+    prim_path: str
+    rotation: List[float]
+    params: CameraCalibrationParam = field(default_factory=dict)
+    
+    def __post_init__(self):
+        assert len(self.rotation) == 3, f"rotation should be a list of 3 floats, got {self.rotation}"
+        self.params = CameraCalibrationParam(**self.params)
+
+@dataclass
+class CameraModuleParams:
+    """
+    Camera module params class.
+    Args:
+        module_name (str): name of the module.
+        root_prim (RootPrimParams): root prim params.
+        sensor_base (SensorBaseParams): sensor base params.
+        links (List[List[str, List[float]]]): list of links and their transforms.
+        camera_sensor (CameraParams): camera params.
+    """
+    module_name: str
+    root_prim: RootPrimParams = field(default_factory=dict)
+    sensor_base: SensorBaseParams = field(default_factory=dict)
+    links: List[List[str, List[float]]] = field(default_factory=list)
+    camera_sensor: CameraParams = field(default_factory=dict)
+    
+    def __post_init__(self):
+        self.root_prim = RootPrimParams(**self.root_prim)
+        self.sensor_base = SensorBaseParams(**self.sensor_base)
+        self.camera_sensor = CameraParams(**self.camera_sensor)
 
 class D435_Sensor:
     """
@@ -24,56 +106,39 @@ class D435_Sensor:
         """
         Args:
             cfg (dict): configuration for the sensor
-        Here are the keys in cfg:
-            structure:
-                module_name: str
-                root_prim:
-                    prim_path: str
-                    pose: List[float]
-                sensor_base:
-                    prim_name: str
-                    usd_path: str
-                links: List[List[str, List[float]]
-                camera_sensor:
-                    prim_path: str
-                    rotation: List[float]
-                    params:
-                        focalLength: float
-                        focusDistance: float
-                        clippingRange: [float, float]
-                        resolution: [float, float]
-                        horizontalAperture: float
-                        verticalAperture: float
         """
 
-        self.cfg = cfg
-        self.root_prim_path = cfg["structure"]["root_prim"]["prim_path"]
-        self.sensor_base = cfg["structure"]["sensor_base"]
-        self.links = cfg["structure"]["links"]
+        self.cfg = CameraModuleParams(**cfg)
+        self.root_prim_path = self.cfg.root_prim.prim_path
+        self.sensor_base = self.cfg.sensor_base
+        self.links = self.cfg.links
         self.stage = get_current_stage()
 
     def _add_root_prim(self) -> None:
         """
-        Add root prim."""
+        Add root prim.
+        """
 
         _, prim = createXform(self.stage, self.root_prim_path)
-        setTranslate(prim, Gf.Vec3d(*self.cfg["structure"]["root_prim"]["pose"][:3]))
-        setRotateXYZ(prim, Gf.Vec3d(*self.cfg["structure"]["root_prim"]["pose"][3:]))
+        setTranslate(prim, Gf.Vec3d(*self.cfg.root_prim.translation))
+        setRotateXYZ(prim, Gf.Vec3d(*self.cfg.root_prim.rotation))
     
     def _add_sensor_link(self) -> None:
         """
         Add sensor link(body)."""
 
-        _, prim = createXform(self.stage, os.path.join(self.root_prim_path, self.sensor_base["prim_name"]))
+        _, prim = createXform(self.stage, os.path.join(self.root_prim_path, self.sensor_base.prim_name))
         setTranslate(prim, Gf.Vec3d((0, 0, 0)))
         setRotateXYZ(prim, Gf.Vec3d((0, 0, 0)))
-
-        sensor_body_usd = os.path.join(os.getcwd(), self.sensor_base["usd_path"])
-        camera_body_prim = add_reference_to_stage(sensor_body_usd, 
-                                                  os.path.join(self.root_prim_path, self.sensor_base["prim_name"], "base_body"))
-        setTranslate(camera_body_prim, Gf.Vec3d((0, 0, 0)))
-        setRotateXYZ(camera_body_prim, Gf.Vec3d((0, 0, 0)))
-        applyCollider(camera_body_prim)
+        
+        if self.sensor_base.usd_path:
+            sensor_body_usd = os.path.join(os.getcwd(), self.sensor_base.usd_path)
+            camera_body_prim = add_reference_to_stage(sensor_body_usd, 
+                                                    os.path.join(self.root_prim_path, 
+                                                                self.sensor_base.prim_name, 
+                                                                "base_body"))
+            setTranslate(camera_body_prim, Gf.Vec3d((0, 0, 0)))
+            setRotateXYZ(camera_body_prim, Gf.Vec3d((0, 0, 0)))
     
     def _add_link(self, link_name:str) -> None:
         """
@@ -97,14 +162,14 @@ class D435_Sensor:
         """
         Add usd camera to camera optical link."""
 
-        camera = self.stage.DefinePrim(self.cfg["structure"]["camera_sensor"]["prim_path"], 'Camera')
+        camera = self.stage.DefinePrim(self.cfg.camera_sensor.prim_path, 'Camera')
         setTranslate(camera, Gf.Vec3d((0, 0, 0)))
-        setRotateXYZ(camera, Gf.Vec3f(*self.cfg["structure"]["camera_sensor"]["rotation"]))
-        camera.GetAttribute('focalLength').Set(self.cfg["structure"]["camera_sensor"]["params"]["focalLength"])
-        camera.GetAttribute('focusDistance').Set(self.cfg["structure"]["camera_sensor"]["params"]["focusDistance"])
-        camera.GetAttribute("clippingRange").Set(Gf.Vec2f(*self.cfg["structure"]["camera_sensor"]["params"]["clippingRange"]))
-        camera.GetAttribute("horizontalAperture").Set(self.cfg["structure"]["camera_sensor"]["params"]["horizontalAperture"])
-        camera.GetAttribute("verticalAperture").Set(self.cfg["structure"]["camera_sensor"]["params"]["verticalAperture"])
+        setRotateXYZ(camera, Gf.Vec3f(*self.cfg.camera_sensor.rotation))
+        camera.GetAttribute('focalLength').Set(self.cfg.camera_sensor.params.focalLength)
+        camera.GetAttribute('focusDistance').Set(self.cfg.camera_sensor.params.focusDistance)
+        camera.GetAttribute("clippingRange").Set(Gf.Vec2f(*self.cfg.camera_sensor.params.clippingRange))
+        camera.GetAttribute("horizontalAperture").Set(self.cfg.camera_sensor.params.horizontalAperture)
+        camera.GetAttribute("verticalAperture").Set(self.cfg.camera_sensor.params.verticalAperture)
     
     def _build_prim_structure(self) -> None:
         """
