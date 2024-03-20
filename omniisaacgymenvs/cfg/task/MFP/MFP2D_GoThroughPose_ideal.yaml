@@ -162,6 +162,7 @@ env:
   task_parameters:
     name: GoThroughPose
     position_tolerance: 0.1
+    heading_tolerance: 0.1
     kill_after_n_steps_in_tolerance: 1 # 10seconds
     kill_dist: 8.0
     target_linear_velocity_curriculum:

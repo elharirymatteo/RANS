@@ -206,9 +206,13 @@ class GoThroughPoseTask(Core):
         )
 
         # Checks if the goal is reached
-        self._goal_reached = (
+        position_goal_reached = (
             self.position_dist < self._task_parameters.position_tolerance
-        ).int()
+        )
+        heading_goal_reached = (
+            self.heading_dist < self._task_parameters.heading_tolerance
+        )
+        self._goal_reached = (position_goal_reached * heading_goal_reached).int()
 
         # rewards
         (

@@ -189,14 +189,20 @@ class GoThroughPoseSequenceTask(Core):
             self._task_data[:, 5 + 4 * i : 5 + 4 * i + 2] = (
                 self._target_positions[self._all, indices] - current_state["position"]
             ) * (1 - overflowing).view(-1, 1)
-            self._heading_error = torch.arctan2(
-                torch.sin(self._target_headings[self._all, indices] - heading),
-                torch.cos(self._target_headings[self._all, indices] - heading),
+            heading_error = torch.arctan2(
+                torch.sin(
+                    self._target_headings[self._all, indices]
+                    - self._target_headings[self._all, indices - 1]
+                ),
+                torch.cos(
+                    self._target_headings[self._all, indices]
+                    - self._target_headings[self._all, indices - 1]
+                ),
             )
-            self._task_data[:, 5 + 4 * i + 2] = torch.cos(self._heading_error) * (
+            self._task_data[:, 5 + 4 * i + 2] = torch.cos(heading_error) * (
                 1 - overflowing
             )
-            self._task_data[:, 5 + 4 * i + 3] = torch.cos(self._heading_error) * (
+            self._task_data[:, 5 + 4 * i + 3] = torch.cos(heading_error) * (
                 1 - overflowing
             )
 
@@ -238,9 +244,13 @@ class GoThroughPoseSequenceTask(Core):
         )
 
         # Checks if the goal is reached
-        goal_reached = (
+        position_goal_reached = (
             self.position_dist < self._task_parameters.position_tolerance
-        ).int()
+        )
+        heading_goal_reached = (
+            self.heading_dist < self._task_parameters.heading_tolerance
+        )
+        goal_reached = (position_goal_reached * heading_goal_reached).int()
         reached_ids = goal_reached.nonzero(as_tuple=False).squeeze(-1)
         # if the goal is reached, the target index is updated
         self._target_index = self._target_index + goal_reached
