@@ -166,6 +166,15 @@ env:
     gate_thickness: 0.2
     boundary_penalty:
       weight: 100.0
+    contact_penalty:
+      enable: True
+      weight: 20.0
+      scaling_function: constant
+      scaling_parameter: 1.0
+      min_value: 0.01
+      max_value: 1000.0
+      kill_on_contact: True
+      kill_threshold: 0.1
     spawn_position_curriculum:
       rate_parameters:
         function: sigmoid
@@ -252,12 +261,13 @@ env:
       radius: 0.31
       shape: "sphere"
       refinement: 2
+      enable_collision: True
     configuration:
       use_four_configurations: False
       num_anchors: 4
       offset: 0.75839816339
       thrust_force: 1.0
-      visualize: True
+      visualize: False
       save_path: "config.png"
 
   penalties_parameters:
@@ -322,9 +332,9 @@ sim:
     # GPU buffers
     gpu_max_rigid_contact_count: 524288
     gpu_max_rigid_patch_count: 81920
-    gpu_found_lost_pairs_capacity: 1024
+    gpu_found_lost_pairs_capacity: 32768
     gpu_found_lost_aggregate_pairs_capacity: 262144
-    gpu_total_aggregate_pairs_capacity: 1024
+    gpu_total_aggregate_pairs_capacity: 32768
     gpu_max_soft_body_contacts: 1048576
     gpu_max_particle_contacts: 1048576
     gpu_heap_capacity: 67108864

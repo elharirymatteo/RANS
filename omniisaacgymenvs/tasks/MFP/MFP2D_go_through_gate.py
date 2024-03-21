@@ -131,7 +131,11 @@ class GoThroughGateTask(Core):
             stats["boundary_dist"] = torch_zeros()
         self.log_with_wandb = []
         self.log_with_wandb += self._task_parameters.boundary_penalty.get_stats_name()
+        self.log_with_wandb += self._task_parameters.contact_penalty.get_stats_name()
         for name in self._task_parameters.boundary_penalty.get_stats_name():
+            if not name in stats.keys():
+                stats[name] = torch_zeros()
+        for name in self._task_parameters.contact_penalty.get_stats_name():
             if not name in stats.keys():
                 stats[name] = torch_zeros()
         return stats
@@ -199,8 +203,13 @@ class GoThroughGateTask(Core):
         self.boundary_dist = torch.abs(
             self._task_parameters.kill_dist - self.position_dist
         )
-        self.boundary_penalty = self._task_parameters.boundary_penalty.compute_penalty(
+        boundary_penalty = self._task_parameters.boundary_penalty.compute_penalty(
             self.boundary_dist, step
+        )
+        contact_penalty, self._contact_kills = (
+            self._task_parameters.contact_penalty.compute_penalty(
+                current_state["net_contact_forces"], step
+            )
         )
 
         # Project the position error into the gate frame
@@ -245,7 +254,8 @@ class GoThroughGateTask(Core):
         return (
             self.progress_reward
             + self.heading_reward
-            - self.boundary_penalty
+            - boundary_penalty
+            - contact_penalty
             - self._reward_parameters.time_penalty
             + self._reward_parameters.terminal_reward * self._goal_reached
             - self._reward_parameters.reverse_penalty * self._is_in_reverse
@@ -266,6 +276,7 @@ class GoThroughGateTask(Core):
         )
         die = torch.where(self._is_in_reverse > 0, ones, die)
         die = torch.where(self._goal_reached > 0, ones, die)
+        die = torch.where(self._contact_kills, ones, die)
         return die
 
     def update_statistics(self, stats: dict) -> dict:
@@ -285,6 +296,7 @@ class GoThroughGateTask(Core):
         stats["heading_error"] += self.heading_dist
         stats["boundary_dist"] += self.boundary_dist
         stats = self._task_parameters.boundary_penalty.update_statistics(stats)
+        stats = self._task_parameters.contact_penalty.update_statistics(stats)
         return stats
 
     def reset(self, env_ids: torch.Tensor) -> None:
@@ -565,6 +577,7 @@ class GoThroughGateTask(Core):
         """
 
         dict = self._task_parameters.boundary_penalty.get_logs()
+        dict = self._task_parameters.contact_penalty.get_logs()
         if step % 50 == 0:
             dict = {**dict, **self.log_spawn_data(step)}
             dict = {**dict, **self.log_target_data(step)}
