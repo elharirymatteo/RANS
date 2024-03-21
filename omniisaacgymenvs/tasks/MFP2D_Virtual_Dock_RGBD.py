@@ -9,15 +9,15 @@ __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
 from omniisaacgymenvs.tasks.base.rl_task import RLTask
-from omniisaacgymenvs.robots.articulations.MFP2D_thrusters_camera import (
-    ModularFloatingPlatformWithCamera,
+from omniisaacgymenvs.robots.articulations.MFP2D_thrusters import (
+    ModularFloatingPlatform,
+)
+from omniisaacgymenvs.robots.sensors.exteroceptive.camera import (
+    camera_factory, 
 )
 from omniisaacgymenvs.robots.articulations.views.MFP2D_view import (
     ModularFloatingPlatformView,
 )
-from omniisaacgymenvs.robots.sensors.exteroceptive.camera import camera_factory
-
-from omniisaacgymenvs.robots.articulations.utils.MFP_utils import applyCollider
 from omniisaacgymenvs.tasks.MFP.MFP2D_thruster_generator import (
     VirtualPlatform,
 )
@@ -30,6 +30,7 @@ from omniisaacgymenvs.tasks.MFP.MFP2D_penalties import (
 from omniisaacgymenvs.tasks.MFP.MFP2D_disturbances import (
     Disturbances,
 )
+from omniisaacgymenvs.robots.articulations.utils.MFP_utils import *
 
 from omni.isaac.core.utils.stage import add_reference_to_stage
 from omni.isaac.core.utils.prims import get_prim_at_path
@@ -42,6 +43,8 @@ import omni
 import time
 import math
 import torch
+from torchvision.utils import make_grid
+from torchvision.transforms.functional import to_pil_image as ToPILImage
 import cv2
 import os
 
@@ -65,19 +68,20 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         self._sim_config = sim_config
         self._cfg = sim_config.config
         self._task_cfg = sim_config.task_config
-        self._enable_wandb_logs = self._task_cfg["enable_wandb_log"]
         self._platform_cfg = self._task_cfg["env"]["platform"]
+        self._dock_cfg = self._task_cfg["env"]["dock"]
         self._num_envs = self._task_cfg["env"]["numEnvs"]
         self._env_spacing = self._task_cfg["env"]["envSpacing"]
         self._max_episode_length = self._task_cfg["env"]["maxEpisodeLength"]
         self._discrete_actions = self._task_cfg["env"]["action_mode"]
         self._device = self._cfg["sim_device"]
-        self.iteration = 0
         self.step = 0
+        self.iteration = 0
+        self.save_image_counter = 0
 
         # Split the maximum amount of thrust across all thrusters.
         self.split_thrust = self._task_cfg["env"]["split_thrust"]
-
+        
         # Collects the platform parameters
         self.dt = self._task_cfg["sim"]["dt"]
         # Collects the task parameters
@@ -103,9 +107,9 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         # Instantiate the action and observations spaces
         self.set_action_and_observation_spaces()
         # Sets the initial positions of the target and platform
-        self._fp_position = torch.tensor([0, 0, 0.5])
-        self._default_marker_position = torch.tensor([0, 0, 0.25])
-        self._marker = None
+        self._fp_position = torch.tensor([0, 0.0, 0.5])
+        self._default_marker_position = torch.tensor([0, 0, 0.45])
+        self._dock_view = None
         # Preallocate tensors
         self.actions = torch.zeros(
             (self._num_envs, self._max_actions),
@@ -118,6 +122,9 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         self.all_indices = torch.arange(
             self._num_envs, dtype=torch.int32, device=self._device
         )
+        self.contact_state = torch.zeros(
+            (self._num_envs), device=self._device, dtype=torch.float32
+        )
         # Extra info
         self.extras = {}
         self.extras_wandb = {}
@@ -129,8 +136,7 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
 
     def set_action_and_observation_spaces(self) -> None:
         """
-        Sets the action and observation spaces.
-        """
+        Sets the action and observation spaces."""
 
         # Defines the observation space
         self.observation_space = spaces.Dict(
@@ -215,8 +221,7 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         Adds training statistics to be recorded during training.
 
         Args:
-            names (List[str]): list of names of the statistics to be recorded.
-        """
+            names (List[str]): list of names of the statistics to be recorded."""
 
         for name in names:
             torch_zeros = lambda: torch.zeros(
@@ -230,8 +235,7 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
 
     def cleanup(self) -> None:
         """
-        Prepares torch buffers for RL data collection.
-        """
+        Prepares torch buffers for RL data collection."""
 
         # prepare tensors
         self.obs_buf = {
@@ -247,6 +251,11 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
             ),
             "masks": torch.zeros(
                 (self._num_envs, self._max_actions),
+                device=self._device,
+                dtype=torch.float,
+            ),
+            "masses": torch.zeros(
+                (self._num_envs, 3),
                 device=self._device,
                 dtype=torch.float,
             ),
@@ -278,11 +287,6 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
                 device=self._device,
                 dtype=torch.float,
             ),
-            "masses": torch.zeros(
-                (self._num_envs, 3),
-                device=self._device,
-                dtype=torch.float,
-            ),
         }
 
         self.states_buf = torch.zeros(
@@ -298,43 +302,47 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
             self._num_envs, device=self._device, dtype=torch.long
         )
         self.extras = {}
+        self.extras_wandb = {}
 
     def set_up_scene(self, scene) -> None:
         """
         Sets up the USD scene inside Omniverse for the task.
 
         Args:
-            scene (Usd.Stage): the USD scene to be set up.
-        """
+            scene (Usd.Stage): the USD scene to be set up."""
 
         # Add the floating platform, and the marker
         self.get_floating_platform()
         self.get_target()
-        self.get_zero_g_lab()
+        if self._task_cfg["sim"].get("add_lab", False):
+            self.get_zero_g_lab()
 
         RLTask.set_up_scene(self, scene, replicate_physics=False)
 
         # Collects the interactive elements in the scene
         root_path = "/World/envs/.*/Modular_floating_platform"
         self._platforms = ModularFloatingPlatformView(
-            prim_paths_expr=root_path, name="modular_floating_platform_view"
+            prim_paths_expr=root_path, 
+            name="modular_floating_platform_view", 
+            track_contact_force=True,
         )
         # Add views to scene
         scene.add(self._platforms)
         scene.add(self._platforms.base)
         scene.add(self._platforms.thrusters)
+        
+        # Add rigidprim view of docking station to the scene
+        scene, self._dock_view = self.task.add_dock_to_scene(scene)
 
+        # Link replicator to existing onboard cameras
         self.collect_camera()
-        # Add arrows to scene if task is go to pose
-        scene, self._marker = self.task.add_visual_marker_to_scene(scene)
         return
 
     def get_floating_platform(self):
         """
-        Adds the floating platform to the scene.
-        """
+        Adds the floating platform to the scene."""
 
-        fp = ModularFloatingPlatformWithCamera(
+        fp = ModularFloatingPlatform(
             prim_path=self.default_zero_env_path + "/Modular_floating_platform",
             name="modular_floating_platform",
             translation=self._fp_position,
@@ -348,53 +356,45 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
 
     def get_target(self) -> None:
         """
-        Adds the visualization target to the scene.
-        """
+        Adds the visualization target to the scene."""
 
         self.task.generate_target(
-            self.default_zero_env_path, self._default_marker_position
+            self.default_zero_env_path, 
+            self._default_marker_position, 
+            self._dock_cfg,
         )
-
+    
     def get_zero_g_lab(self) -> None:
         """
-        Adds the Zero-G-lab to the scene.
-        """
-
-        usd_path = os.path.join(os.getcwd(), "robots/usd/zero_g_lab.usd")
+        Adds the Zero-G-lab to the scene."""
+        usd_path = os.path.join(os.getcwd(), self._task_cfg["lab_usd_path"])
         prim = add_reference_to_stage(usd_path, self._task_cfg["lab_path"])
         applyCollider(prim, True)
 
     def collect_camera(self) -> None:
         """
-        Collect active cameras to generate synthetic images in batch.
-        """
-
+        Collect active cameras to generate synthetic images in batch."""
         active_sensors = []
-        active_camera_source_path = self._task_cfg["env"]["sensors"]["camera"][
-            "RLCamera"
-        ]["prim_path"]
+        active_camera_source_path = self._task_cfg["env"]["sensors"]["RLCamera"]["prim_path"]
         for i in range(self._num_envs):
-            # TODO: make code cleaner.
+            # swap env_0 to env_i
             sensor_path = active_camera_source_path.split("/")
             sensor_path[3] = f"env_{i}"
-            self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]["prim_path"] = (
+            self._task_cfg["env"]["sensors"]["RLCamera"]["prim_path"] = (
                 "/".join(sensor_path)
             )
             rl_sensor = camera_factory.get("RLCamera")(
-                self._task_cfg["env"]["sensors"]["camera"]["RLCamera"]
+                self._task_cfg["env"]["sensors"]["RLCamera"]
             )
             active_sensors.append(rl_sensor)
         self.active_sensors = active_sensors
 
     def update_state(self) -> None:
         """
-        Updates the state of the system.
-        """
+        Updates the state of the system."""
 
         # Collects the position and orientation of the platform
-        self.root_pos, self.root_quats = self._platforms.base.get_world_poses(
-            clone=True
-        )
+        self.root_pos, self.root_quats = self._platforms.base.get_world_poses(clone=True)
         # Remove the offset from the different environments
         root_positions = self.root_pos - self._env_pos
         # Collects the velocity of the platform
@@ -430,15 +430,33 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
             "linear_velocity": root_velocities[:, :2],
             "angular_velocity": root_velocities[:, -1],
         }
+        # Update goal pose
+        self.update_goal_state()
+        # Update FP contact state
+        self.compute_contact_state()
+    
+    def update_goal_state(self) -> None:
+        """
+        Updates the goal state of the task."""
+
+        target_positions, target_orientations = self._dock_view.base.get_world_poses(clone=True)
+        self.task.set_goals(self.all_indices.long(), target_positions-self._env_pos, target_orientations, self.step)
+    
+    def compute_contact_state(self)-> torch.Tensor:
+        """
+        Get the contact state of the platform.
+        Returns:
+            net_contact_forces_norm (torch.Tensor): the norm of the net contact forces."""
+        net_contact_forces = self._platforms.base.get_net_contact_forces(clone=False)
+        net_contact_forces_norm = torch.norm(net_contact_forces, dim=-1)
+        self.contact_state = net_contact_forces_norm
 
     def get_observations(self) -> Dict[str, torch.Tensor]:
         """
         Gets the observations of the task to be passed to the policy.
 
         Returns:
-            observations: a dictionary containing the observations of the task.
-        """
-
+            observations: a dictionary containing the observations of the task."""
         # implement logic to retrieve observation states
         self.update_state()
         # Get the state
@@ -447,11 +465,18 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         self.obs_buf["transforms"] = self.virtual_platform.current_transforms
         # Get the action masks
         self.obs_buf["masks"] = self.virtual_platform.action_masks
+        self.obs_buf["masses"] = self.DR.mass_disturbances.get_masses_and_com()
         # Get the camera data
         rgb_obs, depth_obs = self.get_rgbd_data()
         self.obs_buf["rgb"] = rgb_obs
         self.obs_buf["depth"] = depth_obs
-        self.obs_buf["masses"] = self.DR.mass_disturbances.get_masses_and_com()
+        if self._task_cfg["env"]["sensors"]["save_to_log"] and self._cfg["wandb_activate"]:
+            if self.save_image_counter % self._task_cfg["env"]["sensors"]["save_frequency"] == 0:
+                rgb_grid = ToPILImage(make_grid(rgb_obs, nrow=5))
+                depth_grid = ToPILImage(make_grid(depth_obs, nrow=5))
+                wandb.log({"rgb": wandb.Image(rgb_grid, caption="rgb"), 
+                        "depth": wandb.Image(depth_grid, caption="depth")})
+        self.save_image_counter += 1
 
         observations = {self._platforms.name: {"obs_buf": self.obs_buf}}
         return observations
@@ -463,7 +488,6 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
             rgb (torch.Tensor): batched rgb data
             depth (torch.Tensor): batched depth data
         """
-
         rs_obs = [sensor.get_observation() for sensor in self.active_sensors]
         rgb = torch.stack([ob["rgb"] for ob in rs_obs])
         depth = torch.stack([ob["depth"] for ob in rs_obs])
@@ -474,8 +498,7 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         This function implements the logic to be performed before physics steps.
 
         Args:
-            actions (torch.Tensor): the actions to be applied to the platform.
-        """
+            actions (torch.Tensor): the actions to be applied to the platform."""
 
         # If is not playing skip
         if not self._env._world.is_playing():
@@ -502,7 +525,7 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         # Applies the thrust multiplier
         thrusts = self.virtual_platform.thruster_cfg.thrust_force * thrust_cmds
         # Adds random noise on the actions
-        thrusts = self.DR.noisy_actions.add_noise_on_act(thrusts)
+        thrusts = self.DR.noisy_actions.add_noise_on_act(thrusts, step=self.step)
         # clear actions for reset envs
         thrusts[reset_env_ids] = 0
         # If split thrust, equally shares the maximum amount of thrust across thrusters.
@@ -520,12 +543,13 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
 
     def apply_forces(self) -> None:
         """
-        Applies all the forces to the platform and its thrusters.
-        """
+        Applies all the forces to the platform and its thrusters."""
 
+        # Applies actions from the thrusters
         self._platforms.thrusters.apply_forces_and_torques_at_pos(
             forces=self.forces, positions=self.positions, is_global=False
         )
+        # Applies the domain randomization
         floor_forces = self.DR.force_disturbances.get_force_disturbance(self.root_pos)
         torque_disturbance = self.DR.torque_disturbances.get_torque_disturbance(
             self.root_pos
@@ -539,17 +563,14 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
 
     def post_reset(self):
         """
-        This function implements the logic to be performed after a reset.
-        """
+        This function implements the logic to be performed after a reset."""
 
         # implement any logic required for simulation on-start here
-        self.root_pos, self.root_rot = self._platforms.base.get_world_poses()
-        self.root_velocities = self._platforms.base.get_velocities()
-        self.dof_pos = self._platforms.get_joint_positions()
-        self.dof_vel = self._platforms.get_joint_velocities()
-
+        self.root_pos, self.root_rot = self._platforms.get_world_poses()
+        self.root_velocities = self._platforms.get_velocities()
         self._platforms.get_CoM_indices()
         self._platforms.get_plane_lock_indices()
+        self._dock_view.get_plane_lock_indices()
 
         self.initial_root_pos, self.initial_root_rot = (
             self.root_pos.clone(),
@@ -568,6 +589,11 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
             device=self._device,
         )
 
+        # contact state
+        self.contact_state = torch.zeros(
+            (self._num_envs), dtype=torch.float32, device=self._device, 
+        )
+
         self.set_targets(self.all_indices)
 
     def set_targets(self, env_ids: torch.Tensor):
@@ -578,53 +604,72 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
             env_ids (torch.Tensor): the indices of the environments for which to set the targets.
         """
 
-        num_sets = len(env_ids)
+        num_resets = len(env_ids)
         env_long = env_ids.long()
-        # Randomizes the position of the ball on the x y axis
+
+        # Randomizes the position and orientation of the dock on the x y axis
         target_positions, target_orientation = self.task.get_goals(
             env_long,
-            self.initial_pin_pos.clone(),
-            self.initial_pin_rot.clone(),
-            step=self.step,
+            self.step,
         )
-        target_positions[env_long, 2] = torch.ones(num_sets, device=self._device) * 0.25
-        # Apply the new goals
-        if self._marker:
-            self._marker.set_world_poses(
-                target_positions[env_long],
-                target_orientation[env_long],
-                indices=env_long,
-            )
+
+        siny_cosp = 2 * target_orientation[:, 0] * target_orientation[:, 3]
+        cosy_cosp = 1 - 2 * (target_orientation[:, 3] * target_orientation[:, 3])
+        h = torch.arctan2(siny_cosp, cosy_cosp)
+
+        # apply resets
+        dof_pos = torch.zeros(
+            (num_resets, self._dock_view.num_dof), device=self._device
+        )
+
+        dof_pos[:, self._dock_view.lock_indices[0]] = target_positions[:, 0]
+        dof_pos[:, self._dock_view.lock_indices[1]] = target_positions[:, 1]
+        dof_pos[:, self._dock_view.lock_indices[2]] = h
+        self._dock_view.set_joint_positions(dof_pos, indices=env_ids)
+
+        dof_vel = torch.zeros(
+            (num_resets, self._dock_view.num_dof), device=self._device
+        )
+        dof_vel[:, self._dock_view.lock_indices[0]] = 0.0
+        dof_vel[:, self._dock_view.lock_indices[1]] = 0.0
+        dof_vel[:, self._dock_view.lock_indices[2]] = 0.0
+        self._dock_view.set_joint_velocities(dof_vel, indices=env_ids)
 
     def reset_idx(self, env_ids: torch.Tensor) -> None:
         """
         Resets the environments with the given indices.
 
         Args:
-            env_ids (torch.Tensor): the indices of the environments to be reset.
-        """
-
+            env_ids (torch.Tensor): the indices of the environments to be reset."""
         num_resets = len(env_ids)
         # Resets the counter of steps for which the goal was reached
         self.task.reset(env_ids)
+        self.set_targets(env_ids)
         self.virtual_platform.randomize_thruster_state(env_ids, num_resets)
         self.DR.force_disturbances.generate_forces(env_ids, num_resets, step=self.step)
         self.DR.torque_disturbances.generate_torques(
             env_ids, num_resets, step=self.step
         )
         self.DR.mass_disturbances.randomize_masses(env_ids, step=self.step)
-        CoM_shift = self.DR.mass_disturbances.get_CoM()
-        random_mass = self.DR.mass_disturbances.get_masses()
+        CoM_shift = self.DR.mass_disturbances.get_CoM(env_ids)
+        random_mass = self.DR.mass_disturbances.get_masses(env_ids)
+
         # Randomizes the starting position of the platform
         pos, quat, vel = self.task.get_initial_conditions(env_ids, step=self.step)
         siny_cosp = 2 * quat[:, 0] * quat[:, 3]
         cosy_cosp = 1 - 2 * (quat[:, 3] * quat[:, 3])
         h = torch.arctan2(siny_cosp, cosy_cosp)
-        # apply resets
+
+        # Randomizes mass of the dock
+        if hasattr(self.task._task_parameters, "spawn_dock_mass_curriculum"):
+            mass = self.task.get_dock_masses(env_ids, step=self.step)
+            self._dock_view.base.set_masses(mass, indices=env_ids)
+
+        # apply joint resets
         dof_pos = torch.zeros(
             (num_resets, self._platforms.num_dof), device=self._device
         )
-        # self._platform.CoM.set_masses(random_mass, indices=env_ids)
+        # self._platforms.CoM.set_masses(random_mass, indices=env_ids)
         dof_pos[:, self._platforms.lock_indices[0]] = pos[:, 0]
         dof_pos[:, self._platforms.lock_indices[1]] = pos[:, 1]
         dof_pos[:, self._platforms.lock_indices[2]] = h
@@ -639,6 +684,9 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         dof_vel[:, self._platforms.lock_indices[1]] = vel[:, 1]
         dof_vel[:, self._platforms.lock_indices[2]] = vel[:, 5]
         self._platforms.set_joint_velocities(dof_vel, indices=env_ids)
+        
+        # reset contact state
+        self.contact_state[env_ids] = torch.zeros(num_resets, device=self._device, dtype=torch.float32)
 
         # bookkeeping
         self.reset_buf[env_ids] = 0
@@ -646,16 +694,22 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
 
         # fill `extras`
         self.extras["episode"] = {}
+        self.extras_wandb = {}
         for key in self.episode_sums.keys():
-            self.extras["episode"][key] = (
+            value = (
                 torch.mean(self.episode_sums[key][env_ids]) / self._max_episode_length
             )
+            if key in self._penalties.get_stats_name():
+                self.extras_wandb[key] = value
+            elif key in self.task.log_with_wandb:
+                self.extras_wandb[key] = value
+            else:
+                self.extras["episode"][key] = value
             self.episode_sums[key][env_ids] = 0.0
 
     def update_state_statistics(self) -> None:
         """
-        Updates the statistics of the state of the training.
-        """
+        Updates the statistics of the state of the training."""
 
         self.episode_sums["normed_linear_vel"] += torch.norm(
             self.current_state["linear_velocity"], dim=-1
@@ -668,38 +722,46 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
     def calculate_metrics(self) -> None:
         """
         Calculates the metrics of the training.
-        That is the rewards, penalties, and other perfomance statistics.
-        """
-
-        position_reward = self.task.compute_reward(self.current_state, self.actions)
+        That is the rewards, penalties, and other perfomance statistics."""
+        reward = self.task.compute_reward(self.current_state, self.actions)
         self.iteration += 1
         self.step += 1 / self._task_cfg["env"]["horizon_length"]
         penalties = self._penalties.compute_penalty(
             self.current_state, self.actions, self.step
         )
-        self.rew_buf[:] = position_reward - penalties
+        collision_penalty = self.calculate_collision_penalty()
+        self.rew_buf[:] = reward - penalties - collision_penalty
         self.episode_sums = self.task.update_statistics(self.episode_sums)
         self.episode_sums = self._penalties.update_statistics(self.episode_sums)
-        if self._enable_wandb_logs:
-            if self.iteration / self._task_cfg["env"]["horizon_length"] % 1 == 0:
-                self.extras_wandb["wandb_step"] = int(self.step)
-                for key, value in self._penalties.get_logs().items():
-                    self.extras_wandb[key] = value
-                for key, value in self.task.get_logs(self.step).items():
-                    self.extras_wandb[key] = value
-                for key, value in self.DR.get_logs(self.step).items():
-                    self.extras_wandb[key] = value
+        if self.iteration / self._task_cfg["env"]["horizon_length"] % 1 == 0:
+            self.extras_wandb["wandb_step"] = int(self.step)
+            for key, value in self._penalties.get_logs().items():
+                self.extras_wandb[key] = value
+            for key, value in self.task.get_logs(self.step).items():
+                self.extras_wandb[key] = value
+            for key, value in self.DR.get_logs(self.step).items():
+                self.extras_wandb[key] = value
+            if self._cfg["wandb_activate"]:
                 wandb.log(self.extras_wandb)
-                self.extras_wandb = {}
+            self.extras_wandb = {}
+
+        self.update_state_statistics()
+    
+    def calculate_collision_penalty(self) -> torch.Tensor:
+        """
+        Calculates the penalty for collisions."""
+        return self.task._reward_parameters.collision_scale * self.contact_state
 
     def is_done(self) -> None:
         """
-        Checks if the episode is done.
-        """
+        Checks if the episode is done."""
 
         # resets due to misbehavior
         ones = torch.ones_like(self.reset_buf)
         die = self.task.update_kills()
+
+        # resets due to collision
+        die = self.task.update_collision_termination(die, self.contact_state)
 
         # resets due to episode length
         self.reset_buf[:] = torch.where(

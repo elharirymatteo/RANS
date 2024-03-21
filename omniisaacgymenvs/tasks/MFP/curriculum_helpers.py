@@ -198,7 +198,7 @@ def normal(
         torch.Tensor: Tensor with values from a normal distribution.
     """
 
-    return torch.normal(mean, std, (n), device=device)
+    return torch.normal(mean, std, (n,), device=device)
 
 
 def uniform(

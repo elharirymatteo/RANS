@@ -1,4 +1,4 @@
-__author__ = "Antoine Richard, Matteo El Hariry"
+__author__ = "Antoine Richard, Matteo El Hariry, Junnosuke Kamohara"
 __copyright__ = (
     "Copyright 2023, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
 )
@@ -105,46 +105,58 @@ class RLGamesModel:
         """
 
         self.player.restore(model_name)
-
+    
     def setTarget(
         self,
         target_position=None,
         target_heading=None,
         target_linear_velocity=None,
         target_angular_velocity=None,
+        mode=None,
     ) -> None:
         """
-        Set the targets of the agent. The targets are used to infer the task flag.
+        Set the targets of the agent. mode is task flag.
 
         Args:
             target_position (list, optional): A list containing the target position. Defaults to None.
             target_heading (list, optional): A list containing the target heading. Defaults to None.
             target_linear_velocity (list, optional): A list containing the target linear velocity. Defaults to None.
             target_angular_velocity (list, optional): A list containing the target angular velocity. Defaults to None.
+            mode (int, optional): An integer indicating the agent's task. Defaults to None.
         """
 
-        # Infer task flag from the provided targets
-        if target_position is None:
-            if target_linear_velocity is None:
-                raise ValueError("Cannot make sense of the goal passed to the agent.")
-            else:
-                if target_angular_velocity is None:
-                    self.linear_velocity_target = target_linear_velocity
-                    if target_heading is None:
-                        self.mode = 2
-                    else:
-                        self.mode = 4
-                        self.orientation_target = target_heading
-                else:
-                    self.mode = 3
-                    self.angular_velocity_target = target_angular_velocity
-        else:
+        if mode == 0:
             self.position_target = target_position
-            if target_heading is None:
-                self.mode = 0
-            else:
-                self.mode = 1
-                self.orientation_target = target_heading
+            self.mode = mode
+        elif mode == 1:
+            self.position_target = target_position
+            self.orientation_target = target_heading
+            self.mode = mode
+        elif mode == 2:
+            self.linear_velocity_target = target_linear_velocity
+            self.mode = mode
+        elif mode == 3:
+            self.linear_velocity_target = target_linear_velocity
+            self.angular_velocity_target = target_angular_velocity
+            self.mode = mode
+        elif mode == 4:
+            self.linear_velocity_target = target_linear_velocity
+            self.orientation_target = target_heading
+            self.mode = mode
+        elif mode == 6:
+            ## Add robot footprint dimater + safe margin
+            fp_footprint_radius = 0.31+0.01
+            siny_cosp = 2 * target_heading[0] * target_heading[3]
+            cosy_cosp = 1 - 2 * (target_heading[3] * target_heading[3])
+            target_heading_angle = np.arctan2(siny_cosp, cosy_cosp)
+            target_position[0] += fp_footprint_radius * np.cos(target_heading_angle)
+            target_position[1] += fp_footprint_radius * np.sin(target_heading_angle)
+            
+            self.position_target = target_position
+            self.orientation_target = target_heading
+            self.mode = mode
+        else:
+            raise ValueError("Please specify a task flag.")
 
     def generate_task_data(self, state: Dict[str, np.ndarray]) -> None:
         """
@@ -231,6 +243,48 @@ class RLGamesModel:
             self.target = [
                 self.linear_velocity_target[0] - state["linear_velocity"][0],
                 self.linear_velocity_target[1] - state["linear_velocity"][1],
+                np.cos(heading_error),
+                np.sin(heading_error),
+            ]
+        
+        elif self.mode == 6:
+            target_to_cone_dist = -2.0
+            siny_cosp_target = 2 * (
+                self.orientation_target[0] * self.orientation_target[3]
+                + self.orientation_target[1] * self.orientation_target[2]
+            )
+            cosy_cosp_target = 1 - 2 * (
+                self.orientation_target[2] * self.orientation_target[2]
+                + self.orientation_target[3] * self.orientation_target[3]
+            )
+            heading_target = np.arctan2(siny_cosp_target, cosy_cosp_target)
+            
+            anchor_positions = self.position_target.clone()
+            anchor_positions[0] += target_to_cone_dist * np.cos(heading_target)
+            anchor_positions[1] += target_to_cone_dist * np.sin(heading_target)
+            goal_headings = np.arctan2(
+                anchor_positions[1] - state["position"][1],
+                anchor_positions[0] - state["position"][0]
+            )
+            siny_cosp_system = 2 * (
+                state["quaternion"][0] * state["quaternion"][3]
+                + state["quaternion"][1] * state["quaternion"][2]
+            )
+            cosy_cosp_system = 1 - 2 * (
+                state["quaternion"][2] * state["quaternion"][2]
+                + state["quaternion"][3] * state["quaternion"][3]
+            )
+            heading_system = np.arctan2(siny_cosp_system, cosy_cosp_system)
+            heading_error = np.abs(
+                np.arctan2(
+                    np.sin(goal_headings - heading_system),
+                    np.cos(goal_headings - heading_system),
+                )
+            )
+            
+            self.target = [
+                self.position_target[0] - state["position"][0],
+                self.position_target[1] - state["position"][1],
                 np.cos(heading_error),
                 np.sin(heading_error),
             ]

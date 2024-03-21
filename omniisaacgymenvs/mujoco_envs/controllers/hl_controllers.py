@@ -1,4 +1,4 @@
-__author__ = "Antoine Richard, Matteo El Hariry"
+__author__ = "Antoine Richard, Matteo El Hariry, Junnosuke Kamohara"
 __copyright__ = (
     "Copyright 2023, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
 )
@@ -208,6 +208,198 @@ class BaseController:
         fig.savefig(os.path.join(self.save_dir, "positions.png"))
 
 
+class PositionController(BaseController):
+    def __init__(
+        self,
+        dt: float,
+        model: Union[RLGamesModel, DiscreteController],
+        goals_x: List[float],
+        goals_y: List[float],
+        position_distance_threshold: float = 0.03,
+        save_dir: str = "mujoco_experiment",
+        **kwargs
+    ) -> None:
+        """
+        Initializes the controller.
+
+        Args:
+            dt (float): Simulation time step.
+            model (Union[RLGamesModel, DiscreteController]): Low-level controller.
+            goals_x (List[float]): List of x coordinates of the goals.
+            goals_y (List[float]): List of y coordinates of the goals.
+            position_distance_threshold (float, optional): Distance threshold for the position. Defaults to 0.03.
+            save_dir (str, optional): Directory to save the simulation data. Defaults to "mujoco_experiment".
+            **kwargs: Additional arguments."""
+
+        super().__init__(dt, save_dir)
+        self.model = model
+        self.goals = np.array([goals_x, goals_y, [0] * len(goals_x)]).T
+        self.current_goal = self.goals[0]
+        self.distance_threshold = position_distance_threshold
+
+    def initializeLoggers(self) -> None:
+        """
+        Initializes the loggers."""
+
+        super().initializeLoggers()
+        self.logs["position_target"] = []
+
+    def updateLoggers(self, state, actions, time: float) -> None:
+        """
+        Updates the loggers.
+
+        Args:
+            state (Dict[str, np.ndarray]): State of the system.
+            actions (np.ndarray): Action taken by the controller."""
+
+        super().updateLoggers(state, actions, time=time)
+        self.logs["position_target"].append(self.current_goal[:2])
+
+    def isGoalReached(self, state: Dict[str, np.ndarray]) -> bool:
+        """
+        Checks if the goal is reached.
+
+        Args:
+            state (Dict[str, np.ndarray]): State of the system.
+
+        Returns:
+            bool: True if the goal is reached, False otherwise."""
+
+        dist = np.linalg.norm(self.current_goal[:2] - state["position"][:2])
+        if dist < self.distance_threshold:
+            return True
+
+    def getGoal(self) -> np.ndarray:
+        """
+        Returns the current goal."""
+
+        return self.current_goal
+
+    def setGoal(self, goal) -> None:
+        """
+        Sets the goal of the controller.
+
+        Args:
+            goal (np.ndarray): Goal to set."""
+
+        self.current_goal = goal
+        self.goals = np.array([goal])
+
+    def isDone(self) -> bool:
+        """
+        Checks if the simulation is done.
+
+        Returns:
+            bool: True if the simulation is done, False otherwise."""
+
+        return len(self.goals) == 0
+
+    def setTarget(self) -> None:
+        """
+        Sets the target of the low-level controller."""
+
+        self.model.setTarget(target_position=self.current_goal, mode=0)
+
+    def getAction(
+        self,
+        state,
+        is_deterministic: bool = True,
+        mute: bool = False,
+        time: float = None,
+    ) -> np.ndarray:
+        """
+        Gets the action from the controller.
+
+        Args:
+            state (Dict[str, np.ndarray]): State of the system.
+            is_deterministic (bool, optional): Whether the action is deterministic or not. Defaults to True.
+            mute (bool, optional): Whether to print the goal reached or not. Defaults to False.
+
+        Returns:
+            np.ndarray: Action taken by the controller."""
+
+        if self.isGoalReached(state):
+            if not mute:
+                print("Goal reached!")
+            if len(self.goals) > 1:
+                self.current_goal = self.goals[1]
+                self.goals = self.goals[1:]
+            else:
+                self.goals = []
+
+        self.setTarget()
+        actions = self.model.getAction(state, is_deterministic=is_deterministic)
+        self.updateLoggers(state, actions, time=time)
+        return actions
+
+    def plotSimulation(
+        self, dpi: int = 90, width: int = 1000, height: int = 1000
+    ) -> None:
+        """
+        Plots the simulation.
+
+        Args:
+            dpi (int, optional): Dots per inch. Defaults to 90.
+            width (int, optional): Width of the figure. Defaults to 1000.
+            height (int, optional): Height of the figure. Defaults to 1000."""
+
+        figsize = (width / dpi, height / dpi)
+
+        fig, ax = plt.subplots(2, 1, figsize=figsize, dpi=dpi)
+
+        ax[0].plot(self.logs["timevals"], self.logs["angular_velocity"])
+        ax[0].set_title("angular velocity")
+        ax[0].set_ylabel("radians / second")
+
+        ax[1].plot(
+            self.logs["timevals"],
+            self.logs["linear_velocity"],
+            label="system velocities",
+        )
+        ax[1].legend()
+        ax[1].set_xlabel("time (seconds)")
+        ax[1].set_ylabel("meters / second")
+        _ = ax[1].set_title("linear_velocity")
+        try:
+            os.makedirs(self.save_dir, exist_ok=True)
+            fig.savefig(os.path.join(self.save_dir, "velocities.png"))
+        except Exception as e:
+            print("Saving failed: ", e)
+
+        fig, ax = plt.subplots(1, 1, figsize=figsize, dpi=dpi)
+        ax.scatter(
+            np.array(self.logs["position_target"])[:, 0],
+            np.array(self.logs["position_target"])[:, 1],
+            label="position goals",
+        )
+        ax.plot(
+            np.array(self.logs["position"])[:, 0],
+            np.array(self.logs["position"])[:, 1],
+            label="system position",
+        )
+        ax.legend()
+        ax.set_xlabel("meters")
+        ax.set_ylabel("meters")
+        ax.axis("equal")
+        _ = ax.set_title("x y coordinates")
+        plt.tight_layout()
+        try:
+            os.makedirs(self.save_dir, exist_ok=True)
+            fig.savefig(os.path.join(self.save_dir, "positions.png"))
+        except Exception as e:
+            print("Saving failed: ", e)
+
+        fig, ax = plt.subplots(1, 1, figsize=figsize, dpi=dpi)
+        ax.plot(
+            self.logs["timevals"], np.array(self.logs["actions"]), label="system action"
+        )
+        plt.tight_layout()
+        try:
+            os.makedirs(self.save_dir, exist_ok=True)
+            fig.savefig(os.path.join(self.save_dir, "actions.png"))
+        except Exception as e:
+            print("Saving failed: ", e)
+
 class PoseController(BaseController):
     """
     Controller for the pose of the robot."""
@@ -324,7 +516,7 @@ class PoseController(BaseController):
         q = [np.cos(yaw / 2), 0, 0, np.sin(yaw / 2)]
         orientation_goal = q
         self.model.setTarget(
-            target_position=position_goal, target_heading=orientation_goal
+            target_position=position_goal, target_heading=orientation_goal, mode=1
         )
 
     def getAction(
@@ -427,199 +619,19 @@ class PoseController(BaseController):
             fig.savefig(os.path.join(self.save_dir, "actions.png"))
         except Exception as e:
             print("Saving failed: ", e)
-
-
-class PositionController(BaseController):
-    def __init__(
-        self,
-        dt: float,
-        model: Union[RLGamesModel, DiscreteController],
-        goals_x: List[float],
-        goals_y: List[float],
-        position_distance_threshold: float = 0.03,
-        save_dir: str = "mujoco_experiment",
-        **kwargs
-    ) -> None:
-        """
-        Initializes the controller.
-
-        Args:
-            dt (float): Simulation time step.
-            model (Union[RLGamesModel, DiscreteController]): Low-level controller.
-            goals_x (List[float]): List of x coordinates of the goals.
-            goals_y (List[float]): List of y coordinates of the goals.
-            position_distance_threshold (float, optional): Distance threshold for the position. Defaults to 0.03.
-            save_dir (str, optional): Directory to save the simulation data. Defaults to "mujoco_experiment".
-            **kwargs: Additional arguments."""
-
-        super().__init__(dt, save_dir)
-        self.model = model
-        self.goals = np.array([goals_x, goals_y, [0] * len(goals_x)]).T
-        self.current_goal = self.goals[0]
-        self.distance_threshold = position_distance_threshold
-
-    def initializeLoggers(self) -> None:
-        """
-        Initializes the loggers."""
-
-        super().initializeLoggers()
-        self.logs["position_target"] = []
-
-    def updateLoggers(self, state, actions, time: float) -> None:
-        """
-        Updates the loggers.
-
-        Args:
-            state (Dict[str, np.ndarray]): State of the system.
-            actions (np.ndarray): Action taken by the controller."""
-
-        super().updateLoggers(state, actions, time=time)
-        self.logs["position_target"].append(self.current_goal[:2])
-
-    def isGoalReached(self, state: Dict[str, np.ndarray]) -> bool:
-        """
-        Checks if the goal is reached.
-
-        Args:
-            state (Dict[str, np.ndarray]): State of the system.
-
-        Returns:
-            bool: True if the goal is reached, False otherwise."""
-
-        dist = np.linalg.norm(self.current_goal[:2] - state["position"][:2])
-        if dist < self.distance_threshold:
-            return True
-
-    def getGoal(self) -> np.ndarray:
-        """
-        Returns the current goal."""
-
-        return self.current_goal
-
-    def setGoal(self, goal) -> None:
-        """
-        Sets the goal of the controller.
-
-        Args:
-            goal (np.ndarray): Goal to set."""
-
-        self.current_goal = goal
-        self.goals = np.array([goal])
-
-    def isDone(self) -> bool:
-        """
-        Checks if the simulation is done.
-
-        Returns:
-            bool: True if the simulation is done, False otherwise."""
-
-        return len(self.goals) == 0
-
+            
+class DockController(PoseController):
     def setTarget(self) -> None:
         """
         Sets the target of the low-level controller."""
 
-        self.model.setTarget(target_position=self.current_goal)
-
-    def getAction(
-        self,
-        state,
-        is_deterministic: bool = True,
-        mute: bool = False,
-        time: float = None,
-    ) -> np.ndarray:
-        """
-        Gets the action from the controller.
-
-        Args:
-            state (Dict[str, np.ndarray]): State of the system.
-            is_deterministic (bool, optional): Whether the action is deterministic or not. Defaults to True.
-            mute (bool, optional): Whether to print the goal reached or not. Defaults to False.
-
-        Returns:
-            np.ndarray: Action taken by the controller."""
-
-        if self.isGoalReached(state):
-            if not mute:
-                print("Goal reached!")
-            if len(self.goals) > 1:
-                self.current_goal = self.goals[1]
-                self.goals = self.goals[1:]
-            else:
-                self.goals = []
-
-        self.setTarget()
-        actions = self.model.getAction(state, is_deterministic=is_deterministic)
-        self.updateLoggers(state, actions, time=time)
-        return actions
-
-    def plotSimulation(
-        self, dpi: int = 90, width: int = 1000, height: int = 1000
-    ) -> None:
-        """
-        Plots the simulation.
-
-        Args:
-            dpi (int, optional): Dots per inch. Defaults to 90.
-            width (int, optional): Width of the figure. Defaults to 1000.
-            height (int, optional): Height of the figure. Defaults to 1000."""
-
-        figsize = (width / dpi, height / dpi)
-
-        fig, ax = plt.subplots(2, 1, figsize=figsize, dpi=dpi)
-
-        ax[0].plot(self.logs["timevals"], self.logs["angular_velocity"])
-        ax[0].set_title("angular velocity")
-        ax[0].set_ylabel("radians / second")
-
-        ax[1].plot(
-            self.logs["timevals"],
-            self.logs["linear_velocity"],
-            label="system velocities",
+        position_goal = self.current_goal
+        yaw = self.current_goal[2]
+        q = [np.cos(yaw / 2), 0, 0, np.sin(yaw / 2)]
+        orientation_goal = q
+        self.model.setTarget(
+            target_position=position_goal, target_heading=orientation_goal, mode=6
         )
-        ax[1].legend()
-        ax[1].set_xlabel("time (seconds)")
-        ax[1].set_ylabel("meters / second")
-        _ = ax[1].set_title("linear_velocity")
-        try:
-            os.makedirs(self.save_dir, exist_ok=True)
-            fig.savefig(os.path.join(self.save_dir, "velocities.png"))
-        except Exception as e:
-            print("Saving failed: ", e)
-
-        fig, ax = plt.subplots(1, 1, figsize=figsize, dpi=dpi)
-        ax.scatter(
-            np.array(self.logs["position_target"])[:, 0],
-            np.array(self.logs["position_target"])[:, 1],
-            label="position goals",
-        )
-        ax.plot(
-            np.array(self.logs["position"])[:, 0],
-            np.array(self.logs["position"])[:, 1],
-            label="system position",
-        )
-        ax.legend()
-        ax.set_xlabel("meters")
-        ax.set_ylabel("meters")
-        ax.axis("equal")
-        _ = ax.set_title("x y coordinates")
-        plt.tight_layout()
-        try:
-            os.makedirs(self.save_dir, exist_ok=True)
-            fig.savefig(os.path.join(self.save_dir, "positions.png"))
-        except Exception as e:
-            print("Saving failed: ", e)
-
-        fig, ax = plt.subplots(1, 1, figsize=figsize, dpi=dpi)
-        ax.plot(
-            self.logs["timevals"], np.array(self.logs["actions"]), label="system action"
-        )
-        plt.tight_layout()
-        try:
-            os.makedirs(self.save_dir, exist_ok=True)
-            fig.savefig(os.path.join(self.save_dir, "actions.png"))
-        except Exception as e:
-            print("Saving failed: ", e)
 
 
 class TrajectoryTracker:
@@ -975,7 +987,7 @@ class VelocityTracker(BaseController):
         """
         Sets the target of the low-level controller."""
 
-        self.model.setTarget(target_linear_velocity=self.velocity_goal)
+        self.model.setTarget(target_linear_velocity=self.velocity_goal, mode=2)
 
     def getAction(
         self,
@@ -1205,7 +1217,7 @@ class VelocityHeadingTracker(BaseController):
         q = [np.cos(yaw / 2), 0, 0, np.sin(yaw / 2)]
         orientation_goal = q
         self.model.setTarget(
-            target_linear_velocity=self.velocity_goal, target_heading=orientation_goal
+            target_linear_velocity=self.velocity_goal, target_heading=orientation_goal, mode=4
         )
 
     def getAction(
@@ -1405,6 +1417,7 @@ Register the controllers."""
 hlControllerFactory = HLControllerFactory()
 hlControllerFactory.registerController("position", PositionController)
 hlControllerFactory.registerController("pose", PoseController)
+hlControllerFactory.registerController("dock", DockController)
 hlControllerFactory.registerController("linear_velocity", VelocityTracker)
 hlControllerFactory.registerController(
     "linear_velocity_heading", VelocityHeadingTracker

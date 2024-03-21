@@ -1,4 +1,4 @@
-__author__ = "Antoine Richard, Matteo El Hariry"
+__author__ = "Antoine Richard, Matteo El Hariry, Junnosuke Kamohara"
 __copyright__ = (
     "Copyright 2023-24, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
 )
@@ -27,6 +27,10 @@ from omniisaacgymenvs.tasks.MFP.MFP2D_thruster_generator import (
     ConfigurationParameters,
 )
 
+from omniisaacgymenvs.robots.sensors.exteroceptive.camera_module_generator import (
+    sensor_module_factory,
+)
+
 
 @dataclass
 class PlatformParameters:
@@ -37,6 +41,7 @@ class PlatformParameters:
     CoM: tuple = (0, 0, 0)
     refinement: int = 2
     usd_asset_path: str = "/None"
+    enable_collision: bool = False
 
     def __post_init__(self):
         assert self.shape in [
@@ -49,6 +54,7 @@ class PlatformParameters:
         assert self.mass > 0, "The mass must be larger than 0."
         assert len(self.CoM) == 3, "The length of the CoM coordinates must be 3."
         assert self.refinement > 0, "The refinement level must be larger than 0."
+        assert type(self.enable_collision) == bool, "The enable_collision must be a bool."
         self.refinement = int(self.refinement)
 
 
@@ -67,6 +73,7 @@ class CreatePlatform:
         self.settings = PlatformParameters(**cfg["core"])
         thruster_cfg = ConfigurationParameters(**cfg["configuration"])
         self.num_virtual_thrusters = compute_actions(thruster_cfg)
+        self.camera_cfg = cfg.get("camera", None)
 
     def build(self) -> None:
         """
@@ -114,8 +121,11 @@ class CreatePlatform:
             self.settings.CoM,
             self.settings.mass,
         )
-        self.createArrowXform(self.core_path + "/arrow")
-        self.createPositionMarkerXform(self.core_path + "/marker")
+        if self.camera_cfg is not None:
+            self.createCamera()
+        else: 
+            self.createArrowXform(self.core_path + "/arrow")
+            self.createPositionMarkerXform(self.core_path + "/marker")
 
         # Adds virtual anchors for the thrusters
         for i in range(self.num_virtual_thrusters):
@@ -305,7 +315,7 @@ class CreatePlatform:
         sphere_prim = self.stage.GetPrimAtPath(sphere_geom.GetPath())
         applyRigidBody(sphere_prim)
         # Sets the collider
-        applyCollider(sphere_prim)
+        applyCollider(sphere_prim, self.settings.enable_collision)
         # Sets the mass and CoM
         applyMass(sphere_prim, mass, CoM)
         return sphere_path
@@ -327,7 +337,7 @@ class CreatePlatform:
         sphere_prim = self.stage.GetPrimAtPath(sphere_geom.GetPath())
         applyRigidBody(sphere_prim)
         # Sets the collider
-        applyCollider(sphere_prim)
+        applyCollider(sphere_prim, self.settings.enable_collision)
         # Sets the mass and CoM
         applyMass(sphere_prim, mass, CoM)
         return sphere_path
@@ -351,6 +361,15 @@ class CreatePlatform:
         # Create joint
         createFixedJoint(self.stage, joint_path, parent_path, thruster_path)
         return thruster_path
+    
+    def createCamera(self) -> None:
+        """
+        Creates a camera module prim.
+        """
+        self.camera = sensor_module_factory.get(
+            self.camera_cfg["module_name"]
+        )(self.camera_cfg)
+        self.camera.build()
 
 
 class ModularFloatingPlatform(Robot):

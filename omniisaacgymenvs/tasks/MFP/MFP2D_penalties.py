@@ -391,3 +391,93 @@ class BoundaryPenalty(BasePenalty):
         return {
             "penalties/" + self.name + "_weight": self.get_last_rate() * self.weight
         }
+
+@dataclass
+class ConeShapePenalty(BasePenalty):
+    """
+    This class has access to the realtive angle of FP to dock and applies a penalty based on its norm.
+    """
+
+    weight: float = 0.1
+    scaling_function: str = "linear"
+    scaling_parameter: float = 1.0
+    min_value: float = 0.1745 #pi/18=10deg
+    max_value: float = 3.1415
+
+    def __post_init__(self):
+        super().__post_init__()
+        assert self.weight > 0, "Weight must be positive"
+        assert self.scaling_function in scaling_functions, "Scaling function not found"
+        assert (
+            self.min_value < self.max_value
+        ), "Min value must be smaller than max value"
+
+        self.scaling_function = scaling_functions[self.scaling_function]
+
+    def compute_penalty(
+        self, relative_angle:torch.Tensor, step: int
+    ):
+        """
+        Computes the penalty based on the norm of the angular velocity.
+
+        Args:
+            state (Dict[str, torch.Tensor]): State of the system.
+            actions (torch.Tensor): Actions taken.
+            step (int): Current step.
+
+        Returns:
+            torch.Tensor: Penalty.
+        """
+
+        if self.enable:
+            self.last_rate = self.get_rate(step)
+            # compute the norm of the angular velocity
+            norm = torch.abs(relative_angle) - self.min_value
+            # apply ranging function
+            norm[norm < 0] = 0
+            norm[norm > (self.max_value - self.min_value)] = (
+                self.max_value - self.min_value
+            )
+            # apply scaling function
+            norm = self.scaling_function(norm, p=self.scaling_parameter)
+            self.last_penalties = norm
+            return norm * self.last_rate * self.weight
+        else:
+            return torch.zeros(
+                [relative_angle.shape[0]], dtype=torch.float32, device=relative_angle.device
+            )
+    def get_stats_name(self) -> list:
+        """
+        Returns the names of the statistics to be computed.
+
+        Returns:
+            list: Names of the statistics to be tracked.
+        """
+
+        return ["penalties/" + self.name]
+
+    def update_statistics(self, stats: dict) -> dict:
+        """
+        Updates the training statistics.
+
+        Args:
+            stats (dict): Current statistics.
+
+        Returns:
+            dict: Updated statistics.
+        """
+
+        stats["penalties/" + self.name] += self.get_unweigthed_penalties()
+        return stats
+
+    def get_logs(self) -> dict:
+        """
+        Logs the penalty.
+
+        Returns:
+            dict: Dictionary containing the penalty.
+        """
+
+        return {
+            "penalties/" + self.name + "_weight": self.get_last_rate() * self.weight
+        }
