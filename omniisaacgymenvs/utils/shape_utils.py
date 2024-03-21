@@ -8,7 +8,7 @@ __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
-from pxr import UsdGeom, Gf, UsdShade, Sdf, Usd
+from pxr import UsdGeom, Gf, UsdShade, Sdf, Usd, UsdPhysics
 import omni
 from omni.isaac.core.utils.prims import get_prim_at_path, is_prim_path_valid
 from omni.isaac.core.utils.string import find_unique_string_name
@@ -98,6 +98,23 @@ def applyMaterial(prim: Usd.Prim, material: UsdShade.Material) -> None:
 
 def getCurrentStage():
     return omni.usd.get_context().get_stage()
+
+
+def applyCollider(prim: Usd.Prim, enable: bool = False) -> UsdPhysics.CollisionAPI:
+    """
+    Applies a ColliderAPI to a prim.
+
+    Args:
+        prim (Usd.Prim): The prim to apply the ColliderAPI.
+        enable (bool): Enable or disable the collider.
+
+    Returns:
+        UsdPhysics.CollisionAPI: The ColliderAPI.
+    """
+
+    collider = UsdPhysics.CollisionAPI.Apply(prim)
+    collider.CreateCollisionEnabledAttr(enable)
+    return collider
 
 
 class Pin:
@@ -960,6 +977,22 @@ class Gate:
 
     def updateExtent(self):
         return
+
+    def applyCollisions(self):
+        applyCollider(self.top_front_prim, True)
+        applyCollider(self.bottom_front_prim, True)
+        applyCollider(self.left_front_prim, True)
+        applyCollider(self.right_front_prim, True)
+
+        applyCollider(self.top_back_prim, True)
+        applyCollider(self.bottom_back_prim, True)
+        applyCollider(self.left_back_prim, True)
+        applyCollider(self.right_back_prim, True)
+
+        applyCollider(self.top_right_corner_prim, True)
+        applyCollider(self.top_left_corner_prim, True)
+        applyCollider(self.bottom_left_corner_prim, True)
+        applyCollider(self.bottom_right_corner_prim, True)
 
     def setGateThickness(self, thickness: float) -> None:
         """[summary]

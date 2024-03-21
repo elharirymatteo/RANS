@@ -51,10 +51,8 @@ class VisualGate(XFormPrim, Gate):
         orientation: Optional[Sequence[float]] = None,
         scale: Optional[Sequence[float]] = None,
         visible: Optional[bool] = True,
-        color: Optional[np.ndarray] = None,
         gate_width: Optional[float] = None,
         gate_thickness: Optional[float] = None,
-        visual_material: Optional[VisualMaterial] = None,
     ) -> None:
         if visible is None:
             visible = True
@@ -104,14 +102,8 @@ class FixedGate(VisualGate):
         orientation: Optional[np.ndarray] = None,
         scale: Optional[np.ndarray] = None,
         visible: Optional[bool] = None,
-        color: Optional[np.ndarray] = None,
-        body_radius: Optional[float] = None,
-        body_length: Optional[float] = None,
-        poll_radius: Optional[float] = None,
-        poll_length: Optional[float] = None,
-        head_radius: Optional[float] = None,
-        head_length: Optional[float] = None,
-        visual_material: Optional[VisualMaterial] = None,
+        gate_width: Optional[float] = None,
+        gate_thickness: Optional[float] = None,
         physics_material: Optional[PhysicsMaterial] = None,
     ) -> None:
         if not is_prim_path_valid(prim_path):
@@ -139,15 +131,10 @@ class FixedGate(VisualGate):
             orientation=orientation,
             scale=scale,
             visible=visible,
-            color=color,
-            body_radius=body_radius,
-            body_length=body_length,
-            poll_radius=poll_radius,
-            poll_length=poll_length,
-            head_radius=head_radius,
-            head_length=head_length,
-            visual_material=visual_material,
+            gate_width=gate_width,
+            gate_thickness=gate_thickness,
         )
+        self.applyCollisions()
         # XFormPrim.set_collision_enabled(self, True)
         # if physics_material is not None:
         #    FixedArrow.apply_physics_material(self, physics_material)
@@ -184,14 +171,8 @@ class DynamicGate(RigidPrim, FixedGate):
         orientation: Optional[np.ndarray] = None,
         scale: Optional[np.ndarray] = None,
         visible: Optional[bool] = None,
-        color: Optional[np.ndarray] = None,
-        body_radius: Optional[float] = None,
-        body_length: Optional[float] = None,
-        poll_radius: Optional[float] = None,
-        poll_length: Optional[float] = None,
-        head_radius: Optional[float] = None,
-        head_length: Optional[float] = None,
-        visual_material: Optional[VisualMaterial] = None,
+        gate_width: Optional[float] = None,
+        gate_thickness: Optional[float] = None,
         physics_material: Optional[PhysicsMaterial] = None,
         mass: Optional[float] = None,
         density: Optional[float] = None,
@@ -210,14 +191,8 @@ class DynamicGate(RigidPrim, FixedGate):
             orientation=orientation,
             scale=scale,
             visible=visible,
-            color=color,
-            body_radius=body_radius,
-            body_length=body_length,
-            poll_radius=poll_radius,
-            poll_length=poll_length,
-            head_radius=head_radius,
-            head_length=head_length,
-            visual_material=visual_material,
+            gate_width=gate_width,
+            gate_thickness=gate_thickness,
             physics_material=physics_material,
         )
         RigidPrim.__init__(

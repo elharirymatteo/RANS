@@ -22,7 +22,7 @@ from omniisaacgymenvs.tasks.MFP.curriculum_helpers import (
     CurriculumSampler,
 )
 
-from omniisaacgymenvs.utils.gate import VisualGate
+from omniisaacgymenvs.utils.gate import FixedGate
 from omni.isaac.core.prims import XFormPrimView
 from pxr import Usd
 
@@ -420,8 +420,8 @@ class GoThroughGateTask(Core):
         """
 
         color = torch.tensor([1, 0, 0])
-        VisualGate(
-            prim_path=path + "/arrow",
+        FixedGate(
+            prim_path=path + "/gate",
             translation=position,
             name="target_0",
             gate_width=self._task_parameters.gate_width,
@@ -441,7 +441,7 @@ class GoThroughGateTask(Core):
             Tuple[Usd.Stage, XFormPrimView]: The scene and the visual marker.
         """
 
-        pins = XFormPrimView(prim_paths_expr="/World/envs/.*/arrow")
+        pins = XFormPrimView(prim_paths_expr="/World/envs/.*/gate")
         scene.add(pins)
         return scene, pins
 
