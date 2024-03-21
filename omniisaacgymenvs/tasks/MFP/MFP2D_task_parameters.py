@@ -109,10 +109,9 @@ class GoThroughXYParameters:
     """
 
     name: str = "GoToThroughXY"
-    position_tolerance: float = 0.01
-    heading_tolerance: float = 0.025
+    position_tolerance: float = 0.1
     linear_velocity_tolerance: float = 0.01
-    kill_after_n_steps_in_tolerance: int = 50
+    kill_after_n_steps_in_tolerance: int = 1
     goal_random_position: float = 0.0
     kill_dist: float = 10.0
 
@@ -164,10 +163,9 @@ class GoThroughXYSequenceParameters:
     """
 
     name: str = "GoToThroughXYSequence"
-    position_tolerance: float = 0.01
-    heading_tolerance: float = 0.025
+    position_tolerance: float = 0.1
     linear_velocity_tolerance: float = 0.01
-    kill_after_n_steps_in_tolerance: int = 50
+    kill_after_n_steps_in_tolerance: int = 1
     goal_random_position: float = 0.0
     kill_dist: float = 10.0
     num_points: int = 5
@@ -221,10 +219,10 @@ class GoThroughPoseParameters:
     """
 
     name: str = "GoToThroughPose"
-    position_tolerance: float = 0.01
-    heading_tolerance: float = 0.025
+    position_tolerance: float = 0.1
+    heading_tolerance: float = 0.05
     linear_velocity_tolerance: float = 0.01
-    kill_after_n_steps_in_tolerance: int = 50
+    kill_after_n_steps_in_tolerance: int = 1
     goal_random_position: float = 0.0
     kill_dist: float = 10.0
 
@@ -276,10 +274,10 @@ class GoThroughPoseSequenceParameters:
     """
 
     name: str = "GoToThroughPoseSequence"
-    position_tolerance: float = 0.01
-    heading_tolerance: float = 0.025
+    position_tolerance: float = 0.1
+    heading_tolerance: float = 0.05
     linear_velocity_tolerance: float = 0.01
-    kill_after_n_steps_in_tolerance: int = 50
+    kill_after_n_steps_in_tolerance: int = 1
     goal_random_position: float = 0.0
     kill_dist: float = 10.0
     num_points: int = 5
@@ -312,6 +310,46 @@ class GoThroughPoseSequenceParameters:
         self.target_linear_velocity_curriculum = CurriculumParameters(
             **self.target_linear_velocity_curriculum
         )
+        self.spawn_position_curriculum = CurriculumParameters(
+            **self.spawn_position_curriculum
+        )
+        self.spawn_heading_curriculum = CurriculumParameters(
+            **self.spawn_heading_curriculum
+        )
+        self.spawn_linear_velocity_curriculum = CurriculumParameters(
+            **self.spawn_linear_velocity_curriculum
+        )
+        self.spawn_angular_velocity_curriculum = CurriculumParameters(
+            **self.spawn_angular_velocity_curriculum
+        )
+
+
+@dataclass
+class GoThroughGateParameters:
+    """
+    Parameters for the GoToPose task.
+    """
+
+    name: str = "GoToThroughGate"
+    goal_random_position: float = 0.0
+    kill_dist: float = 10.0
+    gate_width: float = 1.5
+    gate_thickness: float = 0.2
+
+    spawn_position_curriculum: CurriculumParameters = field(default_factory=dict)
+    boundary_penalty: BoundaryPenalty = field(default_factory=dict)
+    spawn_heading_curriculum: CurriculumParameters = field(default_factory=dict)
+    spawn_linear_velocity_curriculum: CurriculumParameters = field(default_factory=dict)
+    spawn_angular_velocity_curriculum: CurriculumParameters = field(
+        default_factory=dict
+    )
+
+    def __post_init__(self) -> None:
+        assert self.gate_width > 0, "Gate width must be positive."
+        assert self.goal_random_position >= 0, "Goal random position must be positive."
+        assert self.kill_dist > 0, "Kill distance must be positive."
+
+        self.boundary_penalty = BoundaryPenalty(**self.boundary_penalty)
         self.spawn_position_curriculum = CurriculumParameters(
             **self.spawn_position_curriculum
         )
