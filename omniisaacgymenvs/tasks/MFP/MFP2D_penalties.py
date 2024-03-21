@@ -354,7 +354,7 @@ class BoundaryPenalty(BasePenalty):
             0,
             self.saturation_value,
         )
-        return self.last_penalties * self.last_rate
+        return self.last_penalties * self.last_rate * self.weight
 
     def get_stats_name(self) -> list:
         """
