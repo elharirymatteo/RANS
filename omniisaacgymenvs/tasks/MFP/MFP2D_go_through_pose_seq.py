@@ -276,6 +276,7 @@ class GoThroughPoseSequenceTask(Core):
         return (
             self.progress_reward
             + self.heading_reward
+            + self.linear_velocity_reward
             - self.boundary_penalty
             - self._reward_parameters.time_penalty
             + self._trajectory_completed * self._reward_parameters.terminal_reward

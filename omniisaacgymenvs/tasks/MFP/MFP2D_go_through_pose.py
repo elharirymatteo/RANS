@@ -230,6 +230,7 @@ class GoThroughPoseTask(Core):
         return (
             self.progress_reward
             + self.heading_reward
+            + self.linear_velocity_reward
             - self.boundary_penalty
             - self._reward_parameters.time_penalty
             + self._reward_parameters.terminal_reward * self._goal_reached
@@ -367,7 +368,6 @@ class GoThroughPoseTask(Core):
             + self._target_headings[env_ids]
         )
         initial_orientation[:, 0] = torch.cos(theta * 0.5)
-        initial_orientation[:, 3] = torch.sin(theta * 0.5)
         initial_orientation[:, 3] = torch.sin(theta * 0.5)
         # Randomizes the linear velocity of the platform
         initial_velocity = torch.zeros(
