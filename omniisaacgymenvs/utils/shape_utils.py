@@ -806,16 +806,16 @@ class Gate:
         )
         # Corners
         self.top_right_corner_geom, self.top_right_corner_prim = createPrim(
-            prim_path, name="/top_back", geom_type=UsdGeom.Cube
+            prim_path, name="/top_right_corner", geom_type=UsdGeom.Cube
         )
         self.top_left_corner_geom, self.top_left_corner_prim = createPrim(
-            prim_path, name="/bottom_back", geom_type=UsdGeom.Cube
+            prim_path, name="/top_left_corner", geom_type=UsdGeom.Cube
         )
         self.bottom_left_corner_geom, self.bottom_left_corner_prim = createPrim(
-            prim_path, name="/right_back", geom_type=UsdGeom.Cube
+            prim_path, name="/bottom_left_corner", geom_type=UsdGeom.Cube
         )
         self.bottom_right_corner_geom, self.bottom_right_corner_prim = createPrim(
-            prim_path, name="/left_back", geom_type=UsdGeom.Cube
+            prim_path, name="/bottom_right_corner", geom_type=UsdGeom.Cube
         )
 
         # Colors
@@ -837,89 +837,105 @@ class Gate:
 
     def applyTransformsInternal(self, gate_thickness, gate_width):
         ratio = gate_width / gate_thickness
-        # Front (Blue)
+        # Front (Red)
         applyTransforms(
             self.top_front_prim,
-            [gate_thickness / 4, 0, gate_width + gate_thickness / 2],
+            [gate_thickness / 4, 0, gate_width / 2 + gate_thickness / 2],
             [0, 0, 0, 1],
-            [0.5, 1, ratio],
-            material=self.blue_material,
+            [0.5, ratio, 1],
+            material=self.red_material,
         )
         applyTransforms(
             self.bottom_front_prim,
-            [gate_thickness / 4, 0, -gate_width - gate_thickness / 2],
+            [gate_thickness / 4, 0, -gate_width / 2 - gate_thickness / 2],
             [0, 0, 0, 1],
-            [0.5, 1, ratio],
-            material=self.blue_material,
+            [0.5, ratio, 1],
+            material=self.red_material,
         )
         applyTransforms(
             self.left_front_prim,
-            [gate_thickness / 4, -gate_width - gate_thickness / 2, 0],
+            [gate_thickness / 4, -gate_width / 2 - gate_thickness / 2, 0],
             [0, 0, 0, 1],
-            [0.5, ratio, 1],
-            material=self.blue_material,
+            [0.5, 1, ratio],
+            material=self.red_material,
         )
         applyTransforms(
             self.right_front_prim,
-            [gate_thickness / 4, gate_width + gate_thickness / 2, 0],
+            [gate_thickness / 4, gate_width / 2 + gate_thickness / 2, 0],
+            [0, 0, 0, 1],
+            [0.5, 1, ratio],
+            material=self.red_material,
+        )
+        # Back (Blue)
+        applyTransforms(
+            self.top_back_prim,
+            [-gate_thickness / 4, 0, gate_width / 2 + gate_thickness / 2],
             [0, 0, 0, 1],
             [0.5, ratio, 1],
             material=self.blue_material,
         )
-        # Back (Red)
-        applyTransforms(
-            self.top_back_prim,
-            [-gate_thickness / 4, 0, gate_width + gate_thickness / 2],
-            [0, 0, 0, 1],
-            [0.5, 1, ratio],
-            material=self.red_material,
-        )
         applyTransforms(
             self.bottom_back_prim,
-            [-gate_thickness / 4, 0, -gate_width - gate_thickness / 2],
+            [-gate_thickness / 4, 0, -gate_width / 2 - gate_thickness / 2],
             [0, 0, 0, 1],
-            [0.5, 1, ratio],
-            material=self.red_material,
+            [0.5, ratio, 1],
+            material=self.blue_material,
         )
         applyTransforms(
             self.left_back_prim,
-            [-gate_thickness / 4, -gate_width - gate_thickness / 2, 0],
+            [-gate_thickness / 4, -gate_width / 2 - gate_thickness / 2, 0],
             [0, 0, 0, 1],
-            [0.5, ratio, 1],
-            material=self.red_material,
+            [0.5, 1, ratio],
+            material=self.blue_material,
         )
         applyTransforms(
             self.right_back_prim,
-            [-gate_thickness / 4, gate_width + gate_thickness / 2, 0],
+            [-gate_thickness / 4, gate_width / 2 + gate_thickness / 2, 0],
             [0, 0, 0, 1],
-            [0.5, ratio, 1],
-            material=self.red_material,
+            [0.5, 1, ratio],
+            material=self.blue_material,
         )
         # Corners (White)
         applyTransforms(
             self.top_right_corner_prim,
-            [0, gate_width + gate_thickness / 2, gate_width + gate_thickness / 2],
+            [
+                0,
+                gate_width / 2 + gate_thickness / 2,
+                gate_width / 2 + gate_thickness / 2,
+            ],
             [0, 0, 0, 1],
             [1, 1, 1],
             material=self.white_material,
         )
         applyTransforms(
             self.top_left_corner_prim,
-            [0, -gate_width + gate_thickness / 2, gate_width - gate_thickness / 2],
+            [
+                0,
+                -gate_width / 2 - gate_thickness / 2,
+                gate_width / 2 + gate_thickness / 2,
+            ],
             [0, 0, 0, 1],
             [1, 1, 1],
             material=self.white_material,
         )
         applyTransforms(
             self.bottom_left_corner_prim,
-            [0, -gate_width - gate_thickness / 2, -gate_width + gate_thickness / 2],
+            [
+                0,
+                -gate_width / 2 - gate_thickness / 2,
+                -gate_width / 2 - gate_thickness / 2,
+            ],
             [0, 0, 0, 1],
             [1, 1, 1],
             material=self.white_material,
         )
         applyTransforms(
             self.bottom_right_corner_prim,
-            [0, gate_width + gate_thickness / 2, -gate_width + gate_thickness / 2],
+            [
+                0,
+                gate_width / 2 + gate_thickness / 2,
+                -gate_width / 2 - gate_thickness / 2,
+            ],
             [0, 0, 0, 1],
             [1, 1, 1],
             material=self.white_material,
