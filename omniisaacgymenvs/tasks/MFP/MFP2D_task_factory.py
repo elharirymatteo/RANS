@@ -21,6 +21,9 @@ from omniisaacgymenvs.tasks.MFP.MFP2D_track_xyo_velocity import (
 from omniisaacgymenvs.tasks.MFP.MFP2D_track_xy_velocity_heading import (
     TrackXYVelocityHeadingTask,
 )
+from omniisaacgymenvs.tasks.MFP.MFP2D_close_proximity_dock import (
+    CloseProximityDockTask,
+)
 from omniisaacgymenvs.tasks.MFP.MFP2D_go_through_xy import GoThroughXYTask
 from omniisaacgymenvs.tasks.MFP.MFP2D_go_through_xy_seq import GoThroughXYSequenceTask
 from omniisaacgymenvs.tasks.MFP.MFP2D_go_through_pose import GoThroughPoseTask
@@ -61,6 +64,7 @@ task_factory.register("GoToPose", GoToPoseTask)
 task_factory.register("TrackXYVelocity", TrackXYVelocityTask)
 task_factory.register("TrackXYOVelocity", TrackXYOVelocityTask)
 task_factory.register("TrackXYVelocityHeading", TrackXYVelocityHeadingTask)
+task_factory.register("CloseProximityDock", CloseProximityDockTask)
 task_factory.register("GoThroughXY", GoThroughXYTask)
 task_factory.register("GoThroughXYSequence", GoThroughXYSequenceTask)
 task_factory.register("GoThroughPose", GoThroughPoseTask)

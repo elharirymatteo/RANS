@@ -14,6 +14,7 @@ from omniisaacgymenvs.mujoco_envs.controllers.hl_controllers import (
     PoseController,
     PositionController,
     VelocityTracker,
+    DockController,
 )
 from omniisaacgymenvs.mujoco_envs.environments.disturbances import (
     RandomKillThrusters,
@@ -24,7 +25,7 @@ from omniisaacgymenvs.mujoco_envs.environments.disturbances import (
 class RLPlayerNode:
     def __init__(
         self,
-        hl_controller: Union[PositionController, PoseController, VelocityTracker],
+        hl_controller: Union[PositionController, PoseController, VelocityTracker, DockController],
         cfg: dict,
         map: List[int] = [2, 5, 4, 7, 6, 1, 0, 3],
         debug: bool = False,

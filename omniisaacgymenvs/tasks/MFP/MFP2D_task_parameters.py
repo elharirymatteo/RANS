@@ -14,6 +14,7 @@ from omniisaacgymenvs.tasks.MFP.curriculum_helpers import (
 )
 from omniisaacgymenvs.tasks.MFP.MFP2D_penalties import (
     BoundaryPenalty,
+    ConeShapePenalty,
 )
 
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
@@ -492,6 +493,78 @@ class TrackXYVelocityHeadingParameters:
         self.target_linear_velocity_curriculum = CurriculumParameters(
             **self.target_linear_velocity_curriculum
         )
+        self.spawn_heading_curriculum = CurriculumParameters(
+            **self.spawn_heading_curriculum
+        )
+        self.spawn_linear_velocity_curriculum = CurriculumParameters(
+            **self.spawn_linear_velocity_curriculum
+        )
+        self.spawn_angular_velocity_curriculum = CurriculumParameters(
+            **self.spawn_angular_velocity_curriculum
+        )
+
+@dataclass
+class CloseProximityDockParameters:
+    """
+    Parameters for the GoToPose task."""
+    name: str = "CloseProximityDock"
+    position_tolerance: float = 0.01
+    heading_tolerance: float = 0.025
+    kill_after_n_steps_in_tolerance: int = 50
+    kill_dist: float = 10.0
+    collision_force_tolerance: float = 0.25
+    dock_footprint_diameter: float = 0.8
+    goal_to_penalty_anchor_dist: float = 0.4
+    env_x: float = 3.0
+    env_y: float = 5.0
+    
+    boundary_penalty: BoundaryPenalty = field(default_factory=dict)
+    relative_angle_penalty: ConeShapePenalty = field(default_factory=dict)
+    
+    fp_footprint_diameter_curriculum: CurriculumParameters = field(default_factory=dict)
+    spawn_dock_mass_curriculum: CurriculumParameters = field(default_factory=dict)
+    spawn_dock_space_curriculum: CurriculumParameters = field(default_factory=dict)
+    spawn_position_curriculum: CurriculumParameters = field(default_factory=dict)
+    spawn_relative_angle_curriculum: CurriculumParameters = field(default_factory=dict)
+    spawn_heading_curriculum: CurriculumParameters = field(default_factory=dict)
+    spawn_linear_velocity_curriculum: CurriculumParameters = field(default_factory=dict)
+    spawn_angular_velocity_curriculum: CurriculumParameters = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        assert self.position_tolerance > 0, "Position tolerance must be positive."
+        assert self.heading_tolerance > 0, "Heading tolerance must be positive."
+        assert (
+            self.kill_after_n_steps_in_tolerance > 0
+        ), "Kill after n steps in tolerance must be positive."
+        assert self.kill_dist > 0, "Kill distance must be positive."
+        assert self.collision_force_tolerance > 0, "Collision force tolerance must be positive."
+        assert self.dock_footprint_diameter > 0, "Dock footprint diameter must be positive."
+        assert self.env_x > 0, "Environment x dimension must be positive."
+        assert self.env_y > 0, "Environment y dimension must be positive."
+        
+        self.boundary_penalty = BoundaryPenalty(**self.boundary_penalty)
+        self.relative_angle_penalty = ConeShapePenalty(**self.relative_angle_penalty)
+        
+        self.fp_footprint_diameter_curriculum = CurriculumParameters(
+            **self.fp_footprint_diameter_curriculum
+        )
+        
+        self.spawn_dock_mass_curriculum = CurriculumParameters(
+            **self.spawn_dock_mass_curriculum
+        )
+        
+        self.spawn_dock_space_curriculum = CurriculumParameters(
+            **self.spawn_dock_space_curriculum
+        )
+        
+        self.spawn_position_curriculum = CurriculumParameters(
+            **self.spawn_position_curriculum
+        )
+
+        self.spawn_relative_angle_curriculum = CurriculumParameters(
+            **self.spawn_relative_angle_curriculum
+        )
+        
         self.spawn_heading_curriculum = CurriculumParameters(
             **self.spawn_heading_curriculum
         )

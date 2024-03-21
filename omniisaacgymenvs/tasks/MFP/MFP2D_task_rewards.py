@@ -641,3 +641,12 @@ class TrackXYVelocityHeadingReward:
         else:
             raise ValueError("Unknown reward type.")
         return velocity_reward, heading_reward
+
+@dataclass
+class CloseProximityDockReward(GoToPoseReward):
+    """
+    Reward function and parameters for the GoToDock task.
+    Args:
+        collision_scale (float): scale for collision penalty.
+    """
+    collision_scale: float = 1.0

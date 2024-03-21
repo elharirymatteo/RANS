@@ -1,9 +1,9 @@
 __author__ = "Antoine Richard, Matteo El Hariry, Junnosuke Kamohara"
 __copyright__ = (
-    "Copyright 2023, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
+    "Copyright 2023-24, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
 )
 __license__ = "GPL"
-__version__ = "1.0.0"
+__version__ = "2.1.0"
 __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
@@ -25,7 +25,9 @@ class IMUInterface(BaseSensorInterface):
     def __init__(self, sensor_cfg: IMU_T, num_envs: int = 1):
         """
         Args:
-            sensor_cfg (IMU_T): imu sensor configuration."""
+            sensor_cfg (IMU_T): imu sensor configuration.
+            num_envs (int): number of environments.
+        """
         super().__init__(sensor_cfg)
         self.gravity_vector = self.sensor_cfg["gravity_vector"]
         self._gyroscope_bias = torch.zeros(3, 1)
@@ -102,7 +104,10 @@ class IMUInterface(BaseSensorInterface):
     
     def reset_idx(self, env_ids: torch.Tensor):
         """
-        reset sensor state of specified env."""
+        reset sensor state of specified env.
+        Args:
+            env_ids (torch.Tensor): environment indices to reset.
+        """
         env_long = env_ids.long()
         self._sensor_state.reset_idx(env_ids=env_long)
         self._prev_linear_velocity[env_long] = 0
@@ -110,7 +115,8 @@ class IMUInterface(BaseSensorInterface):
     @property
     def state(self):
         """
-        return sensor state."""
+        return sensor state.
+        """
         return self._sensor_state
 
 if __name__ == "__main__":
