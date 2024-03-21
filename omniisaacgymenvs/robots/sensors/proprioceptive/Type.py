@@ -1,9 +1,9 @@
 __author__ = "Antoine Richard, Matteo El Hariry, Junnosuke Kamohara"
 __copyright__ = (
-    "Copyright 2023, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
+    "Copyright 2023-24, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
 )
 __license__ = "GPL"
-__version__ = "1.0.0"
+__version__ = "2.1.0"
 __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
@@ -12,15 +12,18 @@ import numpy as np
 import torch
 import dataclasses
 from typing import List
-
-### sensor typing ###
+EPS = 1e-5
 
 @dataclasses.dataclass
 class Gyroscope_T:
     """
     Gyroscope typing class.
+    Args:
+        noise_density (float): noise density of the gyroscope.
+        random_walk (float): random walk of the gyroscope.
+        bias_correlation_time (float): bias correlation time of the gyroscope.
+        turn_on_bias_sigma (float): turn on bias sigma of the gyroscope.
     """
-
     noise_density: float = 0.0003393695767766752
     random_walk: float = 3.878509448876288e-05
     bias_correlation_time: float = 1.0e3
@@ -31,8 +34,12 @@ class Gyroscope_T:
 class Accelometer_T:
     """
     Accelometer typing class.
+    Args:
+        noise_density (float): noise density of the accelometer.
+        random_walk (float): random walk of the accelometer.
+        bias_correlation_time (float): bias correlation time of the accelometer.
+        turn_on_bias_sigma (float): turn on bias sigma of the accelometer.
     """
-
     noise_density: float = 0.004
     random_walk: float = 0.006
     bias_correlation_time: float = 300.0
@@ -47,7 +54,6 @@ class Sensor_T:
         inertial_to_sensor_frame (List[float]): transform from inertial frame (ENU) to sensor frame (FLU)
         sensor_frame_to_optical_frame (List[float]): transform from sensor frame (FLU) to sensor optical optical frame (OPENCV)
     """
-
     dt: float = 0.01
     body_to_sensor_frame: List[float] = dataclasses.field(default_factory=list)
     sensor_frame_to_optical_frame: List[float] = dataclasses.field(default_factory=list)
@@ -67,8 +73,8 @@ class IMU_T(Sensor_T):
         sensor_frame_to_optical_frame (List[float]): transform from sensor frame (FLU) to sensor optical optical frame (OPENCV)
         gravity_vector (List[float]): gravity vector in inertial frame
         accel_param (Accelometer_T): accelometer parameter
-        gyro_param (Gyroscope_T): gyroscope parameter"""
-
+        gyro_param (Gyroscope_T): gyroscope parameter
+    """
     gyro_param: Gyroscope_T = Gyroscope_T()
     accel_param: Accelometer_T = Accelometer_T()
     gravity_vector: List[float] = dataclasses.field(default_factory=list)
@@ -88,12 +94,9 @@ class GPS_T(Sensor_T):
         inertial_to_sensor_frame (List[float]): transform from inertial frame (ENU) to sensor frame (FLU)
         sensor_frame_to_optical_frame (List[float]): transform from sensor frame (FLU) to sensor optical optical frame (OPENCV)
     """
-
     def __post_init__(self):
         super().__post_init__()
 
-
-### state typing ###
 @dataclasses.dataclass
 class State:
     """
@@ -104,7 +107,6 @@ class State:
         linear_velocity (torch.float32): linear velocity of the body in inertial frame.
         angular_velocity (torch.float32): angular velocity of the body in inertial frame.
     """
-
     position: torch.float32
     orientation: torch.float32
     linear_velocity: torch.float32
@@ -121,8 +123,8 @@ class State:
         """
         Convert batched quaternion to batched rotation matrix.
         Args:
-            quat (torch.Tensor): batched quaternion.(..., 4)"""
-        EPS = 1e-5
+            quat (torch.Tensor): batched quaternion.(..., 4)
+        """
         w, x, y, z = torch.unbind(quat, -1)
         two_s = 2.0 / ((quat * quat).sum(-1) + EPS)
         R = torch.stack(

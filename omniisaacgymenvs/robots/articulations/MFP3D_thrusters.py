@@ -1,4 +1,4 @@
-__author__ = "Antoine Richard, Matteo El Hariry"
+__author__ = "Antoine Richard, Matteo El Hariry, Junnosuke Kamohara"
 __copyright__ = (
     "Copyright 2023-24, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
 )

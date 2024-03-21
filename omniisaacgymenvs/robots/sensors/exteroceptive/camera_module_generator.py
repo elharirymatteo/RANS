@@ -1,6 +1,6 @@
 __author__ = "Antoine Richard, Matteo El Hariry, Junnosuke Kamohara"
 __copyright__ = (
-    "Copyright 2023-2024, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
+    "Copyright 2023-24, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
 )
 __license__ = "GPL"
 __version__ = "2.1.0"
@@ -128,7 +128,9 @@ class D435_Sensor:
     
     def _add_sensor_link(self) -> None:
         """
-        Add sensor link(body)."""
+        Add sensor link(body).
+        If usd file is given, it will be linked to the sensor link.
+        """
 
         _, prim = createXform(self.stage, os.path.join(self.root_prim_path, self.sensor_base.prim_name))
         setTranslate(prim, Gf.Vec3d((0, 0, 0)))
@@ -147,7 +149,8 @@ class D435_Sensor:
         """
         Add link(body).
         Args:
-            link_name (str): name of the link."""
+            link_name (str): name of the link.
+        """
         createXform(self.stage, os.path.join(self.root_prim_path, link_name))
 
     def _add_transform(self, link_name:str, transform:list) -> None:
@@ -155,7 +158,8 @@ class D435_Sensor:
         Add transform to the link(body) relative to its parent prim.
         Args:
             link_name (str): name of the link.
-            transform (list): transform of the link."""
+            transform (list): transform of the link.
+        """
         
         prim = get_prim_at_path(os.path.join(self.root_prim_path, link_name))
         setTranslate(prim, Gf.Vec3f(*transform[:3]))
@@ -163,7 +167,8 @@ class D435_Sensor:
     
     def _add_camera(self) -> None:
         """
-        Add usd camera to camera optical link."""
+        Add usd camera to camera optical link.
+        """
 
         camera = self.stage.DefinePrim(self.cfg.camera_sensor.prim_path, 'Camera')
         setTranslate(camera, Gf.Vec3d((0, 0, 0)))
@@ -176,7 +181,8 @@ class D435_Sensor:
     
     def _build_prim_structure(self) -> None:
         """
-        Build the sensor prim structure."""
+        Build the sensor prim structure.
+        """
 
         self._add_root_prim()
         self._add_sensor_link()
@@ -186,7 +192,8 @@ class D435_Sensor:
     
     def build(self) -> None:
         """
-        Initialize the sensor prim structure."""
+        Initialize the sensor prim structure.
+        """
 
         self._build_prim_structure()
         self._add_camera()
@@ -206,21 +213,29 @@ class D455_Sensor(D435_Sensor):
 
 class SensorModuleFactory:
     """
-    Factory class to create tasks."""
+    Factory class to create tasks.
+    """
 
     def __init__(self):
         self.creators = {}
 
     def register(self, name: str, sensor):
         """
-        Registers a new task."""
+        Registers a new task.
+        Args:
+            name (str): name of the task.
+            sensor (object): task object.
+        """
         self.creators[name] = sensor
 
     def get(
         self, name: str
     ) -> object:
         """
-        Returns a task."""
+        Returns a task.
+        Args:
+            name (str): name of the task.
+        """
         assert name in self.creators.keys(), f"{name} not in {self.creators.keys()}"
         return self.creators[name]
 

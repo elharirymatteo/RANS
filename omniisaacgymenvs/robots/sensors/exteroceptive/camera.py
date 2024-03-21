@@ -1,9 +1,9 @@
 __author__ = "Antoine Richard, Matteo El Hariry, Junnosuke Kamohara"
 __copyright__ = (
-    "Copyright 2023, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
+    "Copyright 2023-24, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
 )
 __license__ = "GPL"
-__version__ = "1.0.0"
+__version__ = "2.1.0"
 __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
@@ -85,6 +85,10 @@ class RLCamera:
     def override_params(self, stage, prim_path:str, sensor_param:CameraCalibrationParam)->None:
         """
         Override the sensor parameters if override=True
+        Args:
+            stage (Stage): stage object
+            prim_path (str): path to the prim that the sensor is attached to
+            sensor_param (CameraCalibrationParam): parameters for the sensor
         """
         camera = stage.DefinePrim(prim_path, 'Camera')
         camera.GetAttribute('focalLength').Set(sensor_param.focalLength)
@@ -95,7 +99,8 @@ class RLCamera:
     
     def enable_rgb(self) -> None:
         """
-        Enable RGB as a RL observation"""
+        Enable RGB as a RL observation
+        """
         rgb_annot = rep.AnnotatorRegistry.get_annotator("rgb")
         rgb_annot.attach([self.render_product])
         self.annotators.update({"rgb":rgb_annot})
@@ -103,7 +108,8 @@ class RLCamera:
     
     def enable_depth(self) -> None:
         """
-        Enable depth as a RL observation"""
+        Enable depth as a RL observation
+        """
         depth_annot = rep.AnnotatorRegistry.get_annotator("distance_to_image_plane")
         depth_annot.attach([self.render_product])
         self.annotators.update({"depth":depth_annot})
@@ -122,21 +128,29 @@ class RLCamera:
 
 class CameraFactory:
     """
-    Factory class to create sensors."""
+    Factory class to create sensors.
+    """
 
     def __init__(self):
         self.creators = {}
 
     def register(self, name: str, sensor):
         """
-        Registers a new sensor."""
+        Registers a new sensor.
+        Args:
+            name (str): name of the sensor.
+            sensor (object): sensor object.
+        """
         self.creators[name] = sensor
 
     def get(
         self, name: str
     ) -> object:
         """
-        Returns a sensor."""
+        Returns a sensor.
+        Args:
+            name (str): name of the sensor.
+        """
         assert name in self.creators.keys(), f"{name} not in {self.creators.keys()}"
         return self.creators[name]
 

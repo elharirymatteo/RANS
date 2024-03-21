@@ -290,12 +290,8 @@ class TrackXYVelocityHeadingReward:
 @dataclass
 class CloseProximityDockReward(GoToPoseReward):
     """
-    Reward function and parameters for the GoToDock task."""
-    boundary_relative_angle: float = 0.17453
+    Reward function and parameters for the GoToDock task.
+    Args:
+        collision_scale (float): scale for collision penalty.
+    """
     collision_scale: float = 1.0
-    goal_bonus_scale: float = 1.0
-
-    def compute_goal_bonus(self, is_goal_reached: torch.Tensor) -> torch.Tensor:
-        """
-        Computes the bonus for reaching the goal."""
-        return is_goal_reached * self.goal_bonus_scale
