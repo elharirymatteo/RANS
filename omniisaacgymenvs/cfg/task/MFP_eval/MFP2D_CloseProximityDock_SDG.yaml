@@ -206,9 +206,9 @@ env:
         extent: 4.5
       sampling_parameters:
         distribution: normal
-        start_mean: 0.0
+        start_mean: 0.6
         start_std: 0.001
-        end_mean: 0.0
+        end_mean: 0.6
         end_std: 0.001
     spawn_position_curriculum:
       rate_parameters:
@@ -218,9 +218,9 @@ env:
         extent: 4.5
       sampling_parameters:
         distribution: normal
-        start_mean: 2.0
+        start_mean: 1.5
         start_std: 0.05
-        end_mean: 2.0
+        end_mean: 1.5
         end_std: 0.05
     spawn_relative_angle_curriculum:
       rate_parameters:
@@ -231,9 +231,9 @@ env:
       sampling_parameters:
         distribution: normal
         start_mean: 0.0
-        start_std: 2.0943 #2pi/3
+        start_std: 1.57 #pi/2
         end_mean: 0.0
-        end_std: 2.0943 #2pi/3
+        end_std: 1.57 #pi/2
     spawn_heading_curriculum:
       rate_parameters:
         function: sigmoid

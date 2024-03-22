@@ -10,12 +10,23 @@ __status__ = "development"
 
 from typing import List
 from dataclasses import dataclass, field
+import carb
 import omni.replicator.core as rep
 from omni.isaac.core.utils.prims import get_prim_at_path
 from omni.isaac.core.utils.stage import get_current_stage
 from pxr import Gf
 
 from omniisaacgymenvs.robots.sensors.exteroceptive.camera_interface import camera_interface_factory
+
+carb_settings = carb.settings.get_settings()
+carb_settings.set_bool(
+    "rtx/raytracing/cached/enabled",
+    False,
+)
+carb_settings.set_int(
+    "rtx/descriptorSets", 
+    8192,
+)
 
 @dataclass
 class CameraCalibrationParam:
