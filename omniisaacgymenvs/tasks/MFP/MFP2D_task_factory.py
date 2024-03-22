@@ -31,6 +31,9 @@ from omniisaacgymenvs.tasks.MFP.MFP2D_go_through_pose_seq import (
     GoThroughPoseSequenceTask,
 )
 from omniisaacgymenvs.tasks.MFP.MFP2D_go_through_gate import GoThroughGateTask
+from omniisaacgymenvs.tasks.MFP.MFP2D_go_through_gate_seq import (
+    GoThroughGateSequenceTask,
+)
 
 
 class TaskFactory:
@@ -70,3 +73,4 @@ task_factory.register("GoThroughXYSequence", GoThroughXYSequenceTask)
 task_factory.register("GoThroughPose", GoThroughPoseTask)
 task_factory.register("GoThroughPoseSequence", GoThroughPoseSequenceTask)
 task_factory.register("GoThroughGate", GoThroughGateTask)
+task_factory.register("GoThroughGateSequence", GoThroughGateSequenceTask)

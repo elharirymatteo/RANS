@@ -37,7 +37,7 @@ import math
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
 
-class GoThroughPoseSequenceTask(Core):
+class GoThroughGateSequenceTask(Core):
     """
     Implements the GoThroughXYSequence task. The robot has to reach a sequence of points in the 2D plane
     at a given velocity, it must do so while looking at the target. Unlike the GoThroughXY task, the robot
@@ -61,7 +61,7 @@ class GoThroughPoseSequenceTask(Core):
             device (str): The device to run the task on.
         """
 
-        super(GoThroughPoseSequenceTask, self).__init__(num_envs, device)
+        super(GoThroughGateSequenceTask, self).__init__(num_envs, device)
         # Task and reward parameters
         self._task_parameters = GoThroughGateSequenceParameters(**task_param)
         self._reward_parameters = GoThroughGateSequenceReward(**reward_param)
@@ -77,6 +77,12 @@ class GoThroughPoseSequenceTask(Core):
         )
         self._spawn_angular_velocity_sampler = CurriculumSampler(
             self._task_parameters.spawn_angular_velocity_curriculum
+        )
+        self._spawn_gate_delta_heading_sampler = CurriculumSampler(
+            self._task_parameters.spawn_gate_heading_curriculum
+        )
+        self._spawn_gate_delta_position_sampler = CurriculumSampler(
+            self._task_parameters.spawn_gate_position_curriculum
         )
 
         # Buffers
@@ -101,7 +107,9 @@ class GoThroughPoseSequenceTask(Core):
             (self._num_envs), device=self._device, dtype=torch.long
         )
         self._R = torch.zeros(
-            (self._num_envs, 2, 2), device=self._device, dtype=torch.float32
+            (self._num_envs, self._task_parameters.num_points, 2, 2),
+            device=self._device,
+            dtype=torch.float32,
         )
         self._previous_is_after_gate = torch.zeros(
             (self._num_envs), device=self._device, dtype=torch.int32
@@ -181,8 +189,8 @@ class GoThroughPoseSequenceTask(Core):
         self._task_data[:, :2] = self._position_error
         self._task_data[:, 2] = torch.cos(self._heading_error)
         self._task_data[:, 3] = torch.sin(self._heading_error)
-        self._task_data[:, 4] = torch.cos(self._target_headings)
-        self._task_data[:, 5] = torch.sin(self._target_headings)
+        self._task_data[:, 4] = torch.cos(self._target_headings[:, 0])
+        self._task_data[:, 5] = torch.sin(self._target_headings[:, 0])
         # position of the other points in the sequence
         for i in range(self._task_parameters.num_points - 1):
             overflowing = (
@@ -227,7 +235,7 @@ class GoThroughPoseSequenceTask(Core):
         Returns:
             torch.Tensor: The reward for the current state of the robot.
         """
-        # Compute progress and normalize by the target velocity
+        # Compute progress
         self.position_dist = torch.sqrt(torch.square(self._position_error).sum(-1))
         position_progress = self._previous_position_dist - self.position_dist
         was_killed = (self._previous_position_dist == 0).float()
@@ -248,7 +256,9 @@ class GoThroughPoseSequenceTask(Core):
             )
         )
         # Project the position error into the gate frame
-        pos_proj = torch.matmul(self._R, self._position_error.unsqueeze(-1)).squeeze(-1)
+        pos_proj = torch.matmul(
+            self._R[self._all, self._target_index], self._position_error.unsqueeze(-1)
+        ).squeeze(-1)
         is_after_gate = torch.logical_and(
             torch.logical_and(
                 pos_proj[:, 0] >= 0,
@@ -263,7 +273,6 @@ class GoThroughPoseSequenceTask(Core):
             ),
             torch.abs(pos_proj[:, 1]) < self._task_parameters.gate_width / 2,
         )
-
         # Checks if the goal is reached
         goal_reached = torch.logical_and(
             is_after_gate, self._previous_is_before_gate
@@ -375,6 +384,7 @@ class GoThroughPoseSequenceTask(Core):
         num_goals = len(env_ids)
         # Randomize position
         for i in range(self._task_parameters.num_points):
+            # Initial position is random
             if i == 0:
                 self._target_positions[env_ids, i] = (
                     torch.rand((num_goals, 2), device=self._device)
@@ -382,26 +392,41 @@ class GoThroughPoseSequenceTask(Core):
                     * 2
                     - self._task_parameters.goal_random_position
                 )
+                self._target_headings[env_ids, i] = (
+                    torch.rand(num_goals, device=self._device) * math.pi * 2
+                )
+            # The other positions are generated from the previous one
             else:
+                # Randomizes the position of the gate
+                # Distance from previous gate
                 r = self._spawn_position_sampler.sample(
                     num_goals, step, device=self._device
                 )
-                theta = torch.rand((num_goals,), device=self._device) * 2 * math.pi
+                # Deviation from previous gate's heading
+                delta_theta_position = self._spawn_gate_delta_position_sampler.sample(
+                    num_goals, step, device=self._device
+                )
+                theta = delta_theta_position + self._target_headings[env_ids, i - 1]
                 point = torch.zeros((num_goals, 2), device=self._device)
                 point[:, 0] = r * torch.cos(theta)
                 point[:, 1] = r * torch.sin(theta)
                 self._target_positions[env_ids, i] = (
                     self._target_positions[env_ids, i - 1] + point
                 )
-            self._target_headings[env_ids, i] = (
-                torch.rand(num_goals, device=self._device) * math.pi * 2
-            )
+                # Randomizes the heading of the new gate with respect to the previous one
+                delta_theta_heading = self._spawn_gate_delta_heading_sampler.sample(
+                    num_goals, step, device=self._device
+                )
+                self._target_headings[env_ids, i] = (
+                    self._target_headings[env_ids, i - 1] + delta_theta_heading
+                )
 
-        # Compute the rotation matrix
-        self._R[env_ids, 0, 0] = torch.cos(self._target_headings[env_ids, 0])
-        self._R[env_ids, 0, 1] = torch.sin(self._target_headings[env_ids, 0])
-        self._R[env_ids, 1, 0] = -torch.sin(self._target_headings[env_ids, 0])
-        self._R[env_ids, 1, 1] = torch.cos(self._target_headings[env_ids, 0])
+            # Compute the rotation matrix of the gate
+            self._R[env_ids, i, 0, 0] = torch.cos(self._target_headings[env_ids, i])
+            self._R[env_ids, i, 0, 1] = torch.sin(self._target_headings[env_ids, i])
+            self._R[env_ids, i, 1, 0] = -torch.sin(self._target_headings[env_ids, i])
+            self._R[env_ids, i, 1, 1] = torch.cos(self._target_headings[env_ids, i])
+
         # Creates tensors to save position and orientation
         p = torch.zeros(
             (num_goals, self._task_parameters.num_points, 3), device=self._device
@@ -443,7 +468,14 @@ class GoThroughPoseSequenceTask(Core):
             (num_resets, 3), device=self._device, dtype=torch.float32
         )
         r = self._spawn_position_sampler.sample(num_resets, step, device=self._device)
-        theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
+        theta = (
+            self._spawn_gate_delta_position_sampler.sample(
+                num_resets, step, device=self._device
+            )
+            + self._target_headings[env_ids, 0]
+            + math.pi
+        )
+
         initial_position[:, 0] = (
             r * torch.cos(theta) + self._target_positions[env_ids, 0, 0]
         )
@@ -460,7 +492,9 @@ class GoThroughPoseSequenceTask(Core):
         target_heading = torch.arctan2(
             target_position_local[:, 1], target_position_local[:, 0]
         )
-        theta = target_heading + self._delta_headings[env_ids]
+        theta = target_heading + self._spawn_heading_sampler.sample(
+            num_resets, step, device=self._device
+        )
         initial_orientation[:, 0] = torch.cos(theta * 0.5)
         initial_orientation[:, 3] = torch.sin(theta * 0.5)
         # Randomizes the linear velocity of the platform

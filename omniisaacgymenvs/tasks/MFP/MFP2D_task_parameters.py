@@ -369,6 +369,58 @@ class GoThroughGateParameters:
 
 
 @dataclass
+class GoThroughGateSequenceParameters:
+    """
+    Parameters for the GoToPose task.
+    """
+
+    name: str = "GoToThroughGate"
+    goal_random_position: float = 0.0
+    kill_dist: float = 10.0
+    gate_width: float = 1.5
+    gate_thickness: float = 0.2
+    num_points: int = 5
+
+    spawn_position_curriculum: CurriculumParameters = field(default_factory=dict)
+    boundary_penalty: BoundaryPenalty = field(default_factory=dict)
+    contact_penalty: ContactPenalty = field(default_factory=dict)
+    spawn_heading_curriculum: CurriculumParameters = field(default_factory=dict)
+    spawn_linear_velocity_curriculum: CurriculumParameters = field(default_factory=dict)
+    spawn_angular_velocity_curriculum: CurriculumParameters = field(
+        default_factory=dict
+    )
+    spawn_gate_position_curriculum: CurriculumParameters = field(default_factory=dict)
+    spawn_gate_heading_curriculum: CurriculumParameters = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        assert self.gate_width > 0, "Gate width must be positive."
+        assert self.goal_random_position >= 0, "Goal random position must be positive."
+        assert self.kill_dist > 0, "Kill distance must be positive."
+        assert self.num_points > 0, "Number of points must be positive."
+
+        self.boundary_penalty = BoundaryPenalty(**self.boundary_penalty)
+        self.contact_penalty = ContactPenalty(**self.contact_penalty)
+        self.spawn_position_curriculum = CurriculumParameters(
+            **self.spawn_position_curriculum
+        )
+        self.spawn_heading_curriculum = CurriculumParameters(
+            **self.spawn_heading_curriculum
+        )
+        self.spawn_linear_velocity_curriculum = CurriculumParameters(
+            **self.spawn_linear_velocity_curriculum
+        )
+        self.spawn_angular_velocity_curriculum = CurriculumParameters(
+            **self.spawn_angular_velocity_curriculum
+        )
+        self.spawn_gate_position_curriculum = CurriculumParameters(
+            **self.spawn_gate_position_curriculum
+        )
+        self.spawn_gate_heading_curriculum = CurriculumParameters(
+            **self.spawn_gate_heading_curriculum
+        )
+
+
+@dataclass
 class TrackXYVelocityParameters:
     """
     Parameters for the TrackXYVelocity task.
