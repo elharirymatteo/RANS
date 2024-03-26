@@ -189,8 +189,12 @@ class GoThroughGateSequenceTask(Core):
         self._task_data[:, :2] = self._position_error
         self._task_data[:, 2] = torch.cos(self._heading_error)
         self._task_data[:, 3] = torch.sin(self._heading_error)
-        self._task_data[:, 4] = torch.cos(self._target_headings[:, 0])
-        self._task_data[:, 5] = torch.sin(self._target_headings[:, 0])
+        self._task_data[:, 4] = torch.cos(
+            self._target_headings[self._all, self._target_index]
+        )
+        self._task_data[:, 5] = torch.sin(
+            self._target_headings[self._all, self._target_index]
+        )
         # position of the other points in the sequence
         for i in range(self._task_parameters.num_points - 1):
             overflowing = (
@@ -439,7 +443,7 @@ class GoThroughGateSequenceTask(Core):
         q[:, :, 0] = torch.cos(self._target_headings[env_ids] * 0.5)
         q[:, :, 3] = torch.sin(self._target_headings[env_ids] * 0.5)
         p[:, :, :2] = self._target_positions[env_ids]
-        p[:, :, 2] = 2
+        p[:, :, 2] = 0.5
 
         return p, q
 
