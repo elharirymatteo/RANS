@@ -4,6 +4,7 @@ runs
 models
 omniisaacgymenvs.egg-info/
 checkpoints
+rl_games
 omniisaacgymenvs/wandb
 evaluations
 ros_lab_exp

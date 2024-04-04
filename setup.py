@@ -13,8 +13,10 @@ INSTALL_REQUIRES = [
     "protobuf==3.20.2",
     "omegaconf==2.1.1",
     "hydra-core==1.1.1",
-    "redis==3.5.3", # needed by Ray on Windows
-    "rl-games==1.6.0"
+    "redis==3.5.3",  # needed by Ray on Windows
+    "wandb==0.12.4",
+    "cvxpy==1.3.2",
+    "mujoco==2.3.6",
 ]
 
 # Installation operation
@@ -27,7 +29,10 @@ setup(
     include_package_data=True,
     install_requires=INSTALL_REQUIRES,
     packages=find_packages("."),
-    classifiers=["Natural Language :: English", "Programming Language :: Python :: 3.7, 3.8"],
+    classifiers=[
+        "Natural Language :: English",
+        "Programming Language :: Python :: 3.7, 3.8",
+    ],
     zip_safe=False,
 )
 
