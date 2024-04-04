@@ -13,7 +13,7 @@ from omniisaacgymenvs.robots.articulations.MFP2D_thrusters import (
     ModularFloatingPlatform,
 )
 from omniisaacgymenvs.robots.sensors.exteroceptive.camera import (
-    camera_factory, 
+    camera_factory,
 )
 from omniisaacgymenvs.robots.articulations.views.MFP2D_view import (
     ModularFloatingPlatformView,
@@ -81,7 +81,7 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
 
         # Split the maximum amount of thrust across all thrusters.
         self.split_thrust = self._task_cfg["env"]["split_thrust"]
-        
+
         # Collects the platform parameters
         self.dt = self._task_cfg["sim"]["dt"]
         # Collects the task parameters
@@ -290,7 +290,7 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         }
 
         self.states_buf = torch.zeros(
-            (self._num_envs, self.num_states), device=self._device, dtype=torch.float
+            (self._num_envs, self._num_states), device=self._device, dtype=torch.float
         )
         self.rew_buf = torch.zeros(
             self._num_envs, device=self._device, dtype=torch.float
@@ -322,15 +322,15 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         # Collects the interactive elements in the scene
         root_path = "/World/envs/.*/Modular_floating_platform"
         self._platforms = ModularFloatingPlatformView(
-            prim_paths_expr=root_path, 
-            name="modular_floating_platform_view", 
+            prim_paths_expr=root_path,
+            name="modular_floating_platform_view",
             track_contact_force=True,
         )
         # Add views to scene
         scene.add(self._platforms)
         scene.add(self._platforms.base)
         scene.add(self._platforms.thrusters)
-        
+
         # Add rigidprim view of docking station to the scene
         scene, self._dock_view = self.task.add_dock_to_scene(scene)
 
@@ -359,11 +359,11 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         Adds the visualization target to the scene."""
 
         self.task.generate_target(
-            self.default_zero_env_path, 
-            self._default_marker_position, 
+            self.default_zero_env_path,
+            self._default_marker_position,
             self._dock_cfg,
         )
-    
+
     def get_zero_g_lab(self) -> None:
         """
         Adds the Zero-G-lab to the scene."""
@@ -375,13 +375,15 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         """
         Collect active cameras to generate synthetic images in batch."""
         active_sensors = []
-        active_camera_source_path = self._task_cfg["env"]["sensors"]["RLCamera"]["prim_path"]
+        active_camera_source_path = self._task_cfg["env"]["sensors"]["RLCamera"][
+            "prim_path"
+        ]
         for i in range(self._num_envs):
             # swap env_0 to env_i
             sensor_path = active_camera_source_path.split("/")
             sensor_path[3] = f"env_{i}"
-            self._task_cfg["env"]["sensors"]["RLCamera"]["prim_path"] = (
-                "/".join(sensor_path)
+            self._task_cfg["env"]["sensors"]["RLCamera"]["prim_path"] = "/".join(
+                sensor_path
             )
             rl_sensor = camera_factory.get("RLCamera")(
                 self._task_cfg["env"]["sensors"]["RLCamera"]
@@ -394,7 +396,9 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         Updates the state of the system."""
 
         # Collects the position and orientation of the platform
-        self.root_pos, self.root_quats = self._platforms.base.get_world_poses(clone=True)
+        self.root_pos, self.root_quats = self._platforms.base.get_world_poses(
+            clone=True
+        )
         # Remove the offset from the different environments
         root_positions = self.root_pos - self._env_pos
         # Collects the velocity of the platform
@@ -434,19 +438,27 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         self.update_goal_state()
         # Update FP contact state
         self.compute_contact_state()
-    
+
     def update_goal_state(self) -> None:
         """
         Updates the goal state of the task."""
 
-        target_positions, target_orientations = self._dock_view.base.get_world_poses(clone=True)
-        self.task.set_goals(self.all_indices.long(), target_positions-self._env_pos, target_orientations, self.step)
-    
-    def compute_contact_state(self)-> torch.Tensor:
+        target_positions, target_orientations = self._dock_view.base.get_world_poses(
+            clone=True
+        )
+        self.task.set_goals(
+            self.all_indices.long(),
+            target_positions - self._env_pos,
+            target_orientations,
+            self.step,
+        )
+
+    def compute_contact_state(self) -> torch.Tensor:
         """
         Get the contact state of the platform.
         Returns:
-            net_contact_forces_norm (torch.Tensor): the norm of the net contact forces."""
+            net_contact_forces_norm (torch.Tensor): the norm of the net contact forces.
+        """
         net_contact_forces = self._platforms.base.get_net_contact_forces(clone=False)
         net_contact_forces_norm = torch.norm(net_contact_forces, dim=-1)
         self.contact_state = net_contact_forces_norm
@@ -470,12 +482,23 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         rgb_obs, depth_obs = self.get_rgbd_data()
         self.obs_buf["rgb"] = rgb_obs
         self.obs_buf["depth"] = depth_obs
-        if self._task_cfg["env"]["sensors"]["save_to_log"] and self._cfg["wandb_activate"]:
-            if self.save_image_counter % self._task_cfg["env"]["sensors"]["save_frequency"] == 0:
+        if (
+            self._task_cfg["env"]["sensors"]["save_to_log"]
+            and self._cfg["wandb_activate"]
+        ):
+            if (
+                self.save_image_counter
+                % self._task_cfg["env"]["sensors"]["save_frequency"]
+                == 0
+            ):
                 rgb_grid = ToPILImage(make_grid(rgb_obs, nrow=5))
                 depth_grid = ToPILImage(make_grid(depth_obs, nrow=5))
-                wandb.log({"rgb": wandb.Image(rgb_grid, caption="rgb"), 
-                        "depth": wandb.Image(depth_grid, caption="depth")})
+                wandb.log(
+                    {
+                        "rgb": wandb.Image(rgb_grid, caption="rgb"),
+                        "depth": wandb.Image(depth_grid, caption="depth"),
+                    }
+                )
         self.save_image_counter += 1
 
         observations = {self._platforms.name: {"obs_buf": self.obs_buf}}
@@ -578,7 +601,7 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         )
         self.initial_pin_pos = self._env_pos
         self.initial_pin_rot = torch.zeros(
-            (self.num_envs, 4), dtype=torch.float32, device=self._device
+            (self._num_envs, 4), dtype=torch.float32, device=self._device
         )
         self.initial_pin_rot[:, 0] = 1
 
@@ -591,7 +614,9 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
 
         # contact state
         self.contact_state = torch.zeros(
-            (self._num_envs), dtype=torch.float32, device=self._device, 
+            (self._num_envs),
+            dtype=torch.float32,
+            device=self._device,
         )
 
         self.set_targets(self.all_indices)
@@ -684,9 +709,11 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         dof_vel[:, self._platforms.lock_indices[1]] = vel[:, 1]
         dof_vel[:, self._platforms.lock_indices[2]] = vel[:, 5]
         self._platforms.set_joint_velocities(dof_vel, indices=env_ids)
-        
+
         # reset contact state
-        self.contact_state[env_ids] = torch.zeros(num_resets, device=self._device, dtype=torch.float32)
+        self.contact_state[env_ids] = torch.zeros(
+            num_resets, device=self._device, dtype=torch.float32
+        )
 
         # bookkeeping
         self.reset_buf[env_ids] = 0
@@ -746,7 +773,7 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
             self.extras_wandb = {}
 
         self.update_state_statistics()
-    
+
     def calculate_collision_penalty(self) -> torch.Tensor:
         """
         Calculates the penalty for collisions."""

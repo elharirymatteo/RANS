@@ -59,8 +59,9 @@ def import_tasks():
     from omniisaacgymenvs.tasks.shadow_hand import ShadowHandTask
     from omniisaacgymenvs.tasks.crazyflie import CrazyflieTask
     from omniisaacgymenvs.tasks.MFP2D_Virtual import MFP2DVirtual
-    from omniisaacgymenvs.tasks.MFP2D_Virtual_Dock import MFP2DVirtual_Dock
-    from omniisaacgymenvs.tasks.MFP2D_Virtual_Dock_RGBD import MFP2DVirtual_Dock_RGBD
+
+    # from omniisaacgymenvs.tasks.MFP2D_Virtual_Dock import MFP2DVirtual_Dock
+    # from omniisaacgymenvs.tasks.MFP2D_Virtual_Dock_RGBD import MFP2DVirtual_Dock_RGBD
     from omniisaacgymenvs.tasks.MFP3D_Virtual import MFP3DVirtual
 
     from omniisaacgymenvs.tasks.warp.ant import (
@@ -93,10 +94,25 @@ def import_tasks():
         "ShadowHandOpenAI_FF": ShadowHandTask,
         "ShadowHandOpenAI_LSTM": ShadowHandTask,
         "MFP2DVirtual": MFP2DVirtual,
-        "MFP2DVirtual_Dock": MFP2DVirtual_Dock,
-        "MFP2DVirtual_Dock_RGBD": MFP2DVirtual_Dock_RGBD,
+        # "MFP2DVirtual_Dock": MFP2DVirtual_Dock,
+        # "MFP2DVirtual_Dock_RGBD": MFP2DVirtual_Dock_RGBD,
         "MFP3DVirtual": MFP3DVirtual,
     }
+
+    task_map_warp = {
+        "Cartpole": CartpoleTaskWarp,
+        "Ant": AntLocomotionTaskWarp,
+        "Humanoid": HumanoidLocomotionTaskWarp,
+    }
+
+    return task_map, task_map_warp
+
+
+def initialize_task(config, env, init_sim=True):
+    from omniisaacgymenvs.utils.config_utils.sim_config import SimConfig
+
+    sim_config = SimConfig(config)
+    task_map, task_map_warp = import_tasks()
 
     cfg = sim_config.config
     if cfg["warp"]:
@@ -117,5 +133,4 @@ def import_tasks():
         init_sim=init_sim,
         rendering_dt=rendering_dt,
     )
-
     return task

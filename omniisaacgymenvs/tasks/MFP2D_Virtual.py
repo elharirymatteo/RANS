@@ -27,7 +27,6 @@ from omniisaacgymenvs.tasks.MFP.MFP2D_penalties import (
 from omniisaacgymenvs.tasks.MFP.MFP2D_disturbances import (
     Disturbances,
 )
-from omniisaacgymenvs.tasks.MFP.MFP2D_core import quat_addition
 
 from omni.isaac.core.utils.prims import get_prim_at_path
 from omni.isaac.core.utils.torch.rotations import *
@@ -36,9 +35,6 @@ from gym import spaces
 import numpy as np
 import wandb
 import torch
-import omni
-import time
-import math
 
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
@@ -205,7 +201,7 @@ class MFP2DVirtual(RLTask):
         }
 
         self.states_buf = torch.zeros(
-            (self._num_envs, self.num_states), device=self._device, dtype=torch.float
+            (self._num_envs, self._num_states), device=self._device, dtype=torch.float
         )
         self.rew_buf = torch.zeros(
             self._num_envs, device=self._device, dtype=torch.float
@@ -444,7 +440,7 @@ class MFP2DVirtual(RLTask):
         )
         self.initial_pin_pos = self._env_pos
         self.initial_pin_rot = torch.zeros(
-            (self.num_envs, 4), dtype=torch.float32, device=self._device
+            (self._num_envs, 4), dtype=torch.float32, device=self._device
         )
         self.initial_pin_rot[:, 0] = 1
         # Set the initial contact state

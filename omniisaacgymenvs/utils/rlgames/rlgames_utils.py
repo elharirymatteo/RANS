@@ -44,7 +44,9 @@ class RLGPUAlgoObserver(AlgoObserver):
 
     def after_init(self, algo):
         self.algo = algo
-        self.mean_scores = torch_ext.AverageMeter(1, self.algo.games_to_track).to(self.algo.ppo_device)
+        self.mean_scores = torch_ext.AverageMeter(1, self.algo.games_to_track).to(
+            self.algo.ppo_device
+        )
         self.ep_infos = []
         self.direct_info = {}
         self.writer = self.algo.writer
@@ -55,7 +57,9 @@ class RLGPUAlgoObserver(AlgoObserver):
             if "episode" in infos:
                 self.ep_infos.append(infos["episode"])
 
-            if len(infos) > 0 and isinstance(infos, dict):  # allow direct logging from env
+            if len(infos) > 0 and isinstance(
+                infos, dict
+            ):  # allow direct logging from env
                 self.direct_info = {}
                 for k, v in infos.items():
                     # only log scalars
@@ -79,7 +83,9 @@ class RLGPUAlgoObserver(AlgoObserver):
                         ep_info[key] = torch.Tensor([ep_info[key]])
                     if len(ep_info[key].shape) == 0:
                         ep_info[key] = ep_info[key].unsqueeze(0)
-                    infotensor = torch.cat((infotensor, ep_info[key].to(self.algo.device)))
+                    infotensor = torch.cat(
+                        (infotensor, ep_info[key].to(self.algo.device))
+                    )
                 value = torch.mean(infotensor)
                 self.writer.add_scalar("Episode/" + key, value, epoch_num)
             self.ep_infos.clear()
@@ -98,7 +104,9 @@ class RLGPUAlgoObserver(AlgoObserver):
 
 class RLGPUEnv(vecenv.IVecEnv):
     def __init__(self, config_name, num_actors, **kwargs):
-        self.env = env_configurations.configurations[config_name]["env_creator"](**kwargs)
+        self.env = env_configurations.configurations[config_name]["env_creator"](
+            **kwargs
+        )
 
     def step(self, action):
         return self.env.step(action)
