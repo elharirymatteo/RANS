@@ -13,22 +13,23 @@ from omniisaacgymenvs.tasks.MFP.MFP2D_core import (
     Core,
 )
 from omniisaacgymenvs.tasks.MFP.MFP2D_task_rewards import (
-    GoToPoseReward,
+    GoThroughGateSequenceReward,
 )
 from omniisaacgymenvs.tasks.MFP.MFP2D_task_parameters import (
-    GoToPoseParameters,
+    GoThroughGateSequenceParameters,
 )
 from omniisaacgymenvs.tasks.MFP.curriculum_helpers import (
     CurriculumSampler,
 )
 
-from omniisaacgymenvs.utils.arrow import VisualArrow
+from omniisaacgymenvs.utils.gate import FixedGate
 from omni.isaac.core.prims import XFormPrimView
 from pxr import Usd
 
 from matplotlib import pyplot as plt
 from typing import Tuple
 import numpy as np
+import colorsys
 import wandb
 import torch
 import math
@@ -36,9 +37,11 @@ import math
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
 
-class GoToPoseTask(Core):
+class GoThroughGateSequenceTask(Core):
     """
-    Implements the GoToPose task. The robot has to reach a target position and heading.
+    Implements the GoThroughXYSequence task. The robot has to reach a sequence of points in the 2D plane
+    at a given velocity, it must do so while looking at the target. Unlike the GoThroughXY task, the robot
+    has to reach a sequence of points in the 2D plane.
     """
 
     def __init__(
@@ -49,7 +52,7 @@ class GoToPoseTask(Core):
         device: str,
     ) -> None:
         """
-        Initializes the GoToPose task.
+        Initializes the GoThroughXYSequence task.
 
         Args:
             task_param (dict): The parameters of the task.
@@ -58,10 +61,10 @@ class GoToPoseTask(Core):
             device (str): The device to run the task on.
         """
 
-        super(GoToPoseTask, self).__init__(num_envs, device)
+        super(GoThroughGateSequenceTask, self).__init__(num_envs, device)
         # Task and reward parameters
-        self._task_parameters = GoToPoseParameters(**task_param)
-        self._reward_parameters = GoToPoseReward(**reward_param)
+        self._task_parameters = GoThroughGateSequenceParameters(**task_param)
+        self._reward_parameters = GoThroughGateSequenceReward(**reward_param)
         # Curriculum samplers
         self._spawn_position_sampler = CurriculumSampler(
             self._task_parameters.spawn_position_curriculum
@@ -75,18 +78,49 @@ class GoToPoseTask(Core):
         self._spawn_angular_velocity_sampler = CurriculumSampler(
             self._task_parameters.spawn_angular_velocity_curriculum
         )
+        self._spawn_gate_delta_heading_sampler = CurriculumSampler(
+            self._task_parameters.spawn_gate_heading_curriculum
+        )
+        self._spawn_gate_delta_position_sampler = CurriculumSampler(
+            self._task_parameters.spawn_gate_position_curriculum
+        )
 
         # Buffers
-        self._goal_reached = torch.zeros(
+        self._all = torch.arange(self._num_envs, device=self._device)
+        self._trajectory_completed = torch.zeros(
+            (self._num_envs), device=self._device, dtype=torch.int32
+        )
+        self._is_in_reverse = torch.zeros(
             (self._num_envs), device=self._device, dtype=torch.int32
         )
         self._target_positions = torch.zeros(
-            (self._num_envs, 2), device=self._device, dtype=torch.float32
+            (self._num_envs, self._task_parameters.num_points, 2),
+            device=self._device,
+            dtype=torch.float32,
         )
         self._target_headings = torch.zeros(
+            (self._num_envs, self._task_parameters.num_points),
+            device=self._device,
+            dtype=torch.float32,
+        )
+        self._target_index = torch.zeros(
+            (self._num_envs), device=self._device, dtype=torch.long
+        )
+        self._R = torch.zeros(
+            (self._num_envs, self._task_parameters.num_points, 2, 2),
+            device=self._device,
+            dtype=torch.float32,
+        )
+        self._previous_is_after_gate = torch.zeros(
+            (self._num_envs), device=self._device, dtype=torch.int32
+        )
+        self._previous_is_before_gate = torch.zeros(
+            (self._num_envs), device=self._device, dtype=torch.int32
+        )
+        self._previous_position_dist = torch.zeros(
             (self._num_envs), device=self._device, dtype=torch.float32
         )
-        self._task_label = self._task_label * 1
+        self._task_label = self._task_label * 5
 
     def create_stats(self, stats: dict) -> dict:
         """
@@ -95,15 +129,15 @@ class GoToPoseTask(Core):
         Args:
             stats (dict): The dictionary to store the statistics.
 
-        Returns:
+        Returns:used
             dict: The dictionary containing the statistics.
         """
 
         torch_zeros = lambda: torch.zeros(
             self._num_envs, dtype=torch.float, device=self._device, requires_grad=False
         )
-        if not "position_reward" in stats.keys():
-            stats["position_reward"] = torch_zeros()
+        if not "progress_reward" in stats.keys():
+            stats["progress_reward"] = torch_zeros()
         if not "position_error" in stats.keys():
             stats["position_error"] = torch_zeros()
         if not "heading_reward" in stats.keys():
@@ -114,7 +148,11 @@ class GoToPoseTask(Core):
             stats["boundary_dist"] = torch_zeros()
         self.log_with_wandb = []
         self.log_with_wandb += self._task_parameters.boundary_penalty.get_stats_name()
+        self.log_with_wandb += self._task_parameters.contact_penalty.get_stats_name()
         for name in self._task_parameters.boundary_penalty.get_stats_name():
+            if not name in stats.keys():
+                stats[name] = torch_zeros()
+        for name in self._task_parameters.contact_penalty.get_stats_name():
             if not name in stats.keys():
                 stats[name] = torch_zeros()
         return stats
@@ -131,19 +169,57 @@ class GoToPoseTask(Core):
         """
 
         # position distance
-        self._position_error = self._target_positions - current_state["position"]
-        # heading distance
+        self._position_error = (
+            current_state["position"]
+            - self._target_positions[self._all, self._target_index]
+        ).squeeze()
+        # Compute target heading as the angle required to be looking at the target
+        look_at_target_headings = torch.arctan2(
+            -self._position_error[:, 1], -self._position_error[:, 0]
+        )
         heading = torch.arctan2(
             current_state["orientation"][:, 1], current_state["orientation"][:, 0]
         )
         self._heading_error = torch.arctan2(
-            torch.sin(self._target_headings - heading),
-            torch.cos(self._target_headings - heading),
+            torch.sin(look_at_target_headings - heading),
+            torch.cos(look_at_target_headings - heading),
         )
+
         # Encode task data
         self._task_data[:, :2] = self._position_error
         self._task_data[:, 2] = torch.cos(self._heading_error)
         self._task_data[:, 3] = torch.sin(self._heading_error)
+        self._task_data[:, 4] = torch.cos(
+            self._target_headings[self._all, self._target_index]
+        )
+        self._task_data[:, 5] = torch.sin(
+            self._target_headings[self._all, self._target_index]
+        )
+        # position of the other points in the sequence
+        for i in range(self._task_parameters.num_points - 1):
+            overflowing = (
+                self._target_index + i + 1 >= self._task_parameters.num_points
+            ).int()
+            indices = self._target_index + (i + 1) * (1 - overflowing)
+            self._task_data[:, 6 + 4 * i : 6 + 4 * i + 2] = (
+                self._target_positions[self._all, indices] - current_state["position"]
+            ) * (1 - overflowing).view(-1, 1)
+            heading_error = torch.arctan2(
+                torch.sin(
+                    self._target_headings[self._all, indices]
+                    - self._target_headings[self._all, indices - 1]
+                ),
+                torch.cos(
+                    self._target_headings[self._all, indices]
+                    - self._target_headings[self._all, indices - 1]
+                ),
+            )
+            self._task_data[:, 6 + 4 * i + 2] = torch.cos(heading_error) * (
+                1 - overflowing
+            )
+            self._task_data[:, 6 + 4 * i + 3] = torch.cos(heading_error) * (
+                1 - overflowing
+            )
         return self.update_observation_tensor(current_state)
 
     def compute_reward(
@@ -163,9 +239,12 @@ class GoToPoseTask(Core):
         Returns:
             torch.Tensor: The reward for the current state of the robot.
         """
-
-        # position error
+        # Compute progress
         self.position_dist = torch.sqrt(torch.square(self._position_error).sum(-1))
+        position_progress = self._previous_position_dist - self.position_dist
+        was_killed = (self._previous_position_dist == 0).float()
+        position_progress = position_progress * (1 - was_killed)
+        # Heading
         self.heading_dist = torch.abs(self._heading_error)
         # boundary penalty
         self.boundary_dist = torch.abs(
@@ -174,27 +253,72 @@ class GoToPoseTask(Core):
         self.boundary_penalty = self._task_parameters.boundary_penalty.compute_penalty(
             self.boundary_dist, step
         )
-
+        # contact penalty
+        contact_penalty, self._contact_kills = (
+            self._task_parameters.contact_penalty.compute_penalty(
+                current_state["net_contact_forces"], step
+            )
+        )
+        # Project the position error into the gate frame
+        pos_proj = torch.matmul(
+            self._R[self._all, self._target_index], self._position_error.unsqueeze(-1)
+        ).squeeze(-1)
+        is_after_gate = torch.logical_and(
+            torch.logical_and(
+                pos_proj[:, 0] >= 0,
+                pos_proj[:, 0] < self._task_parameters.gate_width / 4,
+            ),
+            torch.abs(pos_proj[:, 1]) < self._task_parameters.gate_width / 2,
+        )
+        is_before_gate = torch.logical_and(
+            torch.logical_and(
+                pos_proj[:, 0] < 0,
+                pos_proj[:, 0] > -self._task_parameters.gate_width / 4,
+            ),
+            torch.abs(pos_proj[:, 1]) < self._task_parameters.gate_width / 2,
+        )
         # Checks if the goal is reached
-        position_goal_is_reached = (
-            self.position_dist < self._task_parameters.position_tolerance
+        goal_reached = torch.logical_and(
+            is_after_gate, self._previous_is_before_gate
         ).int()
-        heading_goal_is_reached = (
-            self.heading_dist < self._task_parameters.heading_tolerance
+        reached_ids = goal_reached.nonzero(as_tuple=False).squeeze(-1)
+        # if the goal is reached, the target index is updated
+        self._target_index = self._target_index + goal_reached
+        self._trajectory_completed = (
+            self._target_index >= self._task_parameters.num_points
         ).int()
-        goal_is_reached = position_goal_is_reached * heading_goal_is_reached
-        self._goal_reached *= goal_is_reached  # if not set the value to 0
-        self._goal_reached += goal_is_reached  # if it is add 1
+        # Check if the robot goes through the gate in the wrong direction
+        self._is_in_reverse = torch.logical_and(
+            self._previous_is_after_gate, is_before_gate
+        ).int()
 
         # rewards
         (
-            self.position_reward,
+            self.progress_reward,
             self.heading_reward,
         ) = self._reward_parameters.compute_reward(
-            current_state, actions, self.position_dist, self.heading_dist
+            current_state,
+            actions,
+            position_progress,
+            self.heading_dist,
         )
-
-        return self.position_reward + self.heading_reward - self.boundary_penalty
+        self._previous_position_dist = self.position_dist.clone()
+        self._previous_is_after_gate = is_after_gate.clone()
+        self._previous_is_before_gate = is_before_gate.clone()
+        # If goal is reached make next progress null
+        self._previous_position_dist[reached_ids] = 0
+        self._previous_is_after_gate[reached_ids] = 0
+        self._previous_is_before_gate[reached_ids] = 0
+        return (
+            self.progress_reward
+            + self.heading_reward
+            - self.boundary_penalty
+            - contact_penalty
+            - self._reward_parameters.time_penalty
+            + goal_reached * self._reward_parameters.terminal_reward
+            + self._trajectory_completed * self._reward_parameters.terminal_reward
+            - self._reward_parameters.reverse_penalty * self._is_in_reverse
+        )
 
     def update_kills(self) -> torch.Tensor:
         """
@@ -204,16 +328,14 @@ class GoToPoseTask(Core):
             torch.Tensor: Wether the platforms should be killed or not.
         """
 
-        die = torch.zeros_like(self._goal_reached, dtype=torch.long)
-        ones = torch.ones_like(self._goal_reached, dtype=torch.long)
+        die = torch.zeros_like(self._trajectory_completed, dtype=torch.long)
+        ones = torch.ones_like(self._trajectory_completed, dtype=torch.long)
         die = torch.where(
             self.position_dist > self._task_parameters.kill_dist, ones, die
         )
-        die = torch.where(
-            self._goal_reached > self._task_parameters.kill_after_n_steps_in_tolerance,
-            ones,
-            die,
-        )
+        die = torch.where(self._trajectory_completed > 0, ones, die)
+        die = torch.where(self._is_in_reverse > 0, ones, die)
+        die = torch.where(self._contact_kills, ones, die)
         return die
 
     def update_statistics(self, stats: dict) -> dict:
@@ -227,12 +349,13 @@ class GoToPoseTask(Core):
             dict: The statistics of the training
         """
 
-        stats["position_reward"] += self.position_reward
+        stats["progress_reward"] += self.progress_reward
         stats["heading_reward"] += self.heading_reward
         stats["position_error"] += self.position_dist
         stats["heading_error"] += self.heading_dist
         stats["boundary_dist"] += self.boundary_dist
         stats = self._task_parameters.boundary_penalty.update_statistics(stats)
+        stats = self._task_parameters.contact_penalty.update_statistics(stats)
         return stats
 
     def reset(self, env_ids: torch.Tensor) -> None:
@@ -242,8 +365,9 @@ class GoToPoseTask(Core):
         Args:
             env_ids (torch.Tensor): The ids of the environments.
         """
-
-        self._goal_reached[env_ids] = 0
+        self._trajectory_completed[env_ids] = 0
+        self._target_index[env_ids] = 0
+        self._previous_position_dist[env_ids] = 0
 
     def get_goals(
         self,
@@ -263,23 +387,63 @@ class GoToPoseTask(Core):
 
         num_goals = len(env_ids)
         # Randomize position
-        self._target_positions[env_ids] = (
-            torch.rand((num_goals, 2), device=self._device)
-            * self._task_parameters.goal_random_position
-            * 2
-            - self._task_parameters.goal_random_position
+        for i in range(self._task_parameters.num_points):
+            # Initial position is random
+            if i == 0:
+                self._target_positions[env_ids, i] = (
+                    torch.rand((num_goals, 2), device=self._device)
+                    * self._task_parameters.goal_random_position
+                    * 2
+                    - self._task_parameters.goal_random_position
+                )
+                self._target_headings[env_ids, i] = (
+                    torch.rand(num_goals, device=self._device) * math.pi * 2
+                )
+            # The other positions are generated from the previous one
+            else:
+                # Randomizes the position of the gate
+                # Distance from previous gate
+                r = self._spawn_position_sampler.sample(
+                    num_goals, step, device=self._device
+                )
+                # Deviation from previous gate's heading
+                delta_theta_position = self._spawn_gate_delta_position_sampler.sample(
+                    num_goals, step, device=self._device
+                )
+                theta = delta_theta_position + self._target_headings[env_ids, i - 1]
+                point = torch.zeros((num_goals, 2), device=self._device)
+                point[:, 0] = r * torch.cos(theta)
+                point[:, 1] = r * torch.sin(theta)
+                self._target_positions[env_ids, i] = (
+                    self._target_positions[env_ids, i - 1] + point
+                )
+                # Randomizes the heading of the new gate with respect to the previous one
+                delta_theta_heading = self._spawn_gate_delta_heading_sampler.sample(
+                    num_goals, step, device=self._device
+                )
+                self._target_headings[env_ids, i] = (
+                    self._target_headings[env_ids, i - 1] + delta_theta_heading
+                )
+
+            # Compute the rotation matrix of the gate
+            self._R[env_ids, i, 0, 0] = torch.cos(self._target_headings[env_ids, i])
+            self._R[env_ids, i, 0, 1] = torch.sin(self._target_headings[env_ids, i])
+            self._R[env_ids, i, 1, 0] = -torch.sin(self._target_headings[env_ids, i])
+            self._R[env_ids, i, 1, 1] = torch.cos(self._target_headings[env_ids, i])
+
+        # Creates tensors to save position and orientation
+        p = torch.zeros(
+            (num_goals, self._task_parameters.num_points, 3), device=self._device
         )
-        p = torch.zeros((num_goals, 3), dtype=torch.float32, device=self._device)
-        p[:, :2] += self._target_positions[env_ids]
-        p[:, 2] = 2
-        # Randomize heading
-        self._target_headings[env_ids] = (
-            torch.rand(num_goals, device=self._device) * math.pi * 2
+        q = torch.zeros(
+            (num_goals, self._task_parameters.num_points, 4),
+            device=self._device,
+            dtype=torch.float32,
         )
-        q = torch.zeros((num_goals, 4), dtype=torch.float32, device=self._device)
-        q[:, 0] = 1
-        q[:, 0] = torch.cos(self._target_headings[env_ids] * 0.5)
-        q[:, 3] = torch.sin(self._target_headings[env_ids] * 0.5)
+        q[:, :, 0] = torch.cos(self._target_headings[env_ids] * 0.5)
+        q[:, :, 3] = torch.sin(self._target_headings[env_ids] * 0.5)
+        p[:, :, :2] = self._target_positions[env_ids]
+        p[:, :, 2] = 0.5
 
         return p, q
 
@@ -308,20 +472,32 @@ class GoToPoseTask(Core):
             (num_resets, 3), device=self._device, dtype=torch.float32
         )
         r = self._spawn_position_sampler.sample(num_resets, step, device=self._device)
-        theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
+        theta = (
+            self._spawn_gate_delta_position_sampler.sample(
+                num_resets, step, device=self._device
+            )
+            + self._target_headings[env_ids, 0]
+            + math.pi
+        )
+
         initial_position[:, 0] = (
-            r * torch.cos(theta) + self._target_positions[env_ids, 0]
+            r * torch.cos(theta) + self._target_positions[env_ids, 0, 0]
         )
         initial_position[:, 1] = (
-            r * torch.sin(theta) + self._target_positions[env_ids, 1]
+            r * torch.sin(theta) + self._target_positions[env_ids, 0, 1]
         )
         # Randomizes the heading of the platform
         initial_orientation = torch.zeros(
             (num_resets, 4), device=self._device, dtype=torch.float32
         )
-        theta = (
-            self._spawn_heading_sampler.sample(num_resets, step, device=self._device)
-            + self._target_headings[env_ids]
+        target_position_local = (
+            self._target_positions[env_ids, 0, :2] - initial_position[:, :2]
+        )
+        target_heading = torch.arctan2(
+            target_position_local[:, 1], target_position_local[:, 0]
+        )
+        theta = target_heading + self._spawn_heading_sampler.sample(
+            num_resets, step, device=self._device
         )
         initial_orientation[:, 0] = torch.cos(theta * 0.5)
         initial_orientation[:, 3] = torch.sin(theta * 0.5)
@@ -357,25 +533,14 @@ class GoToPoseTask(Core):
             position (torch.Tensor): The position of the arrow.
         """
 
-        color = torch.tensor([1, 0, 0])
-        body_radius = 0.1
-        body_length = 0.5
-        head_radius = 0.2
-        head_length = 0.5
-        poll_radius = 0.025
-        poll_length = 2
-        VisualArrow(
-            prim_path=path + "/arrow",
-            translation=position,
-            name="target_0",
-            body_radius=body_radius,
-            body_length=body_length,
-            poll_radius=poll_radius,
-            poll_length=poll_length,
-            head_radius=head_radius,
-            head_length=head_length,
-            color=color,
-        )
+        for i in range(self._task_parameters.num_points):
+            FixedGate(
+                prim_path=path + "/gate_" + str(i),
+                translation=position,
+                name="target_" + str(i),
+                gate_width=self._task_parameters.gate_width,
+                gate_thickness=self._task_parameters.gate_thickness,
+            )
 
     def add_visual_marker_to_scene(
         self, scene: Usd.Stage
@@ -390,9 +555,9 @@ class GoToPoseTask(Core):
             Tuple[Usd.Stage, XFormPrimView]: The scene and the visual marker.
         """
 
-        arrows = XFormPrimView(prim_paths_expr="/World/envs/.*/arrow")
-        scene.add(arrows)
-        return scene, arrows
+        pins = XFormPrimView(prim_paths_expr="/World/envs/.*/gate_[0-5]")
+        scene.add(pins)
+        return scene, pins
 
     def log_spawn_data(self, step: int) -> dict:
         """
@@ -498,7 +663,9 @@ class GoToPoseTask(Core):
             dict: The target data.
         """
 
-        return {}
+        dict = {}
+
+        return dict
 
     def get_logs(self, step: int) -> dict:
         """
@@ -512,6 +679,7 @@ class GoToPoseTask(Core):
         """
 
         dict = self._task_parameters.boundary_penalty.get_logs()
+        dict = self._task_parameters.contact_penalty.get_logs()
         if step % 50 == 0:
             dict = {**dict, **self.log_spawn_data(step)}
             dict = {**dict, **self.log_target_data(step)}

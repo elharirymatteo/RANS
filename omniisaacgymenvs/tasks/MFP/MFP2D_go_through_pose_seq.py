@@ -13,10 +13,10 @@ from omniisaacgymenvs.tasks.MFP.MFP2D_core import (
     Core,
 )
 from omniisaacgymenvs.tasks.MFP.MFP2D_task_rewards import (
-    TrackXYVelocityHeadingReward,
+    GoThroughPoseSequenceReward,
 )
 from omniisaacgymenvs.tasks.MFP.MFP2D_task_parameters import (
-    TrackXYVelocityHeadingParameters,
+    GoThroughPoseSequenceParameters,
 )
 from omniisaacgymenvs.tasks.MFP.curriculum_helpers import (
     CurriculumSampler,
@@ -29,6 +29,7 @@ from pxr import Usd
 from matplotlib import pyplot as plt
 from typing import Tuple
 import numpy as np
+import colorsys
 import wandb
 import torch
 import math
@@ -36,9 +37,11 @@ import math
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
 
-class TrackXYVelocityHeadingTask(Core):
+class GoThroughPoseSequenceTask(Core):
     """
-    Implements the TrackXYVelHeading task. The robot has to reach a target velocity and a target heading.
+    Implements the GoThroughXYSequence task. The robot has to reach a sequence of points in the 2D plane
+    at a given velocity, it must do so while looking at the target. Unlike the GoThroughXY task, the robot
+    has to reach a sequence of points in the 2D plane.
     """
 
     def __init__(
@@ -49,7 +52,7 @@ class TrackXYVelocityHeadingTask(Core):
         device: str,
     ) -> None:
         """
-        Initializes the TrackXYVelHeading task.
+        Initializes the GoThroughXYSequence task.
 
         Args:
             task_param (dict): The parameters of the task.
@@ -58,11 +61,14 @@ class TrackXYVelocityHeadingTask(Core):
             device (str): The device to run the task on.
         """
 
-        super(TrackXYVelocityHeadingTask, self).__init__(num_envs, device)
+        super(GoThroughPoseSequenceTask, self).__init__(num_envs, device)
         # Task and reward parameters
-        self._task_parameters = TrackXYVelocityHeadingParameters(**task_param)
-        self._reward_parameters = TrackXYVelocityHeadingReward(**reward_param)
+        self._task_parameters = GoThroughPoseSequenceParameters(**task_param)
+        self._reward_parameters = GoThroughPoseSequenceReward(**reward_param)
         # Curriculum samplers
+        self._spawn_position_sampler = CurriculumSampler(
+            self._task_parameters.spawn_position_curriculum
+        )
         self._target_linear_velocity_sampler = CurriculumSampler(
             self._task_parameters.target_linear_velocity_curriculum,
         )
@@ -77,16 +83,33 @@ class TrackXYVelocityHeadingTask(Core):
         )
 
         # Buffers
-        self._goal_reached = torch.zeros(
+        self._all = torch.arange(self._num_envs, device=self._device)
+        self._trajectory_completed = torch.zeros(
             (self._num_envs), device=self._device, dtype=torch.int32
         )
-        self._target_velocities = torch.zeros(
-            (self._num_envs, 2), device=self._device, dtype=torch.float32
+        self._target_positions = torch.zeros(
+            (self._num_envs, self._task_parameters.num_points, 2),
+            device=self._device,
+            dtype=torch.float32,
         )
         self._target_headings = torch.zeros(
+            (self._num_envs, self._task_parameters.num_points),
+            device=self._device,
+            dtype=torch.float32,
+        )
+        self._target_index = torch.zeros(
+            (self._num_envs), device=self._device, dtype=torch.long
+        )
+        self._target_velocities = torch.zeros(
             (self._num_envs), device=self._device, dtype=torch.float32
         )
-        self._task_label = self._task_label * 4
+        self._delta_headings = torch.zeros(
+            (self._num_envs), device=self._device, dtype=torch.float32
+        )
+        self._previous_position_dist = torch.zeros(
+            (self._num_envs), device=self._device, dtype=torch.float32
+        )
+        self._task_label = self._task_label * 5
 
     def create_stats(self, stats: dict) -> dict:
         """
@@ -95,22 +118,32 @@ class TrackXYVelocityHeadingTask(Core):
         Args:
             stats (dict): The dictionary to store the statistics.
 
-        Returns:
+        Returns:used
             dict: The dictionary containing the statistics.
         """
 
         torch_zeros = lambda: torch.zeros(
             self._num_envs, dtype=torch.float, device=self._device, requires_grad=False
         )
-        if not "velocity_reward" in stats.keys():
-            stats["velocity_reward"] = torch_zeros()
-        if not "velocity_error" in stats.keys():
-            stats["velocity_error"] = torch_zeros()
+        if not "progress_reward" in stats.keys():
+            stats["progress_reward"] = torch_zeros()
+        if not "position_error" in stats.keys():
+            stats["position_error"] = torch_zeros()
         if not "heading_reward" in stats.keys():
             stats["heading_reward"] = torch_zeros()
+        if not "linear_velocity_reward" in stats.keys():
+            stats["linear_velocity_reward"] = torch_zeros()
+        if not "linear_velocity_error" in stats.keys():
+            stats["linear_velocity_error"] = torch_zeros()
         if not "heading_error" in stats.keys():
             stats["heading_error"] = torch_zeros()
+        if not "boundary_dist" in stats.keys():
+            stats["boundary_dist"] = torch_zeros()
         self.log_with_wandb = []
+        self.log_with_wandb += self._task_parameters.boundary_penalty.get_stats_name()
+        for name in self._task_parameters.boundary_penalty.get_stats_name():
+            if not name in stats.keys():
+                stats[name] = torch_zeros()
         return stats
 
     def get_state_observations(self, current_state: dict) -> torch.Tensor:
@@ -124,24 +157,55 @@ class TrackXYVelocityHeadingTask(Core):
             torch.Tensor: The observation tensor.
         """
 
-        # velocity distance
-        self._velocity_error = (
-            self._target_velocities - current_state["linear_velocity"]
+        # position distance
+        self._position_error = (
+            self._target_positions[self._all, self._target_index]
+            - current_state["position"]
+        ).squeeze()
+        # linear velocity error (normed velocity)
+        self.linear_velocity_err = self._target_velocities - torch.norm(
+            current_state["linear_velocity"], dim=-1
         )
         # heading distance
         heading = torch.arctan2(
             current_state["orientation"][:, 1], current_state["orientation"][:, 0]
         )
         self._heading_error = torch.arctan2(
-            torch.sin(self._target_headings - heading),
-            torch.cos(self._target_headings - heading),
+            torch.sin(self._target_headings[self._all, self._target_index] - heading),
+            torch.cos(self._target_headings[self._all, self._target_index] - heading),
         )
+
         # Encode task data
-        self._task_data[:, :2] = self._velocity_error
+        self._task_data[:, :2] = self._position_error
         self._task_data[:, 2] = torch.cos(self._heading_error)
         self._task_data[:, 3] = torch.sin(self._heading_error)
-        # Position
-        self._position_error = current_state["position"]
+        self._task_data[:, 4] = self.linear_velocity_err
+        # position of the other points in the sequence
+        for i in range(self._task_parameters.num_points - 1):
+            overflowing = (
+                self._target_index + i + 1 >= self._task_parameters.num_points
+            ).int()
+            indices = self._target_index + (i + 1) * (1 - overflowing)
+            self._task_data[:, 5 + 4 * i : 5 + 4 * i + 2] = (
+                self._target_positions[self._all, indices] - current_state["position"]
+            ) * (1 - overflowing).view(-1, 1)
+            heading_error = torch.arctan2(
+                torch.sin(
+                    self._target_headings[self._all, indices]
+                    - self._target_headings[self._all, indices - 1]
+                ),
+                torch.cos(
+                    self._target_headings[self._all, indices]
+                    - self._target_headings[self._all, indices - 1]
+                ),
+            )
+            self._task_data[:, 5 + 4 * i + 2] = torch.cos(heading_error) * (
+                1 - overflowing
+            )
+            self._task_data[:, 5 + 4 * i + 3] = torch.cos(heading_error) * (
+                1 - overflowing
+            )
+
         return self.update_observation_tensor(current_state)
 
     def compute_reward(
@@ -161,32 +225,62 @@ class TrackXYVelocityHeadingTask(Core):
         Returns:
             torch.Tensor: The reward for the current state of the robot.
         """
-
-        # velocity error
+        # Compute progress and normalize by the target velocity
         self.position_dist = torch.sqrt(torch.square(self._position_error).sum(-1))
-        self.velocity_dist = torch.sqrt(torch.square(self._velocity_error).sum(-1))
+        self.linear_velocity_dist = torch.abs(self.linear_velocity_err)
+        position_progress = (
+            self._previous_position_dist - self.position_dist
+        ) / torch.abs(self._target_velocities)
+        was_killed = (self._previous_position_dist == 0).float()
+        position_progress = position_progress * (1 - was_killed)
+        # Heading
         self.heading_dist = torch.abs(self._heading_error)
+        # boundary penalty
+        self.boundary_dist = torch.abs(
+            self._task_parameters.kill_dist - self.position_dist
+        )
+        self.boundary_penalty = self._task_parameters.boundary_penalty.compute_penalty(
+            self.boundary_dist, step
+        )
 
         # Checks if the goal is reached
-        velocity_goal_is_reached = (
-            self.velocity_dist < self._task_parameters.velocity_tolerance
-        ).int()
-        heading_goal_is_reached = (
+        position_goal_reached = (
+            self.position_dist < self._task_parameters.position_tolerance
+        )
+        heading_goal_reached = (
             self.heading_dist < self._task_parameters.heading_tolerance
+        )
+        goal_reached = (position_goal_reached * heading_goal_reached).int()
+        reached_ids = goal_reached.nonzero(as_tuple=False).squeeze(-1)
+        # if the goal is reached, the target index is updated
+        self._target_index = self._target_index + goal_reached
+        self._trajectory_completed = (
+            self._target_index >= self._task_parameters.num_points
         ).int()
-        goal_is_reached = velocity_goal_is_reached * heading_goal_is_reached
-        self._goal_reached *= goal_is_reached  # if not set the value to 0
-        self._goal_reached += goal_is_reached  # if it is add 1
 
         # rewards
         (
-            self.velocity_reward,
+            self.progress_reward,
             self.heading_reward,
+            self.linear_velocity_reward,
         ) = self._reward_parameters.compute_reward(
-            current_state, actions, self.velocity_dist, self.heading_dist
+            current_state,
+            actions,
+            position_progress,
+            self.heading_dist,
+            self.linear_velocity_dist,
         )
-
-        return self.velocity_reward + self.heading_reward
+        self._previous_position_dist = self.position_dist.clone()
+        # If goal is reached make next progress null
+        self._previous_position_dist[reached_ids] = 0
+        return (
+            self.progress_reward
+            + self.heading_reward
+            + self.linear_velocity_reward
+            - self.boundary_penalty
+            - self._reward_parameters.time_penalty
+            + self._trajectory_completed * self._reward_parameters.terminal_reward
+        )
 
     def update_kills(self) -> torch.Tensor:
         """
@@ -196,16 +290,12 @@ class TrackXYVelocityHeadingTask(Core):
             torch.Tensor: Wether the platforms should be killed or not.
         """
 
-        die = torch.zeros_like(self._goal_reached, dtype=torch.long)
-        ones = torch.ones_like(self._goal_reached, dtype=torch.long)
+        die = torch.zeros_like(self._trajectory_completed, dtype=torch.long)
+        ones = torch.ones_like(self._trajectory_completed, dtype=torch.long)
         die = torch.where(
             self.position_dist > self._task_parameters.kill_dist, ones, die
         )
-        die = torch.where(
-            self._goal_reached > self._task_parameters.kill_after_n_steps_in_tolerance,
-            ones,
-            die,
-        )
+        die = torch.where(self._trajectory_completed > 0, ones, die)
         return die
 
     def update_statistics(self, stats: dict) -> dict:
@@ -219,10 +309,14 @@ class TrackXYVelocityHeadingTask(Core):
             dict: The statistics of the training
         """
 
-        stats["velocity_reward"] += self.velocity_reward
+        stats["progress_reward"] += self.progress_reward
         stats["heading_reward"] += self.heading_reward
-        stats["velocity_error"] += self.velocity_dist
+        stats["linear_velocity_reward"] += self.linear_velocity_reward
+        stats["position_error"] += self.position_dist
         stats["heading_error"] += self.heading_dist
+        stats["linear_velocity_error"] += self.linear_velocity_dist
+        stats["boundary_dist"] += self.boundary_dist
+        stats = self._task_parameters.boundary_penalty.update_statistics(stats)
         return stats
 
     def reset(self, env_ids: torch.Tensor) -> None:
@@ -232,8 +326,9 @@ class TrackXYVelocityHeadingTask(Core):
         Args:
             env_ids (torch.Tensor): The ids of the environments.
         """
-
-        self._goal_reached[env_ids] = 0
+        self._trajectory_completed[env_ids] = 0
+        self._target_index[env_ids] = 0
+        self._previous_position_dist[env_ids] = 0
 
     def get_goals(
         self,
@@ -252,23 +347,53 @@ class TrackXYVelocityHeadingTask(Core):
         """
 
         num_goals = len(env_ids)
+        # Randomize position
+        for i in range(self._task_parameters.num_points):
+            if i == 0:
+                self._target_positions[env_ids, i] = (
+                    torch.rand((num_goals, 2), device=self._device)
+                    * self._task_parameters.goal_random_position
+                    * 2
+                    - self._task_parameters.goal_random_position
+                )
+            else:
+                r = self._spawn_position_sampler.sample(
+                    num_goals, step, device=self._device
+                )
+                theta = torch.rand((num_goals,), device=self._device) * 2 * math.pi
+                point = torch.zeros((num_goals, 2), device=self._device)
+                point[:, 0] = r * torch.cos(theta)
+                point[:, 1] = r * torch.sin(theta)
+                self._target_positions[env_ids, i] = (
+                    self._target_positions[env_ids, i - 1] + point
+                )
+            self._target_headings[env_ids, i] = (
+                torch.rand(num_goals, device=self._device) * math.pi * 2
+            )
+
+        # Randomize heading
+        self._delta_headings[env_ids] = self._spawn_heading_sampler.sample(
+            num_goals, step, device=self._device
+        )
         # Randomizes the target linear velocity
         r = self._target_linear_velocity_sampler.sample(
             num_goals, step=step, device=self._device
         )
-        theta = torch.rand((num_goals,), device=self._device) * 2 * math.pi
-        self._target_velocities[env_ids, 0] = r * torch.cos(theta)
-        self._target_velocities[env_ids, 1] = r * torch.sin(theta)
-        # Randomize heading
-        self._target_headings[env_ids] = (
-            torch.rand(num_goals, device=self._device) * math.pi * 2
+        self._target_velocities[env_ids] = r
+
+        # Creates tensors to save position and orientation
+        p = torch.zeros(
+            (num_goals, self._task_parameters.num_points, 3), device=self._device
         )
-        p = torch.zeros((num_goals, 3), dtype=torch.float32, device=self._device)
-        p[:, 2] = 2
-        q = torch.zeros((num_goals, 4), dtype=torch.float32, device=self._device)
-        q[:, 0] = 1
-        q[:, 0] = torch.cos(self._target_headings[env_ids] * 0.5)
-        q[:, 3] = torch.sin(self._target_headings[env_ids] * 0.5)
+        q = torch.zeros(
+            (num_goals, self._task_parameters.num_points, 4),
+            device=self._device,
+            dtype=torch.float32,
+        )
+        q[:, :, 0] = torch.cos(self._target_headings[env_ids] * 0.5)
+        q[:, :, 3] = torch.sin(self._target_headings[env_ids] * 0.5)
+        p[:, :, :2] = self._target_positions[env_ids]
+        p[:, :, 2] = 2
 
         return p, q
 
@@ -296,14 +421,25 @@ class TrackXYVelocityHeadingTask(Core):
         initial_position = torch.zeros(
             (num_resets, 3), device=self._device, dtype=torch.float32
         )
+        r = self._spawn_position_sampler.sample(num_resets, step, device=self._device)
+        theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
+        initial_position[:, 0] = (
+            r * torch.cos(theta) + self._target_positions[env_ids, 0, 0]
+        )
+        initial_position[:, 1] = (
+            r * torch.sin(theta) + self._target_positions[env_ids, 0, 1]
+        )
         # Randomizes the heading of the platform
         initial_orientation = torch.zeros(
             (num_resets, 4), device=self._device, dtype=torch.float32
         )
-        theta = (
-            self._spawn_heading_sampler.sample(num_resets, step, device=self._device)
-            + self._target_headings[env_ids]
+        target_position_local = (
+            self._target_positions[env_ids, 0, :2] - initial_position[:, :2]
         )
+        target_heading = torch.arctan2(
+            target_position_local[:, 1], target_position_local[:, 0]
+        )
+        theta = target_heading + self._delta_headings[env_ids]
         initial_orientation[:, 0] = torch.cos(theta * 0.5)
         initial_orientation[:, 3] = torch.sin(theta * 0.5)
         # Randomizes the linear velocity of the platform
@@ -338,7 +474,28 @@ class TrackXYVelocityHeadingTask(Core):
             position (torch.Tensor): The position of the arrow.
         """
 
-        pass
+        for i in range(self._task_parameters.num_points):
+            color = torch.tensor(
+                colorsys.hsv_to_rgb(i / self._task_parameters.num_points, 1, 1)
+            )
+            body_radius = 0.1
+            body_length = 0.5
+            head_radius = 0.2
+            head_length = 0.5
+            poll_radius = 0.025
+            poll_length = 2
+            VisualArrow(
+                prim_path=path + "/arrow_" + str(i),
+                translation=position,
+                name="target_" + str(i),
+                body_radius=body_radius,
+                body_length=body_length,
+                poll_radius=poll_radius,
+                poll_length=poll_length,
+                head_radius=head_radius,
+                head_length=head_length,
+                color=color,
+            )
 
     def add_visual_marker_to_scene(
         self, scene: Usd.Stage
@@ -353,7 +510,9 @@ class TrackXYVelocityHeadingTask(Core):
             Tuple[Usd.Stage, XFormPrimView]: The scene and the visual marker.
         """
 
-        return scene, None
+        pins = XFormPrimView(prim_paths_expr="/World/envs/.*/arrow_[0-5]")
+        scene.add(pins)
+        return scene, pins
 
     def log_spawn_data(self, step: int) -> dict:
         """
@@ -369,6 +528,8 @@ class TrackXYVelocityHeadingTask(Core):
         dict = {}
 
         num_resets = self._num_envs
+        # Resets the counter of steps for which the goal was reached
+        r = self._spawn_position_sampler.sample(num_resets, step, device=self._device)
         # Randomizes the heading of the platform
         heading = self._spawn_heading_sampler.sample(
             num_resets, step, device=self._device
@@ -382,9 +543,27 @@ class TrackXYVelocityHeadingTask(Core):
             num_resets, step, device=self._device
         )
 
+        r = r.cpu().numpy()
         heading = heading.cpu().numpy()
         linear_velocities = linear_velocities.cpu().numpy()
         angular_velocities = angular_velocities.cpu().numpy()
+
+        fig, ax = plt.subplots(dpi=100, figsize=(8, 8))
+        ax.hist(r, bins=32)
+        ax.set_title("Initial position")
+        ax.set_xlim(
+            self._spawn_position_sampler.get_min_bound(),
+            self._spawn_position_sampler.get_max_bound(),
+        )
+        ax.set_xlabel("spawn distance (m)")
+        ax.set_ylabel("count")
+        fig.tight_layout()
+
+        fig.canvas.draw()
+        data = np.array(fig.canvas.renderer.buffer_rgba())
+        plt.close(fig)
+
+        dict["curriculum/initial_position"] = wandb.Image(data)
 
         fig, ax = plt.subplots(dpi=100, figsize=(8, 8))
         ax.hist(heading, bins=32)
@@ -478,8 +657,7 @@ class TrackXYVelocityHeadingTask(Core):
             dict: The task data.
         """
 
-        dict = {}
-
+        dict = self._task_parameters.boundary_penalty.get_logs()
         if step % 50 == 0:
             dict = {**dict, **self.log_spawn_data(step)}
             dict = {**dict, **self.log_target_data(step)}

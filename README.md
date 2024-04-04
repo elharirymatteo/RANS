@@ -78,7 +78,7 @@ PYTHON_PATH -m pip install -e .
 
 We use the [rl-games](https://pypi.org/project/rl-games/1.0.2/) library as a starting point to rework the PPO implementation for the agents we train.
 
-To install the appropriate version of rl-games, clone this repository:
+To install the appropriate version of rl-games, clone this repository **INSIDE** RANS:
 ```bash
 git clone https://github.com/AntoineRichard/rl_games
 ```

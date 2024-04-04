@@ -8,7 +8,7 @@ __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
-from pxr import UsdGeom, Gf, UsdShade, Sdf, Usd
+from pxr import UsdGeom, Gf, UsdShade, Sdf, Usd, UsdPhysics
 import omni
 from omni.isaac.core.utils.prims import get_prim_at_path, is_prim_path_valid
 from omni.isaac.core.utils.string import find_unique_string_name
@@ -98,6 +98,23 @@ def applyMaterial(prim: Usd.Prim, material: UsdShade.Material) -> None:
 
 def getCurrentStage():
     return omni.usd.get_context().get_stage()
+
+
+def applyCollider(prim: Usd.Prim, enable: bool = False) -> UsdPhysics.CollisionAPI:
+    """
+    Applies a ColliderAPI to a prim.
+
+    Args:
+        prim (Usd.Prim): The prim to apply the ColliderAPI.
+        enable (bool): Enable or disable the collider.
+
+    Returns:
+        UsdPhysics.CollisionAPI: The ColliderAPI.
+    """
+
+    collider = UsdPhysics.CollisionAPI.Apply(prim)
+    collider.CreateCollisionEnabledAttr(enable)
+    return collider
 
 
 class Pin:
@@ -764,3 +781,253 @@ class Arrow3D:
             float: [description]
         """
         return self.head_geom1.GetHeightAttr().Get()
+
+
+class Gate:
+    def __init__(
+        self,
+        prim_path,
+        gate_width,
+        gate_thickness,
+    ):
+        if gate_width is None:
+            gate_width = 1.0
+        if gate_thickness is None:
+            gate_thickness = 0.2
+
+        # Front
+        self.bottom_front_geom, self.bottom_front_prim = createPrim(
+            prim_path, name="/bottom_front", geom_type=UsdGeom.Cube
+        )
+        self.top_front_geom, self.top_front_prim = createPrim(
+            prim_path, name="/top_front", geom_type=UsdGeom.Cube
+        )
+        self.left_front_geom, self.left_front_prim = createPrim(
+            prim_path, name="/left_front", geom_type=UsdGeom.Cube
+        )
+        self.right_front_geom, self.right_front_prim = createPrim(
+            prim_path, name="/right_ftont", geom_type=UsdGeom.Cube
+        )
+        # Back
+        self.bottom_back_geom, self.bottom_back_prim = createPrim(
+            prim_path, name="/bottom_back", geom_type=UsdGeom.Cube
+        )
+        self.top_back_geom, self.top_back_prim = createPrim(
+            prim_path, name="/top_back", geom_type=UsdGeom.Cube
+        )
+        self.left_back_geom, self.left_back_prim = createPrim(
+            prim_path, name="/left_back", geom_type=UsdGeom.Cube
+        )
+        self.right_back_geom, self.right_back_prim = createPrim(
+            prim_path, name="/right_back", geom_type=UsdGeom.Cube
+        )
+        # Corners
+        self.top_right_corner_geom, self.top_right_corner_prim = createPrim(
+            prim_path, name="/top_right_corner", geom_type=UsdGeom.Cube
+        )
+        self.top_left_corner_geom, self.top_left_corner_prim = createPrim(
+            prim_path, name="/top_left_corner", geom_type=UsdGeom.Cube
+        )
+        self.bottom_left_corner_geom, self.bottom_left_corner_prim = createPrim(
+            prim_path, name="/bottom_left_corner", geom_type=UsdGeom.Cube
+        )
+        self.bottom_right_corner_geom, self.bottom_right_corner_prim = createPrim(
+            prim_path, name="/bottom_right_corner", geom_type=UsdGeom.Cube
+        )
+
+        # Colors
+        self.red_material = createColor(
+            getCurrentStage(), "/World/Looks/red_material", [1, 0, 0]
+        )
+        self.blue_material = createColor(
+            getCurrentStage(), "/World/Looks/blue_material", [0, 0, 1]
+        )
+        self.white_material = createColor(
+            getCurrentStage(), "/World/Looks/white_material", [1, 1, 1]
+        )
+
+        self.gate_thickness = gate_thickness
+        self.gate_width = gate_width
+
+        self.setThicknessInternal(gate_thickness)
+        self.applyTransformsInternal(gate_thickness, gate_width)
+
+    def applyTransformsInternal(self, gate_thickness, gate_width):
+        ratio = gate_width / gate_thickness
+        # Front (Red)
+        applyTransforms(
+            self.top_front_prim,
+            [gate_thickness / 4, 0, gate_width / 2 + gate_thickness / 2],
+            [0, 0, 0, 1],
+            [0.5, ratio, 1],
+            material=self.red_material,
+        )
+        applyTransforms(
+            self.bottom_front_prim,
+            [gate_thickness / 4, 0, -gate_width / 2 - gate_thickness / 2],
+            [0, 0, 0, 1],
+            [0.5, ratio, 1],
+            material=self.red_material,
+        )
+        applyTransforms(
+            self.left_front_prim,
+            [gate_thickness / 4, -gate_width / 2 - gate_thickness / 2, 0],
+            [0, 0, 0, 1],
+            [0.5, 1, ratio],
+            material=self.red_material,
+        )
+        applyTransforms(
+            self.right_front_prim,
+            [gate_thickness / 4, gate_width / 2 + gate_thickness / 2, 0],
+            [0, 0, 0, 1],
+            [0.5, 1, ratio],
+            material=self.red_material,
+        )
+        # Back (Blue)
+        applyTransforms(
+            self.top_back_prim,
+            [-gate_thickness / 4, 0, gate_width / 2 + gate_thickness / 2],
+            [0, 0, 0, 1],
+            [0.5, ratio, 1],
+            material=self.blue_material,
+        )
+        applyTransforms(
+            self.bottom_back_prim,
+            [-gate_thickness / 4, 0, -gate_width / 2 - gate_thickness / 2],
+            [0, 0, 0, 1],
+            [0.5, ratio, 1],
+            material=self.blue_material,
+        )
+        applyTransforms(
+            self.left_back_prim,
+            [-gate_thickness / 4, -gate_width / 2 - gate_thickness / 2, 0],
+            [0, 0, 0, 1],
+            [0.5, 1, ratio],
+            material=self.blue_material,
+        )
+        applyTransforms(
+            self.right_back_prim,
+            [-gate_thickness / 4, gate_width / 2 + gate_thickness / 2, 0],
+            [0, 0, 0, 1],
+            [0.5, 1, ratio],
+            material=self.blue_material,
+        )
+        # Corners (White)
+        applyTransforms(
+            self.top_right_corner_prim,
+            [
+                0,
+                gate_width / 2 + gate_thickness / 2,
+                gate_width / 2 + gate_thickness / 2,
+            ],
+            [0, 0, 0, 1],
+            [1, 1, 1],
+            material=self.white_material,
+        )
+        applyTransforms(
+            self.top_left_corner_prim,
+            [
+                0,
+                -gate_width / 2 - gate_thickness / 2,
+                gate_width / 2 + gate_thickness / 2,
+            ],
+            [0, 0, 0, 1],
+            [1, 1, 1],
+            material=self.white_material,
+        )
+        applyTransforms(
+            self.bottom_left_corner_prim,
+            [
+                0,
+                -gate_width / 2 - gate_thickness / 2,
+                -gate_width / 2 - gate_thickness / 2,
+            ],
+            [0, 0, 0, 1],
+            [1, 1, 1],
+            material=self.white_material,
+        )
+        applyTransforms(
+            self.bottom_right_corner_prim,
+            [
+                0,
+                gate_width / 2 + gate_thickness / 2,
+                -gate_width / 2 - gate_thickness / 2,
+            ],
+            [0, 0, 0, 1],
+            [1, 1, 1],
+            material=self.white_material,
+        )
+
+    def setThicknessInternal(self, thickness):
+        # Front
+        self.top_front_geom.GetSizeAttr().Set(thickness)
+        self.bottom_front_geom.GetSizeAttr().Set(thickness)
+        self.left_front_geom.GetSizeAttr().Set(thickness)
+        self.right_front_geom.GetSizeAttr().Set(thickness)
+        # Back
+        self.top_back_geom.GetSizeAttr().Set(thickness)
+        self.bottom_back_geom.GetSizeAttr().Set(thickness)
+        self.left_back_geom.GetSizeAttr().Set(thickness)
+        self.right_back_geom.GetSizeAttr().Set(thickness)
+        # Corners
+        self.top_right_corner_geom.GetSizeAttr().Set(thickness)
+        self.top_left_corner_geom.GetSizeAttr().Set(thickness)
+        self.bottom_left_corner_geom.GetSizeAttr().Set(thickness)
+        self.bottom_right_corner_geom.GetSizeAttr().Set(thickness)
+
+    def updateExtent(self):
+        return
+
+    def applyCollisions(self):
+        applyCollider(self.top_front_prim, True)
+        applyCollider(self.bottom_front_prim, True)
+        applyCollider(self.left_front_prim, True)
+        applyCollider(self.right_front_prim, True)
+
+        applyCollider(self.top_back_prim, True)
+        applyCollider(self.bottom_back_prim, True)
+        applyCollider(self.left_back_prim, True)
+        applyCollider(self.right_back_prim, True)
+
+        applyCollider(self.top_right_corner_prim, True)
+        applyCollider(self.top_left_corner_prim, True)
+        applyCollider(self.bottom_left_corner_prim, True)
+        applyCollider(self.bottom_right_corner_prim, True)
+
+    def setGateThickness(self, thickness: float) -> None:
+        """[summary]
+
+        Args:
+            thickness (float): [description]
+        """
+        self.gate_thickness = thickness
+        self.setThicknessInternal(self.gate_thickness)
+        self.applyTransformsInternal(self.gate_thickness, self.gate_width)
+        return
+
+    def getGateThickness(self) -> float:
+        """[summary]
+
+        Returns:
+            thickness: [description]
+        """
+        return self.gate_thickness
+
+    def setGateThickness(self, width: float) -> None:
+        """[summary]
+
+        Args:
+            width (float): [description]
+        """
+        self.gate_width = width
+        self.setThicknessInternal(self.gate_thickness)
+        self.applyTransformsInternal(self.gate_thickness, self.gate_width)
+        return
+
+    def getGateWidth(self) -> float:
+        """[summary]
+
+        Returns:
+            float: [description]
+        """
+        return self.gate_width

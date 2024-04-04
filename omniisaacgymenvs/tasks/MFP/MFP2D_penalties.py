@@ -18,7 +18,8 @@ import torch
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
 scaling_functions = {
-    "linear": lambda x, p=0.0: x,
+    "linear": lambda x, p=0.0: x * p,
+    "constant": lambda x, p=0.0: (x > 0) * p,
     "log": lambda x, p=0.0: torch.log(x + EPS),
     "exp": lambda x, p=0.0: torch.exp(x),
     "sqrt": lambda x, p=0.0: torch.sqrt(x),
@@ -354,7 +355,7 @@ class BoundaryPenalty(BasePenalty):
             0,
             self.saturation_value,
         )
-        return self.last_penalties * self.last_rate
+        return self.last_penalties * self.last_rate * self.weight
 
     def get_stats_name(self) -> list:
         """
@@ -392,6 +393,107 @@ class BoundaryPenalty(BasePenalty):
             "penalties/" + self.name + "_weight": self.get_last_rate() * self.weight
         }
 
+
+@dataclass
+class ContactPenalty(BasePenalty):
+    """
+    This class has access to the state and applies a penalty based on the collision.
+    """
+
+    weight: float = 10.0
+    scaling_function: str = "constant"
+    scaling_parameter: float = 1.0
+    kill_on_contact: bool = False
+    kill_threshold: float = 1.0
+    min_value: float = 0
+    max_value: float = float("inf")
+
+    def __post_init__(self):
+        super().__post_init__()
+        assert self.weight > 0, "Weight must be positive"
+        assert self.scaling_function in scaling_functions, "Scaling function not found"
+        assert (
+            self.min_value < self.max_value
+        ), "Min value must be smaller than max value"
+
+        self.scaling_function = scaling_functions[self.scaling_function]
+
+    def compute_penalty(self, forces: torch.Tensor, step: int):
+        """
+        Computes the penalty based on the norm of the angular velocity.
+
+        Args:
+            forces (torch.Tensor): The contact forces.
+            step (int): Current step.
+
+        Returns:
+            Tuple(torch.Tensor, torch.Tensor): Penalty, kills.
+        """
+        self.last_rate = self.get_rate(step)
+        if self.enable:
+            # computes the threshold for the contact forces
+            norm = forces - self.min_value
+            # apply ranging function
+            norm[norm < EPS] = 0
+            norm[norm > (self.max_value - self.min_value)] = (
+                self.max_value - self.min_value
+            )
+            # apply scaling function
+            norm = self.scaling_function(norm, p=self.scaling_parameter)
+            self.last_penalties = norm
+            # kill the episode if the contact forces are too high
+            if self.kill_on_contact:
+                kills = forces > self.kill_threshold
+            else:
+                kills = torch.zeros(
+                    [norm.shape[0]], dtype=torch.float32, device=norm.device
+                )
+            return norm * self.last_rate * self.weight, kills
+        else:
+            self.last_penalties = torch.zeros(
+                [forces.shape[0]], dtype=torch.float32, device=forces.device
+            )
+            return torch.zeros(
+                [forces.shape[0]], dtype=torch.float32, device=forces.device
+            ), torch.zeros([forces.shape[0]], dtype=torch.bool, device=forces.device)
+
+    def get_stats_name(self) -> list:
+        """
+        Returns the names of the statistics to be computed.
+
+        Returns:
+            list: Names of the statistics to be tracked.
+        """
+
+        return ["penalties/" + self.name]
+
+    def update_statistics(self, stats: dict) -> dict:
+        """
+        Updates the training statistics.
+
+        Args:
+            stats (dict): Current statistics.
+
+        Returns:
+            dict: Updated statistics.
+        """
+
+        stats["penalties/" + self.name] += self.get_unweigthed_penalties()
+        return stats
+
+    def get_logs(self) -> dict:
+        """
+        Logs the penalty.
+
+        Returns:
+            dict: Dictionary containing the penalty.
+        """
+
+        return {
+            "penalties/" + self.name + "_weight": self.get_last_rate() * self.weight
+        }
+
+
 @dataclass
 class ConeShapePenalty(BasePenalty):
     """
@@ -401,7 +503,7 @@ class ConeShapePenalty(BasePenalty):
     weight: float = 0.1
     scaling_function: str = "linear"
     scaling_parameter: float = 1.0
-    min_value: float = 0.1745 #pi/18=10deg
+    min_value: float = 0.1745  # pi/18=10deg
     max_value: float = 3.1415
 
     def __post_init__(self):
@@ -414,9 +516,7 @@ class ConeShapePenalty(BasePenalty):
 
         self.scaling_function = scaling_functions[self.scaling_function]
 
-    def compute_penalty(
-        self, relative_angle:torch.Tensor, step: int
-    ):
+    def compute_penalty(self, relative_angle: torch.Tensor, step: int):
         """
         Computes the penalty based on the norm of the angular velocity.
 
@@ -444,8 +544,11 @@ class ConeShapePenalty(BasePenalty):
             return norm * self.last_rate * self.weight
         else:
             return torch.zeros(
-                [relative_angle.shape[0]], dtype=torch.float32, device=relative_angle.device
+                [relative_angle.shape[0]],
+                dtype=torch.float32,
+                device=relative_angle.device,
             )
+
     def get_stats_name(self) -> list:
         """
         Returns the names of the statistics to be computed.

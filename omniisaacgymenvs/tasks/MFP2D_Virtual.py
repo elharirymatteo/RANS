@@ -27,6 +27,7 @@ from omniisaacgymenvs.tasks.MFP.MFP2D_penalties import (
 from omniisaacgymenvs.tasks.MFP.MFP2D_disturbances import (
     Disturbances,
 )
+from omniisaacgymenvs.tasks.MFP.MFP2D_core import quat_addition
 
 from omni.isaac.core.utils.prims import get_prim_at_path
 from omni.isaac.core.utils.torch.rotations import *
@@ -112,6 +113,9 @@ class MFP2DVirtual(RLTask):
         )
         self.all_indices = torch.arange(
             self._num_envs, dtype=torch.int32, device=self._device
+        )
+        self.contact_state = torch.zeros(
+            (self._num_envs), device=self._device, dtype=torch.float32
         )
         # Extra info
         self.extras = {}
@@ -232,7 +236,9 @@ class MFP2DVirtual(RLTask):
         # Collects the interactive elements in the scene
         root_path = "/World/envs/.*/Modular_floating_platform"
         self._platforms = ModularFloatingPlatformView(
-            prim_paths_expr=root_path, name="modular_floating_platform_view"
+            prim_paths_expr=root_path,
+            name="modular_floating_platform_view",
+            track_contact_force=True,
         )
         # Add views to scene
         scene.add(self._platforms)
@@ -303,6 +309,7 @@ class MFP2DVirtual(RLTask):
         orient_z = self.DR.noisy_observations.add_noise_on_heading(
             orient_z, step=self.step
         )
+        net_contact_forces = self.compute_contact_forces()
         # Compute the heading
         self.heading[:, 0] = torch.cos(orient_z)
         self.heading[:, 1] = torch.sin(orient_z)
@@ -312,7 +319,18 @@ class MFP2DVirtual(RLTask):
             "orientation": self.heading,
             "linear_velocity": root_velocities[:, :2],
             "angular_velocity": root_velocities[:, -1],
+            "net_contact_forces": net_contact_forces,
         }
+
+    def compute_contact_forces(self) -> torch.Tensor:
+        """
+        Get the contact forces of the platform.
+
+        Returns:
+            net_contact_forces_norm (torch.Tensor): the norm of the net contact forces.
+        """
+        net_contact_forces = self._platforms.base.get_net_contact_forces(clone=False)
+        return torch.norm(net_contact_forces, dim=-1)
 
     def get_observations(self) -> Dict[str, torch.Tensor]:
         """
@@ -429,6 +447,12 @@ class MFP2DVirtual(RLTask):
             (self.num_envs, 4), dtype=torch.float32, device=self._device
         )
         self.initial_pin_rot[:, 0] = 1
+        # Set the initial contact state
+        self.contact_state = torch.zeros(
+            (self._num_envs),
+            dtype=torch.float32,
+            device=self._device,
+        )
 
         # control parameters
         self.thrusts = torch.zeros(
@@ -452,16 +476,31 @@ class MFP2DVirtual(RLTask):
         # Randomizes the position of the ball on the x y axes
         target_positions, target_orientation = self.task.get_goals(
             env_long,
-            self.initial_pin_pos.clone(),
-            self.initial_pin_rot.clone(),
             step=self.step,
         )
-        target_positions[env_long, 2] = torch.ones(num_sets, device=self._device) * 2.0
-        # Apply the new goals
+        if len(target_positions.shape) == 3:
+            position = (
+                target_positions
+                + self.initial_pin_pos[env_long]
+                .view(num_sets, 1, 3)
+                .expand(*target_positions.shape)
+            ).reshape(-1, 3)
+            a = (env_long * target_positions.shape[1]).repeat_interleave(
+                target_positions.shape[1]
+            )
+            b = torch.arange(target_positions.shape[1], device=self._device).repeat(
+                target_positions.shape[0]
+            )
+            env_long = a + b
+            target_orientation = target_orientation.reshape(-1, 4)
+        else:
+            position = target_positions + self.initial_pin_pos[env_long]
+
+        ## Apply the new goals
         if self._marker:
             self._marker.set_world_poses(
-                target_positions[env_long],
-                target_orientation[env_long],
+                position,
+                target_orientation,
                 indices=env_long,
             )
 
@@ -494,6 +533,8 @@ class MFP2DVirtual(RLTask):
         dof_pos = torch.zeros(
             (num_resets, self._platforms.num_dof), device=self._device
         )
+        # Resets the contacts
+        self.contact_state[env_ids] = 0
         # self._platforms.CoM.set_masses(random_mass, indices=env_ids)
         dof_pos[:, self._platforms.lock_indices[0]] = pos[:, 0]
         dof_pos[:, self._platforms.lock_indices[1]] = pos[:, 1]
