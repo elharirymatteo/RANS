@@ -206,7 +206,7 @@ class MFP2DVirtual_Dock(RLTask):
         }
 
         self.states_buf = torch.zeros(
-            (self._num_envs, self.num_states), device=self._device, dtype=torch.float
+            (self._num_envs, self._num_states), device=self._device, dtype=torch.float
         )
         self.rew_buf = torch.zeros(
             self._num_envs, device=self._device, dtype=torch.float
@@ -484,7 +484,7 @@ class MFP2DVirtual_Dock(RLTask):
         )
         self.initial_pin_pos = self._env_pos
         self.initial_pin_rot = torch.zeros(
-            (self.num_envs, 4), dtype=torch.float32, device=self._device
+            (self._num_envs, 4), dtype=torch.float32, device=self._device
         )
         self.initial_pin_rot[:, 0] = 1
 

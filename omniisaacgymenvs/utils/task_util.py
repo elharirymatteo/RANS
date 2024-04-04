@@ -32,25 +32,45 @@ def initialize_task(config, env, init_sim=True):
 
     sim_config = SimConfig(config)
 
+
+def import_tasks():
     from omniisaacgymenvs.tasks.allegro_hand import AllegroHandTask
     from omniisaacgymenvs.tasks.ant import AntLocomotionTask
     from omniisaacgymenvs.tasks.anymal import AnymalTask
     from omniisaacgymenvs.tasks.anymal_terrain import AnymalTerrainTask
     from omniisaacgymenvs.tasks.ball_balance import BallBalanceTask
     from omniisaacgymenvs.tasks.cartpole import CartpoleTask
+    from omniisaacgymenvs.tasks.cartpole_camera import CartpoleCameraTask
+    from omniisaacgymenvs.tasks.crazyflie import CrazyflieTask
     from omniisaacgymenvs.tasks.factory.factory_task_nut_bolt_pick import (
         FactoryTaskNutBoltPick,
     )
+    from omniisaacgymenvs.tasks.factory.factory_task_nut_bolt_place import (
+        FactoryTaskNutBoltPlace,
+    )
+    from omniisaacgymenvs.tasks.factory.factory_task_nut_bolt_screw import (
+        FactoryTaskNutBoltScrew,
+    )
     from omniisaacgymenvs.tasks.franka_cabinet import FrankaCabinetTask
+    from omniisaacgymenvs.tasks.franka_deformable import FrankaDeformableTask
     from omniisaacgymenvs.tasks.humanoid import HumanoidLocomotionTask
     from omniisaacgymenvs.tasks.ingenuity import IngenuityTask
     from omniisaacgymenvs.tasks.quadcopter import QuadcopterTask
     from omniisaacgymenvs.tasks.shadow_hand import ShadowHandTask
     from omniisaacgymenvs.tasks.crazyflie import CrazyflieTask
     from omniisaacgymenvs.tasks.MFP2D_Virtual import MFP2DVirtual
-    from omniisaacgymenvs.tasks.MFP2D_Virtual_Dock import MFP2DVirtual_Dock
-    from omniisaacgymenvs.tasks.MFP2D_Virtual_Dock_RGBD import MFP2DVirtual_Dock_RGBD
+
+    # from omniisaacgymenvs.tasks.MFP2D_Virtual_Dock import MFP2DVirtual_Dock
+    # from omniisaacgymenvs.tasks.MFP2D_Virtual_Dock_RGBD import MFP2DVirtual_Dock_RGBD
     from omniisaacgymenvs.tasks.MFP3D_Virtual import MFP3DVirtual
+
+    from omniisaacgymenvs.tasks.warp.ant import (
+        AntLocomotionTask as AntLocomotionTaskWarp,
+    )
+    from omniisaacgymenvs.tasks.warp.cartpole import CartpoleTask as CartpoleTaskWarp
+    from omniisaacgymenvs.tasks.warp.humanoid import (
+        HumanoidLocomotionTask as HumanoidLocomotionTaskWarp,
+    )
 
     # Mappings from strings to environments
     task_map = {
@@ -60,8 +80,12 @@ def initialize_task(config, env, init_sim=True):
         "AnymalTerrain": AnymalTerrainTask,
         "BallBalance": BallBalanceTask,
         "Cartpole": CartpoleTask,
+        "CartpoleCamera": CartpoleCameraTask,
         "FactoryTaskNutBoltPick": FactoryTaskNutBoltPick,
+        "FactoryTaskNutBoltPlace": FactoryTaskNutBoltPlace,
+        "FactoryTaskNutBoltScrew": FactoryTaskNutBoltScrew,
         "FrankaCabinet": FrankaCabinetTask,
+        "FrankaDeformable": FrankaDeformableTask,
         "Humanoid": HumanoidLocomotionTask,
         "Ingenuity": IngenuityTask,
         "Quadcopter": QuadcopterTask,
@@ -70,20 +94,43 @@ def initialize_task(config, env, init_sim=True):
         "ShadowHandOpenAI_FF": ShadowHandTask,
         "ShadowHandOpenAI_LSTM": ShadowHandTask,
         "MFP2DVirtual": MFP2DVirtual,
-        "MFP2DVirtual_Dock": MFP2DVirtual_Dock,
-        "MFP2DVirtual_Dock_RGBD": MFP2DVirtual_Dock_RGBD,
+        # "MFP2DVirtual_Dock": MFP2DVirtual_Dock,
+        # "MFP2DVirtual_Dock_RGBD": MFP2DVirtual_Dock_RGBD,
         "MFP3DVirtual": MFP3DVirtual,
     }
 
+    task_map_warp = {
+        "Cartpole": CartpoleTaskWarp,
+        "Ant": AntLocomotionTaskWarp,
+        "Humanoid": HumanoidLocomotionTaskWarp,
+    }
+
+    return task_map, task_map_warp
+
+
+def initialize_task(config, env, init_sim=True):
+    from omniisaacgymenvs.utils.config_utils.sim_config import SimConfig
+
+    sim_config = SimConfig(config)
+    task_map, task_map_warp = import_tasks()
+
     cfg = sim_config.config
+    if cfg["warp"]:
+        task_map = task_map_warp
+
     task = task_map[cfg["task_name"]](
         name=cfg["task_name"], sim_config=sim_config, env=env
     )
 
+    backend = "warp" if cfg["warp"] else "torch"
+
+    rendering_dt = sim_config.get_physics_params()["rendering_dt"]
+
     env.set_task(
         task=task,
         sim_params=sim_config.get_physics_params(),
-        backend="torch",
+        backend=backend,
         init_sim=init_sim,
+        rendering_dt=rendering_dt,
     )
     return task

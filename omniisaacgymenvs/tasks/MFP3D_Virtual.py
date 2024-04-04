@@ -185,7 +185,7 @@ class MFP3DVirtual(MFP2DVirtual):
         }
 
         self.states_buf = torch.zeros(
-            (self._num_envs, self.num_states), device=self._device, dtype=torch.float
+            (self._num_envs, self._num_states), device=self._device, dtype=torch.float
         )
         self.rew_buf = torch.zeros(
             self._num_envs, device=self._device, dtype=torch.float

@@ -501,7 +501,7 @@ def createColor(
     shader = UsdShade.Shader.Define(stage, material_path + "/shader")
     shader.CreateIdAttr("UsdPreviewSurface")
     shader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Float3).Set(Gf.Vec3f(color))
-    material.CreateSurfaceOutput().ConnectToSource(shader, "surface")
+    material.CreateSurfaceOutput().ConnectToSource(shader.ConnectableAPI(), "surface")
     return material
 
 
