@@ -42,7 +42,7 @@ INSTALL_REQUIRES = [
     "numpy==1.23.5",
     "protobuf==3.20.2",
     "omegaconf==2.1.1",
-    "hydra-core==1.1.1",
+    "hydra-core==1.3.2",
     "redis==3.5.3",  # needed by Ray on Windows
     "wandb>=0.13",
     "cvxpy==1.3.2",
