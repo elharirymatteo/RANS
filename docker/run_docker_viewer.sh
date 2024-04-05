@@ -1,6 +1,9 @@
 #!/bin/bash
 
+xhost +
 docker run --name isaac-sim-rans-container -it --gpus all -e "ACCEPT_EULA=Y" --rm --network=host \
+-v $HOME/.Xauthority:/root/.Xauthority \
+-e DISPLAY \
 -e "PRIVACY_CONSENT=Y" \
 -v ${PWD}:/workspace/RANS \
 -v ~/docker/isaac-sim/cache/kit:/isaac-sim/kit/cache:rw \

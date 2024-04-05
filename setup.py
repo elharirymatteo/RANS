@@ -41,10 +41,11 @@ import os
 INSTALL_REQUIRES = [
     "numpy==1.23.5",
     "protobuf==3.20.2",
-    "omegaconf==2.1.1",
-    "hydra-core==1.1.1",
-    "redis==3.5.3",  # needed by Ray on Windows
-    "wandb=>0.13",
+    "omegaconf==2.3.0",
+    "hydra-core==1.3.2",
+    "urllib3==1.26.16",
+    "moviepy==1.0.3",
+    "wandb>=0.13",
     "cvxpy==1.3.2",
     "mujoco==2.3.6",
 ]

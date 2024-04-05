@@ -11,7 +11,6 @@ ENV RL_GAMES_PATH=${RL_GAMES_PATH}
 COPY ./ ${RANS_WS}
 
 RUN /isaac-sim/python.sh -m pip install --upgrade pip
-RUN ls ${RANS_WS}
 RUN /isaac-sim/python.sh -m pip install -e $RANS_WS
 RUN /isaac-sim/python.sh -m pip install -e $RL_GAMES_WS
 
