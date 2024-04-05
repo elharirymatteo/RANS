@@ -44,7 +44,7 @@ INSTALL_REQUIRES = [
     "omegaconf==2.1.1",
     "hydra-core==1.1.1",
     "redis==3.5.3",  # needed by Ray on Windows
-    "wandb=>0.13",
+    "wandb>=0.13",
     "cvxpy==1.3.2",
     "mujoco==2.3.6",
 ]

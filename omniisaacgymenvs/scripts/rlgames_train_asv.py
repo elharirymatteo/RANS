@@ -33,7 +33,7 @@ from omniisaacgymenvs.utils.config_utils.path_utils import (
 )
 from omniisaacgymenvs.utils.rlgames.rlgames_utils import RLGPUAlgoObserver, RLGPUEnv
 from omniisaacgymenvs.utils.hydra_cfg.reformat import omegaconf_to_dict, print_dict
-from omniisaacgymenvs.envs.vec_env_rlgames_mfp import VecEnvRLGames
+from omniisaacgymenvs.envs.vec_env_rlgames_asv import VecEnvRLGames
 from omniisaacgymenvs.utils.task_util import initialize_task
 from omniisaacgymenvs.utils.hydra_cfg.hydra_utils import *
 from rl_games.common import env_configurations, vecenv
@@ -98,7 +98,6 @@ class RLGTrainer:
 
 @hydra.main(config_name="config", config_path="../cfg")
 def parse_hydra_configs(cfg: DictConfig):
-
     time_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     headless = cfg.headless
