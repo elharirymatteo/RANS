@@ -206,7 +206,6 @@ class RLTask(RLTaskInterface):
         if self._task_cfg["sim"].get("add_ground_plane", True):
             self._ground_plane_path = "/World/defaultGroundPlane"
             collision_filter_global_paths.append(self._ground_plane_path)
-            print(self._ground_plane_path)
             scene.add_default_ground_plane(prim_path=self._ground_plane_path)
         prim_paths = self._cloner.generate_paths("/World/envs/env", self._num_envs)
         self._env_pos = self._cloner.clone(

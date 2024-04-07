@@ -11,7 +11,7 @@ __status__ = "development"
 import omni
 
 from typing import List, Tuple
-from pxr import Gf, UsdPhysics, UsdGeom, UsdShade, Sdf, Usd
+from pxr import Gf, UsdPhysics, UsdGeom, UsdShade, Sdf, Usd, PhysxSchema
 import numpy as np
 
 # ==================================================================================================
@@ -140,7 +140,10 @@ def getTransform(prim: Usd.Prim, parent: Usd.Prim) -> Gf.Matrix4d:
 
 
 def applyMaterial(
-    prim: Usd.Prim, material: UsdShade.Material
+    prim: Usd.Prim,
+    material: UsdShade.Material,
+    purpose: str = None,
+    weaker_than_descendants=False,
 ) -> UsdShade.MaterialBindingAPI:
     """
     Applies a material to a prim.
@@ -148,13 +151,45 @@ def applyMaterial(
     Args:
         prim (Usd.Prim): The prim to apply the material.
         material (UsdShade.Material): The material to apply.
+        purpose (None): The purpose of the material.
+        weaker_than_descendants (bool): The material is weaker than its descendants.
 
     Returns:
         UsdShade.MaterialBindingAPI: The MaterialBindingAPI.
     """
 
     binder = UsdShade.MaterialBindingAPI.Apply(prim)
-    binder.Bind(material)
+    if purpose is None:
+        if weaker_than_descendants:
+            binder.Bind(
+                material,
+                bindingStrength=UsdShade.Tokens.weakerThanDescendants,
+            )
+        else:
+            binder.Bind(
+                material,
+                bindingStrength=UsdShade.Tokens.strongerThanDescendants,
+            )
+    else:
+        assert purpose in [
+            "allPurpose",
+            "all",
+            "preview",
+            "physics",
+        ], "Purpose must be 'allPurpose', 'all', 'preview' or 'physics'."
+        if weaker_than_descendants:
+            binder.Bind(
+                material,
+                materialPurpose=purpose,
+                bindingStrength=UsdShade.Tokens.weakerThanDescendants,
+            )
+        else:
+            binder.Bind(
+                material,
+                materialPurpose=purpose,
+                bindingStrength=UsdShade.Tokens.strongerThanDescendants,
+            )
+
     return binder
 
 
@@ -217,6 +252,7 @@ def createDrive(
     token: str = "transX",
     damping: float = 1e3,
     stiffness: float = 1e6,
+    max_force: float = None,
 ) -> UsdPhysics.DriveAPI:
     """
     Creates a DriveAPI on a joint.
@@ -230,6 +266,7 @@ def createDrive(
         token (str, optional): The type of the drive.
         damping (float, optional): The damping of the drive.
         stiffness (float, optional): The stiffness of the drive.
+        max_force (float, optional): The maximum force of the drive.
 
     Returns:
         UsdPhysics.DriveAPI: The DriveAPI.
@@ -239,6 +276,8 @@ def createDrive(
     driveAPI.CreateTypeAttr("force")
     driveAPI.CreateDampingAttr(damping)
     driveAPI.CreateStiffnessAttr(stiffness)
+    if max_force is not None:
+        driveAPI.CreateMaxForceAttr(max_force)
     return driveAPI
 
 
@@ -375,6 +414,67 @@ def createCylinder(
     return path, cylinder_geom
 
 
+def createCapsule(
+    stage: Usd.Stage,
+    path: str,
+    radius: float,
+    height: float,
+    refinement: int,
+) -> Tuple[str, UsdGeom.Capsule]:
+    """
+    Creates a capsule.
+
+    Args:
+        stage (Usd.Stage): The stage to create the capsule.
+        path (str): The path of the capsule.
+        radius (float): The radius of the capsule.
+        height (float): The height of the capsule.
+        refinement (int): The number of times to refine the capsule.
+
+    Returns:
+        Tuple[str, UsdGeom.Capsule]: The path and the prim of the capsule.
+    """
+
+    path = omni.usd.get_stage_next_free_path(stage, path, False)
+    capsule_geom = UsdGeom.Capsule.Define(stage, path)
+    capsule_geom.GetRadiusAttr().Set(radius)
+    capsule_geom.GetHeightAttr().Set(height)
+    setXformOps(capsule_geom)
+    refineShape(stage, path, refinement)
+    return path, capsule_geom
+
+
+def createCube(
+    stage: Usd.Stage,
+    path: str,
+    width: float,
+    depth: float,
+    height: float,
+    refinement: int,
+) -> Tuple[str, UsdGeom.Cube]:
+    """
+    Creates a cube.
+
+    Args:
+        stage (Usd.Stage): The stage to create the cube.
+        path (str): The path of the cube.
+        width (float): The width of the cube.
+        depth (float): The depth of the cube.
+        height (float): The height of the cube.
+        refinement (int): The number of times to refine the cube.
+
+    Returns:
+        Tuple[str, UsdGeom.Cube]: The path and the prim of the cube.
+    """
+
+    path = omni.usd.get_stage_next_free_path(stage, path, False)
+    cube_geom = UsdGeom.Cube.Define(stage, path)
+    cube_geom.GetSizeAttr().Set(1)
+    setXformOps(cube_geom, scale=Gf.Vec3d([width, depth, height]))
+    refineShape(stage, path, refinement)
+    return path, cube_geom
+
+
 def createCone(
     stage: Usd.Stage,
     path: str,
@@ -505,6 +605,51 @@ def createColor(
     return material
 
 
+def createPhysicsMaterial(
+    stage: Usd.Stage,
+    material_path: str,
+    static_friction: float,
+    dynamic_friction: float,
+    restitution: float,
+    friction_combine_mode: str = "average",
+    restitution_combine_mode: str = "average",
+) -> UsdPhysics.MaterialAPI:
+    """
+    Creates a physics material.
+
+    Args:
+        stage (Usd.Stage): The stage to create the physics material.
+        material_path (str): The path of the material.
+        static_friction (float): The static friction of the material.
+        dynamic_friction (float): The dynamic friction of the material.
+        restitution (float): The restitution of the material.
+        friction_combine_mode (str, optional): The way the friction between two surfaces is combined.
+        restitution_combine_mode (str, optional): The way the friction between two surfaces is combined.
+
+    Returns:
+        UsdPhysics.MaterialAPI: The physics material.
+    """
+
+    if not friction_combine_mode in ["multiply", "average", "min", "max"]:
+        raise ValueError("average_friction_mode must be average, multiply, min or max")
+    if not restitution_combine_mode in ["multiply", "average", "min", "max"]:
+        raise ValueError(
+            "average_restitution_mode must be average, multiply, min or max"
+        )
+
+    material_path = omni.usd.get_stage_next_free_path(stage, material_path, False)
+    visual_material = UsdShade.Material.Define(stage, material_path)
+    prim = stage.GetPrimAtPath(material_path)
+    material = UsdPhysics.MaterialAPI.Apply(prim)
+    material.CreateStaticFrictionAttr().Set(static_friction)
+    material.CreateDynamicFrictionAttr().Set(dynamic_friction)
+    material.CreateRestitutionAttr().Set(restitution)
+    physx_material = PhysxSchema.PhysxMaterialAPI.Apply(prim)
+    physx_material.CreateFrictionCombineModeAttr().Set(friction_combine_mode)
+    physx_material.CreateRestitutionCombineModeAttr().Set(restitution_combine_mode)
+    return material
+
+
 def createArticulation(
     stage: Usd.Stage,
     path: str,
@@ -587,8 +732,13 @@ def createRevoluteJoint(
     path: str,
     body_path1: str = None,
     body_path2: str = None,
-    axis="Z",
+    axis: str = "Z",
+    limit_low: float = None,
+    limit_high: float = None,
     enable_drive: bool = False,
+    damping: float = 1e3,
+    stiffness: float = 1e6,
+    force_limit: float = None,
 ) -> UsdPhysics.RevoluteJoint:
     """
     Creates a revolute joint between two bodies.
@@ -599,7 +749,12 @@ def createRevoluteJoint(
         body_path1 (str, optional): The path of the first body.
         body_path2 (str, optional): The path of the second body.
         axis (str, optional): The axis of rotation.
+        limit_low (float, optional): The lower limit of the joint.
+        limit_high (float, optional): The upper limit of the joint.
         enable_drive (bool, optional): Enable or disable the drive.
+        damping (float, optional): The damping of the drive.
+        stiffness (float, optional): The stiffness of the drive.
+        force_limit (float, optional): The force limit of the drive.
 
     Returns:
         UsdPhysics.RevoluteJoint: The revolute joint.
@@ -637,7 +792,26 @@ def createRevoluteJoint(
         joint.CreateLocalPos1Attr().Set(Gf.Vec3d([0, 0, 0]))
         joint.CreateLocalRot0Attr().Set(Gf.Quatf(1, 0, 0, 0))
         joint.CreateLocalRot1Attr().Set(Gf.Quatf(1, 0, 0, 0))
-    joint.CreateAxisAttr(axis)
+
+    if axis in ["X", "Y", "Z"]:
+        joint.CreateAxisAttr(axis)
+    else:
+        raise ValueError("Axis must be X, Y or Z")
+
+    if limit_low is not None:
+        joint.CreateLowerLimitAttr(limit_low)
+    if limit_high is not None:
+        joint.CreateUpperLimitAttr(limit_high)
+
+    if enable_drive:
+        joint_prim = stage.GetPrimAtPath(joint.GetPath())
+        createDrive(
+            joint_prim,
+            token="angular",
+            damping=damping,
+            stiffness=stiffness,
+            max_force=force_limit,
+        )
     return joint
 
 
@@ -647,7 +821,12 @@ def createPrismaticJoint(
     body_path1: str = None,
     body_path2: str = None,
     axis: str = "Z",
+    limit_low: float = None,
+    limit_high: float = None,
     enable_drive: bool = False,
+    damping: float = 1e3,
+    stiffness: float = 1e6,
+    force_limit: float = None,
 ) -> UsdPhysics.PrismaticJoint:
     """
     Creates a prismatic joint between two bodies.
@@ -658,7 +837,12 @@ def createPrismaticJoint(
         body_path1 (str, optional): The path of the first body.
         body_path2 (str, optional): The path of the second body.
         axis (str, optional): The axis of rotation.
+        limit_low (float, optional): The lower limit of the joint.
+        limit_high (float, optional): The upper limit of the joint.
         enable_drive (bool, optional): Enable or disable the drive.
+        damping (float, optional): The damping of the drive.
+        stiffness (float, optional): The stiffness of the drive.
+        force_limit (float, optional): The force limit of the drive.
 
     Returns:
         UsdPhysics.PrismaticJoint: The prismatic joint.
@@ -698,6 +882,25 @@ def createPrismaticJoint(
         joint.CreateLocalRot1Attr().Set(Gf.Quatf(1, 0, 0, 0))
         joint.CreateAxisAttr(axis)
 
+    if axis in ["X", "Y", "Z"]:
+        joint.CreateAxisAttr(axis)
+    else:
+        raise ValueError("Axis must be X, Y or Z")
+
+    if limit_low is not None:
+        joint.CreateLowerLimitAttr(limit_low)
+    if limit_high is not None:
+        joint.CreateUpperLimitAttr(limit_high)
+
+    if enable_drive:
+        joint_prim = stage.GetPrimAtPath(joint.GetPath())
+        createDrive(
+            joint_prim,
+            token="linear",
+            damping=damping,
+            stiffness=stiffness,
+            max_force=force_limit,
+        )
     return joint
 
 
