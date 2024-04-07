@@ -199,25 +199,27 @@ class Capsule(GeometricPrimitive):
 @dataclass
 class Cube(GeometricPrimitive):
     name: str = "Cube"
-    width: float = 0.1
     depth: float = 0.1
+    width: float = 0.1
     height: float = 0.1
 
     def __post_init__(self):
-        assert self.width > 0, "The width must be larger than 0."
         assert self.depth > 0, "The depth must be larger than 0."
+        assert self.width > 0, "The width must be larger than 0."
         assert self.height > 0, "The height must be larger than 0."
         assert self.refinement > 0, "The refinement level must be larger than 0."
         self.refinement = int(self.refinement)
 
     def build(self, stage: Usd.Stage, path: str = None) -> Tuple[str, Usd.Prim]:
-        path, geom = pxr_utils.createCube(
-            stage, path, self.width, self.depth, self.height, self.refinement
+        path, prim = pxr_utils.createXform(stage, path)
+        body_path, body_geom = pxr_utils.createCube(
+            stage, path + "/body", self.depth, self.width, self.height, self.refinement
         )
-        prim = stage.GetPrimAtPath(path)
         if self.has_collider:
+            prim = stage.GetPrimAtPath(body_path)
             pxr_utils.applyCollider(prim, enable=True)
         if self.is_rigid:
+            prim = stage.GetPrimAtPath(path)
             pxr_utils.applyRigidBody(prim)
         return path, prim
 
@@ -243,10 +245,10 @@ class Cube(GeometricPrimitive):
             marker_path + "/marker_arrow",
             0.1,
             0.5,
-            [self.width / 2, 0, 0],
+            [self.depth / 2, 0, 0],
             self.refinement,
         )
-        pxr_utils.applyMaterial(marker_path, color)
+        pxr_utils.applyMaterial(marker_prim, color)
 
 
 GeometricPrimitiveFactory = TypeFactoryBuilder()
@@ -488,6 +490,7 @@ class Wheel:
         collider_path, collider_prim = self.collider_shape.build(
             stage, path + "/collision"
         )
+        collider_prim.GetAttribute("visibility").Set("invisible")
         pxr_utils.applyRigidBody(wheel_prim)
         pxr_utils.applyMass(wheel_prim, self.mass)
         # pxr_utils.applyMaterial(visual_prim, self.visual_material)
@@ -574,7 +577,6 @@ class ZeroFrictionSphere:
             mat = UsdShade.Material.Get(stage, material_path)
         else:
             mat = UsdShade.Material.Get(stage, material_path)
-        print(prim, mat)
         pxr_utils.applyMaterial(prim, mat, purpose="physics")
         return path, prim
 
@@ -602,6 +604,7 @@ class CasterWheel:
         self,
         stage: Usd.Stage,
         joint_path: str = None,
+        material_path: str = None,
         path: str = None,
         body_path: str = None,
     ) -> Tuple[str, Usd.Prim]:
@@ -620,10 +623,12 @@ class CasterWheel:
         caster_path, caster_prim = pxr_utils.createXform(
             stage, caster_wheel_path + "/caster"
         )
+        pxr_utils.applyRigidBody(caster_prim)
+        pxr_utils.applyMass(caster_prim, 0.0005)
         pxr_utils.setTranslate(caster_prim, Gf.Vec3d(*self.caster_offset))
         # Create the joints
-        self.caster_joint.build(stage, joint_path, body_path, caster_path)
-        self.wheel_joint.build(stage, joint_path, caster_path, wheel_path)
+        self.caster_joint.build(stage, joint_path + "_caster", body_path, caster_path)
+        self.wheel_joint.build(stage, joint_path + "_wheel", caster_path, wheel_path)
 
         return wheel_path, wheel_prim
 

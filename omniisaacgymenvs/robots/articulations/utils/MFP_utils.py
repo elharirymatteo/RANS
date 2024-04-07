@@ -447,8 +447,8 @@ def createCapsule(
 def createCube(
     stage: Usd.Stage,
     path: str,
-    width: float,
     depth: float,
+    width: float,
     height: float,
     refinement: int,
 ) -> Tuple[str, UsdGeom.Cube]:
@@ -458,8 +458,8 @@ def createCube(
     Args:
         stage (Usd.Stage): The stage to create the cube.
         path (str): The path of the cube.
-        width (float): The width of the cube.
         depth (float): The depth of the cube.
+        width (float): The width of the cube.
         height (float): The height of the cube.
         refinement (int): The number of times to refine the cube.
 
@@ -470,7 +470,7 @@ def createCube(
     path = omni.usd.get_stage_next_free_path(stage, path, False)
     cube_geom = UsdGeom.Cube.Define(stage, path)
     cube_geom.GetSizeAttr().Set(1)
-    setXformOps(cube_geom, scale=Gf.Vec3d([width, depth, height]))
+    setXformOps(cube_geom, scale=Gf.Vec3d([depth, width, height]))
     refineShape(stage, path, refinement)
     return path, cube_geom
 
