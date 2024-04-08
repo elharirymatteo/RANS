@@ -708,7 +708,9 @@ def createFixedJoint(
         xform_body_2 = UsdGeom.Xformable(body_2_prim)
         transform_body_1 = xform_body_1.ComputeLocalToWorldTransform(0.0)
         transform_body_2 = xform_body_2.ComputeLocalToWorldTransform(0.0)
-        t12 = np.matmul(np.linalg.inv(transform_body_1), transform_body_2)
+        t12 = np.matmul(
+            np.linalg.inv(transform_body_1).T, np.array(transform_body_2).T
+        ).T
         translate_body_12 = Gf.Vec3f([t12[3][0], t12[3][1], t12[3][2]])
         Q_body_12 = Gf.Transform(Gf.Matrix4d(t12.tolist())).GetRotation().GetQuat()
 
@@ -777,7 +779,9 @@ def createRevoluteJoint(
         xform_body_2 = UsdGeom.Xformable(body_2_prim)
         transform_body_1 = xform_body_1.ComputeLocalToWorldTransform(0.0)
         transform_body_2 = xform_body_2.ComputeLocalToWorldTransform(0.0)
-        t12 = np.matmul(np.linalg.inv(transform_body_1), transform_body_2)
+        t12 = np.matmul(
+            np.linalg.inv(transform_body_1).T, np.array(transform_body_2).T
+        ).T
         translate_body_12 = Gf.Vec3f([t12[3][0], t12[3][1], t12[3][2]])
         Q_body_12 = Gf.Transform(Gf.Matrix4d(t12.tolist())).GetRotation().GetQuat()
 
@@ -864,7 +868,9 @@ def createPrismaticJoint(
         xform_body_2 = UsdGeom.Xformable(body_2_prim)
         transform_body_1 = xform_body_1.ComputeLocalToWorldTransform(0.0)
         transform_body_2 = xform_body_2.ComputeLocalToWorldTransform(0.0)
-        t12 = np.matmul(np.linalg.inv(transform_body_1), transform_body_2)
+        t12 = np.matmul(
+            np.linalg.inv(transform_body_1).T, np.array(transform_body_2).T
+        ).T
         translate_body_12 = Gf.Vec3f([t12[3][0], t12[3][1], t12[3][2]])
         Q_body_12 = Gf.Transform(Gf.Matrix4d(t12.tolist())).GetRotation().GetQuat()
 
