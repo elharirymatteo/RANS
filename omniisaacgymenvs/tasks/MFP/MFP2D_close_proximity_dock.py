@@ -48,6 +48,24 @@ class CloseProximityDockTask(Core):
         device: str,
     ) -> None:
         super(CloseProximityDockTask, self).__init__(num_envs, device)
+
+        # Observation buffers
+        self._dim_task_data = 4  # data to be used to fullfil the task (floats) [6:10]
+        self._num_observations = 10
+        self._obs_buffer = torch.zeros(
+            (self._num_envs, self._num_observations),
+            device=self._device,
+            dtype=torch.float32,
+        )
+        self._task_label = torch.ones(
+            (self._num_envs), device=self._device, dtype=torch.float32
+        )
+        self._task_data = torch.zeros(
+            (self._num_envs, self._dim_task_data),
+            device=self._device,
+            dtype=torch.float32,
+        )
+
         # Task and reward parameters
         self._task_parameters = CloseProximityDockParameters(**task_param)
         self._reward_parameters = GoToPoseReward(**reward_param)
@@ -102,6 +120,24 @@ class CloseProximityDockTask(Core):
         )
         
         self._task_label = self._task_label * 6
+    
+    def update_observation_tensor(self, current_state: dict) -> torch.Tensor:
+        """
+        Updates the observation tensor with the current state of the robot.
+
+        Args:
+            current_state (dict): The current state of the robot.
+
+        Returns:
+            torch.Tensor: The observation tensor.
+        """
+
+        self._obs_buffer[:, 0:2] = current_state["orientation"]
+        self._obs_buffer[:, 2:4] = current_state["linear_velocity"]
+        self._obs_buffer[:, 4] = current_state["angular_velocity"]
+        self._obs_buffer[:, 5] = self._task_label
+        self._obs_buffer[:, 6:10] = self._task_data
+        return self._obs_buffer
 
     def create_stats(self, stats: dict) -> dict:
         """

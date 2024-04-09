@@ -122,9 +122,6 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         self.all_indices = torch.arange(
             self._num_envs, dtype=torch.int32, device=self._device
         )
-        self.contact_state = torch.zeros(
-            (self._num_envs), device=self._device, dtype=torch.float32
-        )
         # Extra info
         self.extras = {}
         self.extras_wandb = {}
@@ -428,17 +425,20 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         # Compute the heading
         self.heading[:, 0] = torch.cos(orient_z)
         self.heading[:, 1] = torch.sin(orient_z)
+
+        # Update goal pose
+        self.update_goal_state()
+        # Update FP contact state
+        net_contact_forces = self.compute_contact_forces()
+
         # Dump to state
         self.current_state = {
             "position": root_positions[:, :2],
             "orientation": self.heading,
             "linear_velocity": root_velocities[:, :2],
             "angular_velocity": root_velocities[:, -1],
+            "net_contact_forces": net_contact_forces,
         }
-        # Update goal pose
-        self.update_goal_state()
-        # Update FP contact state
-        self.compute_contact_state()
 
     def update_goal_state(self) -> None:
         """
@@ -454,15 +454,15 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
             self.step,
         )
 
-    def compute_contact_state(self) -> torch.Tensor:
+    def compute_contact_forces(self) -> torch.Tensor:
         """
-        Get the contact state of the platform.
+        Get the contact forces of the platform.
+
         Returns:
             net_contact_forces_norm (torch.Tensor): the norm of the net contact forces.
         """
         net_contact_forces = self._platforms.base.get_net_contact_forces(clone=False)
-        net_contact_forces_norm = torch.norm(net_contact_forces, dim=-1)
-        self.contact_state = net_contact_forces_norm
+        return torch.norm(net_contact_forces, dim=-1)
 
     def get_observations(self) -> Dict[str, torch.Tensor]:
         """
@@ -613,13 +613,6 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
             device=self._device,
         )
 
-        # contact state
-        self.contact_state = torch.zeros(
-            (self._num_envs),
-            dtype=torch.float32,
-            device=self._device,
-        )
-
         self.set_targets(self.all_indices)
 
     def set_targets(self, env_ids: torch.Tensor):
@@ -710,11 +703,6 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         dof_vel[:, self._platforms.lock_indices[1]] = vel[:, 1]
         dof_vel[:, self._platforms.lock_indices[2]] = vel[:, 5]
         self._platforms.set_joint_velocities(dof_vel, indices=env_ids)
-
-        # reset contact state
-        self.contact_state[env_ids] = torch.zeros(
-            num_resets, device=self._device, dtype=torch.float32
-        )
 
         # bookkeeping
         self.reset_buf[env_ids] = 0
