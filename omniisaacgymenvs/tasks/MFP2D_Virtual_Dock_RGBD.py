@@ -45,7 +45,6 @@ import math
 import torch
 from torchvision.utils import make_grid
 from torchvision.transforms.functional import to_pil_image as ToPILImage
-import cv2
 import os
 
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
