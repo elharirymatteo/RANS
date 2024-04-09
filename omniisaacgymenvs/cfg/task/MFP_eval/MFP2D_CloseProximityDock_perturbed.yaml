@@ -1,8 +1,8 @@
 # used to create the object
-name: MFP2DVirtual_Dock_RGBD
+name: MFP2DVirtual_Dock
 
 physics_engine: ${..physics_engine}
-experiment: MFP2D_Virtual_CloseProximityDock_RGBD
+experiment: MFP2D_Virtual_CloseProximityDock
 enable_wandb_log: ${..wandb_activate}
 
 fp_path: /World/envs/env_0/Modular_floating_platform
@@ -11,15 +11,15 @@ lab_usd_path: robots/usd/zero_g_lab.usd
 
 # if given, will override the device setting in gym. 
 env:
-  numEnvs: ${resolve_default:24,${...num_envs}}
-  envSpacing: 12
+  numEnvs: ${resolve_default:64,${...num_envs}}
+  envSpacing: 6
   maxEpisodeLength: 450
   enableDebugVis: False
   action_mode: MultiDiscrete
   numQuantizedActions: 1
   horizon_length: ${...train.params.config.horizon_length}
 
-  controlFrequencyInv: 10
+  controlFrequencyInv: 5
 
   clipObservations: {state: 8.0}
   clipActions: 1.0
@@ -29,7 +29,7 @@ env:
 
   disturbances:
     force_disturbance:
-      enable: False
+      enable: True
       use_sinusoidal_patterns: False
       min_freq: 0.25
       max_freq: 3
@@ -50,7 +50,7 @@ env:
           min_value: 0.0
           max_value: 0.5
     torque_disturbance:
-      enable: False
+      enable: True
       use_sinusoidal_patterns: False
       min_freq: 0.25
       max_freq: 3
@@ -71,9 +71,9 @@ env:
           min_value: -0.1
           max_value: 0.1
     observations_disturbance:
-      enable_position_noise: False
-      enable_velocity_noise: False
-      enable_orientation_noise: False
+      enable_position_noise: True
+      enable_velocity_noise: True
+      enable_orientation_noise: True
       position_curriculum:
         rate_parameters:
           function: sigmoid
@@ -117,7 +117,7 @@ env:
           min_value: -0.025
           max_value: 0.025
     actions_disturbance:
-      enable: False
+      enable: True
       action_curriculum:
         rate_parameters:
           function: sigmoid
@@ -178,9 +178,7 @@ env:
       min_value: 0.1745 #pi/18
       max_value: 3.1415
       curriculum:
-        function: linear
-        start: 25
-        end: 200
+        function: none
     contact_penalty:
       enable: True
       weight: 20.0
@@ -192,25 +190,19 @@ env:
       kill_threshold: 0.1
     fp_footprint_diameter_curriculum:
       rate_parameters:
-        function: sigmoid
-        start: 100
-        end: 1000
-        extent: 4.5
+        function: none
       sampling_parameters:
         distribution: normal
-        start_mean: 1.02 # 0.62+0.4 (20cm margin)
-        start_std: 0.01
+        start_mean: 0.64 # 0.62 + 0.02 (1cm margin)
+        start_std: 1e-5
         end_mean: 0.64 # 0.62 + 0.02 (1cm margin)
-        end_std: 0.01
+        end_std: 1e-5
     spawn_dock_mass_curriculum:
       rate_parameters:
-        function: sigmoid
-        start: 100
-        end: 1000
-        extent: 4.5
+        function: none
       sampling_parameters:
         distribution: normal
-        start_mean: 100.0
+        start_mean: 5.32
         start_std: 0.01
         end_mean: 5.32
         end_std: 0.01
@@ -234,9 +226,9 @@ env:
         extent: 4.5
       sampling_parameters:
         distribution: normal
-        start_mean: 0.3
+        start_mean: 2.0
         start_std: 0.05
-        end_mean: 1.5
+        end_mean: 2.0
         end_std: 0.05
     spawn_relative_angle_curriculum:
       rate_parameters:
@@ -247,7 +239,7 @@ env:
       sampling_parameters:
         distribution: normal
         start_mean: 0.0
-        start_std: 0.01 #super small angle
+        start_std: 2.0943 #2pi/3
         end_mean: 0.0
         end_std: 2.0943 #2pi/3
     spawn_heading_curriculum:
@@ -259,7 +251,7 @@ env:
       sampling_parameters:
         distribution: normal
         start_mean: 0.0
-        start_std: 0.01 #super small angle
+        start_std: 3.14
         end_mean: 0.0
         end_std: 3.14
     spawn_linear_velocity_curriculum:
@@ -285,7 +277,7 @@ env:
     name: CloseProximityDock
     position_reward_mode: exponential
     heading_reward_mode: exponential
-    position_exponential_reward_coeff: 0.50
+    position_exponential_reward_coeff: 0.25
     heading_exponential_reward_coeff: 0.25
     position_scale: 0.666
     heading_scale: 0.333
@@ -336,7 +328,6 @@ env:
       max_thruster_kill: 2
     core:
       mass: 5.32
-      # mass: 10.92
       CoM: [0,0,0]
       radius: 0.31
       shape: "sphere"
@@ -349,39 +340,10 @@ env:
       thrust_force: 1.0
       visualize: False
       save_path: "config.png"
-    camera:
-      module_name: "D455"
-      root_prim:
-        prim_path: "${.....fp_path}/core/body/${..module_name}"
-        translation: [0.3, 0, 0] #camera root translation relative to FP body [x, y, z]
-        rotation: [0, 0, -90] #camera root orientation relative to FP body [roll, pitch, yaw]
-      sensor_base:
-        prim_name: "camera_link"
-        usd_path: "robots/usd/${..module_name}.usd"
-      links: [
-        ["camera_color_frame", [0.011, 0, 0, 0, 0, 0]], 
-        ["camera_color_optical_frame", [0.011, 0, 0, -90, 0, 0]],
-      ]
-      camera_sensor:
-        prim_path: "${..root_prim.prim_path}/camera_color_optical_frame/Camera"
-        rotation: [180, 0, 0] # optical frame to camera prim rotation (due to the fact that OV assumes OpenGL convention)
-        params:
-          focalLength: 1.93
-          focusDistance: 20.0
-          clippingRange: [0.01, 20.0]
-          horizontalAperture: 3.60
-          verticalAperture: 2.70
-  sensors:
-    RLCamera:
-      prim_path: "${...platform.camera.camera_sensor.prim_path}"
-      resolution: [150, 100] # [width, height]
-      is_override: False
-    save_to_log: True
-    save_frequency: 1000
   
   dock:
     usd_path: robots/usd/docking_station.usd
-    mass: 100.0
+    mass: 5.32
     show_axis: False
     enable_collision: True
 
@@ -391,13 +353,13 @@ sim:
   gravity: [0.0, 0.0, 0.0]
   add_ground_plane: False
   add_lab: True
-  add_distant_light: True
+  add_distant_light: False
   use_fabric: True
   enable_scene_query_support: False
   disable_contact_processing: False
 
   # set to True if you use camera sensors in the environment
-  enable_cameras: True
+  enable_cameras: False
 
   physx:
     worker_thread_count: ${....num_threads}
@@ -418,10 +380,10 @@ sim:
     gpu_max_rigid_contact_count: 524288
     gpu_max_rigid_patch_count: 81920
     # gpu_found_lost_pairs_capacity: 1024
-    gpu_found_lost_pairs_capacity: 7200
+    gpu_found_lost_pairs_capacity: 8192
     gpu_found_lost_aggregate_pairs_capacity: 262144
     # gpu_total_aggregate_pairs_capacity: 1024
-    gpu_total_aggregate_pairs_capacity: 20000
+    gpu_total_aggregate_pairs_capacity: 8192
     gpu_max_soft_body_contacts: 1048576
     gpu_max_particle_contacts: 1048576
     gpu_heap_capacity: 67108864

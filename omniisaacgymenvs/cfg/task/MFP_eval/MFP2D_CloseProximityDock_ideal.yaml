@@ -170,7 +170,7 @@ env:
     kill_after_n_steps_in_tolerance: 50 # 10seconds
     kill_dist: 5.0
     dock_footprint_diameter: 0.80
-    goal_to_penalty_anchor_dist: -2.0 # offset from goal position to penalty anchor
+    goal_to_penalty_anchor_dist: -4.0 # offset from goal position to penalty anchor
     relative_angle_penalty:
       enable: True
       weight: 0.5
