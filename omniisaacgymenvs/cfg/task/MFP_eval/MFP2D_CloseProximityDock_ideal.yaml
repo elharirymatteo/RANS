@@ -12,7 +12,7 @@ lab_usd_path: robots/usd/zero_g_lab.usd
 # if given, will override the device setting in gym. 
 env:
   numEnvs: ${resolve_default:64,${...num_envs}}
-  envSpacing: 6
+  envSpacing: 12
   maxEpisodeLength: 450
   enableDebugVis: False
   action_mode: MultiDiscrete
