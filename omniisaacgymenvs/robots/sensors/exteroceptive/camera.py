@@ -8,12 +8,11 @@ __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
+from omniisaacgymenvs.robots.sensors.exteroceptive.camera_interface import camera_interface_factory
 from typing import List
 from dataclasses import dataclass, field
 from omni.isaac.core.utils.stage import get_current_stage
 from pxr import Gf
-
-from omniisaacgymenvs.robots.sensors.exteroceptive.camera_interface import camera_interface_factory
 
 @dataclass
 class CameraCalibrationParam:
