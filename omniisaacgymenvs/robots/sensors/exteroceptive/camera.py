@@ -10,8 +10,6 @@ __status__ = "development"
 
 from typing import List
 from dataclasses import dataclass, field
-import omni.replicator.core as rep
-from omni.isaac.core.utils.prims import get_prim_at_path
 from omni.isaac.core.utils.stage import get_current_stage
 from pxr import Gf
 
@@ -58,7 +56,7 @@ class RLCamera:
     RLCamera is a sensor that can be used in RL tasks.
     It uses replicator to record synthetic (mostly images) data.
     """
-    def __init__(self, sensor_cfg:dict)->None:
+    def __init__(self, sensor_cfg:dict, rep:object)->None:
         """
         Args:
             sensor_cfg (dict): configuration for the sensor with the following key, value
@@ -69,12 +67,13 @@ class RLCamera:
         self.sensor_cfg = RLCameraParams(**sensor_cfg)
         self.prim_path = self.sensor_cfg.prim_path
         self.is_override = self.sensor_cfg.is_override
+        self.rep = rep
 
         if self.is_override:
             assert "params" in sensor_cfg.keys(), "params must be provided if override is True."
             self.override_params(get_current_stage(), self.prim_path, self.sensor_cfg.params)
         
-        self.render_product = rep.create.render_product(
+        self.render_product = self.rep.create.render_product(
             self.prim_path, 
             resolution=[*self.sensor_cfg.resolution])
         self.annotators = {}
@@ -101,7 +100,7 @@ class RLCamera:
         """
         Enable RGB as a RL observation
         """
-        rgb_annot = rep.AnnotatorRegistry.get_annotator("rgb")
+        rgb_annot = self.rep.AnnotatorRegistry.get_annotator("rgb")
         rgb_annot.attach([self.render_product])
         self.annotators.update({"rgb":rgb_annot})
         self.camera_interfaces.update({"rgb":camera_interface_factory.get("RGBInterface")(add_noise=False)})
@@ -110,7 +109,7 @@ class RLCamera:
         """
         Enable depth as a RL observation
         """
-        depth_annot = rep.AnnotatorRegistry.get_annotator("distance_to_image_plane")
+        depth_annot = self.rep.AnnotatorRegistry.get_annotator("distance_to_image_plane")
         depth_annot.attach([self.render_product])
         self.annotators.update({"depth":depth_annot})
         self.camera_interfaces.update({"depth":camera_interface_factory.get("DepthInterface")(add_noise=False)})

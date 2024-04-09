@@ -13,7 +13,7 @@ from omniisaacgymenvs.tasks.MFP.MFP2D_core import (
     Core,
 )
 from omniisaacgymenvs.tasks.MFP.MFP2D_task_rewards import (
-    CloseProximityDockReward,
+    GoToPoseReward,
 )
 from omniisaacgymenvs.tasks.MFP.MFP2D_task_parameters import (
     CloseProximityDockParameters,
@@ -50,7 +50,7 @@ class CloseProximityDockTask(Core):
         super(CloseProximityDockTask, self).__init__(num_envs, device)
         # Task and reward parameters
         self._task_parameters = CloseProximityDockParameters(**task_param)
-        self._reward_parameters = CloseProximityDockReward(**reward_param)
+        self._reward_parameters = GoToPoseReward(**reward_param)
         # Curriculum samplers
         self._fp_footprint_diameter_sampler = CurriculumSampler(
             self._task_parameters.fp_footprint_diameter_curriculum
@@ -126,10 +126,14 @@ class CloseProximityDockTask(Core):
         self.log_with_wandb = []
         self.log_with_wandb += self._task_parameters.boundary_penalty.get_stats_name()
         self.log_with_wandb += self._task_parameters.relative_angle_penalty.get_stats_name()
+        self.log_with_wandb += self._task_parameters.contact_penalty.get_stats_name()
         for name in self._task_parameters.boundary_penalty.get_stats_name():
             if not name in stats.keys():
                 stats[name] = torch_zeros()
         for name in self._task_parameters.relative_angle_penalty.get_stats_name():
+            if not name in stats.keys():
+                stats[name] = torch_zeros()
+        for name in self._task_parameters.contact_penalty.get_stats_name():
             if not name in stats.keys():
                 stats[name] = torch_zeros()
         return stats
@@ -216,12 +220,21 @@ class CloseProximityDockTask(Core):
         self.boundary_dist = torch.abs(
             self._task_parameters.kill_dist - self.position_dist
         )
-        self.boundary_penalty = self._task_parameters.boundary_penalty.compute_penalty(
+        boundary_penalty = self._task_parameters.boundary_penalty.compute_penalty(
             self.boundary_dist, step
         )
         
         # cone shape penalty on fp-dock relative angle
-        self.relative_angle_penalty = self._task_parameters.relative_angle_penalty.compute_penalty(self.relative_angle, step)
+        relative_angle_penalty = self._task_parameters.relative_angle_penalty.compute_penalty(
+            self.relative_angle, step
+        )
+        
+        # contact penalty
+        contact_penalty, self._contact_kills = (
+            self._task_parameters.contact_penalty.compute_penalty(
+                current_state["net_contact_forces"], step
+            )
+        )
 
         # Checks if the goal is reached
         position_goal_is_reached = (
@@ -241,7 +254,13 @@ class CloseProximityDockTask(Core):
         ) = self._reward_parameters.compute_reward(
             current_state, actions, self.position_dist, self.heading_dist
         )
-        return self.position_reward + self.heading_reward - self.boundary_penalty - self.relative_angle_penalty
+        return (
+            self.position_reward
+            + self.heading_reward
+            - boundary_penalty
+            - relative_angle_penalty
+            - contact_penalty
+        )
 
     def update_kills(self) -> torch.Tensor:
         """
@@ -261,21 +280,7 @@ class CloseProximityDockTask(Core):
             ones,
             die,
         )
-        return die
-    
-    def update_collision_termination(self, die:torch.Tensor, contact_state:torch.Tensor):
-        """
-        Updates if the platforms should be killed or not based on collision status. 
-
-        Args: 
-            die(torch.Tensor): Wether the platforms should be killed or not (from update_kills method).
-            contact_state (torch.Tensor): norm of contact force.
-            
-        Returns:
-            torch.Tensor: Wether the platforms should be killed or not.
-        """
-        ones = torch.ones_like(die)
-        die = torch.where(contact_state > self._task_parameters.collision_force_tolerance, ones, die)
+        die = torch.where(self._contact_kills, ones, die)
         return die
 
     def update_statistics(self, stats: dict) -> dict:
@@ -288,9 +293,7 @@ class CloseProximityDockTask(Core):
         Returns:
             dict: The statistics of the training
         """
-
-        # stats["position_reward"] += self.reward_mask * self.position_reward
-        # stats["heading_reward"] += self.reward_mask * self.heading_reward
+        
         stats["position_reward"] += self.position_reward
         stats["heading_reward"] += self.heading_reward
         stats["position_error"] += self.position_dist
@@ -298,6 +301,7 @@ class CloseProximityDockTask(Core):
         stats["boundary_dist"] += self.boundary_dist
         stats = self._task_parameters.boundary_penalty.update_statistics(stats)
         stats = self._task_parameters.relative_angle_penalty.update_statistics(stats)
+        stats = self._task_parameters.contact_penalty.update_statistics(stats)
         return stats
 
     def reset(self, env_ids: torch.Tensor) -> None:

@@ -301,7 +301,8 @@ class MFP2DVirtual_Dock(RLTask):
                 "/".join(sensor_path)
             )
             rl_sensor = camera_factory.get("RLCamera")(
-                self._task_cfg["env"]["sensors"]["RLCamera"]
+                self._task_cfg["env"]["sensors"]["RLCamera"], 
+                self.rep, 
             )
             active_sensors.append(rl_sensor)
         self.active_sensors = active_sensors
@@ -389,7 +390,7 @@ class MFP2DVirtual_Dock(RLTask):
     
     def get_rgbd_data(self) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        return batched sensor data.
+        return batched rgbd data.
         Returns:
             rgb (torch.Tensor): batched rgb data
             depth (torch.Tensor): batched depth data
@@ -635,8 +636,7 @@ class MFP2DVirtual_Dock(RLTask):
         penalties = self._penalties.compute_penalty(
             self.current_state, self.actions, self.step
         )
-        collision_penalty = self.calculate_collision_penalty()
-        self.rew_buf[:] = reward - penalties - collision_penalty
+        self.rew_buf[:] = reward - penalties
         self.episode_sums = self.task.update_statistics(self.episode_sums)
         self.episode_sums = self._penalties.update_statistics(self.episode_sums)
         if self.iteration / self._task_cfg["env"]["horizon_length"] % 1 == 0:
@@ -652,11 +652,6 @@ class MFP2DVirtual_Dock(RLTask):
             self.extras_wandb = {}
 
         self.update_state_statistics()
-    
-    def calculate_collision_penalty(self) -> torch.Tensor:
-        """
-        Calculates the penalty for collisions."""
-        return self.task._reward_parameters.collision_scale * self.contact_state
 
     def is_done(self) -> None:
         """
@@ -665,9 +660,6 @@ class MFP2DVirtual_Dock(RLTask):
         # resets due to misbehavior
         ones = torch.ones_like(self.reset_buf)
         die = self.task.update_kills()
-
-        # resets due to collision
-        die = self.task.update_collision_termination(die, self.contact_state)
 
         # resets due to episode length
         self.reset_buf[:] = torch.where(
