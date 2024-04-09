@@ -46,18 +46,6 @@ import torch
 import cv2
 import os
 
-import carb
-
-carb_settings = carb.settings.get_settings()
-carb_settings.set_bool(
-    "rtx/raytracing/cached/enabled", 
-    False,
-)
-carb_settings.set_int(
-    "rtx/descriptorSets", 
-    8192,
-)
-
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
 class MFP2DVirtual_Dock(RLTask):

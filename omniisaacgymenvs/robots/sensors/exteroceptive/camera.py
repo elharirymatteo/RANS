@@ -14,6 +14,18 @@ from dataclasses import dataclass, field
 from omni.isaac.core.utils.stage import get_current_stage
 from pxr import Gf
 
+import carb
+
+carb_settings = carb.settings.get_settings()
+carb_settings.set_bool(
+    "rtx/raytracing/cached/enabled", 
+    False,
+)
+carb_settings.set_int(
+    "rtx/descriptorSets", 
+    8192,
+)
+
 @dataclass
 class CameraCalibrationParam:
     """
