@@ -15,6 +15,7 @@ from omniisaacgymenvs.tasks.MFP.MFP2D_disturbances_parameters import (
     TorqueDisturbanceParameters,
     NoisyObservationsParameters,
     NoisyActionsParameters,
+    NoisyImagesParameters,
 )
 
 from omniisaacgymenvs.tasks.MFP.curriculum_helpers import (
@@ -783,6 +784,93 @@ class NoisyActions:
                 step
             )
         return dict
+    
+    
+class NoisyImages:
+    """
+    Adds noise to the actions of the robot."""
+
+    def __init__(
+        self,
+        parameters: NoisyImagesParameters,
+        num_envs: int,
+        device: str,
+    ) -> None:
+        """
+        Args:
+            parameters (NoisyActionParameters): The task configuration.
+            num_envs (int): The number of environments.
+            device (str): The device on which the tensors are stored.
+        """
+
+        self.image_sampler = CurriculumSampler(parameters.image_curriculum)
+        self.parameters = parameters
+        self._num_envs = num_envs
+        self._device = device
+
+    def add_noise_on_image(self, image: torch.Tensor, step: int = 0) -> torch.Tensor:
+        """
+        Adds noise to the actions of the robot.
+
+        Args:
+            image (torch.Tensor): The image observation of the robot. Shape is (num_envs, channel, height, width).
+            step (int, optional): The current step of the learning process. Defaults to 0.
+
+        Returns:
+            torch.Tensor: The image observation of the robot with noise.
+        """
+
+        if self.parameters.enable:
+            self.shape = image.shape
+            image += self.image_sampler.sample(
+                self._num_envs * self.shape[1] * self.shape[2] * self.shape[3], step, device=self._device
+            ).reshape(-1, self.shape[1], self.shape[2], self.shape[3])
+        return image
+
+    def get_image_logs(self, step: int) -> dict:
+        """
+        Logs the current state of the disturbances.
+
+        Args:
+            step (int): The current step of the learning process.
+
+        Returns:
+            dict: The logged data.
+        """
+        dict = {}
+
+        if self.parameters.enable:
+            image = self.image_sampler.sample(
+                self._num_envs * self.shape[1] * self.shape[2] * self.shape[3], step, device=self._device
+            ).reshape(-1, self.shape[1], self.shape[2], self.shape[3])
+            image = image.squeeze().cpu().numpy()[0]
+            fig, ax = plt.subplots(1, 1, dpi=100, figsize=(8, 8), sharey=True)
+            ax.imshow(image)
+            ax.set_title("Action noise")
+            fig.tight_layout()
+            fig.canvas.draw()
+            data = np.array(fig.canvas.renderer.buffer_rgba())
+            plt.close(fig)
+            dict[f"disturbance/{self.parameters.modality}_noise"] = wandb.Image(data)
+        return dict
+
+    def get_scalar_logs(self, step: int) -> dict:
+        """
+        Logs the current state of the disturbances.
+
+        Args:
+            step (int): The current step of the learning process.
+
+        Returns:
+            dict: The logged data.
+        """
+        dict = {}
+
+        if self.parameters.enable:
+            dict[f"disturbance/{self.parameters.modality}_disturbance_rate"] = self.image_sampler.get_rate(
+                step
+            )
+        return dict
 
 
 class Disturbances:
@@ -832,6 +920,16 @@ class Disturbances:
             self.parameters.actions_disturbance,
             num_envs,
             device,
+        )
+        self.noisy_rgb_images = NoisyImages(
+            self.parameters.rgb_disturbance, 
+            num_envs, 
+            device
+        )
+        self.noisy_depth_images = NoisyImages(
+            self.parameters.depth_disturbance, 
+            num_envs, 
+            device
         )
 
     def get_logs(self, step: int) -> dict:

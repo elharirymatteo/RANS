@@ -512,8 +512,10 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
             depth (torch.Tensor): batched depth data
         """
         rs_obs = [sensor.get_observation() for sensor in self.active_sensors]
-        rgb = torch.stack([ob["rgb"] for ob in rs_obs])
-        depth = torch.stack([ob["depth"] for ob in rs_obs])
+        rgb = torch.stack([ob["rgb"] for ob in rs_obs]).to(self._device)
+        depth = torch.stack([ob["depth"] for ob in rs_obs]).to(self._device)
+        rgb = self.DR.noisy_rgb_images.add_noise_on_image(rgb, step=self.step)
+        depth = self.DR.noisy_depth_images.add_noise_on_image(depth, step=self.step)
         return rgb, depth
 
     def pre_physics_step(self, actions: torch.Tensor) -> None:

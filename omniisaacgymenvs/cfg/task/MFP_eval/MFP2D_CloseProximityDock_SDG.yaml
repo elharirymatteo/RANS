@@ -29,7 +29,7 @@ env:
 
   disturbances:
     force_disturbance:
-      enable: False
+      enable: True
       use_sinusoidal_patterns: False
       min_freq: 0.25
       max_freq: 3
@@ -50,7 +50,7 @@ env:
           min_value: 0.0
           max_value: 0.5
     torque_disturbance:
-      enable: False
+      enable: True
       use_sinusoidal_patterns: False
       min_freq: 0.25
       max_freq: 3
@@ -71,9 +71,9 @@ env:
           min_value: -0.1
           max_value: 0.1
     observations_disturbance:
-      enable_position_noise: False
-      enable_velocity_noise: False
-      enable_orientation_noise: False
+      enable_position_noise: True
+      enable_velocity_noise: True
+      enable_orientation_noise: True
       position_curriculum:
         rate_parameters:
           function: sigmoid
@@ -117,7 +117,7 @@ env:
           min_value: -0.025
           max_value: 0.025
     actions_disturbance:
-      enable: False
+      enable: True
       action_curriculum:
         rate_parameters:
           function: sigmoid
@@ -162,6 +162,40 @@ env:
           end_std: 0.25
           min_value: 0.0
           max_value: 0.25
+    rgb_disturbance:
+      enable: True
+      modality: rgb
+      image_curriculum:
+        rate_parameters:
+          function: sigmoid
+          start: 250
+          end: 1250
+          extent: 4.5
+        sampling_parameters:
+          distribution: truncated_normal
+          start_mean: 0.0
+          start_std: 0.1
+          end_mean: 0.0
+          end_std: 0.1
+          min_value: -0.05
+          max_value: 0.05
+    depth_disturbance:
+      enable: True
+      modality: depth
+      image_curriculum:
+        rate_parameters:
+          function: sigmoid
+          start: 250
+          end: 1250
+          extent: 4.5
+        sampling_parameters:
+          distribution: truncated_normal
+          start_mean: 0.0
+          start_std: 0.1
+          end_mean: 0.0
+          end_std: 0.1
+          min_value: -0.05
+          max_value: 0.05
 
   task_parameters:
     name: CloseProximityDock
@@ -239,9 +273,9 @@ env:
       sampling_parameters:
         distribution: normal
         start_mean: 0.0
-        start_std: 1.57 #2pi/3
+        start_std: 1.047 #pi/3
         end_mean: 0.0
-        end_std: 1.57 #2pi/3
+        end_std: 1.047 #pi/3
     spawn_heading_curriculum:
       rate_parameters:
         function: sigmoid

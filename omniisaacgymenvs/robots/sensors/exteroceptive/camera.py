@@ -116,7 +116,7 @@ class RLCamera:
         rgb_annot = self.rep.AnnotatorRegistry.get_annotator("rgb")
         rgb_annot.attach([self.render_product])
         self.annotators.update({"rgb":rgb_annot})
-        self.camera_interfaces.update({"rgb":camera_interface_factory.get("RGBInterface")(add_noise=False)})
+        self.camera_interfaces.update({"rgb":camera_interface_factory.get("RGBInterface")()})
     
     def enable_depth(self) -> None:
         """
@@ -125,7 +125,7 @@ class RLCamera:
         depth_annot = self.rep.AnnotatorRegistry.get_annotator("distance_to_image_plane")
         depth_annot.attach([self.render_product])
         self.annotators.update({"depth":depth_annot})
-        self.camera_interfaces.update({"depth":camera_interface_factory.get("DepthInterface")(add_noise=False)})
+        self.camera_interfaces.update({"depth":camera_interface_factory.get("DepthInterface")()})
     
     def get_observation(self) -> dict:
         """

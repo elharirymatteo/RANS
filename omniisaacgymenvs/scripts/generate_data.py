@@ -56,32 +56,42 @@ def run_sdg(cfg, horizon, num_ep=1):
         os.makedirs(evaluation_dir, exist_ok=True)
         env._task.reset_idx(env._task.all_indices.long())
         obs = env.reset()
-        ep_data = {"act": [], "state": [], "rgb": [], "depth": [], "rews": []}
+        ep_data = {
+            "act": [], "state": [], "task": [], 
+            "rgb": [], "depth": [], "rews": []
+            }
 
         for _ in range(horizon):
             actions = agent.get_action(obs["obs"], is_deterministic=True)
-            obs, reward, done, info = env.step(actions)
-
+            position = env._task.current_state["position"]
+            obs, reward, _, _ = env.step(actions)
+            state = obs["obs"]["state"][:, :5]
+            task_data = obs["obs"]["state"][:, 6:]
+            state = torch.cat([position, state], dim=-1)
             rgb, depth = env._task.get_rgbd_data()
             
             ep_data["act"].append(actions.cpu())
-            ep_data["state"].append(obs["obs"]["state"].cpu())
+            ep_data["state"].append(state.cpu())
+            ep_data["task"].append(task_data.cpu())
             ep_data["rgb"].append(rgb.cpu())
             ep_data["depth"].append(depth.cpu())
             ep_data["rews"].append(reward.cpu())
-
-        ep_data["state"] = torch.stack(ep_data["state"]).transpose(0, 1)
-        ep_data["rews"] = torch.stack(ep_data["rews"]).transpose(0, 1)
+        
         ep_data["act"] = torch.stack(ep_data["act"]).transpose(0, 1)
+        ep_data["state"] = torch.stack(ep_data["state"]).transpose(0, 1)
+        ep_data["task"] = torch.stack(ep_data["task"]).transpose(0, 1)
+        ep_data["rews"] = torch.stack(ep_data["rews"]).transpose(0, 1)
         ep_data["rgb"] = torch.stack(ep_data["rgb"]).transpose(0, 1)
         ep_data["depth"] = torch.stack(ep_data["depth"]).transpose(0, 1)
+        
         # if thrusters were killed during the episode, save the action with the mask applied to the thrusters that were killed
         if cfg.task.env.platform.randomization.kill_thrusters:
             ep_data["act"] = ep_data["act"] * (1 - killed_thrusters_idxs.cpu().numpy())
         
         # save the episode data
-        torch.save(ep_data["state"], os.path.join(evaluation_dir, "state.pt"))
         torch.save(ep_data["act"], os.path.join(evaluation_dir, "act.pt"))
+        torch.save(ep_data["state"], os.path.join(evaluation_dir, "state.pt"))
+        torch.save(ep_data["task"], os.path.join(evaluation_dir, "task.pt"))
         torch.save(ep_data["rews"], os.path.join(evaluation_dir, "rews.pt"))
         torch.save(ep_data["rgb"], os.path.join(evaluation_dir, "rgb.pt"))
         torch.save(ep_data["depth"], os.path.join(evaluation_dir, "depth.pt"))
@@ -94,8 +104,8 @@ def parse_hydra_configs(cfg: DictConfig):
         print("No checkpoint specified. Exiting...")
         return
 
-    horizon = 150 #3s
-    num_ep = 2
+    horizon = 250 #5s(50fps)
+    num_ep = 300
     cfg.task.env.maxEpisodeLength = horizon + 2
     cfg_dict = omegaconf_to_dict(cfg)
     print_dict(cfg_dict)
