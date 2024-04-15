@@ -16,6 +16,7 @@ from pxr import Gf
 
 import carb
 
+## Replicator hack
 carb_settings = carb.settings.get_settings()
 carb_settings.set_bool(
     "rtx/raytracing/cached/enabled", 
@@ -74,6 +75,7 @@ class RLCamera:
                 prim_path (str): path to the prim that the sensor is attached to
                 sensor_param (dict): parameters for the sensor
                 override_param (bool): if True, the sensor parameters will be overriden
+            rep (object): omni.replicator.core object
         """
         self.sensor_cfg = RLCameraParams(**sensor_cfg)
         self.prim_path = self.sensor_cfg.prim_path
