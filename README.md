@@ -1,5 +1,4 @@
-# RANS: Reinforcement Learning Autonomous Navigating Systems
-
+![RANS_LOGO](data/RANS_v31_full_2.png) 
 ## About this repository
 
 This repo is an extension of the Isaac Gym Envs library present at https://github.com/NVIDIA-Omniverse/OmniIsaacGymEnvs. There, you can find further details and instructions regarding the default tasks (`AllegroHand`, `Ant`, `Anymal`, `AnymalTerrain`, `BallBalance`, `Cartpole`, `Crazyflie`, `FrankaCabinet`, `Humanoid`, `Ingenuity`, `Quadcopter`, `ShadowHand`, `ShadowHandOpenAI_FF`, `ShadowHandOpenAI_LSTM`).
