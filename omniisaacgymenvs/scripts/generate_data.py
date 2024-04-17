@@ -13,6 +13,7 @@ import datetime
 import numpy as np
 import torch
 import hydra
+import carb
 from omegaconf import DictConfig
 
 from omniisaacgymenvs.utils.hydra_cfg.hydra_utils import *
@@ -25,11 +26,13 @@ from omniisaacgymenvs.utils.task_util import initialize_task
 from omniisaacgymenvs.envs.vec_env_rlgames_mfp import VecEnvRLGames
 
 
-def eval_multi_agents(cfg, horizon):
+def run_sdg(cfg, horizon, num_ep=1):
     """
-    Evaluate a trained agent for a given number of steps"""
-    evaluation_dir = "./sdg/" + datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    os.makedirs(evaluation_dir, exist_ok=True)
+    Generate synthetic data using the trained agent.
+    TODO: Discard terminated agents
+    """
+    root_dir = "./sdg/" + datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    os.makedirs(root_dir, exist_ok=True)
 
     rlg_config_dict = omegaconf_to_dict(cfg.train)
     runner = Runner(RLGPUAlgoObserver())
@@ -48,40 +51,51 @@ def eval_multi_agents(cfg, horizon):
     if cfg.task.env.platform.randomization.kill_thrusters:
         killed_thrusters_idxs = env._task.virtual_platform.action_masks
 
-    ep_data = {"act": [], "state": [], "rgb": [], "depth": [], "rews": []}
-    total_reward = 0
-    num_steps = 0
+    for n in range(num_ep):
+        evaluation_dir = os.path.join(root_dir, str(n))
+        os.makedirs(evaluation_dir, exist_ok=True)
+        env._task.reset_idx(env._task.all_indices.long())
+        obs = env.reset()
+        ep_data = {
+            "act": [], "state": [], "task": [], 
+            "rgb": [], "depth": [], "rews": []
+            }
 
-    for _ in range(horizon):
-        actions = agent.get_action(obs["obs"], is_deterministic=True)
-        obs, reward, done, info = env.step(actions)
-        rgb, depth = env._task.get_rgbd_data()
+        for _ in range(horizon):
+            actions = agent.get_action(obs["obs"], is_deterministic=True)
+            position = env._task.current_state["position"]
+            obs, reward, _, _ = env.step(actions)
+            state = obs["obs"]["state"][:, :5]
+            task_data = obs["obs"]["state"][:, 6:]
+            state = torch.cat([position, state], dim=-1)
+            rgb, depth = env._task.get_rgbd_data()
+            
+            ep_data["act"].append(actions.cpu())
+            ep_data["state"].append(state.cpu())
+            ep_data["task"].append(task_data.cpu())
+            ep_data["rgb"].append(rgb.cpu())
+            ep_data["depth"].append(depth.cpu())
+            ep_data["rews"].append(reward.cpu())
         
-        ep_data["act"].append(actions.cpu())
-        ep_data["state"].append(obs["obs"]["state"].cpu())
-        ep_data["rgb"].append(rgb.cpu())
-        ep_data["depth"].append(depth.cpu())
-        ep_data["rews"].append(reward.cpu())
-        total_reward += reward[0]
-        num_steps += 1
-    ep_data["state"] = torch.cat(ep_data["state"])
-    ep_data["rews"] = torch.cat(ep_data["rews"])
-    ep_data["act"] = torch.cat(ep_data["act"])
-    ep_data["rgb"] = torch.cat(ep_data["rgb"])
-    ep_data["depth"] = torch.cat(ep_data["depth"])
-    # if thrusters were killed during the episode, save the action with the mask applied to the thrusters that were killed
-    if cfg.task.env.platform.randomization.kill_thrusters:
-        ep_data["act"] = ep_data["act"] * (1 - killed_thrusters_idxs.cpu().numpy())
-
-    print(f"\n Episode: rew_sum={total_reward:.2f}, tot_steps={num_steps} \n")
-    print(f'Episode data numberes: {ep_data["state"].shape[0]} \n')
-    
-    # save the episode data
-    torch.save(ep_data["state"], os.path.join(evaluation_dir, "state.pt"))
-    torch.save(ep_data["act"], os.path.join(evaluation_dir, "act.pt"))
-    torch.save(ep_data["rews"], os.path.join(evaluation_dir, "rews.pt"))
-    torch.save(ep_data["rgb"], os.path.join(evaluation_dir, "rgb.pt"))
-    torch.save(ep_data["depth"], os.path.join(evaluation_dir, "depth.pt"))
+        ep_data["act"] = torch.stack(ep_data["act"]).transpose(0, 1)
+        ep_data["state"] = torch.stack(ep_data["state"]).transpose(0, 1)
+        ep_data["task"] = torch.stack(ep_data["task"]).transpose(0, 1)
+        ep_data["rews"] = torch.stack(ep_data["rews"]).transpose(0, 1)
+        ep_data["rgb"] = torch.stack(ep_data["rgb"]).transpose(0, 1)
+        ep_data["depth"] = torch.stack(ep_data["depth"]).transpose(0, 1)
+        
+        # if thrusters were killed during the episode, save the action with the mask applied to the thrusters that were killed
+        if cfg.task.env.platform.randomization.kill_thrusters:
+            ep_data["act"] = ep_data["act"] * (1 - killed_thrusters_idxs.cpu().numpy())
+        
+        # save the episode data
+        torch.save(ep_data["act"], os.path.join(evaluation_dir, "act.pt"))
+        torch.save(ep_data["state"], os.path.join(evaluation_dir, "state.pt"))
+        torch.save(ep_data["task"], os.path.join(evaluation_dir, "task.pt"))
+        torch.save(ep_data["rews"], os.path.join(evaluation_dir, "rews.pt"))
+        torch.save(ep_data["rgb"], os.path.join(evaluation_dir, "rgb.pt"))
+        torch.save(ep_data["depth"], os.path.join(evaluation_dir, "depth.pt"))
+    carb.log_info("Data generation complete")
 
 
 @hydra.main(config_name="config", config_path="../cfg")
@@ -90,7 +104,8 @@ def parse_hydra_configs(cfg: DictConfig):
         print("No checkpoint specified. Exiting...")
         return
 
-    horizon = 100
+    horizon = 250 #5s(50fps)
+    num_ep = 300
     cfg.task.env.maxEpisodeLength = horizon + 2
     cfg_dict = omegaconf_to_dict(cfg)
     print_dict(cfg_dict)
@@ -115,10 +130,8 @@ def parse_hydra_configs(cfg: DictConfig):
 
     rlg_trainer = RLGTrainer(cfg, cfg_dict)
     rlg_trainer.launch_rlg_hydra(env)
-    # _____Create players (model)_____
 
-    # eval_single_agent(cfg_dict, cfg, env)
-    eval_multi_agents(cfg, horizon)
+    run_sdg(cfg, horizon, num_ep)
 
     env.close()
 

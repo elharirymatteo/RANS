@@ -15,18 +15,6 @@ class BaseCameraInterface:
     """
     Base camera interface class.
     """
-    def __init__(self, add_noise:bool=False):
-        """
-        Args:
-            add_noise (bool): Whether to add noise to the data or not
-        """
-        self.add_noise = add_noise
-        
-    def _add_noise(self):
-        """
-        Add noise to the data.
-        """
-        raise NotImplementedError
     
     def __call__(self, data):
         """

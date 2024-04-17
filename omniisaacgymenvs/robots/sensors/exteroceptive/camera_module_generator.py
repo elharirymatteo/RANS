@@ -41,8 +41,8 @@ class SensorBaseParams:
         prim_name (str): name of the prim.
         usd_path (str): path to the usd file. none if you do not link a usd file.
     """
-    prim_name: str
-    usd_path: str
+    prim_name: str = None
+    usd_path: str = None
 
 @dataclass
 class CameraCalibrationParam:
@@ -136,7 +136,7 @@ class D435_Sensor:
         setTranslate(prim, Gf.Vec3d((0, 0, 0)))
         setRotateXYZ(prim, Gf.Vec3d((0, 0, 0)))
         
-        if self.sensor_base.usd_path:
+        if self.sensor_base.usd_path is not None:
             sensor_body_usd = os.path.join(os.getcwd(), self.sensor_base.usd_path)
             camera_body_prim = add_reference_to_stage(sensor_body_usd, 
                                                     os.path.join(self.root_prim_path, 

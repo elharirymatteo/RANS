@@ -45,7 +45,6 @@ import math
 import torch
 from torchvision.utils import make_grid
 from torchvision.transforms.functional import to_pil_image as ToPILImage
-import cv2
 import os
 
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
@@ -121,9 +120,6 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         )
         self.all_indices = torch.arange(
             self._num_envs, dtype=torch.int32, device=self._device
-        )
-        self.contact_state = torch.zeros(
-            (self._num_envs), device=self._device, dtype=torch.float32
         )
         # Extra info
         self.extras = {}
@@ -386,7 +382,8 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
                 sensor_path
             )
             rl_sensor = camera_factory.get("RLCamera")(
-                self._task_cfg["env"]["sensors"]["RLCamera"]
+                self._task_cfg["env"]["sensors"]["RLCamera"], 
+                self.rep, 
             )
             active_sensors.append(rl_sensor)
         self.active_sensors = active_sensors
@@ -427,17 +424,20 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         # Compute the heading
         self.heading[:, 0] = torch.cos(orient_z)
         self.heading[:, 1] = torch.sin(orient_z)
+
+        # Update goal pose
+        self.update_goal_state()
+        # Update FP contact state
+        net_contact_forces = self.compute_contact_forces()
+
         # Dump to state
         self.current_state = {
             "position": root_positions[:, :2],
             "orientation": self.heading,
             "linear_velocity": root_velocities[:, :2],
             "angular_velocity": root_velocities[:, -1],
+            "net_contact_forces": net_contact_forces,
         }
-        # Update goal pose
-        self.update_goal_state()
-        # Update FP contact state
-        self.compute_contact_state()
 
     def update_goal_state(self) -> None:
         """
@@ -453,15 +453,15 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
             self.step,
         )
 
-    def compute_contact_state(self) -> torch.Tensor:
+    def compute_contact_forces(self) -> torch.Tensor:
         """
-        Get the contact state of the platform.
+        Get the contact forces of the platform.
+
         Returns:
             net_contact_forces_norm (torch.Tensor): the norm of the net contact forces.
         """
         net_contact_forces = self._platforms.base.get_net_contact_forces(clone=False)
-        net_contact_forces_norm = torch.norm(net_contact_forces, dim=-1)
-        self.contact_state = net_contact_forces_norm
+        return torch.norm(net_contact_forces, dim=-1)
 
     def get_observations(self) -> Dict[str, torch.Tensor]:
         """
@@ -506,14 +506,16 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
 
     def get_rgbd_data(self) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        return batched sensor data.
+        return batched rgbd data.
         Returns:
             rgb (torch.Tensor): batched rgb data
             depth (torch.Tensor): batched depth data
         """
         rs_obs = [sensor.get_observation() for sensor in self.active_sensors]
-        rgb = torch.stack([ob["rgb"] for ob in rs_obs])
-        depth = torch.stack([ob["depth"] for ob in rs_obs])
+        rgb = torch.stack([ob["rgb"] for ob in rs_obs]).to(self._device)
+        depth = torch.stack([ob["depth"] for ob in rs_obs]).to(self._device)
+        rgb = self.DR.noisy_rgb_images.add_noise_on_image(rgb, step=self.step)
+        depth = self.DR.noisy_depth_images.add_noise_on_image(depth, step=self.step)
         return rgb, depth
 
     def pre_physics_step(self, actions: torch.Tensor) -> None:
@@ -612,13 +614,6 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
             device=self._device,
         )
 
-        # contact state
-        self.contact_state = torch.zeros(
-            (self._num_envs),
-            dtype=torch.float32,
-            device=self._device,
-        )
-
         self.set_targets(self.all_indices)
 
     def set_targets(self, env_ids: torch.Tensor):
@@ -710,11 +705,6 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         dof_vel[:, self._platforms.lock_indices[2]] = vel[:, 5]
         self._platforms.set_joint_velocities(dof_vel, indices=env_ids)
 
-        # reset contact state
-        self.contact_state[env_ids] = torch.zeros(
-            num_resets, device=self._device, dtype=torch.float32
-        )
-
         # bookkeeping
         self.reset_buf[env_ids] = 0
         self.progress_buf[env_ids] = 0
@@ -756,8 +746,7 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         penalties = self._penalties.compute_penalty(
             self.current_state, self.actions, self.step
         )
-        collision_penalty = self.calculate_collision_penalty()
-        self.rew_buf[:] = reward - penalties - collision_penalty
+        self.rew_buf[:] = reward - penalties
         self.episode_sums = self.task.update_statistics(self.episode_sums)
         self.episode_sums = self._penalties.update_statistics(self.episode_sums)
         if self.iteration / self._task_cfg["env"]["horizon_length"] % 1 == 0:
@@ -774,11 +763,6 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
 
         self.update_state_statistics()
 
-    def calculate_collision_penalty(self) -> torch.Tensor:
-        """
-        Calculates the penalty for collisions."""
-        return self.task._reward_parameters.collision_scale * self.contact_state
-
     def is_done(self) -> None:
         """
         Checks if the episode is done."""
@@ -786,9 +770,6 @@ class MFP2DVirtual_Dock_RGBD(RLTask):
         # resets due to misbehavior
         ones = torch.ones_like(self.reset_buf)
         die = self.task.update_kills()
-
-        # resets due to collision
-        die = self.task.update_collision_termination(die, self.contact_state)
 
         # resets due to episode length
         self.reset_buf[:] = torch.where(
