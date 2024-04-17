@@ -14,11 +14,12 @@ from matplotlib import pyplot as plt
 import pandas as pd
 import numpy as np
 import os
+import datetime
 
-from omniisaacgymenvs.mujoco_envs.controllers.discrete_LQR_controller import (
+from mujoco_envs.controllers.discrete_LQR_controller import (
     DiscreteController,
 )
-from omniisaacgymenvs.mujoco_envs.controllers.RL_games_model_4_mujoco import (
+from mujoco_envs.controllers.RL_games_model_4_mujoco import (
     RLGamesModel,
 )
 
@@ -36,7 +37,7 @@ class BaseController:
             save_dir (str, optional): Directory to save the simulation data. Defaults to "mujoco_experiment".
         """
 
-        self.save_dir = save_dir
+        self.save_dir = os.path.join(save_dir, datetime.datetime.now().strftime("%Y%m%d_%H%M%S"))
         self.dt = dt
         self.time = 0
 
@@ -632,6 +633,74 @@ class DockController(PoseController):
         self.model.setTarget(
             target_position=position_goal, target_heading=orientation_goal, mode=6
         )
+    
+    def plotSimulation(
+        self, dpi: int = 90, width: int = 1000, height: int = 1000
+    ) -> None:
+        """
+        Plots the simulation.
+
+        Args:
+            dpi (int, optional): Dots per inch. Defaults to 90.
+            width (int, optional): Width of the figure. Defaults to 1000.
+            height (int, optional): Height of the figure. Defaults to 1000."""
+
+        figsize = (width / dpi, height / dpi)
+
+        fig, ax = plt.subplots(2, 1, figsize=figsize, dpi=dpi)
+
+        ax[0].plot(self.logs["timevals"], self.logs["angular_velocity"])
+        ax[0].set_title("angular velocity")
+        ax[0].set_ylabel("radians / second")
+
+        ax[1].plot(
+            self.logs["timevals"],
+            self.logs["linear_velocity"],
+            label="system velocities",
+        )
+        ax[1].legend()
+        ax[1].set_xlabel("time (seconds)")
+        ax[1].set_ylabel("meters / second")
+        _ = ax[1].set_title("linear_velocity")
+        try:
+            os.makedirs(self.save_dir, exist_ok=True)
+            fig.savefig(os.path.join(self.save_dir, "velocities.png"))
+        except Exception as e:
+            print("Saving failed: ", e)
+
+        fig, ax = plt.subplots(1, 1, figsize=figsize, dpi=dpi)
+        ax.scatter(
+            np.array(self.logs["position_target"])[:, 0],
+            np.array(self.logs["position_target"])[:, 1],
+            label="position goals",
+        )
+        ax.plot(
+            np.array(self.logs["position"])[:, 0],
+            np.array(self.logs["position"])[:, 1],
+            label="system position",
+        )
+        ax.legend()
+        ax.set_xlabel("meters")
+        ax.set_ylabel("meters")
+        ax.axis("equal")
+        _ = ax.set_title("x y coordinates")
+        plt.tight_layout()
+        try:
+            os.makedirs(self.save_dir, exist_ok=True)
+            fig.savefig(os.path.join(self.save_dir, "positions.png"))
+        except Exception as e:
+            print("Saving failed: ", e)
+
+        fig, ax = plt.subplots(1, 1, figsize=figsize, dpi=dpi)
+        ax.plot(
+            self.logs["timevals"], np.array(self.logs["actions"]), label="system action"
+        )
+        plt.tight_layout()
+        try:
+            os.makedirs(self.save_dir, exist_ok=True)
+            fig.savefig(os.path.join(self.save_dir, "actions.png"))
+        except Exception as e:
+            print("Saving failed: ", e)
 
 
 class TrajectoryTracker:
