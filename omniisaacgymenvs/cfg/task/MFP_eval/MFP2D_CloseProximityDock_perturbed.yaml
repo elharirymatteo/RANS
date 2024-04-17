@@ -19,7 +19,7 @@ env:
   numQuantizedActions: 1
   horizon_length: ${...train.params.config.horizon_length}
 
-  controlFrequencyInv: 5
+  controlFrequencyInv: 10
 
   clipObservations: {state: 8.0}
   clipActions: 1.0
