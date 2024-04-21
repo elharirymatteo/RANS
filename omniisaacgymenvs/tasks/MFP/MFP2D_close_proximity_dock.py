@@ -379,8 +379,7 @@ class CloseProximityDockTask(Core):
             2*(self._task_parameters.env_y/2 - self._task_parameters.dock_footprint_diameter - dock_space) * torch.rand((num_goals,), device=self._device) \
                 - (self._task_parameters.env_y/2 - self._task_parameters.dock_footprint_diameter - dock_space)
         
-        # Randomizes the target heading
-        # First, make dock face the center of environment.
+        # Set orientation to face the world's origin
         self._target_headings[env_ids] = torch.atan2(self._target_positions[env_ids, 1], self._target_positions[env_ids, 0]) + math.pi # facing center
         self._target_orientations[env_ids, 0] = torch.cos(
             self._target_headings[env_ids] * 0.5
@@ -389,12 +388,12 @@ class CloseProximityDockTask(Core):
             self._target_headings[env_ids] * 0.5
         )
 
-        # Retrieve the target positions and orientations at batch index = env_ids
+        # Retrieve the target positions and orientations used to manipulate usd prim
         target_positions[:, :2] = self._target_positions[env_ids]
-        target_positions[:, 2] = torch.ones(num_goals, device=self._device) * 0.45
+        target_positions[:, 2] = 0.2
         target_orientations[:] = self._target_orientations[env_ids]
         
-        # Add offset to the local target position
+        # Add offset to the target position
         fp_foot_print_diameter = self._fp_footprint_diameter_sampler.sample(num_goals, step, device=self._device)
         self._target_positions[env_ids, 0] += (fp_foot_print_diameter / 2) * torch.cos(self._target_headings[env_ids])
         self._target_positions[env_ids, 1] += (fp_foot_print_diameter / 2) * torch.sin(self._target_headings[env_ids])

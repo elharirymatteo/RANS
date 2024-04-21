@@ -198,9 +198,9 @@ env:
         extent: 4.5
       sampling_parameters:
         distribution: normal
-        start_mean: 1.02 # 0.62+0.4 (20cm margin)
+        start_mean: 1.64 # 0.62+0.62+0.4 (20cm margin)
         start_std: 0.01
-        end_mean: 0.64 # 0.62 + 0.02 (1cm margin)
+        end_mean: 1.26 # 0.62+0.62+0.02 (1cm margin)
         end_std: 0.01
     spawn_dock_mass_curriculum:
       rate_parameters:
@@ -350,9 +350,9 @@ env:
       save_path: "config.png"
   
   dock:
-    usd_path: robots/usd/docking_station.usd
+    usd_path: robots/usd/SpaceR_FP.usd
     mass: 100.0
-    show_axis: False
+    add_arrow: True
     enable_collision: True
 
 sim:

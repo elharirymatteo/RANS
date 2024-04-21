@@ -29,8 +29,9 @@ class DockParameters:
     """
 
     usd_path: str = None
-    show_axis: bool = False
     mass: float = 5.0
+    radius: float = 0.31
+    add_arrow: bool = False
     enable_collision: bool = True
 
 class Dock(Articulation):
@@ -62,6 +63,7 @@ class Dock(Articulation):
         self.stage = get_current_stage()
         self.joints_path = "joints"
         self.create_articulation_root(prim_path)
+        self.materials_path = "materials"
         super().__init__(
             prim_path=prim_path,
             name=name,
@@ -82,11 +84,6 @@ class Dock(Articulation):
         """
         createArticulation(self.stage, prim_path)
         add_reference_to_stage(os.path.join(os.getcwd(), self.dock_params.usd_path), prim_path)
-        axis_prim = get_prim_at_path(prim_path+"/dock/axis")
-        if self.dock_params.show_axis:
-            axis_prim.GetAttribute("visibility").Set("visible")
-        else:
-            axis_prim.GetAttribute("visibility").Set("invisible")
             
     def build(self)->None:
         """
@@ -97,6 +94,14 @@ class Dock(Articulation):
         )
         self.configure_core_prim()
         self.createXYPlaneLock()
+
+        self.materials_path, self.materials_prim = createXform(
+            self.stage, self.core_path + "/" + self.materials_path
+        )
+        # Creates a set of basic materials
+        self.createBasicColors()
+        if self.dock_params.add_arrow:
+            self.createArrowXform(self.core_path + "/arrow")
     
     def createXYPlaneLock(self) -> None:
         """
@@ -165,6 +170,49 @@ class Dock(Articulation):
         applyRigidBody(core)
         applyCollider(core, self.dock_params.enable_collision)
         applyMass(core, self.dock_params.mass)
+    
+    def createBasicColors(self) -> None:
+        """
+        Creates a set of basic colors."""
+
+        self.colors = {}
+        self.colors["red"] = createColor(
+            self.stage, self.materials_path + "/red", [1, 0, 0]
+        )
+        self.colors["green"] = createColor(
+            self.stage, self.materials_path + "/green", [0, 1, 0]
+        )
+        self.colors["blue"] = createColor(
+            self.stage, self.materials_path + "/blue", [0, 0, 1]
+        )
+        self.colors["white"] = createColor(
+            self.stage, self.materials_path + "/white", [1, 1, 1]
+        )
+        self.colors["grey"] = createColor(
+            self.stage, self.materials_path + "/grey", [0.5, 0.5, 0.5]
+        )
+        self.colors["dark_grey"] = createColor(
+            self.stage, self.materials_path + "/dark_grey", [0.25, 0.25, 0.25]
+        )
+        self.colors["black"] = createColor(
+            self.stage, self.materials_path + "/black", [0, 0, 0]
+        )
+
+    def createArrowXform(self, path: str) -> None:
+        """
+        Creates an Xform to store the arrow indicating the platform heading."""
+
+        self.arrow_path, self.arrow_prim = createXform(self.stage, path)
+        createArrow(
+            self.stage,
+            self.arrow_path,
+            0.1,
+            0.5,
+            [self.dock_params.radius, 0, 0],
+            2,
+        )
+        applyMaterial(self.arrow_prim, self.colors["green"])
+
 
 class DockView(ArticulationView):
     def __init__(
