@@ -350,7 +350,8 @@ env:
       save_path: "config.png"
   
   dock:
-    usd_path: robots/usd/SpaceR_FP.usd
+    # usd_path: robots/usd/SpaceR_FP.usd
+    shape: "cylinder"
     mass: 100.0
     add_arrow: True
     enable_collision: True

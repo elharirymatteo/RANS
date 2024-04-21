@@ -390,7 +390,7 @@ class CloseProximityDockTask(Core):
 
         # Retrieve the target positions and orientations used to manipulate usd prim
         target_positions[:, :2] = self._target_positions[env_ids]
-        target_positions[:, 2] = 0.2
+        target_positions[:, 2] = 0.5
         target_orientations[:] = self._target_orientations[env_ids]
         
         # Add offset to the target position

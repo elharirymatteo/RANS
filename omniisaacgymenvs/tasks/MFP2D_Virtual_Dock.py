@@ -103,7 +103,7 @@ class MFP2DVirtual_Dock(RLTask):
         self.set_action_and_observation_spaces()
         # Sets the initial positions of the target and platform
         self._fp_position = torch.tensor([0, 0.0, 0.5])
-        self._default_marker_position = torch.tensor([0, 0, 0.2])
+        self._default_marker_position = torch.tensor([0, 0, 0.5])
         self._dock_view = None
         # Preallocate tensors
         self.actions = torch.zeros(

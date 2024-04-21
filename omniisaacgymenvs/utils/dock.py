@@ -27,10 +27,11 @@ class DockParameters:
         show_axis (bool): show the axis of the docking station
         mass (float): mass of the docking station
     """
-
+    shape: str = "sphere"
     usd_path: str = None
     mass: float = 5.0
     radius: float = 0.31
+    height: float = 0.5
     add_arrow: bool = False
     enable_collision: bool = True
 
@@ -62,8 +63,8 @@ class Dock(Articulation):
         self.dock_params = DockParameters(**dock_params)
         self.stage = get_current_stage()
         self.joints_path = "joints"
-        self.create_articulation_root(prim_path)
         self.materials_path = "materials"
+        createArticulation(self.stage, prim_path)
         super().__init__(
             prim_path=prim_path,
             name=name,
@@ -75,15 +76,6 @@ class Dock(Articulation):
         )
         self.build()
         return
-    
-    def create_articulation_root(self, prim_path)->None:
-        """
-        Create a root xform and link usd to it.
-        Args:
-            prim_path (str): path to the prim
-        """
-        createArticulation(self.stage, prim_path)
-        add_reference_to_stage(os.path.join(os.getcwd(), self.dock_params.usd_path), prim_path)
             
     def build(self)->None:
         """
@@ -92,7 +84,18 @@ class Dock(Articulation):
         self.joints_path, self.joints_prim = createXform(
             self.stage, self.prim_path + "/" + self.joints_path
         )
-        self.configure_core_prim()
+        if self.dock_params.usd_path is not None:
+            self.loadFromFile(self.prim_path, self.dock_params.mass)
+        else:
+            if self.dock_params.shape == "sphere":
+                self.createRigidSphere(
+                    self.prim_path, self.dock_params.radius, self.dock_params.mass
+                )
+            elif self.dock_params.shape == "cylinder":
+                self.createRigidCylinder(
+                    self.prim_path, self.dock_params.radius, self.dock_params.height, self.dock_params.mass
+                )
+
         self.createXYPlaneLock()
 
         self.materials_path, self.materials_prim = createXform(
@@ -161,15 +164,59 @@ class Dock(Articulation):
             enable_drive=False,
         )
     
-    def configure_core_prim(self):
+    def createRigidSphere(
+        self, path: str, radius: float, mass: float
+    ) -> None:
         """
-        Configures the body of the platform.
+        Creates a rigid sphere. The sphere is a RigidBody, a Collider, and has a mass and CoM.
+        It is used to create the main body of the platform."""
+
+        # Creates a sphere
+        sphere_path, sphere_geom = createSphere(
+            self.stage, path + "/" + "dock", radius, 2
+        )
+        sphere_prim = self.stage.GetPrimAtPath(sphere_geom.GetPath())
+        self.core_path = sphere_path
+        applyRigidBody(sphere_prim)
+        # Sets the collider
+        applyCollider(sphere_prim, self.dock_params.enable_collision)
+        # Sets the mass and CoM
+        applyMass(sphere_prim, mass)
+
+    def createRigidCylinder(
+        self, path: str, radius: float, height: float, mass: float
+    ) -> None:
         """
-        self.core_path = self.prim_path+"/dock"
+        Creates a rigid cylinder. The cylinder is a RigidBody, a Collider, and has a mass and CoM.
+        It is used to create the main body of the platform."""
+
+        # Creates a cylinder
+        cylinder_path, sphere_geom = createCylinder(
+            self.stage, path + "/" + "dock", radius, height, 2
+        )
+        sphere_prim = self.stage.GetPrimAtPath(sphere_geom.GetPath())
+        self.core_path = cylinder_path
+        applyRigidBody(sphere_prim)
+        # Sets the collider
+        applyCollider(sphere_prim, self.dock_params.enable_collision)
+        # Sets the mass and CoM
+        applyMass(sphere_prim, mass)
+    
+    def loadFromFile(self, path:str, mass:float)->None:
+        """
+        Load a usd file and apply RigidBody API, Collider, and mass.
+        Args:
+            path (str): path to the usd file
+            name (str): name of the prim
+            mass (float): mass of the prim
+        """
+        add_reference_to_stage(os.path.join(os.getcwd(), self.dock_params.usd_path), path)
+        self.core_path = path+"/dock"
         core = get_prim_at_path(self.core_path)
         applyRigidBody(core)
-        applyCollider(core, self.dock_params.enable_collision)
-        applyMass(core, self.dock_params.mass)
+        mesh = get_prim_at_path(self.core_path+"/mesh")
+        applyCollider(mesh, self.dock_params.enable_collision)
+        applyMass(core, mass)
     
     def createBasicColors(self) -> None:
         """
