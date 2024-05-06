@@ -18,19 +18,14 @@ from omniisaacgymenvs.robots.articulations.views.heron_view import (
 from omniisaacgymenvs.utils.pin import VisualPin
 from omniisaacgymenvs.utils.arrow import VisualArrow
 
-from omniisaacgymenvs.tasks.ASV.ASV_task_factory import (
+from omniisaacgymenvs.tasks.MFP.MFP2D_task_factory import (
     task_factory,
 )
-from omniisaacgymenvs.tasks.ASV.ASV_core import parse_data_dict
-from omniisaacgymenvs.tasks.ASV.ASV_task_rewards import (
-    Penalties,
+from omniisaacgymenvs.tasks.MFP.MFP2D_penalties import (
+    EnvironmentPenalties,
 )
-from omniisaacgymenvs.tasks.ASV.ASV_disturbances import (
-    ForceDisturbance,
-    TorqueDisturbance,
-    NoisyObservations,
-    NoisyActions,
-    MassDistributionDisturbances,
+from omniisaacgymenvs.tasks.MFP.MFP2D_disturbances import (
+    Disturbances,
 )
 
 from omniisaacgymenvs.envs.Physics.Hydrodynamics import *
@@ -46,6 +41,7 @@ import numpy as np
 import omni
 import time
 import math
+import wandb
 import torch
 from gym import spaces
 from dataclasses import dataclass
@@ -70,6 +66,7 @@ class ASVVirtual(RLTask):
         self._sim_config = sim_config
         self._cfg = sim_config.config
         self._task_cfg = sim_config.task_config
+        self._enable_wandb_logs = self._task_cfg["enable_wandb_log"]
         self._heron_cfg = self._task_cfg["env"]["platform"]
         self._num_envs = self._task_cfg["env"]["numEnvs"]
         self._env_spacing = self._task_cfg["env"]["envSpacing"]
@@ -77,29 +74,12 @@ class ASVVirtual(RLTask):
         self._discrete_actions = self._task_cfg["env"]["action_mode"]
         self._observation_frame = self._task_cfg["env"]["observation_frame"]
         self._device = self._cfg["sim_device"]
+        self.iteration = 0
         self.step = 0
 
         # Split the maximum amount of thrust across all thrusters.
         self.split_thrust = self._task_cfg["env"]["split_thrust"]
 
-        # Domain randomization and adaptation
-        self.UF = ForceDisturbance(
-            self._task_cfg["env"]["disturbances"]["forces"],
-            self._num_envs,
-            self._device,
-        )
-        self.TD = TorqueDisturbance(
-            self._task_cfg["env"]["disturbances"]["torques"],
-            self._num_envs,
-            self._device,
-        )
-        self.ON = NoisyObservations(
-            self._task_cfg["env"]["disturbances"]["observations"]
-        )
-        self.AN = NoisyActions(self._task_cfg["env"]["disturbances"]["actions"])
-        self.MDD = MassDistributionDisturbances(
-            self._task_cfg["env"]["disturbances"]["mass"], self.num_envs, self._device
-        )
         # Collects the platform parameters
         self.dt = self._task_cfg["sim"]["dt"]
         # Collects the task parameters
@@ -139,9 +119,7 @@ class ASVVirtual(RLTask):
         self.heron_zero_height = self._task_cfg["dynamics"]["hydrostatics"][
             "heron_zero_height"
         ]
-        self.max_volume = (
-            self.box_width * self.box_length * (self.heron_zero_height + 20)
-        )  # TODO: Hardcoded value
+        self.max_volume = (self.box_width * self.box_length)
         self.heron_mass = self._task_cfg["dynamics"]["hydrostatics"]["mass"]
 
         # thrusters dynamics
@@ -199,9 +177,19 @@ class ASVVirtual(RLTask):
         self.scaling_added_mass = self._task_cfg["dynamics"]["hydrodynamics"][
             "scaling_added_mass"
         ]
+        # Collects the task parameters
+        task_cfg = self._task_cfg["env"]["task_parameters"]
+        reward_cfg = self._task_cfg["env"]["reward_parameters"]
+        penalty_cfg = self._task_cfg["env"]["penalties_parameters"]
+        domain_randomization_cfg = self._task_cfg["env"]["disturbances"]
         # Instantiate the task, reward and platform
         self.task = task_factory.get(task_cfg, reward_cfg, self._num_envs, self._device)
-        self._penalties = parse_data_dict(Penalties(), penalty_cfg)
+        self._penalties = EnvironmentPenalties(**penalty_cfg)
+        self.DR = Disturbances(
+            domain_randomization_cfg,
+            num_envs=self._num_envs,
+            device=self._device,
+        )
         self._num_observations = self.task._num_observations
         self._max_actions = 2  # Number of thrusters
         self._num_actions = 2  # Number of thrusters
@@ -209,7 +197,7 @@ class ASVVirtual(RLTask):
         # Instantiate the action and observations spaces
         self.set_action_and_observation_spaces()
         # Sets the initial positions of the target and platform
-        self._fp_position = torch.tensor([0, 0.0, 0.5])
+        self._asv_position = torch.tensor([0, 0.0, 0.0])
         self._default_marker_position = torch.tensor([0, 0, 1.0])
         self._marker = None
         # Preallocate tensors
@@ -264,6 +252,9 @@ class ASVVirtual(RLTask):
         self.thrusters = torch.zeros(
             (self._num_envs, 6), device=self._device, dtype=torch.float32
         )
+        self.contact_state = torch.zeros(
+            (self._num_envs), device=self._device, dtype=torch.float32
+        )
 
         ##some tests for the thrusters
 
@@ -277,7 +268,8 @@ class ASVVirtual(RLTask):
 
     def set_action_and_observation_spaces(self) -> None:
         """
-        Sets the action and observation spaces."""
+        Sets the action and observation spaces.
+        """
 
         # Defines the observation space
         self.observation_space = spaces.Dict(
@@ -309,7 +301,8 @@ class ASVVirtual(RLTask):
         Adds training statistics to be recorded during training.
 
         Args:
-            names (List[str]): list of names of the statistics to be recorded."""
+            names (List[str]): list of names of the statistics to be recorded.
+        """
 
         for name in names:
             torch_zeros = lambda: torch.zeros(
@@ -323,7 +316,8 @@ class ASVVirtual(RLTask):
 
     def cleanup(self) -> None:
         """
-        Prepares torch buffers for RL data collection."""
+        Prepares torch buffers for RL data collection.
+        """
 
         # prepare tensors
         self.obs_buf = {
@@ -381,15 +375,14 @@ class ASVVirtual(RLTask):
         """
         Adds the floating platform to the scene."""
 
-        fp = Heron(
+        asv = Heron(
             prim_path=self.default_zero_env_path + "/heron",
             name="heron",
-            translation=self._fp_position,
-            # cfg=self._heron_cfg,
+            translation=self._asv_position,
         )
         self._sim_config.apply_articulation_settings(
             "heron",
-            get_prim_at_path(fp.prim_path),
+            get_prim_at_path(asv.prim_path),
             self._sim_config.parse_actor_config("heron"),
         )
 
@@ -418,7 +411,7 @@ class ASVVirtual(RLTask):
             last_time=self.last_time,
         )
         self.hydrodynamics = HydrodynamicsObject(
-            task_cfg=self._task_cfg["env"]["disturbances"]["drag"],
+            task_cfg=self._task_cfg["env"]["asv_domain_randomization"]["drag"],
             num_envs=self.num_envs,
             device=self._device,
             water_density=self.water_density,
@@ -436,7 +429,7 @@ class ASVVirtual(RLTask):
             last_time=self.last_time,
         )
         self.thrusters_dynamics = DynamicsFirstOrder(
-            task_cfg=self._task_cfg["env"]["disturbances"]["thruster"],
+            task_cfg=self._task_cfg["env"]["asv_domain_randomization"]["thruster"],
             num_envs=self.num_envs,
             device=self._device,
             timeConstant=self.timeConstant,
@@ -452,7 +445,8 @@ class ASVVirtual(RLTask):
 
     def update_state(self) -> None:
         """
-        Updates the state of the system."""
+        Updates the state of the system.
+        """
 
         # Collects the position and orientation of the platform
         self.root_pos, self.root_quats = self._heron.get_world_poses(clone=True)
@@ -472,9 +466,16 @@ class ASVVirtual(RLTask):
         )
         orient_z = torch.arctan2(siny_cosp, cosy_cosp)
         # Add noise on obs
-        root_positions = self.ON.add_noise_on_pos(root_positions)
-        root_velocities = self.ON.add_noise_on_vel(root_velocities)
-        orient_z = self.ON.add_noise_on_heading(orient_z)
+        root_positions = self.DR.noisy_observations.add_noise_on_pos(
+            root_positions, step=self.step
+        )
+        root_velocities = self.DR.noisy_observations.add_noise_on_vel(
+            root_velocities, step=self.step
+        )
+        orient_z = self.DR.noisy_observations.add_noise_on_heading(
+            orient_z, step=self.step
+        )
+        #net_contact_forces = self.compute_contact_forces()
         # Compute the heading
         self.heading[:, 0] = torch.cos(orient_z)
         self.heading[:, 1] = torch.sin(orient_z)
@@ -486,7 +487,7 @@ class ASVVirtual(RLTask):
         self.high_submerged[:] = torch.clamp(
             (self.heron_zero_height) - self.root_pos[:, 2],
             0,
-            self.heron_zero_height + 20,  # TODO: Hardcoded value
+            self.heron_zero_height + 20,  # TODO: Fix
         )
         self.submerged_volume[:] = torch.clamp(
             self.high_submerged * self.waterplane_area, 0, self.max_volume
@@ -502,6 +503,16 @@ class ASVVirtual(RLTask):
             "linear_velocity": root_velocities[:, :2],
             "angular_velocity": root_velocities[:, -1],
         }
+
+    def compute_contact_forces(self) -> torch.Tensor:
+        """
+        Get the contact forces of the platform.
+
+        Returns:
+            net_contact_forces_norm (torch.Tensor): the norm of the net contact forces.
+        """
+        net_contact_forces = self._heron.base.get_net_contact_forces(clone=False)
+        return torch.norm(net_contact_forces, dim=-1)
 
     def get_euler_angles(self, quaternions):
         """quaternions to euler"""
@@ -536,17 +547,17 @@ class ASVVirtual(RLTask):
         Gets the observations of the task to be passed to the policy.
 
         Returns:
-            observations: a dictionary containing the observations of the task."""
+            observations: a dictionary containing the observations of the task.
+        """
 
         # implement logic to retrieve observation states
         self.update_state()
         # Get the state
         self.obs_buf["state"] = self.task.get_state_observations(
-            self.current_state, self._observation_frame
+            self.current_state,
         )
 
         observations = {self._heron.name: {"obs_buf": self.obs_buf}}
-
         return observations
 
     def pre_physics_step(self, actions: torch.Tensor) -> None:
@@ -554,7 +565,8 @@ class ASVVirtual(RLTask):
         This function implements the logic to be performed before physics steps.
 
         Args:
-            actions (torch.Tensor): the actions to be applied to the platform."""
+            actions (torch.Tensor): the actions to be applied to the platform.
+        """
 
         # If is not playing skip
         if not self._env._world.is_playing():
@@ -567,9 +579,6 @@ class ASVVirtual(RLTask):
         # Collect actions
         actions = actions.clone().to(self._device)
         self.actions = actions
-
-        # Debug : Set actions
-        # self.actions = torch.ones_like(self.actions) * 0.0
 
         # Remap actions to the correct values
         if self._discrete_actions == "MultiDiscrete":
@@ -585,7 +594,7 @@ class ASVVirtual(RLTask):
         thrusts = thrust_cmds
 
         # Adds random noise on the actions
-        thrusts = self.AN.add_noise_on_act(thrusts)
+        thrusts = self.DR.noisy_actions.add_noise_on_act(thrusts, step=self.step)
 
         # Clip the actions
         thrusts = torch.clamp(thrusts, -1.0, 1.0)
@@ -600,10 +609,10 @@ class ASVVirtual(RLTask):
     def apply_forces(self) -> None:
         """
         Applies all the forces to the platform and its thrusters."""
-
-        disturbance_forces = self.UF.get_disturbance_forces(self.root_pos)
-        torque_disturbance = self.TD.get_torque_disturbance(self.root_pos)
-
+        disturbance_forces = self.DR.force_disturbances.get_force_disturbance(self.root_pos)
+        torque_disturbance = self.DR.torque_disturbances.get_torque_disturbance(
+            self.root_pos
+        )
         # Hydrostatic force
         self.hydrostatic_force[:, :] = (
             self.hydrostatics.compute_archimedes_metacentric_local(
@@ -622,10 +631,12 @@ class ASVVirtual(RLTask):
         self.thrusters[:, :] = self.thrusters_dynamics.update_forces()
 
         self._heron.base.apply_forces_and_torques_at_pos(
-            forces=disturbance_forces
+            forces=
+            disturbance_forces
             + self.hydrostatic_force[:, :3]
             + self.drag[:, :3],
-            torques=torque_disturbance
+            torques=
+            torque_disturbance
             + self.hydrostatic_force[:, 3:]
             + self.drag[:, 3:],
             is_global=False,
@@ -649,6 +660,7 @@ class ASVVirtual(RLTask):
         self.dof_pos = self._heron.get_joint_positions()
         self.dof_vel = self._heron.get_joint_velocities()
 
+        # Set initial conditions
         self.initial_root_pos, self.initial_root_rot = (
             self.root_pos.clone(),
             self.root_rot.clone(),
@@ -658,6 +670,12 @@ class ASVVirtual(RLTask):
             (self.num_envs, 4), dtype=torch.float32, device=self._device
         )
         self.initial_pin_rot[:, 0] = 1
+        # Set the initial contact state
+        self.contact_state = torch.zeros(
+            (self._num_envs),
+            dtype=torch.float32,
+            device=self._device,
+        )
 
         # control parameters
         self.thrusts = torch.zeros(
@@ -677,56 +695,37 @@ class ASVVirtual(RLTask):
         """
 
         num_sets = len(env_ids)
-        env_long = env_ids.long()
-        # Randomizes the position of the ball on the x y axis
+        env_long = env_ids.long()     
+        # Randomizes the position of the ball on the x y axes
         target_positions, target_orientation = self.task.get_goals(
-            env_long, self.initial_pin_pos.clone(), self.initial_pin_rot.clone()
+            env_long,
+            step=self.step,
         )
-        target_positions[env_long, 2] = torch.ones(num_sets, device=self._device) * 2.0
-        # Apply the new goals
+        if len(target_positions.shape) == 3:
+            position = (
+                target_positions
+                + self.initial_pin_pos[env_long]
+                .view(num_sets, 1, 3)
+                .expand(*target_positions.shape)
+            ).reshape(-1, 3)
+            a = (env_long * target_positions.shape[1]).repeat_interleave(
+                target_positions.shape[1]
+            )
+            b = torch.arange(target_positions.shape[1], device=self._device).repeat(
+                target_positions.shape[0]
+            )
+            env_long = a + b
+            target_orientation = target_orientation.reshape(-1, 4)
+        else:
+            position = target_positions + self.initial_pin_pos[env_long]
+
+        ## Apply the new goals
         if self._marker:
             self._marker.set_world_poses(
-                target_positions[env_long],
-                target_orientation[env_long],
+                position,
+                target_orientation,
                 indices=env_long,
             )
-
-    def set_to_pose(
-        self, env_ids: torch.Tensor, positions: torch.Tensor, heading: torch.Tensor
-    ) -> None:
-        """
-        Sets the platform to a specific pose.
-        TODO: Impose more iniiial conditions, such as linear and angular velocity.
-
-        Args:
-            env_ids (torch.Tensor): the indices of the environments for which to set the pose.
-            positions (torch.Tensor): the positions of the platform.
-            heading (torch.Tensor): the heading of the platform."""
-
-        num_resets = len(env_ids)
-        # Resets the counter of steps for which the goal was reached
-        self.task.reset(env_ids)
-        # Randomizes the starting position of the platform within a disk around the target
-        root_pos = torch.zeros_like(self.root_pos)
-        root_pos[env_ids, :2] = positions
-        root_rot = torch.zeros_like(self.root_rot)
-        root_rot[env_ids, :] = heading
-        # Resets the states of the joints
-        self.dof_pos[env_ids, :] = torch.zeros(
-            (num_resets, self._heron.num_dof), device=self._device
-        )
-        self.dof_vel[env_ids, :] = 0
-        # Sets the velocities to 0
-        root_velocities = self.root_velocities.clone()
-        root_velocities[env_ids] = 0
-
-        # apply resets
-        self._heron.set_joint_positions(self.dof_pos[env_ids], indices=env_ids)
-        self._heron.set_joint_velocities(self.dof_vel[env_ids], indices=env_ids)
-        self._heron.set_world_poses(
-            root_pos[env_ids], root_rot[env_ids], indices=env_ids
-        )
-        self._heron.set_velocities(root_velocities[env_ids], indices=env_ids)
 
     def reset_idx(self, env_ids: torch.Tensor) -> None:
         """
@@ -738,65 +737,61 @@ class ASVVirtual(RLTask):
         num_resets = len(env_ids)
         # Resets the counter of steps for which the goal was reached
         self.task.reset(env_ids)
-        self.UF.generate_force(env_ids, num_resets)
-        self.TD.generate_torque(env_ids, num_resets)
-        self.MDD.randomize_masses(env_ids, num_resets)
-        self.MDD.set_masses(self._heron.base, env_ids)
+        self.set_targets(env_ids)
+        self.DR.force_disturbances.generate_forces(env_ids, num_resets, step=self.step)
+        self.DR.torque_disturbances.generate_torques(
+            env_ids, num_resets, step=self.step
+        )
+        self.DR.mass_disturbances.randomize_masses(env_ids, step=self.step)
+        CoM_shift = self.DR.mass_disturbances.get_CoM(env_ids)
+        random_mass = self.DR.mass_disturbances.get_masses(env_ids)
         # Resets hydrodynamic coefficients
         self.hydrodynamics.reset_coefficients(env_ids, num_resets)
         # Resets thruster randomization
         self.thrusters_dynamics.reset_thruster_randomization(env_ids, num_resets)
         # Randomizes the starting position of the platform within a disk around the target
-        root_pos, root_rot = self.task.get_spawns(
-            env_ids,
-            self.initial_root_pos.clone(),
-            self.initial_root_rot.clone(),
-            self.step,
+        root_pos, root_quat, root_vel = self.task.get_initial_conditions(env_ids, step=self.step)
+        root_pos[:, :2] = root_pos[:, :2] + self.initial_root_pos[env_ids, :2]
+        root_pos[:, 2] = 0.05
+        self._heron.set_world_poses(
+            root_pos, root_quat, indices=env_ids
         )
-        root_pos[:, 2] = self.heron_zero_height + (
-            -1 * self.heron_mass / (self.waterplane_area * self.water_density)
-        )
+        self._heron.set_velocities(root_vel, indices=env_ids)
 
         # Resets the states of the joints
         self.dof_pos[env_ids, :] = torch.zeros(
             (num_resets, self._heron.num_dof), device=self._device
         )
         self.dof_vel[env_ids, :] = 0
+        self._heron.set_joint_positions(self.dof_pos[env_ids], indices=env_ids)
+
         # Sets the velocities to 0
         root_velocities = self.root_velocities.clone()
-
-        root_velocities[env_ids] = 0
-        # set root_velocities x, y direction randomly between -1.5m/s to +1.5m/s (in global)
-        root_velocities[env_ids, 0] = (
-            torch.rand(num_resets, device=self._device) * 3 - 1.5
-        )
-        root_velocities[env_ids, 1] = (
-            torch.rand(num_resets, device=self._device) * 3 - 1.5
-        )
-
-        # apply resets
-        self._heron.set_joint_positions(self.dof_pos[env_ids], indices=env_ids)
         self._heron.set_joint_velocities(self.dof_vel[env_ids], indices=env_ids)
-        self._heron.set_world_poses(
-            root_pos[env_ids], root_rot[env_ids], indices=env_ids
-        )
-        self._heron.set_velocities(root_velocities[env_ids], indices=env_ids)
 
         # bookkeeping
         self.reset_buf[env_ids] = 0
         self.progress_buf[env_ids] = 0
-
+        
         # fill `extras`
         self.extras["episode"] = {}
+        self.extras_wandb = {}
         for key in self.episode_sums.keys():
-            self.extras["episode"][key] = (
+            value = (
                 torch.mean(self.episode_sums[key][env_ids]) / self._max_episode_length
             )
+            if key in self._penalties.get_stats_name():
+                self.extras_wandb[key] = value
+            elif key in self.task.log_with_wandb:
+                self.extras_wandb[key] = value
+            else:
+                self.extras["episode"][key] = value
             self.episode_sums[key][env_ids] = 0.0
 
     def update_state_statistics(self) -> None:
         """
-        Updates the statistics of the state of the training."""
+        Updates the statistics of the state of the training.
+        """
 
         self.episode_sums["normed_linear_vel"] += torch.norm(
             self.current_state["linear_velocity"], dim=-1
@@ -809,26 +804,38 @@ class ASVVirtual(RLTask):
     def calculate_metrics(self) -> None:
         """
         Calculates the metrics of the training.
-        That is the rewards, penalties, and other perfomance statistics."""
+        That is the rewards, penalties, and other perfomance statistics.
+        """
 
-        overall_reward = self.task.compute_reward(self.current_state, self.actions)
+        position_reward = self.task.compute_reward(self.current_state, self.actions)
+        self.iteration += 1
         self.step += 1 / self._task_cfg["env"]["horizon_length"]
-
         penalties = self._penalties.compute_penalty(
             self.current_state, self.actions, self.step
         )
-        self.rew_buf[:] = overall_reward + penalties
+        self.rew_buf[:] = position_reward - penalties
         self.episode_sums = self.task.update_statistics(self.episode_sums)
         self.episode_sums = self._penalties.update_statistics(self.episode_sums)
-        self.update_state_statistics()
+        if self._enable_wandb_logs:
+            if self.iteration / self._task_cfg["env"]["horizon_length"] % 1 == 0:
+                self.extras_wandb["wandb_step"] = int(self.step)
+                for key, value in self._penalties.get_logs().items():
+                    self.extras_wandb[key] = value
+                for key, value in self.task.get_logs(self.step).items():
+                    self.extras_wandb[key] = value
+                for key, value in self.DR.get_logs(self.step).items():
+                    self.extras_wandb[key] = value
+                wandb.log(self.extras_wandb)
+                self.extras_wandb = {}
 
     def is_done(self) -> None:
         """
-        Checks if the episode is done."""
+        Checks if the episode is done.
+        """
 
         # resets due to misbehavior
         ones = torch.ones_like(self.reset_buf)
-        die = self.task.update_kills(self.step)
+        die = self.task.update_kills()
 
         # resets due to episode length
         self.reset_buf[:] = torch.where(
