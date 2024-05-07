@@ -14,14 +14,7 @@ class HydrostaticsObject:
         device,
         water_density,
         gravity,
-        metacentric_width,
-        metacentric_length,
-        average_hydrostatics_force_value,
-        amplify_torque,
-        offset_added_mass,
-        scaling_added_mass,
-        alpha,
-        last_time,
+        params
     ):
         self._num_envs = num_envs
         self.device = device
@@ -29,11 +22,17 @@ class HydrostaticsObject:
             (self._num_envs, 6), dtype=torch.float32, device=self.device
         )
 
+        # data
+        # TODO: Move to dataclass implementation
+        self.average_hydrostatics_force_value = params["average_hydrostatics_force_value"]
+        self.amplify_torque = params["amplify_torque"]
+        self.metacentric_width = params["box_width"]/2
+        self.metacentric_length = params["box_length"]/2
+
         # Buoyancy
         self.water_density = water_density
         self.gravity = gravity
-        self.metacentric_width = metacentric_width
-        self.metacentric_length = metacentric_length
+
         self.archimedes_force_global = torch.zeros(
             (self._num_envs, 3), dtype=torch.float32, device=self.device
         )
@@ -47,14 +46,9 @@ class HydrostaticsObject:
             (self._num_envs, 3), dtype=torch.float32, device=self.device
         )
 
-        # data
-        self.average_hydrostatics_force_value = average_hydrostatics_force_value
-        self.amplify_torque = amplify_torque
 
         # acceleration
-        self.alpha = alpha
         self._filtered_acc = torch.zeros([6], device=self.device)
-        self._last_time = last_time
         self._last_vel_rel = torch.zeros([6], device=self.device)
 
         return

@@ -5,44 +5,47 @@ from omniisaacgymenvs.envs.Physics.Utils import *
 class HydrodynamicsObject:
     def __init__(
         self,
-        task_cfg,
+        dr_params,
         num_envs,
         device,
-        water_density,
-        gravity,
-        linear_damping,
-        quadratic_damping,
-        linear_damping_forward_speed,
-        offset_linear_damping,
-        offset_lin_forward_damping_speed,
-        offset_nonlin_damping,
-        scaling_damping,
-        offset_added_mass,
-        scaling_added_mass,
-        alpha,
-        last_time,
+        params,
     ):
-        self._use_drag_randomization = task_cfg["use_drag_randomization"]
+        # TODO: Move to dataclass implementation
+        self.linear_damping_base = params["linear_damping"] #TODO: Check if really needed
+        self.quadratic_damping_base = params["quadratic_damping"] #TODO: Check if really needed
+
+        self.linear_damping = params["linear_damping"]
+        self.quadratic_damping = params["quadratic_damping"]
+        self.linear_damping_forward_speed = params["linear_damping_forward_speed"]
+        self.offset_linear_damping = params["offset_linear_damping"]
+        self.offset_lin_forward_damping_speed = params["offset_lin_forward_damping_speed"]
+        self.offset_nonlin_damping = params["offset_nonlin_damping"]
+        self.scaling_damping = params["scaling_damping"]
+        self.offset_added_mass = params["offset_added_mass"]
+        self.scaling_added_mass = params["scaling_added_mass"]
+
+        self._use_drag_randomization = dr_params["use_drag_randomization"]
         # linear_rand range, calculated as a percentage of the base damping coefficients
         self._linear_rand = torch.tensor(
             [
-                task_cfg["u_linear_rand"] * linear_damping[0],
-                task_cfg["v_linear_rand"] * linear_damping[1],
-                task_cfg["w_linear_rand"] * linear_damping[2],
-                task_cfg["p_linear_rand"] * linear_damping[3],
-                task_cfg["q_linear_rand"] * linear_damping[4],
-                task_cfg["r_linear_rand"] * linear_damping[5],
+                dr_params["u_linear_rand"] * self.linear_damping[0],
+                dr_params["v_linear_rand"] *
+                  self.linear_damping[1],
+                dr_params["w_linear_rand"] * self.linear_damping[2],
+                dr_params["p_linear_rand"] * self.linear_damping[3],
+                dr_params["q_linear_rand"] * self.linear_damping[4],
+                dr_params["r_linear_rand"] * self.linear_damping[5],
             ],
             device=device,
         )
         self._quad_rand = torch.tensor(
             [
-                task_cfg["u_quad_rand"] * quadratic_damping[0],
-                task_cfg["v_quad_rand"] * quadratic_damping[1],
-                task_cfg["w_quad_rand"] * quadratic_damping[2],
-                task_cfg["p_quad_rand"] * quadratic_damping[3],
-                task_cfg["q_quad_rand"] * quadratic_damping[4],
-                task_cfg["r_quad_rand"] * quadratic_damping[5],
+                dr_params["u_quad_rand"] * self.quadratic_damping[0],
+                dr_params["v_quad_rand"] * self.quadratic_damping[1],
+                dr_params["w_quad_rand"] * self.quadratic_damping[2],
+                dr_params["p_quad_rand"] * self.quadratic_damping[3],
+                dr_params["q_quad_rand"] * self.quadratic_damping[4],
+                dr_params["r_quad_rand"] * self.quadratic_damping[5],
             ],
             device=device,
         )
@@ -54,21 +57,14 @@ class HydrodynamicsObject:
         )
 
         # damping parameters (individual set for each environment)
-        self.linear_damping_base = linear_damping
-        self.quadratic_damping_base = quadratic_damping
         self.linear_damping = torch.tensor(
-            [linear_damping] * num_envs, device=self.device
+            [self.linear_damping] * num_envs, device=self.device
         )  # num_envs * 6
         self.quadratic_damping = torch.tensor(
-            [quadratic_damping] * num_envs, device=self.device
+            [self.quadratic_damping] * num_envs, device=self.device
         )  # num_envs * 6
         self.linear_damping_forward_speed = torch.tensor(
-            linear_damping_forward_speed, device=self.device
-        )
-        self.offset_linear_damping = offset_linear_damping
-        self.offset_lin_forward_damping_speed = offset_lin_forward_damping_speed
-        self.offset_nonlin_damping = offset_nonlin_damping
-        self.scaling_damping = scaling_damping
+            self.linear_damping_forward_speed, device=self.device)
         # damping parameters randomization
         if self._use_drag_randomization:
             # Applying uniform noise as an example
@@ -84,13 +80,9 @@ class HydrodynamicsObject:
         # coriolis
         self._Ca = torch.zeros([6, 6], device=self.device)
         self.added_mass = torch.zeros([num_envs, 6], device=self.device)
-        self.offset_added_mass = offset_added_mass
-        self.scaling_added_mass = scaling_added_mass
 
         # acceleration
-        self.alpha = alpha
         self._filtered_acc = torch.zeros([6], device=self.device)
-        self._last_time = last_time
         self._last_vel_rel = torch.zeros([6], device=self.device)
 
         return

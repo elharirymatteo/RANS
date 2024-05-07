@@ -67,13 +67,13 @@ class ASVVirtual(RLTask):
         self._cfg = sim_config.config
         self._task_cfg = sim_config.task_config
         self._enable_wandb_logs = self._task_cfg["enable_wandb_log"]
+        self._device = self._cfg["sim_device"]
 
         self._num_envs = self._task_cfg["env"]["numEnvs"]
         self._env_spacing = self._task_cfg["env"]["envSpacing"]
         self._max_episode_length = self._task_cfg["env"]["maxEpisodeLength"]
         self._discrete_actions = self._task_cfg["env"]["action_mode"]
         self._observation_frame = self._task_cfg["env"]["observation_frame"]
-        self._device = self._cfg["sim_device"]
         self.iteration = 0
         self.step = 0
 
@@ -90,90 +90,24 @@ class ASVVirtual(RLTask):
         self.water_density = self._task_cfg["dynamics"]["hydrostatics"]["water_density"]
         self.timeConstant = self._task_cfg["dynamics"]["thrusters"]["timeConstant"]
 
-        # Water Current
-        self.use_water_current = self._task_cfg["env"]["water_current"][
-            "use_water_current"
-        ]
+        # Water Current TODO: move to hydrodynamics parameters
+        self.use_water_current = self._task_cfg["env"]["water_current"]["use_water_current"]
         self.flow_vel = self._task_cfg["env"]["water_current"]["flow_velocity"]
 
-        # hydrostatics
-        self.average_hydrostatics_force_value = self._task_cfg["dynamics"][
-            "hydrostatics"
-        ]["average_hydrostatics_force_value"]
-        self.amplify_torque = self._task_cfg["dynamics"]["hydrostatics"][
-            "amplify_torque"
-        ]
+        # hydrodynamics
+        self.hydrodynamics_cfg = self._task_cfg["dynamics"]["hydrodynamics"]
 
-        # boxes dimension to compute hydrostatic forces and torques
-        self.box_density = self._task_cfg["dynamics"]["hydrostatics"][
-            "material_density"
-        ]
-        self.box_width = self._task_cfg["dynamics"]["hydrostatics"]["box_width"]
-        self.box_length = self._task_cfg["dynamics"]["hydrostatics"]["box_length"]
-        self.waterplane_area = self._task_cfg["dynamics"]["hydrostatics"][
-            "waterplane_area"
-        ]
-        self.heron_zero_height = self._task_cfg["dynamics"]["hydrostatics"][
-            "heron_zero_height"
-        ]
+        # hydrostatics
+        self.hydrostatics_cfg = self._task_cfg["dynamics"]["hydrostatics"]
+        self.box_width = self.hydrostatics_cfg["box_width"]
+        self.box_length = self.hydrostatics_cfg["box_length"]
+        self.waterplane_area = self.hydrostatics_cfg["waterplane_area"]
+        self.heron_zero_height = self.hydrostatics_cfg["heron_zero_height"]
         self.max_volume = (self.box_width * self.box_length)
-        self.heron_mass = self._task_cfg["dynamics"]["hydrostatics"]["mass"]
 
         # thrusters dynamics
-        # interpolation
-        self.cmd_lower_range = self._task_cfg["dynamics"]["thrusters"][
-            "cmd_lower_range"
-        ]
-        self.cmd_upper_range = self._task_cfg["dynamics"]["thrusters"][
-            "cmd_upper_range"
-        ]
-        self.numberOfPointsForInterpolation = self._task_cfg["dynamics"]["thrusters"][
-            "interpolation"
-        ]["numberOfPointsForInterpolation"]
-        self.interpolationPointsFromRealDataLeft = self._task_cfg["dynamics"][
-            "thrusters"
-        ]["interpolation"]["interpolationPointsFromRealDataLeft"]
-        self.interpolationPointsFromRealDataRight = self._task_cfg["dynamics"][
-            "thrusters"
-        ]["interpolation"]["interpolationPointsFromRealDataRight"]
-        # least square methode
-        self.neg_cmd_coeff = self._task_cfg["dynamics"]["thrusters"][
-            "leastSquareMethod"
-        ]["neg_cmd_coeff"]
-        self.pos_cmd_coeff = self._task_cfg["dynamics"]["thrusters"][
-            "leastSquareMethod"
-        ]["pos_cmd_coeff"]
-        # acceleration
-        self.alpha = self._task_cfg["dynamics"]["acceleration"]["alpha"]
-        self.last_time = self._task_cfg["dynamics"]["acceleration"]["last_time"]
-        # hydrodynamics constants
-        self.linear_damping = self._task_cfg["dynamics"]["hydrodynamics"][
-            "linear_damping"
-        ]
-        self.quadratic_damping = self._task_cfg["dynamics"]["hydrodynamics"][
-            "quadratic_damping"
-        ]
-        self.linear_damping_forward_speed = self._task_cfg["dynamics"]["hydrodynamics"][
-            "linear_damping_forward_speed"
-        ]
-        self.offset_linear_damping = self._task_cfg["dynamics"]["hydrodynamics"][
-            "offset_linear_damping"
-        ]
-        self.offset_lin_forward_damping_speed = self._task_cfg["dynamics"][
-            "hydrodynamics"
-        ]["offset_lin_forward_damping_speed"]
-        self.offset_nonlin_damping = self._task_cfg["dynamics"]["hydrodynamics"][
-            "offset_nonlin_damping"
-        ]
-        self.scaling_damping = self._task_cfg["dynamics"]["hydrodynamics"][
-            "scaling_damping"
-        ]
-        self.offset_added_mass = self._task_cfg["dynamics"]["hydrodynamics"][
-            "offset_added_mass"
-        ]
-        self.scaling_added_mass = self._task_cfg["dynamics"]["hydrodynamics"][
-            "scaling_added_mass"
-        ]
+        self.thrusters_dynamics_cfg = self._task_cfg["dynamics"]["thrusters"]
+
         # Collects the task parameters
         task_cfg = self._task_cfg["env"]["task_parameters"]
         reward_cfg = self._task_cfg["env"]["reward_parameters"]
@@ -398,46 +332,21 @@ class ASVVirtual(RLTask):
             device=self._device,
             water_density=self.water_density,
             gravity=self.gravity,
-            metacentric_width=self.box_width / 2,
-            metacentric_length=self.box_length / 2,
-            average_hydrostatics_force_value=self.average_hydrostatics_force_value,
-            amplify_torque=self.amplify_torque,
-            offset_added_mass=self.offset_added_mass,
-            scaling_added_mass=self.scaling_added_mass,
-            alpha=self.alpha,
-            last_time=self.last_time,
+            params=self.hydrostatics_cfg,
         )
         self.hydrodynamics = HydrodynamicsObject(
-            task_cfg=self._task_cfg["env"]["asv_domain_randomization"]["drag"],
+            dr_params=self._task_cfg["env"]["asv_domain_randomization"]["drag"],
             num_envs=self.num_envs,
             device=self._device,
-            water_density=self.water_density,
-            gravity=self.gravity,
-            linear_damping=self.linear_damping,
-            quadratic_damping=self.quadratic_damping,
-            linear_damping_forward_speed=self.linear_damping_forward_speed,
-            offset_linear_damping=self.offset_linear_damping,
-            offset_lin_forward_damping_speed=self.offset_lin_forward_damping_speed,
-            offset_nonlin_damping=self.offset_nonlin_damping,
-            scaling_damping=self.scaling_damping,
-            offset_added_mass=self.offset_added_mass,
-            scaling_added_mass=self.scaling_added_mass,
-            alpha=self.alpha,
-            last_time=self.last_time,
+            params=self.hydrodynamics_cfg,
         )
         self.thrusters_dynamics = DynamicsFirstOrder(
-            task_cfg=self._task_cfg["env"]["asv_domain_randomization"]["thruster"],
+            dr_params=self._task_cfg["env"]["asv_domain_randomization"]["thruster"],
             num_envs=self.num_envs,
             device=self._device,
             timeConstant=self.timeConstant,
             dt=self.dt,
-            numberOfPointsForInterpolation=self.numberOfPointsForInterpolation,
-            interpolationPointsFromRealDataLeft=self.interpolationPointsFromRealDataLeft,
-            interpolationPointsFromRealDataRight=self.interpolationPointsFromRealDataRight,
-            coeff_neg_commands=self.neg_cmd_coeff,
-            coeff_pos_commands=self.pos_cmd_coeff,
-            cmd_lower_range=self.cmd_lower_range,
-            cmd_upper_range=self.cmd_upper_range,
+            params=self.thrusters_dynamics_cfg,
         )
 
     def update_state(self) -> None:

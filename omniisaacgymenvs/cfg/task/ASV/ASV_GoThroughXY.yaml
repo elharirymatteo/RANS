@@ -352,9 +352,6 @@ dynamics:
     waterplane_area: 0.233333 # Kingfisher/Heron draught 120mm in Spec Sheet
     heron_zero_height: 0.84
 
-  acceleration:
-    alpha: 0.3
-    last_time: -10.0
 sim:
   dt: 0.02
   use_gpu_pipeline: ${eq:${...pipeline},"gpu"}
