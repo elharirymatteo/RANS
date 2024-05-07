@@ -183,10 +183,6 @@ env:
       use_separate_randomization: False
       left_rand: 0.5 # If it is 0.2 it means 0.8 to 1.2
       right_rand: 0.5 # If it is 0.2 it means 0.8 to 1.2
-  
-  water_current:
-    use_water_current: False
-    flow_velocity: [0.0, 0.0, 0.0] # x, y, z
 
   task_parameters:
     name: GoThroughXY
@@ -261,7 +257,6 @@ env:
         end_std: 0.5
         min_value: -0.5
         max_value: 0.5
-        
 
   reward_parameters:
     name: GoThroughXY
@@ -275,7 +270,6 @@ env:
     heading_scale: 0.3
     dt: ${resolve_default:0.02,${...sim.dt}}
     action_repeat: ${resolve_default:10,${...env.controlFrequencyInv}}
-
 
   penalties_parameters:
     energy_penalty:
@@ -308,6 +302,7 @@ env:
         start: 0
         end: 250
         extent: 4.5
+
 dynamics:
   thrusters:
     cmd_lower_range: -1.0
@@ -340,6 +335,9 @@ dynamics:
     scaling_damping: 1.0
     offset_added_mass: 0.0
     scaling_added_mass: 1.0
+    water_current:
+      use_water_current: False
+      flow_velocity: [0.0, 0.0, 0.0] # x, y, z
 
   hydrostatics:
     average_hydrostatics_force_value: 275

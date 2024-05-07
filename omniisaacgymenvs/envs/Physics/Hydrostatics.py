@@ -7,12 +7,11 @@ Fossen, T. I. (1991). Nonlinear modeling and control of Underwater Vehicles. Doc
 """
 
 
-class HydrostaticsObject:
+class Hydrostatics:
     def __init__(
         self,
         num_envs,
         device,
-        water_density,
         gravity,
         params
     ):
@@ -28,9 +27,12 @@ class HydrostaticsObject:
         self.amplify_torque = params["amplify_torque"]
         self.metacentric_width = params["box_width"]/2
         self.metacentric_length = params["box_length"]/2
+        self.waterplane_area = params["waterplane_area"]
+        self.heron_zero_height = params["heron_zero_height"]
+        self.water_density = params["water_density"]
+        self.max_volume = (params["box_width"] * params["box_length"]) #TODO: Review and fix
 
         # Buoyancy
-        self.water_density = water_density
         self.gravity = gravity
 
         self.archimedes_force_global = torch.zeros(
@@ -90,8 +92,23 @@ class HydrostaticsObject:
 
         return self.archimedes_force_global, self.archimedes_torque_global
 
-    def compute_archimedes_metacentric_local(self, submerged_volume, rpy, quaternions):
+    def compute_submerged_volume(self, position):
+
+        high_submerged = torch.clamp(
+            (self.heron_zero_height) - position[:, 2], # Consider only the z position
+            0,
+            self.heron_zero_height + 20,  # TODO: Fix
+        )
+        submerged_volume = torch.clamp(
+            high_submerged * self.waterplane_area, 0, self.max_volume
+        )
+
+        return submerged_volume
+
+    def compute_archimedes_metacentric_local(self, position, rpy, quaternions):
         # get archimedes global force
+
+        submerged_volume = self.compute_submerged_volume(position)
         self.compute_archimedes_metacentric_global(submerged_volume, rpy)
 
         # get rotation matrix from quaternions in world frame, size is (3*num_envs, 3)

@@ -2,7 +2,7 @@ import torch
 from omniisaacgymenvs.envs.Physics.Utils import *
 
 
-class HydrodynamicsObject:
+class Hydrodynamics:
     def __init__(
         self,
         dr_params,
@@ -23,6 +23,8 @@ class HydrodynamicsObject:
         self.scaling_damping = params["scaling_damping"]
         self.offset_added_mass = params["offset_added_mass"]
         self.scaling_added_mass = params["scaling_added_mass"]
+        self.use_water_current = params["water_current"]["use_water_current"]
+        self.flow_velocity = params["water_current"]["flow_velocity"]
 
         self._use_drag_randomization = dr_params["use_drag_randomization"]
         # linear_rand range, calculated as a percentage of the base damping coefficients
@@ -151,7 +153,7 @@ class HydrodynamicsObject:
         return damping_matrix
 
     def ComputeHydrodynamicsEffects(
-        self, time, quaternions, world_vel, use_water_current, flow_vel
+        self, time, quaternions, world_vel
     ):
         rot_mat = quaternion_to_matrix(quaternions)
         rot_mat_inv = rot_mat.mT
@@ -167,13 +169,13 @@ class HydrodynamicsObject:
             [self.local_lin_velocities, self.local_ang_velocities]
         )
 
-        if use_water_current:
-            flow_vel = torch.tensor(flow_vel, device=self.device)
+        if self.use_water_current:
+            self.flow_vel = torch.tensor(self.flow_vel, device=self.device)
 
-            if flow_vel.dim() == 1:
-                flow_vel = flow_vel.unsqueeze(0).expand_as(world_vel[:, :3])
+            if self.flow_vel.dim() == 1:
+                self.flow_vel = self.flow_vel.unsqueeze(0).expand_as(world_vel[:, :3])
 
-            self.local_flow_vel = getLocalLinearVelocities(flow_vel, rot_mat_inv)
+            self.local_flow_vel = getLocalLinearVelocities(self.flow_vel, rot_mat_inv)
             self.relative_lin_velocities = (
                 getLocalLinearVelocities(world_vel[:, :3], rot_mat_inv)
                 - self.local_flow_vel

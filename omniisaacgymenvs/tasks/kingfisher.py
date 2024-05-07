@@ -28,8 +28,8 @@ from omniisaacgymenvs.tasks.MFP.MFP2D_disturbances import (
     Disturbances,
 )
 
-from omniisaacgymenvs.envs.Physics.Hydrodynamics import HydrodynamicsObject
-from omniisaacgymenvs.envs.Physics.Hydrostatics import HydrostaticsObject
+from omniisaacgymenvs.envs.Physics.Hydrodynamics import Hydrodynamics
+from omniisaacgymenvs.envs.Physics.Hydrostatics import Hydrostatics
 from omniisaacgymenvs.envs.Physics.ThrusterDynamics import DynamicsFirstOrder
 
 from omni.isaac.core.utils.torch.rotations import *
@@ -86,24 +86,13 @@ class ASVVirtual(RLTask):
 
         # physics
         self.gravity = self._task_cfg["sim"]["gravity"][2]
-        # Water density kg/m^3
-        self.water_density = self._task_cfg["dynamics"]["hydrostatics"]["water_density"]
         self.timeConstant = self._task_cfg["dynamics"]["thrusters"]["timeConstant"]
-
-        # Water Current TODO: move to hydrodynamics parameters
-        self.use_water_current = self._task_cfg["env"]["water_current"]["use_water_current"]
-        self.flow_vel = self._task_cfg["env"]["water_current"]["flow_velocity"]
 
         # hydrodynamics
         self.hydrodynamics_cfg = self._task_cfg["dynamics"]["hydrodynamics"]
 
         # hydrostatics
         self.hydrostatics_cfg = self._task_cfg["dynamics"]["hydrostatics"]
-        self.box_width = self.hydrostatics_cfg["box_width"]
-        self.box_length = self.hydrostatics_cfg["box_length"]
-        self.waterplane_area = self.hydrostatics_cfg["waterplane_area"]
-        self.heron_zero_height = self.hydrostatics_cfg["heron_zero_height"]
-        self.max_volume = (self.box_width * self.box_length)
 
         # thrusters dynamics
         self.thrusters_dynamics_cfg = self._task_cfg["dynamics"]["thrusters"]
@@ -327,14 +316,13 @@ class ASVVirtual(RLTask):
 
     def get_USV_dynamics(self):
         """create physics"""
-        self.hydrostatics = HydrostaticsObject(
+        self.hydrostatics = Hydrostatics(
             num_envs=self.num_envs,
             device=self._device,
-            water_density=self.water_density,
             gravity=self.gravity,
             params=self.hydrostatics_cfg,
         )
-        self.hydrodynamics = HydrodynamicsObject(
+        self.hydrodynamics = Hydrodynamics(
             dr_params=self._task_cfg["env"]["asv_domain_randomization"]["drag"],
             num_envs=self.num_envs,
             device=self._device,
@@ -388,19 +376,6 @@ class ASVVirtual(RLTask):
 
         # get euler angles
         self.get_euler_angles(self.root_quats)  # rpy roll pitch yaws
-
-        # body underwater
-        self.high_submerged[:] = torch.clamp(
-            (self.heron_zero_height) - self.root_pos[:, 2],
-            0,
-            self.heron_zero_height + 20,  # TODO: Fix
-        )
-        self.submerged_volume[:] = torch.clamp(
-            self.high_submerged * self.waterplane_area, 0, self.max_volume
-        )
-        self.box_is_under_water = torch.where(
-            self.high_submerged[:] > 0, 1.0, 0.0
-        ).unsqueeze(0)
 
         # Dump to state
         self.current_state = {
@@ -522,16 +497,14 @@ class ASVVirtual(RLTask):
         # Hydrostatic force
         self.hydrostatic_force[:, :] = (
             self.hydrostatics.compute_archimedes_metacentric_local(
-                self.submerged_volume, self.euler_angles, self.root_quats
+                self.root_pos, self.euler_angles, self.root_quats
             )
         )
         # Hydrodynamic forces
         self.drag[:, :] = self.hydrodynamics.ComputeHydrodynamicsEffects(
-            0.01,
+            0.01, #TODO: Debug this. Not being used
             self.root_quats,
             self.root_velocities[:, :],
-            self.use_water_current,
-            self.flow_vel,
         )
 
         self.thrusters[:, :] = self.thrusters_dynamics.update_forces()
