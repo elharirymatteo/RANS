@@ -16,14 +16,10 @@ env:
   horizon_length: ${...train.params.config.horizon_length}
 
   controlFrequencyInv: 10
-  waterVisualization: False
   observation_frame: "local"
 
   clipObservations: {state: 8.0}
   clipActions: 1.0
-
-  # Split the maximum amount of thrust across all thrusters.
-  split_thrust: False
 
   disturbances:
     force_disturbance:
@@ -280,32 +276,6 @@ env:
     dt: ${resolve_default:0.02,${...sim.dt}}
     action_repeat: ${resolve_default:10,${...env.controlFrequencyInv}}
 
-  platform:
-    randomization:
-      random_permutation: False
-      random_offset: False
-      randomize_thruster_position: False
-      min_random_radius: 0.125
-      max_random_radius: 0.5
-      random_theta: 0.39269908169872414 #2pi/16
-      randomize_thrust_force: False
-      min_thrust_force: 0.5
-      max_thrust_force: 1.0
-      kill_thrusters: False
-      max_thruster_kill: 2
-    core:
-      mass: 5.32
-      CoM: [0,0,0]
-      radius: 0.31
-      shape: "sphere"
-      refinement: 2
-    configuration:
-      use_four_configurations: False
-      num_anchors: 4
-      offset: 0.75839816339
-      thrust_force: 1.0
-      visualize: True
-      save_path: "config.png"
 
   penalties_parameters:
     energy_penalty:
@@ -424,18 +394,3 @@ sim:
     gpu_heap_capacity: 67108864
     gpu_temp_buffer_capacity: 16777216
     gpu_max_num_partitions: 8
-
-  mfp2d:
-    # -1 to use default values
-    override_usd_defaults: False
-    enable_self_collisions: False
-    enable_gyroscopic_forces: True
-    # also in stage params
-    # per-actor
-    solver_position_iteration_count: 4
-    solver_velocity_iteration_count: 1
-    sleep_threshold: 0.005
-    stabilization_threshold: 0.001
-    # per-body
-    density: -1
-    max_depenetration_velocity: 100.0

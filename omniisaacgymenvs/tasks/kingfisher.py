@@ -28,9 +28,9 @@ from omniisaacgymenvs.tasks.MFP.MFP2D_disturbances import (
     Disturbances,
 )
 
-from omniisaacgymenvs.envs.Physics.Hydrodynamics import *
-from omniisaacgymenvs.envs.Physics.Hydrostatics import *
-from omniisaacgymenvs.envs.Physics.ThrusterDynamics import *
+from omniisaacgymenvs.envs.Physics.Hydrodynamics import HydrodynamicsObject
+from omniisaacgymenvs.envs.Physics.Hydrostatics import HydrostaticsObject
+from omniisaacgymenvs.envs.Physics.ThrusterDynamics import DynamicsFirstOrder
 
 from omni.isaac.core.utils.torch.rotations import *
 from omni.isaac.core.utils.prims import get_prim_at_path
@@ -67,7 +67,7 @@ class ASVVirtual(RLTask):
         self._cfg = sim_config.config
         self._task_cfg = sim_config.task_config
         self._enable_wandb_logs = self._task_cfg["enable_wandb_log"]
-        self._heron_cfg = self._task_cfg["env"]["platform"]
+
         self._num_envs = self._task_cfg["env"]["numEnvs"]
         self._env_spacing = self._task_cfg["env"]["envSpacing"]
         self._max_episode_length = self._task_cfg["env"]["maxEpisodeLength"]
@@ -76,9 +76,6 @@ class ASVVirtual(RLTask):
         self._device = self._cfg["sim_device"]
         self.iteration = 0
         self.step = 0
-
-        # Split the maximum amount of thrust across all thrusters.
-        self.split_thrust = self._task_cfg["env"]["split_thrust"]
 
         # Collects the platform parameters
         self.dt = self._task_cfg["sim"]["dt"]
