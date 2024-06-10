@@ -99,8 +99,9 @@ PYTHON_PATH -m pip install -e .
 To train your first policy, run:
 
 ```bash
-PYTHON_PATH scripts/rlgames_train_mfp.py task=virtual_floating_platform/MFP2D_Virtual_GoToXY train=virtual_floating_platform/MFP2D_PPOmulti_dict_MLP
+PYTHON_PATH scripts/rlgames_train_mfp.py task=MFP/MFP2D_GoToXY_ideal train=MFP/MFP2D_PPOmulti_dict_MLP headless=True num_envs=1024
 ```
+Modify num_envs appropriately to scale with your current machine capabilities. Turn headless to `False` if you want to visualize the envs while training occurs.
 
 You should see an Isaac Sim window pop up. Once Isaac Sim initialization completes, the FloatingPlatform scene will be constructed and simulation will start running automatically. The process will terminate once training finishes.
 
