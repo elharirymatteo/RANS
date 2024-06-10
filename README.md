@@ -109,7 +109,7 @@ You should see an Isaac Sim window pop up. Once Isaac Sim initialization complet
 Here's another example - GoToPose - using the multi-threaded training script:
 
 ```bash
-PYTHON_PATH scripts/rlgames_train_mfp.py task=virtual_floating_platform/MFP2D_Virtual_GoToPose train=virtual_floating_platform/MFP2D_PPOmulti_dict_MLP
+PYTHON_PATH scripts/rlgames_train_mfp.py task=MFP/MFP2D_GoToPose_ideal train=MFP/MFP2D_PPOmulti_dict_MLP
 ```
 
 Note that by default, we show a Viewport window with rendering, which slows down training. You can choose to close the Viewport window during training for better performance. The Viewport window can be re-enabled by selecting `Window > Viewport` from the top menu bar.
