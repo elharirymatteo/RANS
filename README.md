@@ -258,50 +258,51 @@ If you use the current repository in your work, we suggest citing the following 
 }
 ```
 
-## Directory Structure
+## Directory Structure (most relevant folders shown)
 
 ```bash
 .
-├── cfg
-│   ├── controller                     # Optimal Controllers configurations
-│   ├── hl_task                        # High-level task configurations
-│   ├── task                           # Task configurations
-│   │   └── virtual_floating_platform  # Virtual floating platform task configurations
-│   └── train                          # Training configurations
-│       └── virtual_floating_platform  # Virtual floating platform training configurations
-├── checkpoints                        # Checkpoints for saved models
-├── conf_runs                          # Configuration runs for training
-├── demos                              # Demonstration files (gifs)
-├── envs
-│   └── BuoyancyPhysics                # Environment related to buoyancy physics
-├── images                             # Image files
-├── mujoco_envs
-│   ├── controllers                    # Controllers for Mujoco environments
-│   ├── environments                   # Mujoco environments
-│   └── legacy                         # Legacy Mujoco environment files
-├── notebooks                          # Jupyter notebooks
-├── robots
-│   ├── articulations                  # Articulation-related files
-│   │   ├── utils                      # Utilities for articulations
-│   │   └── views                      # Articulation views
-│   └── usd                            # USD-related files
-├── ros                                # ROS-related files
-├── scripts                            # Utility scripts
-├── skrl                               # Reinforcement learning utilities
-├── tasks
-│   ├── base                           # Base task implementations
-│   ├── buoyancy                       # Buoyancy-related tasks
-│   ├── factory                        # Factory task configurations
-│   │   └── yaml                       # YAML configurations for factory tasks
-│   ├── shared                         # Shared task implementations
-│   ├── utils                          # Task utility functions
-│   └── virtual_floating_platform      # Task implementations for virtual floating platform
-├── utils
-│   ├── config_utils                   # Configuration utilities
-│   ├── domain_randomization           # Domain randomization utilities
-│   ├── hydra_cfg                      # Hydra configuration utilities
-│   ├── rlgames                        # Utilities for rlgames
-│   ├── terrain_utils                  # Terrain-related utilities
-│   └── usd_utils                      # USD-related utilities
-└── videos                             # Video files
+├── cfg                                 # Configuration files
+│   ├── controller                      # Controller configurations
+│   └──  hl_task                         # High-level task configurations convergence task
+│   └── train                           # Training configurations
+│       └── MFP                         # Training configurations for Modular Floating Platform
+├── demos                               # Demonstration files (e.g., gifs, videos)
+├── doc                                 # Documentation files
+│   ├── curriculum.md                   # Documentation for curriculum
+│   ├── domain_randomization.md         # Documentation for domain randomization
+│   ├── figures                         # Figures used in documentation
+│   │   └── ...                         # Other figure files
+│   └── penalties.md                    # Documentation for penalties
+├── envs                                # Environment scripts
+│   ├── vec_env_rlgames_mfp.py          # Vectorized environment for rlgames with MFP
+│   ├── vec_env_rlgames_mt.py           # Vectorized environment for rlgames with multiple tasks
+│   └── vec_env_rlgames.py              # General vectorized environment for rlgames
+├── extension.py                        # Extension script
+├── images                              # Image files
+│   ├── 3dof_gotoxy.png                 # Image for 3DOF GoToXY task
+│   └── ...                             # Other image files
+├── __init__.py                         # Initialization script for the package
+├── lab_tests                           # Lab test scripts and data
+├── mj_runs                             # Mujoco run scripts and data
+├── models                              # Model files
+├── robots                              # Robot related files
+│   ├── articulations                   # Articulation files for robots
+│   ├── sensors                         # Sensor files for robots
+│   └── usd                             # USD files for robots
+├── ros                                 # ROS related files
+├── scripts                             # Utility scripts
+├── tasks                               # Task implementations
+│   └── MFP                             # Task implementations for Modular Floating Platform
+│       ├── curriculum_helpers.py       # Helper functions for curriculum
+│       └── unit_tests                  # Unit tests for MFP tasks
+├── utils                               # Utility functions and scripts
+│   ├── aggregate_and_eval_mujoco_batch_data.py  # Script to aggregate and evaluate Mujoco batch data
+│   ├── rlgames                         # RL games related utilities
+│   │   ├── __pycache__                 # Compiled Python files
+│   │   ├── rlgames_train_mt.py         # Training script for RL games with multiple tasks
+│   │   └── rlgames_utils.py            # Utility functions for RL games
+├── videos                              # Video files
+└── wandb                               # Weights and Biases integration files
+
 ```
