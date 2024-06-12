@@ -65,6 +65,7 @@ class GoThroughPoseSequenceTask(Core):
         # Task and reward parameters
         self._task_parameters = GoThroughPoseSequenceParameters(**task_param)
         self._reward_parameters = GoThroughPoseSequenceReward(**reward_param)
+        
         # Curriculum samplers
         self._spawn_position_sampler = CurriculumSampler(
             self._task_parameters.spawn_position_curriculum

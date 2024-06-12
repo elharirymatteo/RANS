@@ -57,6 +57,10 @@ class TrackXYVelocityTask(Core):
         self._task_parameters = TrackXYVelocityParameters(**task_param)
         self._reward_parameters = TrackXYVelocityReward(**reward_param)
 
+        # Define the specific observation space dimensions for this task
+        self._dim_task_data = 2
+        self.define_observation_space(self._dim_task_data)
+
         # Curriculum
         self._target_linear_velocity_sampler = CurriculumSampler(
             self._task_parameters.target_linear_velocity_curriculum,

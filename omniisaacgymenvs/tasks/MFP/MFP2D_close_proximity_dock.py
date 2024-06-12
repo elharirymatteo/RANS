@@ -69,6 +69,11 @@ class CloseProximityDockTask(Core):
         # Task and reward parameters
         self._task_parameters = CloseProximityDockParameters(**task_param)
         self._reward_parameters = GoToPoseReward(**reward_param)
+
+        # Define the specific observation space dimensions for this task
+        self._dim_task_data = 4  # data to be used to fullfil the task (floats) [6:10]
+        self.define_observation_space(self._dim_task_data)
+        
         # Curriculum samplers
         self._fp_footprint_diameter_sampler = CurriculumSampler(
             self._task_parameters.fp_footprint_diameter_curriculum
@@ -120,24 +125,7 @@ class CloseProximityDockTask(Core):
         )
         
         self._task_label = self._task_label * 6
-    
-    def update_observation_tensor(self, current_state: dict) -> torch.Tensor:
-        """
-        Updates the observation tensor with the current state of the robot.
 
-        Args:
-            current_state (dict): The current state of the robot.
-
-        Returns:
-            torch.Tensor: The observation tensor.
-        """
-
-        self._obs_buffer[:, 0:2] = current_state["orientation"]
-        self._obs_buffer[:, 2:4] = current_state["linear_velocity"]
-        self._obs_buffer[:, 4] = current_state["angular_velocity"]
-        self._obs_buffer[:, 5] = self._task_label
-        self._obs_buffer[:, 6:10] = self._task_data
-        return self._obs_buffer
 
     def create_stats(self, stats: dict) -> dict:
         """
@@ -208,7 +196,7 @@ class CloseProximityDockTask(Core):
         self._task_data[:, :2] = self._position_error
         self._task_data[:, 2] = torch.cos(self._heading_error)
         self._task_data[:, 3] = torch.sin(self._heading_error)
-        return self.update_observation_tensor(current_state)
+        return self.update_observation_tensor(current_state, self._task_data)
     
     def compute_relative_angle(self, fp_position:torch.Tensor):
         """

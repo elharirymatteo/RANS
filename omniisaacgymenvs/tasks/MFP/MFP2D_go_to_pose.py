@@ -55,7 +55,6 @@ class GoToPoseTask(Core):
 
         # Define the specific observation space dimensions for this task
         self._dim_task_data = 4  # Adjusted dimension of task-specific data
-
         self.define_observation_space(self._dim_task_data)
 
         # Curriculum samplers

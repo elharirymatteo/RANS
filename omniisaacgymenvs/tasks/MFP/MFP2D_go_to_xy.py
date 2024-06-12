@@ -61,6 +61,10 @@ class GoToXYTask(Core):
         # Task and reward parameters
         self._task_parameters = GoToXYParameters(**task_param)
         self._reward_parameters = GoToXYReward(**reward_param)
+        # Define the specific observation space dimensions for this task
+        self._dim_task_data = 2
+        self.define_observation_space(self._dim_task_data)
+
         # Curriculum samplers
         self._spawn_position_sampler = CurriculumSampler(
             self._task_parameters.spawn_position_curriculum
@@ -122,7 +126,7 @@ class GoToXYTask(Core):
 
         self._position_error = self._target_positions - current_state["position"]
         self._task_data[:, :2] = self._position_error
-        return self.update_observation_tensor(current_state)
+        return self.update_observation_tensor(current_state, self._task_data)
 
     def compute_reward(
         self,

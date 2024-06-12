@@ -64,6 +64,11 @@ class GoThroughGateTask(Core):
         # Task and reward parameters
         self._task_parameters = GoThroughGateParameters(**task_param)
         self._reward_parameters = GoThroughGateReward(**reward_param)
+
+        # Task data
+        self._dim_task_data = 6
+        self.define_observation_space(self._dim_task_data)
+
         # Curriculum samplers
         self._spawn_position_sampler = CurriculumSampler(
             self._task_parameters.spawn_position_curriculum
@@ -171,7 +176,7 @@ class GoThroughGateTask(Core):
         self._task_data[:, 3] = torch.sin(self._heading_error)
         self._task_data[:, 4] = torch.cos(self._target_headings)
         self._task_data[:, 5] = torch.sin(self._target_headings)
-        return self.update_observation_tensor(current_state)
+        return self.update_observation_tensor(current_state, self._task_data)
 
     def compute_reward(
         self,
