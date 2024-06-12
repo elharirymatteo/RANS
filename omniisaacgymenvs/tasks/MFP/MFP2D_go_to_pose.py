@@ -55,20 +55,8 @@ class GoToPoseTask(Core):
 
         # Define the specific observation space dimensions for this task
         self._dim_task_data = 4  # Adjusted dimension of task-specific data
-        self._dim_orientation = 2
-        self._dim_velocity = 2
-        self._dim_omega = 1
-        self._dim_task_label = 1
-        self._dim_observation = (
-            self._dim_orientation
-            + self._dim_velocity
-            + self._dim_omega
-            + self._dim_task_label
-            + self._dim_task_data
-        )
-        self.define_observation_space(
-            self._dim_observation, self._dim_task_data
-        )
+
+        self.define_observation_space(self._dim_task_data)
 
         # Curriculum samplers
         self._spawn_position_sampler = CurriculumSampler(
@@ -94,23 +82,6 @@ class GoToPoseTask(Core):
         self._target_headings = torch.zeros(
             (self._num_envs), device=self._device, dtype=torch.float32
         )
-
-    def update_observation_tensor(self, current_state: dict) -> torch.Tensor:
-        """
-        Updates the observation tensor with the current state of the robot.
-
-        Args:
-            current_state (dict): The current state of the robot.
-
-        Returns:
-            torch.Tensor: The observation tensor.
-        """
-        self._obs_buffer[:, 0:2] = current_state["orientation"]
-        self._obs_buffer[:, 2:4] = current_state["linear_velocity"]
-        self._obs_buffer[:, 4] = current_state["angular_velocity"]
-        self._obs_buffer[:, 5] = self._task_label
-        self._obs_buffer[:, 6:6 + self._dim_task_data] = self._task_data
-        return self._obs_buffer
 
     def create_stats(self, stats: dict) -> dict:
         """
@@ -167,7 +138,7 @@ class GoToPoseTask(Core):
         self._task_data[:, :2] = self._position_error
         self._task_data[:, 2] = torch.cos(self._heading_error)
         self._task_data[:, 3] = torch.sin(self._heading_error)
-        return self.update_observation_tensor(current_state)
+        return self.update_observation_tensor(current_state, self._task_data)
 
     def compute_reward(
         self,

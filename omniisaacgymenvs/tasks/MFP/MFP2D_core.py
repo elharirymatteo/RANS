@@ -58,11 +58,16 @@ class Core:
         """
         self._num_envs = num_envs
         self._device = device
-        self._obs_buffer = None
-        self._task_label = None
-        self._task_data = None
 
-    def define_observation_space(self, dim_observation: int, dim_task_data: int):
+        # Dimensions of the observation tensors
+        self._dim_orientation = (
+            2  # theta heading in the world frame (cos(theta), sin(theta)) [0:2]
+        )
+        self._dim_velocity = 2  # velocity in the world (x_dot, y_dot) [2:4]
+        self._dim_omega = 1  # rotation velocity (theta_dot) [4]
+        self._dim_task_label = 1  # label of the task to be executed (int) [5]
+
+    def define_observation_space(self, dim_task_data: int):
         """
         Define the observation space dimensions.
 
@@ -71,7 +76,9 @@ class Core:
             dim_task_data (int): Dimension of the task-specific data part of the observation.
         """
 
-        self._num_observations = dim_observation
+        self._num_observations = (
+            self._dim_orientation + self._dim_velocity + self._dim_omega + self._dim_task_label + dim_task_data
+        )
         self._dim_task_data = dim_task_data
         
         self._obs_buffer = torch.zeros(
@@ -88,7 +95,7 @@ class Core:
             dtype=torch.float32,
         )
 
-    def update_observation_tensor(self, current_state: dict) -> torch.Tensor:
+    def update_observation_tensor(self, current_state: dict, task_data: torch.Tensor) -> torch.Tensor:
         """
         Updates the observation tensor with the current state of the robot.
 
@@ -98,8 +105,13 @@ class Core:
         Returns:
             torch.Tensor: The observation tensor.
         """
-        raise NotImplementedError("This method should be overridden by subclasses.")
-
+        self._obs_buffer[:, 0:2] = current_state["orientation"]
+        self._obs_buffer[:, 2:4] = current_state["linear_velocity"]
+        self._obs_buffer[:, 4] = current_state["angular_velocity"]
+        self._obs_buffer[:, 5] = self._task_label
+        self._obs_buffer[:, 6:6 + self._dim_task_data] = task_data
+        return self._obs_buffer
+    
     def create_stats(self, stats: dict) -> dict:
         """
         Creates a dictionary to store the training statistics for the task.
