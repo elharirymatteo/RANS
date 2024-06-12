@@ -397,8 +397,8 @@ class VirtualPlatform:
 
     def visualize(self, save_path: str = None):
         """
-        Visualizes the thruster configuration."""
-
+        Visualizes the thruster configuration.
+        """
         from matplotlib import pyplot as plt
         from matplotlib import cm
         import numpy as np
@@ -409,25 +409,13 @@ class VirtualPlatform:
         for i in range(self._max_thrusters):
             colors.append(cmap(i / self._max_thrusters))
 
-        # Split into 1/4th of the envs, so that we can visualize all the configs in use_four_configuration mode.
-        env_ids = [
-            0,
-            1,
-            2,
-            3,
-            self._num_envs // 4,
-            self._num_envs // 4 + 1,
-            self._num_envs // 4 + 2,
-            self._num_envs // 4 + 3,
-            2 * self._num_envs // 4,
-            2 * self._num_envs // 4 + 1,
-            2 * self._num_envs // 4 + 2,
-            2 * self._num_envs // 4 + 3,
-            3 * self._num_envs // 4,
-            3 * self._num_envs // 4 + 1,
-            3 * self._num_envs // 4 + 2,
-            3 * self._num_envs // 4 + 3,
-        ]
+        # Construct env_ids dynamically
+        env_ids = []
+        for i in range(4):
+            for j in range(4):
+                idx = i * (self._num_envs // 4) + j
+                if idx < self._num_envs:
+                    env_ids.append(idx)
 
         # Generates a thrust on all the thrusters
         forces = torch.ones(
@@ -444,23 +432,30 @@ class VirtualPlatform:
         f = np.array(f.cpu())
 
         # Plot
-        fig, axs = plt.subplots(4, 4)
-        fig.set_size_inches(20, 20)
-        for i in range(4):
-            for j in range(4):
-                idx = env_ids[i * 4 + j]
-                axs[i, j].quiver(
-                    p[idx, :, 0],
-                    p[idx, :, 1],
-                    f[idx, :, 0],
-                    f[idx, :, 1],
-                    color=colors,
-                    scale=4,
-                    scale_units="xy",
-                    angles="xy",
-                )
-                axs[i, j].set_xlim([-0.75, 0.75])
-                axs[i, j].set_ylim([-0.75, 0.75])
+        num_plots = len(env_ids)
+        rows = (num_plots + 3) // 4  # calculate rows needed
+        fig, axs = plt.subplots(rows, 4)
+        fig.set_size_inches(20, 5 * rows)
+        axs = axs.flatten()
+        
+        for i in range(num_plots):
+            idx = env_ids[i]
+            axs[i].quiver(
+                p[idx, :, 0],
+                p[idx, :, 1],
+                f[idx, :, 0],
+                f[idx, :, 1],
+                color=colors,
+                scale=4,
+                scale_units="xy",
+                angles="xy",
+            )
+            axs[i].set_xlim([-0.75, 0.75])
+            axs[i].set_ylim([-0.75, 0.75])
+            
+        for i in range(num_plots, len(axs)):
+            fig.delaxes(axs[i])
+
         fig.tight_layout()
         fig.savefig(save_path, dpi=300)
         plt.close()
