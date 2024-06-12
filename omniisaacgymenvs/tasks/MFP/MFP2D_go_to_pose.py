@@ -8,19 +8,10 @@ __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
-
-from omniisaacgymenvs.tasks.MFP.MFP2D_core import (
-    Core,
-)
-from omniisaacgymenvs.tasks.MFP.MFP2D_task_rewards import (
-    GoToPoseReward,
-)
-from omniisaacgymenvs.tasks.MFP.MFP2D_task_parameters import (
-    GoToPoseParameters,
-)
-from omniisaacgymenvs.tasks.MFP.curriculum_helpers import (
-    CurriculumSampler,
-)
+from omniisaacgymenvs.tasks.MFP.MFP2D_core import Core
+from omniisaacgymenvs.tasks.MFP.MFP2D_task_rewards import GoToPoseReward
+from omniisaacgymenvs.tasks.MFP.MFP2D_task_parameters import GoToPoseParameters
+from omniisaacgymenvs.tasks.MFP.curriculum_helpers import CurriculumSampler
 
 from omniisaacgymenvs.utils.arrow import VisualArrow
 from omni.isaac.core.prims import XFormPrimView
@@ -34,7 +25,6 @@ import torch
 import math
 
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
-
 
 class GoToPoseTask(Core):
     """
@@ -57,11 +47,29 @@ class GoToPoseTask(Core):
             num_envs (int): The number of environments.
             device (str): The device to run the task on.
         """
-
         super(GoToPoseTask, self).__init__(num_envs, device)
+
         # Task and reward parameters
         self._task_parameters = GoToPoseParameters(**task_param)
         self._reward_parameters = GoToPoseReward(**reward_param)
+
+        # Define the specific observation space dimensions for this task
+        self._dim_task_data = 4  # Adjusted dimension of task-specific data
+        self._dim_orientation = 2
+        self._dim_velocity = 2
+        self._dim_omega = 1
+        self._dim_task_label = 1
+        self._dim_observation = (
+            self._dim_orientation
+            + self._dim_velocity
+            + self._dim_omega
+            + self._dim_task_label
+            + self._dim_task_data
+        )
+        self.define_observation_space(
+            self._dim_observation, self._dim_task_data
+        )
+
         # Curriculum samplers
         self._spawn_position_sampler = CurriculumSampler(
             self._task_parameters.spawn_position_curriculum
@@ -86,7 +94,23 @@ class GoToPoseTask(Core):
         self._target_headings = torch.zeros(
             (self._num_envs), device=self._device, dtype=torch.float32
         )
-        self._task_label = self._task_label * 1
+
+    def update_observation_tensor(self, current_state: dict) -> torch.Tensor:
+        """
+        Updates the observation tensor with the current state of the robot.
+
+        Args:
+            current_state (dict): The current state of the robot.
+
+        Returns:
+            torch.Tensor: The observation tensor.
+        """
+        self._obs_buffer[:, 0:2] = current_state["orientation"]
+        self._obs_buffer[:, 2:4] = current_state["linear_velocity"]
+        self._obs_buffer[:, 4] = current_state["angular_velocity"]
+        self._obs_buffer[:, 5] = self._task_label
+        self._obs_buffer[:, 6:6 + self._dim_task_data] = self._task_data
+        return self._obs_buffer
 
     def create_stats(self, stats: dict) -> dict:
         """
@@ -129,7 +153,6 @@ class GoToPoseTask(Core):
         Returns:
             torch.Tensor: The observation tensor.
         """
-
         # position distance
         self._position_error = self._target_positions - current_state["position"]
         # heading distance
@@ -159,11 +182,10 @@ class GoToPoseTask(Core):
             current_state (torch.Tensor): The current state of the robot.
             actions (torch.Tensor): The actions taken by the robot.
             step (int, optional): The current step. Defaults to 0.
-
+        
         Returns:
             torch.Tensor: The reward for the current state of the robot.
         """
-
         # position error
         self.position_dist = torch.sqrt(torch.square(self._position_error).sum(-1))
         self.heading_dist = torch.abs(self._heading_error)
@@ -203,7 +225,6 @@ class GoToPoseTask(Core):
         Returns:
             torch.Tensor: Wether the platforms should be killed or not.
         """
-
         die = torch.zeros_like(self._goal_reached, dtype=torch.long)
         ones = torch.ones_like(self._goal_reached, dtype=torch.long)
         die = torch.where(
@@ -226,7 +247,6 @@ class GoToPoseTask(Core):
         Returns:
             dict: The statistics of the training
         """
-
         stats["position_reward"] += self.position_reward
         stats["heading_reward"] += self.heading_reward
         stats["position_error"] += self.position_dist
@@ -242,7 +262,6 @@ class GoToPoseTask(Core):
         Args:
             env_ids (torch.Tensor): The ids of the environments.
         """
-
         self._goal_reached[env_ids] = 0
 
     def get_goals(
@@ -260,7 +279,6 @@ class GoToPoseTask(Core):
         Returns:
             Tuple[torch.Tensor, torch.Tensor]: The target positions and orientations.
         """
-
         num_goals = len(env_ids)
         # Randomize position
         self._target_positions[env_ids] = (
@@ -280,7 +298,6 @@ class GoToPoseTask(Core):
         q[:, 0] = 1
         q[:, 0] = torch.cos(self._target_headings[env_ids] * 0.5)
         q[:, 3] = torch.sin(self._target_headings[env_ids] * 0.5)
-
         return p, q
 
     def get_initial_conditions(
@@ -299,7 +316,6 @@ class GoToPoseTask(Core):
             Tuple[torch.Tensor, torch.Tensor, torch.Tensor]: The initial position,
             orientation and velocity of the robot.
         """
-
         num_resets = len(env_ids)
         # Resets the counter of steps for which the goal was reached
         self.reset(env_ids)
@@ -340,7 +356,6 @@ class GoToPoseTask(Core):
             num_resets, step, device=self._device
         )
         initial_velocity[:, 5] = angular_velocity
-
         return (
             initial_position,
             initial_orientation,
@@ -356,7 +371,6 @@ class GoToPoseTask(Core):
             path (str): The path where the pin is to be generated.
             position (torch.Tensor): The position of the arrow.
         """
-
         color = torch.tensor([1, 0, 0])
         body_radius = 0.1
         body_length = 0.5
@@ -389,7 +403,6 @@ class GoToPoseTask(Core):
         Returns:
             Tuple[Usd.Stage, XFormPrimView]: The scene and the visual marker.
         """
-
         arrows = XFormPrimView(prim_paths_expr="/World/envs/.*/arrow")
         scene.add(arrows)
         return scene, arrows
@@ -404,7 +417,6 @@ class GoToPoseTask(Core):
         Returns:
             dict: The spawn data.
         """
-
         dict = {}
 
         num_resets = self._num_envs
@@ -497,7 +509,6 @@ class GoToPoseTask(Core):
         Returns:
             dict: The target data.
         """
-
         return {}
 
     def get_logs(self, step: int) -> dict:
@@ -510,7 +521,6 @@ class GoToPoseTask(Core):
         Returns:
             dict: The task data.
         """
-
         dict = self._task_parameters.boundary_penalty.get_logs()
         if step % 50 == 0:
             dict = {**dict, **self.log_spawn_data(step)}
