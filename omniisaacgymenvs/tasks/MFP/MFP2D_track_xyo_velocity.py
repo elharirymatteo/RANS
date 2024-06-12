@@ -57,6 +57,10 @@ class TrackXYOVelocityTask(Core):
         self._task_parameters = TrackXYOVelocityParameters(**task_param)
         self._reward_parameters = TrackXYOVelocityReward(**reward_param)
 
+        # Define the specific observation space dimensions for this task
+        self._dim_task_data = 3 # linear velocity x, y and angular velocity
+        self.define_observation_space(self._dim_task_data)
+
         # Curriculum
         self._target_linear_velocity_sampler = CurriculumSampler(
             self._task_parameters.target_linear_velocity_curriculum,
@@ -129,7 +133,7 @@ class TrackXYOVelocityTask(Core):
         self._position_error = current_state["position"]
         self._task_data[:, :2] = self._linear_velocity_error
         self._task_data[:, 2] = self._angular_velocity_error
-        return self.update_observation_tensor(current_state)
+        return self.update_observation_tensor(current_state, self._task_data)
 
     def compute_reward(
         self, current_state: torch.Tensor, actions: torch.Tensor

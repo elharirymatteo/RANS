@@ -64,6 +64,11 @@ class GoThroughXYTask(Core):
         # Task and reward parameters
         self._task_parameters = GoThroughXYParameters(**task_param)
         self._reward_parameters = GoThroughXYReward(**reward_param)
+
+        # Define the specific observation space dimensions for this task
+        self._dim_task_data = 5  # position error (x, y), heading error (cos, sin), linear velocity error
+        self.define_observation_space(self._dim_task_data)
+        
         # Curriculum samplers
         self._spawn_position_sampler = CurriculumSampler(
             self._task_parameters.spawn_position_curriculum
@@ -171,7 +176,7 @@ class GoThroughXYTask(Core):
         self._task_data[:, 2] = torch.cos(self._heading_error)
         self._task_data[:, 3] = torch.sin(self._heading_error)
         self._task_data[:, 4] = self.linear_velocity_err
-        return self.update_observation_tensor(current_state)
+        return self.update_observation_tensor(current_state, self._task_data)
 
     def compute_reward(
         self,

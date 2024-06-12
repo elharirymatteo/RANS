@@ -65,7 +65,11 @@ class GoThroughPoseSequenceTask(Core):
         # Task and reward parameters
         self._task_parameters = GoThroughPoseSequenceParameters(**task_param)
         self._reward_parameters = GoThroughPoseSequenceReward(**reward_param)
-        
+       
+        # Define the specific observation space dimensions for this task
+        self._dim_task_data = 5 + 4 * (self._task_parameters.num_points - 1)
+        self.define_observation_space(self._dim_task_data)
+
         # Curriculum samplers
         self._spawn_position_sampler = CurriculumSampler(
             self._task_parameters.spawn_position_curriculum

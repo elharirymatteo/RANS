@@ -64,6 +64,10 @@ class GoThroughPoseTask(Core):
         # Task and reward parameters
         self._task_parameters = GoThroughPoseParameters(**task_param)
         self._reward_parameters = GoThroughPoseReward(**reward_param)
+
+        self._dim_task_data = 5
+        self.define_observation_space(self._dim_task_data)
+
         # Curriculum samplers
         self._spawn_position_sampler = CurriculumSampler(
             self._task_parameters.spawn_position_curriculum
@@ -167,7 +171,7 @@ class GoThroughPoseTask(Core):
         self._task_data[:, 2] = torch.cos(self._heading_error)
         self._task_data[:, 3] = torch.sin(self._heading_error)
         self._task_data[:, 4] = self.linear_velocity_err
-        return self.update_observation_tensor(current_state)
+        return self.update_observation_tensor(current_state, self._task_data)
 
     def compute_reward(
         self,

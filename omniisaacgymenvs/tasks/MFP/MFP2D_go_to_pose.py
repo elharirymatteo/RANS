@@ -54,7 +54,7 @@ class GoToPoseTask(Core):
         self._reward_parameters = GoToPoseReward(**reward_param)
 
         # Define the specific observation space dimensions for this task
-        self._dim_task_data = 4  # Adjusted dimension of task-specific data
+        self._dim_task_data = 4  # position error (x, y), heading error (cos, sin)
         self.define_observation_space(self._dim_task_data)
 
         # Curriculum samplers

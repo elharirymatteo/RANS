@@ -65,6 +65,11 @@ class GoThroughXYSequenceTask(Core):
         # Task and reward parameters
         self._task_parameters = GoThroughXYSequenceParameters(**task_param)
         self._reward_parameters = GoThroughXYSequenceReward(**reward_param)
+        
+        # Define the specific observation space dimensions for this task
+        self._dim_task_data = 5 + 2 * self._task_parameters.num_points
+        self.define_observation_space(self._dim_task_data)
+        
         # Curriculum samplers
         self._spawn_position_sampler = CurriculumSampler(
             self._task_parameters.spawn_position_curriculum
@@ -190,7 +195,7 @@ class GoThroughXYSequenceTask(Core):
                 self._target_positions[self._all, indices] - current_state["position"]
             ) * (1 - overflowing.int()).view(-1, 1)
 
-        return self.update_observation_tensor(current_state)
+        return self.update_observation_tensor(current_state, self._task_data)
 
     def compute_reward(
         self,

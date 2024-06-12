@@ -65,7 +65,7 @@ class GoThroughGateTask(Core):
         self._task_parameters = GoThroughGateParameters(**task_param)
         self._reward_parameters = GoThroughGateReward(**reward_param)
 
-        # Task data
+        # Define the specific observation space dimensions for this task
         self._dim_task_data = 6
         self.define_observation_space(self._dim_task_data)
 

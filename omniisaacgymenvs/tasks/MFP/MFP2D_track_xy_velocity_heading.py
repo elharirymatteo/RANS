@@ -62,6 +62,11 @@ class TrackXYVelocityHeadingTask(Core):
         # Task and reward parameters
         self._task_parameters = TrackXYVelocityHeadingParameters(**task_param)
         self._reward_parameters = TrackXYVelocityHeadingReward(**reward_param)
+       
+        # Define the specific observation space dimensions for this task
+        self._dim_task_data = 4  # velocity error (x, y), heading error (cos, sin)
+        self.define_observation_space(self._dim_task_data)
+       
         # Curriculum samplers
         self._target_linear_velocity_sampler = CurriculumSampler(
             self._task_parameters.target_linear_velocity_curriculum,
@@ -142,7 +147,7 @@ class TrackXYVelocityHeadingTask(Core):
         self._task_data[:, 3] = torch.sin(self._heading_error)
         # Position
         self._position_error = current_state["position"]
-        return self.update_observation_tensor(current_state)
+        return self.update_observation_tensor(current_state, self._task_data)
 
     def compute_reward(
         self,
