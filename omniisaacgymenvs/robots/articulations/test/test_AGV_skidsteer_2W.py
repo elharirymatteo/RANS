@@ -7,22 +7,20 @@ if __name__ == "__main__":
 
     simulation_app = SimulationApp(cfg)
     from omni.isaac.core import World
+    from pxr import UsdLux
     import omni
 
-    from omniisaacgymenvs.robots.articulations.AMR_2WheelsSkidSteer import (
-        AMR_2W_SS,
-        SkidSteerParameters,
+    from omniisaacgymenvs.robots.articulations.AGV_skidsteer_2W import (
+        AGV_SS_2W,
+        AGVSkidsteer2WParameters,
     )
-    from pxr import UsdLux
 
+    # Instantiate simulation
     timeline = omni.timeline.get_timeline_interface()
-
     world = World(stage_units_in_meters=1.0)
-
     world.scene.add_default_ground_plane()
     light = UsdLux.DistantLight.Define(world.stage, "/DistantLight")
     light.CreateIntensityAttr(3000.0)
-
     physics_ctx = world.get_physics_context()
     physics_ctx.set_solver_type("PGS")
 
@@ -109,9 +107,16 @@ if __name__ == "__main__":
                 "offset": [0.24 / 2, 0.0, -0.420 / 2 + 0.076 / 2 - 0.015],
             },
         ],
+        "wheel_physics_material": {
+            "static_friction": 0.9,
+            "dynamic_friction": 0.7,
+            "restitution": 0.5,
+            "friction_combine_mode": "average",
+            "restitution_combine_mode": "average",
+        },
     }
 
-    AMR_2W_SS("/Turtlebot2", cfg={"system": Turtlebot2}, translation=[0, 0, 0.3])
+    AGV_SS_2W("/Turtlebot2", cfg={"system": Turtlebot2}, translation=[0, 0, 0.3])
 
     # Kobuki's Turtlebot 2
     Turtlebot2_caster = {
@@ -256,9 +261,16 @@ if __name__ == "__main__":
                 "wheel_orientation": [-90, 0, 0],
             },
         ],
+        "wheel_physics_material": {
+            "static_friction": 0.9,
+            "dynamic_friction": 0.7,
+            "restitution": 0.5,
+            "friction_combine_mode": "average",
+            "restitution_combine_mode": "average",
+        },
     }
 
-    AMR_2W_SS(
+    AGV_SS_2W(
         "/Turtlebot2_Caster",
         cfg={"system": Turtlebot2_caster},
         translation=[1.0, 0, 0.3],
