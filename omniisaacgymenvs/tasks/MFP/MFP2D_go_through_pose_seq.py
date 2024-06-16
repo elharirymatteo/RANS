@@ -211,7 +211,7 @@ class GoThroughPoseSequenceTask(Core):
                 1 - overflowing
             )
 
-        return self.update_observation_tensor(current_state)
+        return self.update_observation_tensor(current_state, self._task_data)
 
     def compute_reward(
         self,
