@@ -219,6 +219,8 @@ def plot_all_distances_GoToXY(
     plt.title(f"All distances over {all_distances.shape[1]} episodes")
     plt.grid()
     plt.savefig(save_dir + "all_position_distances")
+    plt.close()
+    
     return fig_count
 
 
@@ -338,6 +340,8 @@ def plot_distance_GoToPose(
     )
     plt.grid()
     plt.savefig(save_dir + "mean_best_worst_heading_distances")
+    plt.close()
+
     return fig_count
 
 
@@ -454,6 +458,8 @@ def plot_distance_TrackXYVelocity(
     plt.title(f"Mean, best and worst distances over {all_distances.shape[1]} episodes")
     plt.grid()
     plt.savefig(save_dir + "mean_best_worst_velocity_distances")
+    plt.close()
+
     return fig_count
 
 
@@ -481,6 +487,8 @@ def plot_all_distances_TrackXYVelocity(
     plt.title(f"All distances over {all_distances.shape[1]} episodes")
     plt.grid()
     plt.savefig(save_dir + "all_velocity_distances")
+    plt.close()
+
     return fig_count
 
 
@@ -596,6 +604,8 @@ def plot_distance_TrackXYOVelocity(
     )
     plt.grid()
     plt.savefig(save_dir + "mean_best_worst_velocity_distances")
+    plt.close()
+
     return fig_count
 
 
@@ -645,6 +655,8 @@ def plot_all_distances_TrackXYOVelocity(
     plt.title(f"All distances over {all_omega_distances.shape[1]} episodes")
     plt.grid()
     plt.savefig(save_dir + "all_velocity_distances")
+    plt.close()
+
     return fig_count
 
 
@@ -708,6 +720,8 @@ def plot_reward(
     plt.title(f"Mean, best and worst reward over {state_history.shape[1]} episodes")
     plt.grid()
     plt.savefig(save_dir + "mean_best_worst_rewards")
+    plt.close()
+
     return fig_count
 
 
@@ -773,6 +787,8 @@ def plot_velocities(
     )
     plt.grid()
     plt.savefig(save_dir + "mean_best_worst_ang_velocities")
+    plt.close()
+
     return fig_count
 
 
@@ -800,6 +816,8 @@ def plot_actions_histogram(
     plt.bar(mean_freq.index, mean_freq.values)
     plt.title(f"Mean number of thrusts in {control_history.shape[0]} episodes")
     plt.savefig(save_dir + "mean_actions_histogram")
+    plt.close()
+
     return fig_count
 
 
@@ -826,6 +844,8 @@ def plot_actions_box_plot(
     sns.boxplot(data=freq, orient="h")
     plt.title(f"Mean number of thrusts in {control_history.shape[0]} episodes")
     plt.savefig(save_dir + "actions_boxplot")
+    plt.close()
+
     return fig_count
 
 
@@ -1001,6 +1021,8 @@ def plot_single_linear_vel(
         plt.savefig(save_dir + "single_linear_velocity")
     if show:
         plt.show()
+    plt.close()
+
     return fig_count
 
 
@@ -1030,6 +1052,7 @@ def plot_single_angular_vel(
         plt.savefig(save_dir + "single_angular_velocity")
     if show:
         plt.show()
+    plt.close()
     return fig_count
 
 
@@ -1060,6 +1083,7 @@ def plot_single_heading_cos_sin(
         plt.savefig(save_dir + "single_heading_cos_sin")
     if show:
         plt.show()
+    plt.close()
     return fig_count
 
 
@@ -1090,6 +1114,7 @@ def plot_single_absolute_heading(
         plt.savefig(save_dir + "single_heading")
     if show:
         plt.show()
+    plt.close()
     return fig_count
 
 
@@ -1119,6 +1144,7 @@ def plot_single_actions(
         fig.savefig(save_dir + "single_actions")
     if show:
         plt.show()
+    plt.close()
     return fig_count
 
 
@@ -1144,6 +1170,7 @@ def plot_single_action_histogram(
         plt.savefig(save_dir + "single_actions_hist")
     if show:
         plt.show()
+    plt.close()
     return fig_count
 
 
@@ -1172,6 +1199,7 @@ def plot_single_rewards(
             plt.savefig(save_dir + "single_reward")
         if show:
             plt.show()
+        plt.close()
     return fig_count
 
 
@@ -1202,6 +1230,8 @@ def plot_single_xy_position_error(
         plt.savefig(save_dir + "single_xy_position_error")
     if show:
         plt.show()
+    plt.close()
+
     return fig_count
 
 
@@ -1231,6 +1261,8 @@ def plot_single_heading_error(
         plt.savefig(save_dir + "single_heading_heading_error")
     if show:
         plt.show()
+    plt.close()
+
     return fig_count
 
 
@@ -1268,6 +1300,8 @@ def plot_single_xy_position(
         fig.savefig(save_dir + "single_xy_trajectory")
     if show:
         plt.show()
+    plt.close()
+    
     return fig_count
 
 
@@ -1311,6 +1345,8 @@ def plot_single_xy_pose(
         fig.savefig(save_dir + "single_pose_trajectory")
     if show:
         plt.show()
+    plt.close()
+
     return fig_count
 
 
@@ -1351,6 +1387,8 @@ def plot_single_xy_position_heading(
         fig.savefig(save_dir + "single_xy_trajectory_with_heading")
     if show:
         plt.show()
+    plt.close()
+    
     return fig_count
 
 
@@ -1384,6 +1422,8 @@ def plot_single_GoToXY_distance_to_target(
         plt.savefig(save_dir + "single_distance_to_position_target")
     if show:
         plt.show()
+    plt.close()
+
     return fig_count
 
 
@@ -1418,6 +1458,8 @@ def plot_single_GoToXY_log_distance_to_target(
         plt.savefig(save_dir + "single_log_distance_to_position_target")
     if show:
         plt.show()
+    plt.close()
+
     return fig_count
 
 
@@ -1467,6 +1509,8 @@ def plot_single_GoToPose_distance_to_target(
         plt.savefig(save_dir + "single_distance_to_heading_target")
     if show:
         plt.show()
+    plt.close()
+
     return fig_count
 
 
@@ -1518,6 +1562,8 @@ def plot_single_GoToPose_log_distance_to_target(
         plt.savefig(save_dir + "single_log_distance_to_heading_target")
     if show:
         plt.show()
+    plt.close()
+
     return fig_count
 
 
@@ -1551,6 +1597,8 @@ def plot_single_TrackXYVelocity_distance_to_target(
         plt.savefig(save_dir + "single_distance_to_velocity_target")
     if show:
         plt.show()
+    plt.close()
+
     return fig_count
 
 
@@ -1585,6 +1633,8 @@ def plot_single_TrackXYVelocity_log_distance_to_target(
         plt.savefig(save_dir + "single_log_distance_to_velocity_target")
     if show:
         plt.show()
+    plt.close()
+
     return fig_count
 
 
@@ -1633,6 +1683,8 @@ def plot_single_TrackXYOVelocity_distance_to_target(
         plt.savefig(save_dir + "single_distance_to_angular_velocity_target")
     if show:
         plt.show()
+    plt.close()
+
     return fig_count
 
 
@@ -1684,4 +1736,6 @@ def plot_single_TrackXYOVelocity_log_distance_to_target(
         plt.savefig(save_dir + "single_log_distance_to_angular_velocity_target")
     if show:
         plt.show()
+    plt.close()
+
     return fig_count
