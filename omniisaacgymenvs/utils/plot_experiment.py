@@ -8,13 +8,10 @@ __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
-
-import array
 import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
-import matplotlib.cm as cm
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes, mark_inset
 import seaborn as sns
 from matplotlib.collections import LineCollection
@@ -212,7 +209,7 @@ def plot_all_distances_GoToXY(
 
     fig_count += 1
     fig, ax = plt.subplots()
-    cmap = cm.get_cmap("tab20")
+    cmap = plt.colormaps["tab20"]
     for j in range(all_distances.shape[1]):
         ax.plot(
             tgrid, all_distances[:, j], alpha=1.0, color=cmap(j % cmap.N), linewidth=1.0
@@ -363,7 +360,7 @@ def plot_all_distances_GoToPose(
 
     fig_count += 1
     fig, ax = plt.subplots()
-    cmap = cm.get_cmap("tab20")
+    cmap = plt.colormaps["tab20"]
     for j in range(all_position_distances.shape[1]):
         ax.plot(
             tgrid,
@@ -380,7 +377,7 @@ def plot_all_distances_GoToPose(
 
     fig_count += 1
     fig, ax = plt.subplots()
-    cmap = cm.get_cmap("tab20")
+    cmap = plt.colormaps["tab20"]
     for j in range(all_heading_distances.shape[1]):
         ax.plot(
             tgrid,
@@ -474,7 +471,7 @@ def plot_all_distances_TrackXYVelocity(
 
     fig_count += 1
     fig, ax = plt.subplots()
-    cmap = cm.get_cmap("tab20")
+    cmap = plt.colormaps["tab20"]
     for j in range(all_distances.shape[1]):
         ax.plot(
             tgrid, all_distances[:, j], alpha=1.0, color=cmap(j % cmap.N), linewidth=1.0
@@ -617,7 +614,7 @@ def plot_all_distances_TrackXYOVelocity(
 
     fig_count += 1
     fig, ax = plt.subplots()
-    cmap = cm.get_cmap("tab20")
+    cmap = plt.colormaps["tab20"]
     for j in range(all_xy_distances.shape[1]):
         ax.plot(
             tgrid,
@@ -634,7 +631,7 @@ def plot_all_distances_TrackXYOVelocity(
 
     fig_count += 1
     fig, ax = plt.subplots()
-    cmap = cm.get_cmap("tab20")
+    cmap = plt.colormaps["tab20"]
     for j in range(all_omega_distances.shape[1]):
         ax.plot(
             tgrid,
@@ -843,7 +840,7 @@ def plot_trajectories_GoToXY(
     plt.clf()
     positions = state_history[:, :, 6:8]
 
-    cmap = cm.get_cmap("tab20")
+    cmap = plt.colormaps["tab20"]
     for j in range(positions.shape[1]):
         col = cmap(
             j % cmap.N
@@ -858,6 +855,8 @@ def plot_trajectories_GoToXY(
     plt.title(f"Trajectories in 2D space [{positions.shape[1]} episodes]")
     plt.gcf().dpi = 200
     plt.savefig(save_dir + "multi_trajectories")
+    
+    plt.close()  # Close the figure to free memory
     return fig_count
 
 
@@ -991,8 +990,8 @@ def plot_single_linear_vel(
     fig_count += 1
     plt.figure(fig_count)
     plt.clf()
-    plt.plot(tgrid, lin_vels[:, 0], color=cm.get_cmap("tab20")(0))
-    plt.plot(tgrid, lin_vels[:, 1], color=cm.get_cmap("tab20")(2))
+    plt.plot(tgrid, lin_vels[:, 0], color=plt.colormaps["tab20"](0))
+    plt.plot(tgrid, lin_vels[:, 1], color=plt.colormaps["tab20"](2))
     plt.xlabel("Time steps")
     plt.ylabel("Velocity [m/s]")
     plt.legend(["x", "y"], loc="best")
@@ -1021,7 +1020,7 @@ def plot_single_angular_vel(
     fig_count += 1
     plt.figure(fig_count)
     plt.clf()
-    plt.plot(tgrid, ang_vel_z, color=cm.get_cmap("tab20")(0))
+    plt.plot(tgrid, ang_vel_z, color=plt.colormaps["tab20"](0))
     plt.xlabel("Time steps")
     plt.ylabel("Angular speed [rad/s]")
     plt.legend(["z"], loc="best")
@@ -1050,8 +1049,8 @@ def plot_single_heading_cos_sin(
     fig_count += 1
     plt.figure(fig_count)
     plt.clf()
-    plt.plot(tgrid, headings[:, 0], color=cm.get_cmap("tab20")(0))  # cos
-    plt.plot(tgrid, headings[:, 1], color=cm.get_cmap("tab20")(2))  # sin
+    plt.plot(tgrid, headings[:, 0], color=plt.colormaps["tab20"](0))  # cos
+    plt.plot(tgrid, headings[:, 1], color=plt.colormaps["tab20"](2))  # sin
     plt.xlabel("Time steps")
     plt.ylabel("Heading")
     plt.legend(["cos(${\\theta}$)", "sin(${\\theta}$)"], loc="best")
@@ -1081,7 +1080,7 @@ def plot_single_absolute_heading(
     fig_count += 1
     plt.figure(fig_count)
     plt.clf()
-    plt.plot(tgrid, angles, color=cm.get_cmap("tab20")(0))
+    plt.plot(tgrid, angles, color=plt.colormaps["tab20"](0))
     plt.xlabel("Time steps")
     plt.ylabel("Angle [rad]")
     plt.legend(["${\\theta}$"], loc="best")
@@ -1109,7 +1108,7 @@ def plot_single_actions(
         len(control_history_df.columns), 1, sharex=True, figsize=(8, 6)
     )
     # Select subset of colors from a colormap
-    colormap = cm.get_cmap("tab20")
+    colormap = plt.colormaps["tab20"]
     num_colors = len(control_history_df.columns)
     colors = [colormap(i) for i in range(0, num_colors * 2, 2)]
     for i, column in enumerate(control_history_df.columns):
@@ -1138,7 +1137,7 @@ def plot_single_action_histogram(
         control_history, columns=[f"T{i+1}" for i in range(control_history.shape[1])]
     )
     freq = actions_df.sum()
-    plt.bar(freq.index, freq.values, color=cm.get_cmap("tab20")(0))
+    plt.bar(freq.index, freq.values, color=plt.colormaps["tab20"](0))
     plt.title("Number of thrusts in episode")
     plt.tight_layout()
     if save_dir:
@@ -1163,7 +1162,7 @@ def plot_single_rewards(
         fig_count += 1
         plt.figure(fig_count)
         plt.clf()
-        plt.plot(tgrid, reward_history, color=cm.get_cmap("tab20")(0))
+        plt.plot(tgrid, reward_history, color=plt.colormaps["tab20"](0))
         plt.xlabel("Time steps")
         plt.ylabel("Reward")
         plt.legend(["reward"], loc="best")
@@ -1192,8 +1191,8 @@ def plot_single_xy_position_error(
     fig_count += 1
     plt.figure(fig_count)
     plt.clf()
-    plt.plot(tgrid, pos_error[:, 0], color=cm.get_cmap("tab20")(0))
-    plt.plot(tgrid, pos_error[:, 1], color=cm.get_cmap("tab20")(2))
+    plt.plot(tgrid, pos_error[:, 0], color=plt.colormaps["tab20"](0))
+    plt.plot(tgrid, pos_error[:, 1], color=plt.colormaps["tab20"](2))
     plt.xlabel("Time steps")
     plt.ylabel("Position [m]")
     plt.legend(["x position", "y position"], loc="best")
@@ -1223,7 +1222,7 @@ def plot_single_heading_error(
     fig_count += 1
     plt.figure(fig_count)
     plt.clf()
-    plt.plot(tgrid, heading_error, color=cm.get_cmap("tab20")(0))
+    plt.plot(tgrid, heading_error, color=plt.colormaps["tab20"](0))
     plt.xlabel("Time steps")
     plt.ylabel("Heading [rad]")
     plt.title("Heading error")
@@ -1258,7 +1257,7 @@ def plot_single_xy_position(
     else:
         location = 2 if (y[0] < 0 and x[0] < 0) else 1
     axins = inset_axes(ax, width=1.5, height=1.25, loc=location)
-    ax.plot(x, y, color=cm.get_cmap("tab20")(0))
+    ax.plot(x, y, color=plt.colormaps["tab20"](0))
     ax.set_xlabel("X [m]")
     ax.set_ylabel("Y [m]")
     axins.set_xlim(x1, x2)
@@ -1340,8 +1339,8 @@ def plot_single_xy_position_heading(
     else:
         location = 2 if (y[0] < 0 and x[0] < 0) else 1
     axins = inset_axes(ax, width=1.5, height=1.25, loc=location)
-    ax.plot(x, y, color=cm.get_cmap("tab20")(0))
-    ax.quiver(x[::10], y[::10], s[::10], c[::10], color=cm.get_cmap("tab20")(0))
+    ax.plot(x, y, color=plt.colormaps["tab20"](0))
+    ax.quiver(x[::10], y[::10], s[::10], c[::10], color=plt.colormaps["tab20"](0))
     ax.set_xlabel("X [m]")
     ax.set_ylabel("Y [m]")
     axins.set_xlim(x1, x2)
@@ -1374,7 +1373,7 @@ def plot_single_GoToXY_distance_to_target(
     plt.plot(
         tgrid,
         np.linalg.norm(np.array([pos_error[:, 0], pos_error[:, 1]]), axis=0),
-        color=cm.get_cmap("tab20")(0),
+        color=plt.colormaps["tab20"](0),
     )
     plt.xlabel("Time steps")
     plt.ylabel("Distance [m]")
@@ -1408,7 +1407,7 @@ def plot_single_GoToXY_log_distance_to_target(
     plt.plot(
         tgrid,
         np.linalg.norm(np.array([pos_error[:, 0], pos_error[:, 1]]), axis=0),
-        color=cm.get_cmap("tab20")(0),
+        color=plt.colormaps["tab20"](0),
     )
     plt.xlabel("Time steps")
     plt.ylabel("Log distance [m]")
@@ -1443,7 +1442,7 @@ def plot_single_GoToPose_distance_to_target(
     plt.plot(
         tgrid,
         np.linalg.norm(np.array([pos_error[:, 0], pos_error[:, 1]]), axis=0),
-        color=cm.get_cmap("tab20")(0),
+        color=plt.colormaps["tab20"](0),
     )
     plt.xlabel("Time steps")
     plt.ylabel("Distance [m]")
@@ -1458,7 +1457,7 @@ def plot_single_GoToPose_distance_to_target(
     fig_count += 1
     plt.figure(fig_count)
     plt.clf()
-    plt.plot(tgrid, np.abs(heading_error), color=cm.get_cmap("tab20")(0))
+    plt.plot(tgrid, np.abs(heading_error), color=plt.colormaps["tab20"](0))
     plt.xlabel("Time steps")
     plt.ylabel("Heading [rad]")
     plt.legend(["abs dist"], loc="best")
@@ -1493,7 +1492,7 @@ def plot_single_GoToPose_log_distance_to_target(
     plt.plot(
         tgrid,
         np.linalg.norm(np.array([pos_error[:, 0], pos_error[:, 1]]), axis=0),
-        color=cm.get_cmap("tab20")(0),
+        color=plt.colormaps["tab20"](0),
     )
     plt.xlabel("Time steps")
     plt.ylabel("Log distance [m]")
@@ -1509,7 +1508,7 @@ def plot_single_GoToPose_log_distance_to_target(
     plt.figure(fig_count)
     plt.clf()
     plt.yscale("log")
-    plt.plot(tgrid, np.abs(heading_error), color=cm.get_cmap("tab20")(0))
+    plt.plot(tgrid, np.abs(heading_error), color=plt.colormaps["tab20"](0))
     plt.xlabel("Time steps")
     plt.ylabel("Log distance [rad]")
     plt.legend(["x-y dist"], loc="best")
@@ -1541,7 +1540,7 @@ def plot_single_TrackXYVelocity_distance_to_target(
     plt.plot(
         tgrid,
         np.linalg.norm(np.array([vel_error[:, 0], vel_error[:, 1]]), axis=0),
-        color=cm.get_cmap("tab20")(0),
+        color=plt.colormaps["tab20"](0),
     )
     plt.xlabel("Time steps")
     plt.ylabel("Distance [m/s]")
@@ -1575,7 +1574,7 @@ def plot_single_TrackXYVelocity_log_distance_to_target(
     plt.plot(
         tgrid,
         np.linalg.norm(np.array([vel_error[:, 0], vel_error[:, 1]]), axis=0),
-        color=cm.get_cmap("tab20")(0),
+        color=plt.colormaps["tab20"](0),
     )
     plt.xlabel("Time steps")
     plt.ylabel("Log distance [m/s]")
@@ -1609,7 +1608,7 @@ def plot_single_TrackXYOVelocity_distance_to_target(
     plt.plot(
         tgrid,
         np.linalg.norm(np.array([vel_error[:, 0], vel_error[:, 1]]), axis=0),
-        color=cm.get_cmap("tab20")(0),
+        color=plt.colormaps["tab20"](0),
     )
     plt.xlabel("Time steps")
     plt.ylabel("Distance [m/s]")
@@ -1624,7 +1623,7 @@ def plot_single_TrackXYOVelocity_distance_to_target(
     fig_count += 1
     plt.figure(fig_count)
     plt.clf()
-    plt.plot(tgrid, np.abs(omega_error), color=cm.get_cmap("tab20")(0))
+    plt.plot(tgrid, np.abs(omega_error), color=plt.colormaps["tab20"](0))
     plt.xlabel("Time steps")
     plt.ylabel("Distance [rad/s]")
     plt.legend(["abs dist"], loc="best")
@@ -1659,7 +1658,7 @@ def plot_single_TrackXYOVelocity_log_distance_to_target(
     plt.plot(
         tgrid,
         np.linalg.norm(np.array([vel_error[:, 0], vel_error[:, 1]]), axis=0),
-        color=cm.get_cmap("tab20")(0),
+        color=plt.colormaps["tab20"](0),
     )
     plt.xlabel("Time steps")
     plt.ylabel("Log distance [m/s]")
@@ -1675,7 +1674,7 @@ def plot_single_TrackXYOVelocity_log_distance_to_target(
     plt.figure(fig_count)
     plt.clf()
     plt.yscale("log")
-    plt.plot(tgrid, np.abs(omega_error), color=cm.get_cmap("tab20")(0))
+    plt.plot(tgrid, np.abs(omega_error), color=plt.colormaps["tab20"](0))
     plt.xlabel("Time steps")
     plt.ylabel("Log distance [rad/s]")
     plt.legend(["x-y dist"], loc="best")

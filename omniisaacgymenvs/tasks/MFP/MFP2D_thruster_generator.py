@@ -404,7 +404,7 @@ class VirtualPlatform:
         import numpy as np
 
         # Creates a list of color
-        cmap = cm.get_cmap("hsv")
+        cmap = plt.colormaps.get_cmap("hsv")
         colors = []
         for i in range(self._max_thrusters):
             colors.append(cmap(i / self._max_thrusters))
