@@ -176,7 +176,7 @@ class GoThroughXYTask(Core):
         self._task_data[:, 2] = torch.cos(self._heading_error)
         self._task_data[:, 3] = torch.sin(self._heading_error)
         self._task_data[:, 4] = self.linear_velocity_err
-        return self.update_observation_tensor(current_state, self._task_data)
+        return self.update_observation_tensor(current_state)
 
     def compute_reward(
         self,

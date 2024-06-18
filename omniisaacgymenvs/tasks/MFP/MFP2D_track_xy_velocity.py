@@ -119,7 +119,7 @@ class TrackXYVelocityTask(Core):
         )
         self._position_error = current_state["position"]
         self._task_data[:, :2] = self._velocity_error
-        return self.update_observation_tensor(current_state, self._task_data)
+        return self.update_observation_tensor(current_state)
 
     def compute_reward(
         self, current_state: torch.Tensor, actions: torch.Tensor

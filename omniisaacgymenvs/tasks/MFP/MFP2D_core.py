@@ -95,7 +95,7 @@ class Core:
             dtype=torch.float32,
         )
 
-    def update_observation_tensor(self, current_state: dict, task_data: torch.Tensor) -> torch.Tensor:
+    def update_observation_tensor(self, current_state: dict) -> torch.Tensor:
         """
         Updates the observation tensor with the current state of the robot.
 
@@ -109,7 +109,7 @@ class Core:
         self._obs_buffer[:, 2:4] = current_state["linear_velocity"]
         self._obs_buffer[:, 4] = current_state["angular_velocity"]
         self._obs_buffer[:, 5] = self._task_label
-        self._obs_buffer[:, 6:6 + self._dim_task_data] = task_data
+        self._obs_buffer[:, 6:6 + self._dim_task_data] = self._task_data
         return self._obs_buffer
     
     def create_stats(self, stats: dict) -> dict:

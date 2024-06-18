@@ -195,7 +195,7 @@ class GoThroughXYSequenceTask(Core):
                 self._target_positions[self._all, indices] - current_state["position"]
             ) * (1 - overflowing.int()).view(-1, 1)
 
-        return self.update_observation_tensor(current_state, self._task_data)
+        return self.update_observation_tensor(current_state)
 
     def compute_reward(
         self,

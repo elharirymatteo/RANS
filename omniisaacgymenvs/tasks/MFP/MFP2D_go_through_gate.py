@@ -176,7 +176,7 @@ class GoThroughGateTask(Core):
         self._task_data[:, 3] = torch.sin(self._heading_error)
         self._task_data[:, 4] = torch.cos(self._target_headings)
         self._task_data[:, 5] = torch.sin(self._target_headings)
-        return self.update_observation_tensor(current_state, self._task_data)
+        return self.update_observation_tensor(current_state)
 
     def compute_reward(
         self,

@@ -225,7 +225,7 @@ class GoThroughGateSequenceTask(Core):
             self._task_data[:, 6 + 4 * i + 3] = torch.cos(heading_error) * (
                 1 - overflowing
             )
-        return self.update_observation_tensor(current_state, self._task_data)
+        return self.update_observation_tensor(current_state)
 
     def compute_reward(
         self,

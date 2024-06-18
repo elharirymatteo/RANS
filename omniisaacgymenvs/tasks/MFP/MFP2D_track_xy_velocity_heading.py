@@ -147,7 +147,7 @@ class TrackXYVelocityHeadingTask(Core):
         self._task_data[:, 3] = torch.sin(self._heading_error)
         # Position
         self._position_error = current_state["position"]
-        return self.update_observation_tensor(current_state, self._task_data)
+        return self.update_observation_tensor(current_state)
 
     def compute_reward(
         self,
