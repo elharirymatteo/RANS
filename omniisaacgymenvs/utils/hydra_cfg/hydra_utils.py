@@ -29,12 +29,24 @@
 
 import hydra
 from omegaconf import DictConfig, OmegaConf
+import yaml
 
 ## OmegaConf & Hydra Config
+
+def read_file(path: str) -> dict:
+    """
+    Read a yaml file and return the config as DictConfig
+    """
+    print(path)
+    with open(path, "r") as stream:
+        output = yaml.safe_load(stream)
+    return output 
 
 # Resolvers used in hydra configs (see https://omegaconf.readthedocs.io/en/2.1_branch/usage.html#resolvers)
 if not OmegaConf.has_resolver("eq"):
     OmegaConf.register_new_resolver("eq", lambda x, y: x.lower() == y.lower())
+if not OmegaConf.has_resolver("compose"):
+    OmegaConf.register_new_resolver("compose", lambda x: read_file(x))
 if not OmegaConf.has_resolver("contains"):
     OmegaConf.register_new_resolver("contains", lambda x, y: x.lower() in y.lower())
 if not OmegaConf.has_resolver("if"):

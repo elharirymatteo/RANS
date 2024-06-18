@@ -25,6 +25,7 @@ from omniisaacgymenvs.robots.articulations.utils.Types import (
     DirectDriveWheel,
     GeometricPrimitive,
     PhysicsMaterial,
+    ActuatorCfg,
     GeometricPrimitiveFactory,
     PassiveWheelFactory,
 )
@@ -32,6 +33,7 @@ from omniisaacgymenvs.robots.articulations.utils.Types import (
 
 @dataclass
 class AGVSkidsteer2WParameters:
+    actuators: ActuatorCfg = field(default_factory=dict)
     shape: GeometricPrimitive = field(default_factory=dict)
     left_wheel: DirectDriveWheel = field(default_factory=dict)
     right_wheel: DirectDriveWheel = field(default_factory=dict)
@@ -43,6 +45,7 @@ class AGVSkidsteer2WParameters:
 
     def __post_init__(self):
         self.shape = GeometricPrimitiveFactory.get_item(self.shape)
+        self.actuators = ActuatorCfg(**self.actuators)
         self.left_wheel = DirectDriveWheel(**self.left_wheel)
         self.right_wheel = DirectDriveWheel(**self.right_wheel)
         self.passive_wheels = [
@@ -63,7 +66,7 @@ class CreateAGVSkidsteer2W:
         self.stage = omni.usd.get_context().get_stage()
 
         # Reads the thruster configuration and computes the number of virtual thrusters.
-        self.settings = AGVSkidsteer2WParameters(**cfg["system"])
+        self.settings = AGVSkidsteer2WParameters(**cfg)
         self.camera_cfg = cfg.get("camera", None)
 
     def build(self) -> None:
@@ -97,7 +100,7 @@ class CreateAGVSkidsteer2W:
         self.core_path, self.core_prim = self.settings.shape.build(
             self.stage, self.platform_path + "/core"
         )
-        applyMass(self.core_prim, self.settings.mass, Gf.Vec3d(0, 0, 0))
+        applyMass(self.core_prim, self.settings.mass, Gf.Vec3d(*self.settings.CoM))
         if self.camera_cfg is not None:
             self.createCamera()
         else:
@@ -188,7 +191,7 @@ class CreateAGVSkidsteer2W:
         self.camera.build()
 
 
-class AGV_SS_2W(Robot):
+class AGV_SkidSteer_2W(Robot):
     def __init__(
         self,
         prim_path: str,
@@ -206,6 +209,7 @@ class AGV_SS_2W(Robot):
 
         AMR = CreateAGVSkidsteer2W(prim_path, cfg)
         AMR.build()
+        self._settings = AMR.settings
 
         super().__init__(
             prim_path=prim_path,

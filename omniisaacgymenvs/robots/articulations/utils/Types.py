@@ -3,7 +3,7 @@ from pxr import Usd, Gf, UsdShade, UsdPhysics
 from scipy.spatial.transform import Rotation
 from dataclasses import dataclass, field
 from typing import Tuple
-
+import math
 
 class TypeFactoryBuilder:
     def __init__(self):
@@ -11,6 +11,9 @@ class TypeFactoryBuilder:
 
     def register_instance(self, type):
         self.creators[type.__name__] = type
+
+    def register_instance_by_name(self, name, type):
+        self.creators[name] = type
 
     def get_item(self, params):
         assert "name" in list(params.keys()), "The name of the type must be provided."
@@ -417,51 +420,248 @@ JointActuatorFactory.register_instance(PrismaticJoint)
 JointActuatorFactory.register_instance(RevoluteJoint)
 
 ####################################################################################################
-## Define different type of dynamics
+## Dynamics, Limits & Actuator definitions
 ####################################################################################################
+
+@dataclass
+class DynamicsCfg:
+    """
+    Dynamics parameters for the actuators.
+    """
+    name: str = "None"
 
 
 @dataclass
-class ZeroOrderDynamics:
+class ZeroOrderDynamicsCfg(DynamicsCfg):
+    """
+    Zero-order dynamics for the actuators.
+    """
     name: str = "zero_order"
 
 
 @dataclass
-class FirstOrderDynamics:
+class FirstOrderDynamicsCfg(DynamicsCfg):
+    """
+    First-order dynamics for the actuators.
+
+    T: float = time constant
+    """
+    time_constant: float = 0.2
     name: str = "first_order"
-    time_constant: float = 0.1
-    delay: float = 0.0
 
     def __post_init__(self):
-        assert self.time_constant > 0, "The time constant must be larger than 0."
-        assert self.delay >= 0, "The delay must be larger than or equal to 0."
+        assert self.time_constant > 0, "Invalid time constant, should be greater than 0"
 
 
 @dataclass
-class SecondOrderDynamics:
+class SecondOrderDynamicsCfg(DynamicsCfg):
+    """
+    Second-order dynamics for the actuators.
+
+    natural frequency: float = omega_0
+    damping ratio: float = zeta
+    """
+    natural_frequency: float = 100
+    damping_ratio: float = 1 / math.sqrt(2)
     name: str = "second_order"
-    damping_ratio: float = 0.7
-    natural_frequency: float = 1.0
-    delay: float = 0.0
 
     def __post_init__(self):
-        assert (
-            0 <= self.damping_ratio <= 1
-        ), "The damping ratio must be between 0 and 1."
-        assert (
-            self.natural_frequency > 0
-        ), "The natural frequency must be larger than 0."
-        assert self.delay >= 0, "The delay must be larger than or equal to 0."
-
+        assert self.natural_frequency > 0, "Invalid natural frequency, should be greater than 0"
+        assert self.damping_ratio > 0, "Invalid damping ratio, should be greater than 0"
 
 DynamicsFactory = TypeFactoryBuilder()
-DynamicsFactory.register_instance(ZeroOrderDynamics)
-DynamicsFactory.register_instance(FirstOrderDynamics)
-DynamicsFactory.register_instance(SecondOrderDynamics)
+DynamicsFactory.register_instance_by_name("zero_order", ZeroOrderDynamicsCfg)
+DynamicsFactory.register_instance_by_name("first_order", FirstOrderDynamicsCfg)
+DynamicsFactory.register_instance_by_name("second_order", SecondOrderDynamicsCfg)
+
+@dataclass
+class ControlLimitsCfg:
+    """
+    Control limits for the airship.
+    """
+
+    limits: tuple = field(default_factory=tuple)
+
+    def __post_init__(self):
+        assert self.limits[0] < self.limits[1], "Invalid limits, min should be less than max"
+        assert len(self.limits) == 2, "Invalid limits shape, should be a tuple of length 2"
+
+
+@dataclass
+class ActuatorCfg:
+    """
+    Actuator configuration.
+    """
+    dynamics: dict = field(default_factory=dict)
+    limits: dict = field(default_factory=dict)
+
+    def __post_init__(self):
+        self.dynamics = DynamicsFactory.get_item(self.dynamics)
+        self.limits = ControlLimitsCfg(**self.limits)
 
 ####################################################################################################
-## Define the type of high level actuators
+## Define the type of high level passive and active joints
 ####################################################################################################
+
+
+@dataclass
+class Motor:
+    max_speed = 10000
+    min_speed = -5000
+    max_torque = 2
+    damping = 1e10
+    stiffness = 0.0
+    # dynamics: dict = field(default_factory=dict)
+
+    def __post_init__(self):
+        active_joint = {
+            "name": "RevoluteActuator",
+            "axis": "Z",
+            "lower_limit": None,
+            "upper_limit": None,
+            "velocity_limit": None,
+            "enable_drive": True,
+            "force_limit": None,
+            "damping": self.damping,
+            "stiffness": self.stiffness,
+        }
+        passive_joint = {
+            "name": "RevoluteActuator",
+            "axis": "Z",
+            "lower_limit": None,
+            "upper_limit": None,
+            "velocity_limit": None,
+            "enable_drive": True,
+            "force_limit": None,
+            "damping": self.damping,
+            "stiffness": self.stiffness,
+        }
+        self.active_joint = RevoluteJoint(**active_joint)
+        self.passive_joint = RevoluteJoint(**passive_joint)
+        # self.dynamics = DynamicsFactory.get_item(self.dynamics)
+
+    def build(
+        self,
+        stage: Usd.Stage,
+        joint_path: str = None,
+        body_path: str = None,
+        wheel_path: str = None,
+        active: bool = True,
+    ) -> Tuple[str, Usd.Prim]:
+        if active:
+            joint = self.active_joint.build(stage, joint_path, body_path, wheel_path)
+        else:
+            joint = self.passive_joint.build(stage, joint_path, body_path, wheel_path)
+        return joint
+
+
+@dataclass
+class Steering:
+    limits: tuple = (-30, 30)
+    damping: float = 1e10
+    stiffness: float = 0
+    # dynamics: dict = field(default_factory=dict)
+
+    def __post_init__(self):
+        revolute_joint = {
+            "name": "RevoluteActuator",
+            "axis": "Z",
+            "lower_limit": self.limits[0],
+            "upper_limit": self.limits[1],
+            "velocity_limit": None,
+            "enable_drive": True,
+            "force_limit": None,
+            "damping": self.damping,
+            "stiffness": self.stiffness,
+        }
+        self.actuator = JointActuatorFactory.get_item(revolute_joint)
+        # self.dynamics = DynamicsFactory.get_item(self.dynamics)
+
+    def build(
+        self,
+        stage: Usd.Stage,
+        joint_path: str = None,
+        path: str = None,
+        body_path: str = None,
+    ) -> Tuple[str, Usd.Prim]:
+        steering_path, steering_prim = pxr_utils.createXform(stage, path)
+        pxr_utils.applyRigidBody(steering_prim)
+        pxr_utils.applyMass(steering_prim, 0.05)
+        self.actuator.build(stage, joint_path, body_path, body_path)
+        return steering_path, steering_prim
+
+
+@dataclass
+class Suspension:
+    travel: float = 0.1
+    damping: float = 1e10
+    stiffness: float = 0.0
+
+    def __post_init__(self):
+        assert self.damping > 0, "The damping must be larger than 0."
+        assert self.stiffness > 0, "The stiffness must be larger than 0."
+
+        piston_shape = {
+            "name": "Cylinder",
+            "height": self.travel,
+            "radius": self.travel / 4,
+            "has_collider": False,
+            "is_rigid": False,
+            "refinement": 2,
+        }
+        rod_shape = {
+            "name": "Cylinder",
+            "height": self.travel,
+            "radius": self.travel / 5,
+            "has_collider": False,
+            "is_rigid": False,
+            "refinement": 2,
+        }
+        pristmatic_joint = {
+            "name": "PrismaticActuator",
+            "axis": "Z",
+            "lower_limit": 0,
+            "upper_limit": self.travel,
+            "velocity_limit": None,
+            "enable_drive": True,
+            "force_limit": None,
+            "damping": self.damping,
+            "stiffness": self.stiffness,
+        }
+        self.piston_shape = Cylinder(**piston_shape)
+        self.rod_shape = Cylinder(**rod_shape)
+        self.spring = PrismaticJoint(**pristmatic_joint)
+
+    def build(self, stage, joint_path, path, body_path, offset):
+
+        # Build piston
+        path, prim = pxr_utils.createXform(stage, path)
+        piston_path, piston_prim = pxr_utils.createXform(stage, path + "/piston")
+        pxr_utils.applyRigidBody(piston_prim)
+        pxr_utils.applyMass(piston_prim, 0.05)
+        pxr_utils.setTranslate(
+            piston_prim, Gf.Vec3d(offset[0], offset[1], offset[2] - self.travel * 2)
+        )
+        piston_body_path, piston_body_prim = self.piston_shape.build(
+            stage, path + "/piston/body"
+        )
+        pxr_utils.setTranslate(piston_body_prim, Gf.Vec3d(0, 0, -self.travel / 2))
+
+        # Build piston rod
+        rod_path, rod_prim = pxr_utils.createXform(stage, path + "/rod")
+        pxr_utils.applyRigidBody(rod_prim)
+        pxr_utils.applyMass(rod_prim, 0.05)
+        pxr_utils.setTranslate(rod_prim, Gf.Vec3d(offset[0], offset[1], offset[2]))
+        rod_body_path, rod_body_prim = self.rod_shape.build(stage, path + "/rod/body")
+        pxr_utils.setTranslate(rod_body_prim, Gf.Vec3d(0, 0, self.travel / 2))
+
+        # Build joint between piston and body
+        pxr_utils.createFixedJoint(
+            stage, joint_path + "_body_spring", path, piston_path
+        )
+        # Build the joint to create the spring
+        self.spring.build(stage, joint_path + "_spring", piston_path, rod_path)
+        return rod_path, rod_prim
 
 
 @dataclass
@@ -469,7 +669,6 @@ class Wheel:
     visual_shape: GeometricPrimitive = field(default_factory=dict)
     collider_shape: GeometricPrimitive = field(default_factory=dict)
     mass: float = 1.0
-    # physics_material: PhysicsMaterial = field(default_factory=dict)
     # visual_material: SimpleColorTexture = field(default_factory=dict)
 
     def __post_init__(self):
@@ -529,6 +728,37 @@ class DirectDriveWheel:
         self.actuator.build(stage, joint_path, body_path, wheel_path)
 
         return wheel_path, wheel_prim
+
+
+@dataclass
+class FullyFeaturedWheel:
+    wheel: Wheel = field(default_factory=dict)
+    offset: tuple = (0, 0, 0)
+    orientation: tuple = (0, 90, 0)
+    steering: Steering = field(default_factory=dict)
+    motor: Motor = field(default_factory=dict)
+    is_driven: bool = True
+    suspension: Suspension = field(default_factory=dict)
+
+    def __post_init__(self):
+        self.wheel = Wheel(**self.wheel)
+        if self.suspension is not None:
+            self.suspension = Suspension(**self.suspension)
+        if self.steering is not None:
+            self.steering = Steering(**self.steering)
+
+    def build(self, stage: Usd.Stage, joint_path: str, path: str, body_path: str):
+        pxr_utils.createXform(stage, path)
+        # Create wheel
+        wheel_path, wheel_prim = self.wheel.build(stage, path + "/wheel")
+        pxr_utils.setTranslate(wheel_prim, Gf.Vec3d(*self.offset))
+        q_xyzw = Rotation.from_euler("xyz", self.orientation, degrees=True).as_quat()
+        pxr_utils.setOrient(
+            wheel_prim, Gf.Quatd(q_xyzw[3], Gf.Vec3d([q_xyzw[0], q_xyzw[1], q_xyzw[2]]))
+        )
+        if self.steering is not None:
+            self.steering.build(stage, joint_path + "_steering", body_path)
+        self.suspension.build()
 
 
 @dataclass

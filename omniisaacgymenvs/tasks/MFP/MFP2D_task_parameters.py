@@ -130,7 +130,6 @@ class GoThroughXYParameters:
 
     def __post_init__(self) -> None:
         assert self.position_tolerance > 0, "Position tolerance must be positive."
-        assert self.heading_tolerance > 0, "Heading tolerance must be positive."
         assert (
             self.linear_velocity_tolerance > 0
         ), "Velocity tolerance must be positive."
@@ -185,7 +184,6 @@ class GoThroughXYSequenceParameters:
 
     def __post_init__(self) -> None:
         assert self.position_tolerance > 0, "Position tolerance must be positive."
-        assert self.heading_tolerance > 0, "Heading tolerance must be positive."
         assert (
             self.linear_velocity_tolerance > 0
         ), "Velocity tolerance must be positive."

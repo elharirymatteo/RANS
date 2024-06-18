@@ -11,7 +11,7 @@ if __name__ == "__main__":
     import omni
 
     from omniisaacgymenvs.robots.articulations.AGV_skidsteer_2W import (
-        AGV_SS_2W,
+        AGV_SkidSteer_2W,
         AGVSkidsteer2WParameters,
     )
 
@@ -26,6 +26,15 @@ if __name__ == "__main__":
 
     # Kobuki's Turtlebot 2
     Turtlebot2 = {
+        "actuators": {
+            "dynamics": {
+                "name": "first_order",
+                "time_constant": 0.05,
+            },
+            "limits": {
+                "limits": (-17, 17)
+            },
+        },
         "shape": {
             "name": "Cylinder",
             "radius": 0.354 / 2,
@@ -116,10 +125,19 @@ if __name__ == "__main__":
         },
     }
 
-    AGV_SS_2W("/Turtlebot2", cfg={"system": Turtlebot2}, translation=[0, 0, 0.3])
+    AGV_SkidSteer_2W("/Turtlebot2", cfg=Turtlebot2, translation=[0, 0, 0.3])
 
     # Kobuki's Turtlebot 2
     Turtlebot2_caster = {
+        "actuators": {
+            "dynamics": {
+                "name": "first_order",
+                "time_constant": 0.05,
+            },
+            "limits": {
+                "limits": (-17, 17)
+            },
+        },
         "shape": {
             "name": "Cylinder",
             "radius": 0.354 / 2,
@@ -270,11 +288,7 @@ if __name__ == "__main__":
         },
     }
 
-    AGV_SS_2W(
-        "/Turtlebot2_Caster",
-        cfg={"system": Turtlebot2_caster},
-        translation=[1.0, 0, 0.3],
-    )
+    AGV_SkidSteer_2W("/Turtlebot2_Caster", cfg=Turtlebot2_caster, translation=[1.0, 0, 0.3])
 
     world.reset()
     for i in range(100):
