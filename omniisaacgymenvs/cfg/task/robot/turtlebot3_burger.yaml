@@ -1,0 +1,75 @@
+actuators:
+  dynamics:
+    name: first_order
+    time_constant: 0.1
+  limits:
+    limits: [-6.0, 6.0]
+shape:
+  name: Cylinder
+  radius: 0.080
+  height: 0.180
+  has_collider: True
+  is_rigid: True
+  refinement: 2
+mass: 1.0
+CoM: [0.0, 0.0, -0.090]
+left_wheel:
+  wheel:
+    visual_shape:
+      name: Cylinder
+      radius: 0.033
+      height: 0.04
+      has_collider: False
+      is_rigid: False
+      refinement: 2
+    collider_shape:
+      name: Capsule
+      radius: 0.033
+      height: 0.04
+      has_collider: True
+      is_rigid: True
+      refinement: 2
+    mass: 0.05
+  actuator:
+    name: RevoluteJoint
+    axis: Z
+    enable_drive: True
+    damping: 10000000000.0
+    stiffness: 0.0
+  offset: [-0.03, -0.08, -0.080]
+  orientation: [-90, 0, 0]
+right_wheel:
+  wheel:
+    visual_shape:
+      name: Cylinder
+      radius: 0.033
+      height: 0.04
+      has_collider: False
+      is_rigid: False
+      refinement: 2
+    collider_shape:
+      name: Capsule
+      radius: 0.033
+      height: 0.04
+      has_collider: True
+      is_rigid: True
+      refinement: 2
+    mass: 0.05
+  actuator:
+    name: RevoluteJoint
+    axis: Z
+    enable_drive: True
+    damping: 10000000000.0
+    stiffness: 0.0
+  offset: [-0.03, 0.08, -0.080]
+  orientation: [-90, 0, 0]
+passive_wheels:
+  - name: ZeroFrictionSphere
+    radius: 0.033
+    offset: [0.03, 0.0, -0.080]
+wheel_physics_material:
+  static_friction: 0.9
+  dynamic_friction: 0.7
+  restitution: 0.5
+  friction_combine_mode: average
+  restitution_combine_mode: average

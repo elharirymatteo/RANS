@@ -10,60 +10,53 @@ __status__ = "development"
 
 from omni.isaac.core.robots.robot import Robot
 from dataclasses import dataclass, field
+from pxr import Gf, PhysxSchema
 from typing import Optional
 import numpy as np
-from pxr import Gf
-import torch
 import omni
-import carb
-import math
-import os
 
 from omniisaacgymenvs.robots.articulations.utils.MFP_utils import *
-from omniisaacgymenvs.tasks.MFP.MFP2D_thruster_generator import (
-    compute_actions,
-)
-from omniisaacgymenvs.tasks.MFP.MFP2D_thruster_generator import (
-    ConfigurationParameters,
-)
 
 from omniisaacgymenvs.robots.sensors.exteroceptive.camera_module_generator import (
     sensor_module_factory,
 )
 
 from omniisaacgymenvs.robots.articulations.utils.Types import (
-    Sphere,
     DirectDriveWheel,
     GeometricPrimitive,
     PhysicsMaterial,
+    ActuatorCfg,
     GeometricPrimitiveFactory,
     PassiveWheelFactory,
 )
 
 
 @dataclass
-class SkidSteerParameters:
+class AGVSkidsteer2WParameters:
+    actuators: ActuatorCfg = field(default_factory=dict)
     shape: GeometricPrimitive = field(default_factory=dict)
-    front_left_wheel: DirectDriveWheel = field(default_factory=dict)
-    front_right_wheel: DirectDriveWheel = field(default_factory=dict)
-    rear_left_wheel: DirectDriveWheel = field(default_factory=dict)
-    rear_right_wheel: DirectDriveWheel = field(default_factory=dict)
+    left_wheel: DirectDriveWheel = field(default_factory=dict)
+    right_wheel: DirectDriveWheel = field(default_factory=dict)
     passive_wheels: list = field(default_factory=list)
+    wheel_physics_material: PhysicsMaterial = field(default_factory=dict)
 
     mass: float = 5.0
     CoM: tuple = (0, 0, 0)
 
     def __post_init__(self):
         self.shape = GeometricPrimitiveFactory.get_item(self.shape)
-        self.front_left_wheel = DirectDriveWheel(**self.front_left_wheel)
-        self.front_right_wheel = DirectDriveWheel(**self.front_right_wheel)
-        self.rear_left_wheel = DirectDriveWheel(**self.rear_left_wheel)
-        self.rear_right_wheel = DirectDriveWheel(**self.rear_right_wheel)
+        self.actuators = ActuatorCfg(**self.actuators)
+        self.left_wheel = DirectDriveWheel(**self.left_wheel)
+        self.right_wheel = DirectDriveWheel(**self.right_wheel)
+        self.passive_wheels = [
+            PassiveWheelFactory.get_item(wheel) for wheel in self.passive_wheels
+        ]
+        self.wheel_physics_material = PhysicsMaterial(**self.wheel_physics_material)
 
 
-class CreateAMR4WheelsSkidSteer:
+class CreateAGVSkidsteer2W:
     """
-    Creates a 2 wheeled SkidSteer robot."""
+    Creates a 2 wheeled Skidsteer robot."""
 
     def __init__(self, path: str, cfg: dict) -> None:
         self.platform_path = path
@@ -73,7 +66,7 @@ class CreateAMR4WheelsSkidSteer:
         self.stage = omni.usd.get_context().get_stage()
 
         # Reads the thruster configuration and computes the number of virtual thrusters.
-        self.settings = SkidSteerParameters(**cfg["system"])
+        self.settings = AGVSkidsteer2WParameters(**cfg)
         self.camera_cfg = cfg.get("camera", None)
 
     def build(self) -> None:
@@ -107,7 +100,7 @@ class CreateAMR4WheelsSkidSteer:
         self.core_path, self.core_prim = self.settings.shape.build(
             self.stage, self.platform_path + "/core"
         )
-        applyMass(self.core_prim, self.settings.mass, Gf.Vec3d(0, 0, 0))
+        applyMass(self.core_prim, self.settings.mass, Gf.Vec3d(*self.settings.CoM))
         if self.camera_cfg is not None:
             self.createCamera()
         else:
@@ -123,45 +116,29 @@ class CreateAMR4WheelsSkidSteer:
         Creates the wheels of the AMR.
         """
 
-        # Creates the front left wheel
-        front_left_wheel_path, front_left_wheel_prim = (
-            self.settings.front_left_wheel.build(
-                self.stage,
-                joint_path=self.joints_path + "/front_left_wheel",
-                wheel_path=self.platform_path + "/front_left_wheel",
-                body_path=self.core_path,
-            )
+        # Creates the left wheel
+        left_wheel_path, left_wheel_prim = self.settings.left_wheel.build(
+            self.stage,
+            joint_path=self.joints_path + "/left_wheel",
+            wheel_path=self.platform_path + "/left_wheel",
+            body_path=self.core_path,
         )
 
-        # Creates the front right wheel
-        front_right_wheel_path, front_right_wheel_prim = (
-            self.settings.front_right_wheel.build(
-                self.stage,
-                joint_path=self.joints_path + "/front_right_wheel",
-                wheel_path=self.platform_path + "/front_right_wheel",
-                body_path=self.core_path,
-            )
+        # Creates the right wheel
+        right_wheel_path, right_wheel_prim = self.settings.right_wheel.build(
+            self.stage,
+            joint_path=self.joints_path + "/right_wheel",
+            wheel_path=self.platform_path + "/right_wheel",
+            body_path=self.core_path,
         )
 
-        # Creates the rear left wheel
-        rear_left_wheel_path, rear_left_wheel_prim = (
-            self.settings.rear_left_wheel.build(
-                self.stage,
-                joint_path=self.joints_path + "/rear_left_wheel",
-                wheel_path=self.platform_path + "/rear_left_wheel",
-                body_path=self.core_path,
-            )
+        self.settings.wheel_physics_material.build(
+            self.stage, self.materials_path + "/wheel_material"
         )
 
-        # Creates the rear right wheel
-        rear_right_wheel_path, rear_right_wheel_prim = (
-            self.settings.rear_right_wheel.build(
-                self.stage,
-                joint_path=self.joints_path + "/rear_right_wheel",
-                wheel_path=self.platform_path + "/rear_right_wheel",
-                body_path=self.core_path,
-            )
-        )
+        mat = UsdShade.Material.Get(self.stage, self.materials_path + "/wheel_material")
+        applyMaterial(left_wheel_prim, mat, purpose="physics")
+        applyMaterial(right_wheel_prim, mat, purpose="physics")
 
     def createPassiveWheels(self) -> None:
         """
@@ -214,12 +191,12 @@ class CreateAMR4WheelsSkidSteer:
         self.camera.build()
 
 
-class AMR_4W_SS(Robot):
+class AGV_SkidSteer_2W(Robot):
     def __init__(
         self,
         prim_path: str,
         cfg: dict,
-        name: Optional[str] = "AMR_2W_SS",
+        name: Optional[str] = "AGV_SS_2W",
         usd_path: Optional[str] = None,
         translation: Optional[np.ndarray] = None,
         orientation: Optional[np.ndarray] = None,
@@ -230,8 +207,9 @@ class AMR_4W_SS(Robot):
         self._usd_path = usd_path
         self._name = name
 
-        AMR = CreateAMR4WheelsSkidSteer(prim_path, cfg)
+        AMR = CreateAGVSkidsteer2W(prim_path, cfg)
         AMR.build()
+        self._settings = AMR.settings
 
         super().__init__(
             prim_path=prim_path,
@@ -240,3 +218,6 @@ class AMR_4W_SS(Robot):
             orientation=orientation,
             scale=scale,
         )
+        stage = omni.usd.get_context().get_stage()
+        art = PhysxSchema.PhysxArticulationAPI.Apply(stage.GetPrimAtPath(prim_path))
+        art.CreateEnabledSelfCollisionsAttr().Set(False)
