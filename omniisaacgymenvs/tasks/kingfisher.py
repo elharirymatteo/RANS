@@ -502,7 +502,6 @@ class ASVVirtual(RLTask):
         )
         # Hydrodynamic forces
         self.drag[:, :] = self.hydrodynamics.ComputeHydrodynamicsEffects(
-            0.01, #TODO: Debug this. Not being used
             self.root_quats,
             self.root_velocities[:, :],
         )

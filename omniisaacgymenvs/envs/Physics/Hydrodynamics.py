@@ -31,8 +31,7 @@ class Hydrodynamics:
         self._linear_rand = torch.tensor(
             [
                 dr_params["u_linear_rand"] * self.linear_damping[0],
-                dr_params["v_linear_rand"] *
-                  self.linear_damping[1],
+                dr_params["v_linear_rand"] * self.linear_damping[1],
                 dr_params["w_linear_rand"] * self.linear_damping[2],
                 dr_params["p_linear_rand"] * self.linear_damping[3],
                 dr_params["q_linear_rand"] * self.linear_damping[4],
@@ -153,7 +152,7 @@ class Hydrodynamics:
         return damping_matrix
 
     def ComputeHydrodynamicsEffects(
-        self, time, quaternions, world_vel
+        self, quaternions, world_vel
     ):
         rot_mat = quaternion_to_matrix(quaternions)
         rot_mat_inv = rot_mat.mT
