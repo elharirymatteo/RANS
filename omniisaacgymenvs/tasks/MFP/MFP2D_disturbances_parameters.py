@@ -108,6 +108,19 @@ class NoisyActionsParameters:
     def __post_init__(self):
         self.action_curriculum = CurriculumParameters(**self.action_curriculum)
 
+@dataclass
+class NoisyImagesParameters:
+    """
+    This class provides an interface to adjust the hyperparameters of the action noise.
+    """
+
+    image_curriculum: CurriculumParameters = field(default_factory=dict)
+    enable: bool = False
+    modality: bool = "rgb"
+
+    def __post_init__(self):
+        self.image_curriculum = CurriculumParameters(**self.image_curriculum)
+
 
 @dataclass
 class DisturbancesParameters:
@@ -122,6 +135,8 @@ class DisturbancesParameters:
     torque_disturbance: TorqueDisturbanceParameters = field(default_factory=dict)
     observations_disturbance: NoisyObservationsParameters = field(default_factory=dict)
     actions_disturbance: NoisyActionsParameters = field(default_factory=dict)
+    rgb_disturbance: NoisyImagesParameters = field(default_factory=dict)
+    depth_disturbance: NoisyImagesParameters = field(default_factory=dict)
 
     def __post_init__(self):
         self.mass_disturbance = MassDistributionDisturbanceParameters(
@@ -133,3 +148,5 @@ class DisturbancesParameters:
             **self.observations_disturbance
         )
         self.actions_disturbance = NoisyActionsParameters(**self.actions_disturbance)
+        self.rgb_disturbance = NoisyImagesParameters(**self.rgb_disturbance)
+        self.depth_disturbance = NoisyImagesParameters(**self.depth_disturbance)

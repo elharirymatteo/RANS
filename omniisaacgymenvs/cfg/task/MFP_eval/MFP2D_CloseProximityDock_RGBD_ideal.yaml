@@ -1,8 +1,8 @@
 # used to create the object
-name: MFP2DVirtual_Dock
+name: MFP2DVirtual_Dock_RGBD
 
 physics_engine: ${..physics_engine}
-experiment: MFP2D_Virtual_CloseProximityDock
+experiment: MFP2D_Virtual_CloseProximityDock_RGBD
 enable_wandb_log: ${..wandb_activate}
 
 fp_path: /World/envs/env_0/Modular_floating_platform
@@ -29,7 +29,7 @@ env:
 
   disturbances:
     force_disturbance:
-      enable: True
+      enable: False
       use_sinusoidal_patterns: False
       min_freq: 0.25
       max_freq: 3
@@ -50,7 +50,7 @@ env:
           min_value: 0.0
           max_value: 0.5
     torque_disturbance:
-      enable: True
+      enable: False
       use_sinusoidal_patterns: False
       min_freq: 0.25
       max_freq: 3
@@ -71,9 +71,9 @@ env:
           min_value: -0.1
           max_value: 0.1
     observations_disturbance:
-      enable_position_noise: True
-      enable_velocity_noise: True
-      enable_orientation_noise: True
+      enable_position_noise: False
+      enable_velocity_noise: False
+      enable_orientation_noise: False
       position_curriculum:
         rate_parameters:
           function: sigmoid
@@ -117,7 +117,7 @@ env:
           min_value: -0.025
           max_value: 0.025
     actions_disturbance:
-      enable: True
+      enable: False
       action_curriculum:
         rate_parameters:
           function: sigmoid
@@ -162,40 +162,6 @@ env:
           end_std: 0.25
           min_value: 0.0
           max_value: 0.25
-    rgb_disturbance:
-      enable: True
-      modality: rgb
-      image_curriculum:
-        rate_parameters:
-          function: sigmoid
-          start: 250
-          end: 1250
-          extent: 4.5
-        sampling_parameters:
-          distribution: truncated_normal
-          start_mean: 0.0
-          start_std: 0.1
-          end_mean: 0.0
-          end_std: 0.1
-          min_value: -0.05
-          max_value: 0.05
-    depth_disturbance:
-      enable: True
-      modality: depth
-      image_curriculum:
-        rate_parameters:
-          function: sigmoid
-          start: 250
-          end: 1250
-          extent: 4.5
-        sampling_parameters:
-          distribution: truncated_normal
-          start_mean: 0.0
-          start_std: 0.1
-          end_mean: 0.0
-          end_std: 0.1
-          min_value: -0.05
-          max_value: 0.05
 
   task_parameters:
     name: CloseProximityDock
@@ -203,8 +169,10 @@ env:
     heading_tolerance: 0.02
     kill_after_n_steps_in_tolerance: 50 # 10seconds
     kill_dist: 5.0
+    collision_force_tolerance: 0.1
     dock_footprint_diameter: 0.80
-    goal_to_penalty_anchor_dist: -2.0 # offset from goal position to penalty anchor
+    goal_to_penalty_anchor_dist: 0.2 # offset from goal position to penalty anchor
+    kill_relative_angle: 2.094 #2pi/3
     relative_angle_penalty:
       enable: True
       weight: 0.5
@@ -227,9 +195,9 @@ env:
         function: none
       sampling_parameters:
         distribution: normal
-        start_mean: 0.66 # 0.62 + 0.04 (2cm margin)
+        start_mean: 0.64 # 0.62 + 0.02 (1cm margin)
         start_std: 1e-5
-        end_mean: 0.66 # 0.62 + 0.04 (2cm margin)
+        end_mean: 0.64 # 0.62 + 0.02 (1cm margin)
         end_std: 1e-5
     spawn_dock_mass_curriculum:
       rate_parameters:
@@ -248,9 +216,9 @@ env:
         extent: 4.5
       sampling_parameters:
         distribution: normal
-        start_mean: 0.5
+        start_mean: 0.0
         start_std: 0.001
-        end_mean: 0.5
+        end_mean: 0.0
         end_std: 0.001
     spawn_position_curriculum:
       rate_parameters:
@@ -260,9 +228,9 @@ env:
         extent: 4.5
       sampling_parameters:
         distribution: normal
-        start_mean: 1.3
+        start_mean: 2.0
         start_std: 0.05
-        end_mean: 1.3
+        end_mean: 2.0
         end_std: 0.05
     spawn_relative_angle_curriculum:
       rate_parameters:
@@ -273,9 +241,9 @@ env:
       sampling_parameters:
         distribution: normal
         start_mean: 0.0
-        start_std: 1.047 #pi/3
+        start_std: 2.0943 #2pi/3
         end_mean: 0.0
-        end_std: 1.047 #pi/3
+        end_std: 2.0943 #2pi/3
     spawn_heading_curriculum:
       rate_parameters:
         function: sigmoid
@@ -362,6 +330,7 @@ env:
       max_thruster_kill: 2
     core:
       mass: 5.32
+      # mass: 10.92
       CoM: [0,0,0]
       radius: 0.31
       shape: "sphere"
@@ -404,7 +373,7 @@ env:
   
   dock:
     usd_path: robots/usd/docking_station.usd
-    mass: 5.32
+    mass: 100.0
     show_axis: False
     enable_collision: True
 
@@ -441,10 +410,10 @@ sim:
     gpu_max_rigid_contact_count: 524288
     gpu_max_rigid_patch_count: 81920
     # gpu_found_lost_pairs_capacity: 1024
-    gpu_found_lost_pairs_capacity: 8192
+    gpu_found_lost_pairs_capacity: 7200
     gpu_found_lost_aggregate_pairs_capacity: 262144
     # gpu_total_aggregate_pairs_capacity: 1024
-    gpu_total_aggregate_pairs_capacity: 8192
+    gpu_total_aggregate_pairs_capacity: 20000
     gpu_max_soft_body_contacts: 1048576
     gpu_max_particle_contacts: 1048576
     gpu_heap_capacity: 67108864

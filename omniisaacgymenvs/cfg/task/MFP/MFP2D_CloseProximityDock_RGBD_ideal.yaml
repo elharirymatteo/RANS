@@ -1,8 +1,8 @@
 # used to create the object
-name: MFP2DVirtual_Dock
+name: MFP2DVirtual_Dock_RGBD
 
 physics_engine: ${..physics_engine}
-experiment: MFP2D_Virtual_CloseProximityDock
+experiment: MFP2D_Virtual_CloseProximityDock_RGBD
 enable_wandb_log: ${..wandb_activate}
 
 fp_path: /World/envs/env_0/Modular_floating_platform
@@ -11,7 +11,7 @@ lab_usd_path: robots/usd/zero_g_lab.usd
 
 # if given, will override the device setting in gym. 
 env:
-  numEnvs: ${resolve_default:64,${...num_envs}}
+  numEnvs: ${resolve_default:24,${...num_envs}}
   envSpacing: 12
   maxEpisodeLength: 450
   enableDebugVis: False
@@ -19,7 +19,7 @@ env:
   numQuantizedActions: 1
   horizon_length: ${...train.params.config.horizon_length}
 
-  controlFrequencyInv: 5
+  controlFrequencyInv: 10
 
   clipObservations: {state: 8.0}
   clipActions: 1.0
@@ -169,9 +169,8 @@ env:
     heading_tolerance: 0.02
     kill_after_n_steps_in_tolerance: 50 # 10seconds
     kill_dist: 5.0
-    collision_force_tolerance: 0.1 #0.1N
     dock_footprint_diameter: 0.80
-    goal_to_penalty_anchor_dist: -2.0 # offset from goal position to penalty anchor
+    goal_to_penalty_anchor_dist: -4.0 # offset from goal position to penalty anchor
     relative_angle_penalty:
       enable: True
       weight: 0.5
@@ -182,6 +181,15 @@ env:
         function: linear
         start: 25
         end: 200
+    contact_penalty:
+      enable: True
+      weight: 20.0
+      scaling_function: constant
+      scaling_parameter: 1.0
+      min_value: 0.01
+      max_value: 1000.0
+      kill_on_contact: True
+      kill_threshold: 0.1
     fp_footprint_diameter_curriculum:
       rate_parameters:
         function: sigmoid
@@ -226,9 +234,9 @@ env:
         extent: 4.5
       sampling_parameters:
         distribution: normal
-        start_mean: 0.6
+        start_mean: 0.3
         start_std: 0.05
-        end_mean: 2.0
+        end_mean: 1.5
         end_std: 0.05
     spawn_relative_angle_curriculum:
       rate_parameters:
@@ -277,11 +285,10 @@ env:
     name: CloseProximityDock
     position_reward_mode: exponential
     heading_reward_mode: exponential
-    position_exponential_reward_coeff: 0.25
+    position_exponential_reward_coeff: 0.50
     heading_exponential_reward_coeff: 0.25
     position_scale: 0.666
     heading_scale: 0.333
-    collision_scale: 100.0
   
   penalties_parameters:
     energy_penalty:
@@ -329,6 +336,7 @@ env:
       max_thruster_kill: 2
     core:
       mass: 5.32
+      # mass: 10.92
       CoM: [0,0,0]
       radius: 0.31
       shape: "sphere"
@@ -341,6 +349,35 @@ env:
       thrust_force: 1.0
       visualize: False
       save_path: "config.png"
+    camera:
+      module_name: "D455"
+      root_prim:
+        prim_path: "${.....fp_path}/core/body/${..module_name}"
+        translation: [0.3, 0, 0] #camera root translation relative to FP body [x, y, z]
+        rotation: [0, 0, -90] #camera root orientation relative to FP body [roll, pitch, yaw]
+      sensor_base:
+        prim_name: "camera_link"
+        usd_path: "robots/usd/${..module_name}.usd"
+      links: [
+        ["camera_color_frame", [0.011, 0, 0, 0, 0, 0]], 
+        ["camera_color_optical_frame", [0.011, 0, 0, -90, 0, 0]],
+      ]
+      camera_sensor:
+        prim_path: "${..root_prim.prim_path}/camera_color_optical_frame/Camera"
+        rotation: [180, 0, 0] # optical frame to camera prim rotation (due to the fact that OV assumes OpenGL convention)
+        params:
+          focalLength: 1.93
+          focusDistance: 20.0
+          clippingRange: [0.01, 20.0]
+          horizontalAperture: 3.60
+          verticalAperture: 2.70
+  sensors:
+    RLCamera:
+      prim_path: "${...platform.camera.camera_sensor.prim_path}"
+      resolution: [150, 100] # [width, height]
+      is_override: False
+    save_to_log: True
+    save_frequency: 1000
   
   dock:
     usd_path: robots/usd/docking_station.usd
@@ -353,14 +390,14 @@ sim:
   use_gpu_pipeline: ${eq:${...pipeline},"gpu"}
   gravity: [0.0, 0.0, 0.0]
   add_ground_plane: False
-  add_lab: False
-  add_distant_light: False
+  add_lab: True
+  add_distant_light: True
   use_fabric: True
   enable_scene_query_support: False
   disable_contact_processing: False
 
   # set to True if you use camera sensors in the environment
-  enable_cameras: False
+  enable_cameras: True
 
   physx:
     worker_thread_count: ${....num_threads}

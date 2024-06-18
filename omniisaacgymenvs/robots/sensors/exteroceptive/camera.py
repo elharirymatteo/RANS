@@ -8,14 +8,24 @@ __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
+from omniisaacgymenvs.robots.sensors.exteroceptive.camera_interface import camera_interface_factory
 from typing import List
 from dataclasses import dataclass, field
-import omni.replicator.core as rep
-from omni.isaac.core.utils.prims import get_prim_at_path
 from omni.isaac.core.utils.stage import get_current_stage
 from pxr import Gf
 
-from omniisaacgymenvs.robots.sensors.exteroceptive.camera_interface import camera_interface_factory
+import carb
+
+## Replicator hack
+carb_settings = carb.settings.get_settings()
+carb_settings.set_bool(
+    "rtx/raytracing/cached/enabled", 
+    False,
+)
+carb_settings.set_int(
+    "rtx/descriptorSets", 
+    8192,
+)
 
 @dataclass
 class CameraCalibrationParam:
@@ -58,23 +68,25 @@ class RLCamera:
     RLCamera is a sensor that can be used in RL tasks.
     It uses replicator to record synthetic (mostly images) data.
     """
-    def __init__(self, sensor_cfg:dict)->None:
+    def __init__(self, sensor_cfg:dict, rep:object)->None:
         """
         Args:
             sensor_cfg (dict): configuration for the sensor with the following key, value
                 prim_path (str): path to the prim that the sensor is attached to
                 sensor_param (dict): parameters for the sensor
                 override_param (bool): if True, the sensor parameters will be overriden
+            rep (object): omni.replicator.core object
         """
         self.sensor_cfg = RLCameraParams(**sensor_cfg)
         self.prim_path = self.sensor_cfg.prim_path
         self.is_override = self.sensor_cfg.is_override
+        self.rep = rep
 
         if self.is_override:
             assert "params" in sensor_cfg.keys(), "params must be provided if override is True."
             self.override_params(get_current_stage(), self.prim_path, self.sensor_cfg.params)
         
-        self.render_product = rep.create.render_product(
+        self.render_product = self.rep.create.render_product(
             self.prim_path, 
             resolution=[*self.sensor_cfg.resolution])
         self.annotators = {}
@@ -101,19 +113,19 @@ class RLCamera:
         """
         Enable RGB as a RL observation
         """
-        rgb_annot = rep.AnnotatorRegistry.get_annotator("rgb")
+        rgb_annot = self.rep.AnnotatorRegistry.get_annotator("rgb")
         rgb_annot.attach([self.render_product])
         self.annotators.update({"rgb":rgb_annot})
-        self.camera_interfaces.update({"rgb":camera_interface_factory.get("RGBInterface")(add_noise=False)})
+        self.camera_interfaces.update({"rgb":camera_interface_factory.get("RGBInterface")()})
     
     def enable_depth(self) -> None:
         """
         Enable depth as a RL observation
         """
-        depth_annot = rep.AnnotatorRegistry.get_annotator("distance_to_image_plane")
+        depth_annot = self.rep.AnnotatorRegistry.get_annotator("distance_to_image_plane")
         depth_annot.attach([self.render_product])
         self.annotators.update({"depth":depth_annot})
-        self.camera_interfaces.update({"depth":camera_interface_factory.get("DepthInterface")(add_noise=False)})
+        self.camera_interfaces.update({"depth":camera_interface_factory.get("DepthInterface")()})
     
     def get_observation(self) -> dict:
         """
