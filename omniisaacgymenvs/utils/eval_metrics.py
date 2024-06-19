@@ -99,16 +99,20 @@ def print_success(
         )
 
 
-def get_GoToPose_success_rate_new(
-    ep_data: dict, threshold: float = 0.02, print_intermediate: bool = False
+def get_GoToPose_success_rate(
+    ep_data: dict, print_intermediate: bool = False
 ) -> dict:
-    """Compute the success rate from the distances to the target.
+    """Compute the success rate from the distances to the target. 
 
     Args:
         distances (np.ndarray): Array of distances to the target for N episodes.
         precision (float): Distance at which the target is considered reached.
+        p005, p002, p001 (float): (5, 2, 1) cm precision, for position.
+        h005, h002, h001 (float): (5, 2, 1) degrees precision, for heading.
+        PT, OT (float): Position and orientation time spent under the precision.
     Returns:
-        float: Success rate."""
+        success_rate_df (pd.DataFrame): Success rate for each experiment, using the metrics above.
+    """
 
     distances = np.linalg.norm(ep_data["obs"][:, :, 6:8], axis=2)
     dist = distances
@@ -147,42 +151,152 @@ def get_GoToPose_success_rate_new(
     return {"pose": success_rate_df}
 
 
-def get_GoToXY_success_rate(
-    ep_data: dict, threshold: float = 0.02, print_intermediate: bool = False
-) -> dict:
-    """Compute the success rate from the distances to the target.
+def get_TrackXYVelocity_success_rate(ep_data: dict, print_intermediate: bool = False) -> dict:
+    """Compute the success rate from the velocity errors.
 
     Args:
-        distances (np.ndarray): Array of distances to the target for N episodes.
-        precision (float): Distance at which the target is considered reached.
+        ep_data (dict): Dictionary containing episode data with keys "obs".
+        print_intermediate (bool): Whether to print intermediate results.
+        
     Returns:
-        float: Success rate."""
-
-    distances = np.linalg.norm(ep_data["obs"][:, :, 6:8], axis=2)
-    (
-        less_than_margin_df,
-        first_less_than_thr_idxs,
-        first_less_than_thr2_idxs,
-    ) = build_distance_dataframe(distances, threshold)
-    success_rate_thr, success_rate_thr2, success_and_stay_rate = check_stay(
-        less_than_margin_df, first_less_than_thr_idxs, first_less_than_thr2_idxs
-    )
-    print_success(
-        success_rate_thr,
-        success_rate_thr2,
-        success_and_stay_rate,
-        threshold,
-        print_intermediate,
-    )
+        success_rate_df (pd.DataFrame): Success rate for each experiment, using the metrics above.
+    """
+    
+    # Extract velocity errors from the episode data
+    velocity_errors = np.linalg.norm(ep_data["obs"][:, :, 6:8], axis=2)
+    
+    # Calculate the percentage of time the velocity error is below the thresholds
+    avg_ve1 = np.mean(velocity_errors < 0.1)
+    avg_ve05 = np.mean(velocity_errors < 0.05)
+    avg_ve02 = np.mean(velocity_errors < 0.02)
+    
+    if print_intermediate:
+        print(
+            "percentage of time velocity error is under (10cm/s, 5cm/s, 2cm/s):",
+            avg_ve1 * 100,
+            avg_ve05 * 100,
+            avg_ve02 * 100,
+        )
     success_rate_df = pd.DataFrame(
         {
-            f"success_rate_{threshold}_m": [success_rate_thr],
-            f"success_rate_{threshold/2}_m": [success_rate_thr2],
-            f"success_and_stay_within_{threshold*7.5}_m": [success_and_stay_rate * 100],
+            "VE1": [avg_ve1],
+            "VE05": [avg_ve05],
+            "VE02": [avg_ve02],
         }
     )
+    return {"velocity_tracking": success_rate_df}
 
-    return {"position": success_rate_df}
+def get_GoThroughPoseSequence_success_rate(ep_data: dict, print_intermediate: bool = False) -> dict:
+    """Compute the success rate from the position and orientation errors.
+
+    Args:
+        ep_data (dict): Dictionary containing episode data with keys "obs".
+        print_intermediate (bool): Whether to print intermediate results.
+        
+    Returns:
+        success_rate_df (pd.DataFrame): Success rate for each experiment, using the metrics above.
+    """
+    
+    # Extract position and orientation errors from the episode data
+    position_errors = np.linalg.norm(ep_data["obs"][:, :, 6:8], axis=2)
+    orientation_errors = np.abs(np.arctan2(ep_data["obs"][:, :, -1], ep_data["obs"][:, :, -2]))
+    
+    # Calculate the percentage of time the position error is below the thresholds
+    avg_p1 = np.mean(position_errors < 0.1)
+    avg_p05 = np.mean(position_errors < 0.05)
+    avg_p02 = np.mean(position_errors < 0.02)
+    
+    # Calculate the percentage of time the orientation error is below the thresholds
+    avg_o5 = np.mean(orientation_errors < np.pi * 5 / 180)
+    avg_o2 = np.mean(orientation_errors < np.pi * 2 / 180)
+    avg_o1 = np.mean(orientation_errors < np.pi * 1 / 180)
+    
+    if print_intermediate:
+        print(
+            "percentage of time position error is under (10cm, 5cm, 2cm):",
+            avg_p1 * 100,
+            avg_p05 * 100,
+            avg_p02 * 100,
+        )
+        print(
+            "percentage of time orientation error is under (5deg, 2deg, 1deg):",
+            avg_o5 * 100,
+            avg_o2 * 100,
+            avg_o1 * 100,
+        )
+    
+    success_rate_df = pd.DataFrame(
+        {
+            "P1": [avg_p1],
+            "P05": [avg_p05],
+            "P02": [avg_p02],
+            "O5": [avg_o5],
+            "O2": [avg_o2],
+            "O1": [avg_o1],
+        }
+    )
+    
+    return {"trajectory_tracking": success_rate_df}
+
+# Example usage
+ep_data_example = {
+    "act": [], 
+    "obs": np.random.rand(10, 20, 8),  # Random example data
+    "rews": []
+}
+
+result = get_GoThroughPoseSequence_success_rate(ep_data_example, print_intermediate=True)
+print(result)
+
+
+
+def get_GoToXY_success_rate(ep_data: dict, print_intermediate: bool = False) -> dict:
+    """Compute the success rate from the position errors.
+
+    Args:
+        ep_data (dict): Dictionary containing episode data with keys "obs".
+        print_intermediate (bool): Whether to print intermediate results.
+        
+    Returns:
+        success_rate_df (pd.DataFrame): Success rate for each experiment, using the metrics above.
+    """
+    
+    # Extract position errors from the episode data
+    position_errors = np.linalg.norm(ep_data["obs"][:, :, 6:8], axis=2)
+    
+    # Calculate the percentage of time the position error is below the thresholds
+    avg_p1 = np.mean(position_errors < 0.1)
+    avg_p05 = np.mean(position_errors < 0.05)
+    avg_p02 = np.mean(position_errors < 0.02)
+    
+    if print_intermediate:
+        print(
+            "percentage of time position error is under (10cm, 5cm, 2cm):",
+            avg_p1 * 100,
+            avg_p05 * 100,
+            avg_p02 * 100,
+        )
+    
+    success_rate_df = pd.DataFrame(
+        {
+            "P1": [avg_p1],
+            "P05": [avg_p05],
+            "P02": [avg_p02],
+        }
+    )
+    
+    return {"position_control": success_rate_df}
+
+# Example usage
+ep_data_example = {
+    "act": [], 
+    "obs": np.random.rand(10, 20, 8),  # Random example data
+    "rews": []
+}
+
+result = get_GoToXY_success_rate(ep_data_example, print_intermediate=True)
+print(result)
+
 
 
 def get_GoToPose_results(
@@ -191,8 +305,7 @@ def get_GoToPose_results(
     heading_threshold: float = 0.087,
     print_intermediate: bool = False,
 ) -> None:
-    new_SR = get_GoToPose_success_rate_new(ep_data, print_intermediate=False)
-    old_SR = get_GoToPose_success_rate(ep_data, print_intermediate=False)
+    SR = get_GoToPose_success_rate(ep_data, print_intermediate=False)
     alv = compute_average_linear_velocity(ep_data)
     aav = compute_average_angular_velocity(ep_data)
     aac = compute_average_action_count(ep_data) / 8
@@ -271,21 +384,15 @@ def get_GoToPose_results(
 
     metrics = np.array(
         [
-            old_SR["position"]["success_rate_0.02_m"][0],  # PA1
-            old_SR["position"]["success_rate_0.01_m"][0],  # PA2
-            old_SR["position"]["success_and_stay_within_0.15_m"][0],  # PSA
-            old_SR["heading"]["success_rate_0.087_rad"][0],  # OA1
-            old_SR["heading"]["success_rate_0.0435_rad"][0],  # OA2
-            old_SR["heading"]["success_and_stay_within_0.6525_rad"][0],  # OSA
             alv,  # ALV
             aav,  # AAV
             aac,  # AAC
-            new_SR["pose"]["PT5"][0],  # PT5
-            new_SR["pose"]["PT2"][0],  # PT2
-            new_SR["pose"]["PT1"][0],  # PT1
-            new_SR["pose"]["OT5"][0],  # OT5
-            new_SR["pose"]["OT2"][0],  # OT2
-            new_SR["pose"]["OT1"][0],  # OT1
+            SR["pose"]["PT5"][0],  # PT5
+            SR["pose"]["PT2"][0],  # PT2
+            SR["pose"]["PT1"][0],  # PT1
+            SR["pose"]["OT5"][0],  # OT5
+            SR["pose"]["OT2"][0],  # OT2
+            SR["pose"]["OT1"][0],  # OT1
         ]
     )
 
@@ -301,80 +408,6 @@ def get_GoToPose_results(
     ):
         print(f"  + {metric}: {metrics[i]*mult:.2f}{unit}. {desc}.")
     return
-
-
-def get_GoToPose_success_rate(
-    ep_data: dict,
-    position_threshold: float = 0.02,
-    heading_threshold: float = 0.087,
-    print_intermediate: bool = False,
-) -> dict:
-    """Compute the success rate from the distances to the target.
-
-    Args:
-        distances (np.ndarray): Array of distances to the target for N episodes.
-        precision (float): Distance at which the target is considered reached.
-    Returns:
-        float: Success rate."""
-
-    position_distances = np.linalg.norm(ep_data["obs"][:, :, 6:8], axis=2)
-    heading_distances = np.abs(
-        np.arctan2(ep_data["obs"][:, :, 9], ep_data["obs"][:, :, 8])
-    )
-
-    (
-        less_than_margin_df,
-        first_less_than_thr_idxs,
-        first_less_than_thr2_idxs,
-    ) = build_distance_dataframe(position_distances, position_threshold)
-    success_rate_thr, success_rate_thr2, success_and_stay_rate = check_stay(
-        less_than_margin_df, first_less_than_thr_idxs, first_less_than_thr2_idxs
-    )
-    print_success(
-        success_rate_thr,
-        success_rate_thr2,
-        success_and_stay_rate,
-        position_threshold,
-        print_intermediate,
-    )
-
-    position_success_rate_df = pd.DataFrame(
-        {
-            f"success_rate_{position_threshold}_m": [success_rate_thr],
-            f"success_rate_{position_threshold/2}_m": [success_rate_thr2],
-            f"success_and_stay_within_{position_threshold*7.5}_m": [
-                success_and_stay_rate * 100
-            ],
-        }
-    )
-
-    (
-        less_than_margin_df,
-        first_less_than_thr_idxs,
-        first_less_than_thr2_idxs,
-    ) = build_distance_dataframe(heading_distances, heading_threshold)
-    success_rate_thr, success_rate_thr2, success_and_stay_rate = check_stay(
-        less_than_margin_df, first_less_than_thr_idxs, first_less_than_thr2_idxs
-    )
-    print_success(
-        success_rate_thr,
-        success_rate_thr2,
-        success_and_stay_rate,
-        heading_threshold,
-        print_intermediate,
-    )
-
-    heading_success_rate_df = pd.DataFrame(
-        {
-            f"success_rate_{heading_threshold}_rad": [success_rate_thr],
-            f"success_rate_{heading_threshold/2}_rad": [success_rate_thr2],
-            f"success_and_stay_within_{heading_threshold*7.5}_rad": [
-                success_and_stay_rate * 100
-            ],
-        }
-    )
-
-    return {"position": position_success_rate_df, "heading": heading_success_rate_df}
 
 
 def get_TrackXYVelocity_success_rate(
