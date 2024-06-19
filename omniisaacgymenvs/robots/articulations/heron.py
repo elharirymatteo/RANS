@@ -34,9 +34,8 @@ from omni.isaac.core.utils.nucleus import get_assets_root_path
 from omni.isaac.core.utils.stage import add_reference_to_stage
 
 import numpy as np
-import torch
 import carb
-
+import os
 
 class Heron(Robot):
     def __init__(
@@ -51,7 +50,9 @@ class Heron(Robot):
     ) -> None:
         """[summary]"""
 
-        self._usd_path = "/workspace/RANS/omniisaacgymenvs/robots/usd/heron.usd" #TODO: use nucleous or relative path
+        # get script execution path
+        script_path = os.path.join(os.getcwd())
+        self._usd_path = os.path.join(script_path,"robots/usd/heron.usd") #TODO: use nucleous or relative path
         self._name = name
 
         if self._usd_path is None:

@@ -1,0 +1,15 @@
+enable: False
+action_curriculum:
+  rate_parameters:
+    function: sigmoid
+    start: 250
+    end: 1250
+    extent: 4.5
+  sampling_parameters:
+    distribution: truncated_normal
+    start_mean: 0.0
+    start_std: 0.0001
+    end_mean: 0.0
+    end_std: 0.1
+    min_value: -0.05
+    max_value: 0.05

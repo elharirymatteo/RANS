@@ -1,0 +1,93 @@
+# used to create the object
+name: AGVSS2WVirtual
+
+physics_engine: ${..physics_engine}
+experiment: AGVSS2W_GoThroughPosition
+enable_wandb_log: ${..wandb_activate}
+
+defaults:
+  - robot: AGV_Turtlebot2_no_caster.yaml
+  - disturbances: disable_disturbances.yaml
+  - sub_task: GoThroughPosition.yaml
+  - reward: GoThroughPosition.yaml
+  - penalty: penalties.yaml
+  - _self_
+
+# Disable velocities at spawn for wheeled robots (Can topple them over)
+sub_task:
+  spawn_linear_velocity_curriculum:
+    rate_parameters:
+      function: "null"
+  spawn_angular_velocity_curriculum:
+    rate_parameters:
+      function: "null"
+
+# if given, will override the device setting in gym. 
+env:
+  numEnvs: ${resolve_default:64,${...num_envs}}
+  envSpacing: 12
+  maxEpisodeLength: 450
+  enableDebugVis: False
+  action_mode: Continuous
+  numQuantizedActions: 1
+  horizon_length: ${...train.params.config.horizon_length}
+
+  controlFrequencyInv: 3
+
+  clipObservations: {state: 8.0}
+  clipActions: 1.0
+
+sim:
+  dt: 0.03333
+  use_gpu_pipeline: ${eq:${...pipeline},"gpu"}
+  gravity: [0.0, 0.0, -9.81]
+  add_ground_plane: True
+  add_distant_light: False
+  use_fabric: True
+  enable_scene_query_support: False
+  disable_contact_processing: False
+
+  # set to True if you use camera sensors in the environment
+  enable_cameras: False
+
+  physx:
+    worker_thread_count: ${....num_threads}
+    solver_type: ${....solver_type}
+    use_gpu: ${eq:${....sim_device},"gpu"} # set to False to run on CPU
+    solver_position_iteration_count: 4
+    solver_velocity_iteration_count: 1
+    contact_offset: 0.02
+    rest_offset: 0.001
+    bounce_threshold_velocity: 0.2
+    friction_offset_threshold: 0.04
+    friction_correlation_distance: 0.025
+    enable_sleeping: True
+    enable_stabilization: False
+    max_depenetration_velocity: 100.0
+
+    # GPU buffers
+    gpu_max_rigid_contact_count: 524288
+    gpu_max_rigid_patch_count: 163840
+    gpu_found_lost_pairs_capacity: 4194304
+    gpu_found_lost_aggregate_pairs_capacity: 33554432
+    gpu_total_aggregate_pairs_capacity: 4194304
+    gpu_max_soft_body_contacts: 1048576
+    gpu_max_particle_contacts: 1048576
+    gpu_heap_capacity: 134217728
+    gpu_temp_buffer_capacity: 33554432
+    gpu_max_num_partitions: 8
+
+  mfp2d:
+    # -1 to use default values
+    override_usd_defaults: False
+    enable_self_collisions: False
+    enable_gyroscopic_forces: True
+    # also in stage params
+    # per-actor
+    solver_position_iteration_count: 4
+    solver_velocity_iteration_count: 1
+    sleep_threshold: 0.005
+    stabilization_threshold: 0.001
+    # per-body
+    density: -1
+    max_depenetration_velocity: 100.0

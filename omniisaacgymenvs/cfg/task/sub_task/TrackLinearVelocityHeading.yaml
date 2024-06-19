@@ -1,0 +1,60 @@
+name: TrackLinearVelocityHeading
+velocity_tolerance: 0.01
+kill_after_n_steps_in_tolerance: 50 # 10seconds
+kill_dist: 500.0
+target_linear_velocity_curriculum:
+  rate_parameters:
+    function: ${if:${.....test},none,sigmoid}
+    start: 0
+    end: 250
+    extent: 4.5
+  sampling_parameters:
+    distribution: truncated_normal
+    start_mean: 0.0
+    start_std: 0.25
+    end_mean: 0.75
+    end_std: 0.75
+    min_value: 0.0
+    max_value: 0.75
+spawn_heading_curriculum:
+  rate_parameters:
+    function: ${if:${.....test},none,sigmoid}
+    start: 25
+    end: 1000
+    extent: 4.5
+  sampling_parameters:
+    distribution: truncated_normal
+    start_mean: 0.0
+    start_std: 0.25
+    end_mean: 0.0 #2pi
+    end_std: 4.71238898038469 #3/2 pi
+    min_value: -3.141592653589793 # -pi
+    max_value: 3.141592653589793 # pi
+spawn_linear_velocity_curriculum:
+  rate_parameters:
+    function: ${if:${.....test},none,sigmoid}
+    start: 500
+    end: 1500
+    extent: 4.5
+  sampling_parameters:
+    distribution: truncated_normal
+    start_mean: 0.0
+    start_std: 0.0001
+    end_mean: 0.5
+    end_std: 0.5
+    min_value: 0.0
+    max_value: 0.5
+spawn_angular_velocity_curriculum:
+  rate_parameters:
+    function: ${if:${.....test},none,sigmoid}
+    start: 500
+    end: 1500
+    extent: 4.5
+  sampling_parameters:
+    distribution: truncated_normal
+    start_mean: 0.0
+    start_std: 0.0001
+    end_mean: 0.0
+    end_std: 0.5
+    min_value: -0.5
+    max_value: 0.5

@@ -18,13 +18,13 @@ from omniisaacgymenvs.robots.articulations.views.heron_view import (
 from omniisaacgymenvs.utils.pin import VisualPin
 from omniisaacgymenvs.utils.arrow import VisualArrow
 
-from omniisaacgymenvs.tasks.MFP.MFP2D_task_factory import (
+from omniisaacgymenvs.tasks.common_3DoF.task_factory import (
     task_factory,
 )
-from omniisaacgymenvs.tasks.MFP.MFP2D_penalties import (
+from omniisaacgymenvs.tasks.common_3DoF.penalties import (
     EnvironmentPenalties,
 )
-from omniisaacgymenvs.tasks.MFP.MFP2D_disturbances import (
+from omniisaacgymenvs.tasks.common_3DoF.disturbances import (
     Disturbances,
 )
 

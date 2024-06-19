@@ -1,0 +1,46 @@
+name: TrackLinearVelocity
+lin_vel_tolerance: 0.01
+kill_after_n_steps_in_tolerance: 50 # 10seconds
+kill_dist: 500.0
+target_linear_velocity_curriculum:
+  rate_parameters:
+    function: ${if:${.....test},none,sigmoid}
+    start: 0
+    end: 250
+    extent: 4.5
+  sampling_parameters:
+    distribution: truncated_normal
+    start_mean: 0.0
+    start_std: 0.25
+    end_mean: 0.75
+    end_std: 0.75
+    min_value: 0.0
+    max_value: 0.75
+spawn_linear_velocity_curriculum:
+  rate_parameters:
+    function: ${if:${.....test},none,sigmoid}
+    start: 500
+    end: 1000
+    extent: 4.5
+  sampling_parameters:
+    distribution: truncated_normal
+    start_mean: 0.0
+    start_std: 0.0001
+    end_mean: 0.75
+    end_std: 0.75
+    min_value: 0.0
+    max_value: 0.75
+spawn_angular_velocity_curriculum:
+  rate_parameters:
+    function: ${if:${.....test},none,sigmoid}
+    start: 500
+    end: 1000
+    extent: 4.5
+  sampling_parameters:
+    distribution: truncated_normal
+    start_mean: 0.0
+    start_std: 0.0001
+    end_mean: 0.75
+    end_std: 1.5
+    min_value: -0.75
+    max_value: 0.75

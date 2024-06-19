@@ -1,0 +1,7 @@
+name: GoToPose
+position_reward_mode: exponential
+heading_reward_mode: exponential
+position_exponential_reward_coeff: 0.25
+heading_exponential_reward_coeff: 0.25
+position_scale: 0.666
+heading_scale: 0.333

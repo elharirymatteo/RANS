@@ -1,0 +1,29 @@
+energy_penalty:
+  enable: True
+  weight: 0.03
+  curriculum:
+    function: sigmoid
+    start: 250
+    end: 1000
+    extent: 4.5
+linear_velocity_penalty:
+  enable: True
+  weight: 0.5
+  scaling_function: linear
+  min_value: 0.2
+  max_value: 1.0
+  curriculum:
+    function: sigmoid
+    start: 250
+    end: 1250
+    extent: 4.5
+angular_velocity_penalty:
+  enable: True
+  weight: 0.5
+  scaling_function: linear
+  min_value: 0.5
+  max_value: 20.0
+  curriculum:
+    function: linear
+    start: 25
+    end: 200
