@@ -68,7 +68,7 @@ class ASVVirtual(RLTask):
         self._task_cfg = sim_config.task_config
         self._enable_wandb_logs = self._task_cfg["enable_wandb_log"]
         self._device = self._cfg["sim_device"]
-
+        self._robot_cfg = self._task_cfg["robot"]
         self._num_envs = self._task_cfg["env"]["numEnvs"]
         self._env_spacing = self._task_cfg["env"]["envSpacing"]
         self._max_episode_length = self._task_cfg["env"]["maxEpisodeLength"]
@@ -80,28 +80,24 @@ class ASVVirtual(RLTask):
         # Collects the platform parameters
         self.dt = self._task_cfg["sim"]["dt"]
         # Collects the task parameters
-        task_cfg = self._task_cfg["env"]["task_parameters"]
-        reward_cfg = self._task_cfg["env"]["reward_parameters"]
-        penalty_cfg = self._task_cfg["env"]["penalties_parameters"]
+        task_cfg = self._task_cfg["sub_task"]
+        reward_cfg = self._task_cfg["reward"]
+        penalty_cfg = self._task_cfg["penalty"]
+        domain_randomization_cfg = self._task_cfg["disturbances"]
 
         # physics
         self.gravity = self._task_cfg["sim"]["gravity"][2]
-        self.timeConstant = self._task_cfg["dynamics"]["thrusters"]["timeConstant"]
+        self.timeConstant = self._robot_cfg["dynamics"]["thrusters"]["timeConstant"]
 
         # hydrodynamics
-        self.hydrodynamics_cfg = self._task_cfg["dynamics"]["hydrodynamics"]
+        self.hydrodynamics_cfg = self._robot_cfg["dynamics"]["hydrodynamics"]
 
         # hydrostatics
-        self.hydrostatics_cfg = self._task_cfg["dynamics"]["hydrostatics"]
+        self.hydrostatics_cfg = self._robot_cfg["dynamics"]["hydrostatics"]
 
         # thrusters dynamics
-        self.thrusters_dynamics_cfg = self._task_cfg["dynamics"]["thrusters"]
+        self.thrusters_dynamics_cfg = self._robot_cfg["dynamics"]["thrusters"]
 
-        # Collects the task parameters
-        task_cfg = self._task_cfg["env"]["task_parameters"]
-        reward_cfg = self._task_cfg["env"]["reward_parameters"]
-        penalty_cfg = self._task_cfg["env"]["penalties_parameters"]
-        domain_randomization_cfg = self._task_cfg["env"]["disturbances"]
         # Instantiate the task, reward and platform
         self.task = task_factory.get(task_cfg, reward_cfg, self._num_envs, self._device)
         self._penalties = EnvironmentPenalties(**penalty_cfg)
@@ -323,13 +319,13 @@ class ASVVirtual(RLTask):
             params=self.hydrostatics_cfg,
         )
         self.hydrodynamics = Hydrodynamics(
-            dr_params=self._task_cfg["env"]["asv_domain_randomization"]["drag"],
+            dr_params=self._task_cfg["robot"]["asv_domain_randomization"]["drag"],
             num_envs=self.num_envs,
             device=self._device,
             params=self.hydrodynamics_cfg,
         )
         self.thrusters_dynamics = DynamicsFirstOrder(
-            dr_params=self._task_cfg["env"]["asv_domain_randomization"]["thruster"],
+            dr_params=self._task_cfg["robot"]["asv_domain_randomization"]["thruster"],
             num_envs=self.num_envs,
             device=self._device,
             timeConstant=self.timeConstant,
