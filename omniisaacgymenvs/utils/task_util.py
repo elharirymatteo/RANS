@@ -59,9 +59,11 @@ def import_tasks():
     from omniisaacgymenvs.tasks.shadow_hand import ShadowHandTask
     from omniisaacgymenvs.tasks.crazyflie import CrazyflieTask
     from omniisaacgymenvs.tasks.MFP2D_Virtual import MFP2DVirtual
+    from omniisaacgymenvs.tasks.AGV_SS_2W_Virtual import AGVSS2WVirtual
     from omniisaacgymenvs.tasks.MFP2D_Virtual_Dock import MFP2DVirtual_Dock
     from omniisaacgymenvs.tasks.MFP2D_Virtual_Dock_RGBD import MFP2DVirtual_Dock_RGBD
     from omniisaacgymenvs.tasks.MFP3D_Virtual import MFP3DVirtual
+    from omniisaacgymenvs.tasks.kingfisher import ASVVirtual
 
     from omniisaacgymenvs.tasks.warp.ant import (
         AntLocomotionTask as AntLocomotionTaskWarp,
@@ -93,9 +95,11 @@ def import_tasks():
         "ShadowHandOpenAI_FF": ShadowHandTask,
         "ShadowHandOpenAI_LSTM": ShadowHandTask,
         "MFP2DVirtual": MFP2DVirtual,
+        "AGVSS2WVirtual": AGVSS2WVirtual,
         "MFP2DVirtual_Dock": MFP2DVirtual_Dock,
         "MFP2DVirtual_Dock_RGBD": MFP2DVirtual_Dock_RGBD,
         "MFP3DVirtual": MFP3DVirtual,
+        "ASVVirtual": ASVVirtual,
     }
 
     task_map_warp = {

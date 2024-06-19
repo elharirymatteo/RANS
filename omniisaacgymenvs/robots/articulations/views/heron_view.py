@@ -27,31 +27,33 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-import hydra
-from omegaconf import DictConfig, OmegaConf
-import yaml
+from typing import Optional
+from omni.isaac.core.articulations import ArticulationView
+from omni.isaac.core.prims import RigidPrimView
 
-## OmegaConf & Hydra Config
 
-def read_file(path: str) -> dict:
-    """
-    Read a yaml file and return the config as DictConfig
-    """
-    print(path)
-    with open(path, "r") as stream:
-        output = yaml.safe_load(stream)
-    return output 
+class HeronView(ArticulationView):
+    def __init__(
+        self, prim_paths_expr: str, name: Optional[str] = "HeronPlatformView"
+    ) -> None:
+        """[summary]"""
 
-# Resolvers used in hydra configs (see https://omegaconf.readthedocs.io/en/2.1_branch/usage.html#resolvers)
-if not OmegaConf.has_resolver("eq"):
-    OmegaConf.register_new_resolver("eq", lambda x, y: x.lower() == y.lower())
-if not OmegaConf.has_resolver("compose"):
-    OmegaConf.register_new_resolver("compose", lambda x: read_file(x))
-if not OmegaConf.has_resolver("contains"):
-    OmegaConf.register_new_resolver("contains", lambda x, y: x.lower() in y.lower())
-if not OmegaConf.has_resolver("if"):
-    OmegaConf.register_new_resolver("if", lambda pred, a, b: a if pred else b)
-# allows us to resolve default arguments which are copied in multiple places in the config. used primarily for
-# num_ensv
-if not OmegaConf.has_resolver("resolve_default"):
-    OmegaConf.register_new_resolver("resolve_default", lambda default, arg: default if arg == "" else arg)
+        super().__init__(
+            prim_paths_expr=prim_paths_expr, name=name, reset_xform_properties=False
+        )
+        self.base = RigidPrimView(
+            prim_paths_expr=f"/World/envs/.*/heron/base_link",
+            name="base_view",
+            reset_xform_properties=False,
+        )
+
+        self.thruster_left = RigidPrimView(
+            prim_paths_expr=f"/World/envs/.*/heron/thruster_left",
+            name="thruster_left",
+            reset_xform_properties=False,
+        )
+        self.thruster_right = RigidPrimView(
+            prim_paths_expr=f"/World/envs/.*/heron/thruster_right",
+            name="thruster_right",
+            reset_xform_properties=False,
+        )

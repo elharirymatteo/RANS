@@ -1,0 +1,284 @@
+# used to create the object
+name: ASVVirtual
+
+physics_engine: ${..physics_engine}
+experiment: ASV_Capture
+
+# if given, will override the device setting in gym. 
+env:
+  numEnvs: ${resolve_default:16,${...num_envs}}
+  envSpacing: 15
+  maxEpisodeLength: 3000
+  enableDebugVis: False
+  action_mode: Continuous
+  numQuantizedActions: 1
+  horizon_length: 16
+  waterVisualization: False
+
+  observation_frame: "local"
+
+  controlFrequencyInv: 5
+
+  clipObservations: {state: 12.0}
+  clipActions: 1.0
+
+  # Split the maximum amount of thrust across all thrusters.
+  split_thrust: False
+
+  wind:
+
+  water_current:
+    use_water_current: False
+    flow_velocity: [0.0, 0.0, 0.0] # x, y, z
+
+  disturbances:
+    forces:
+      # Force disturbance generation
+      use_force_disturbance: True
+      use_constant_force: True
+      use_sinusoidal_force: True
+      force_const_min: 0.0 
+      force_const_max: 2.5
+      force_sin_min: 0.0
+      force_sin_max: 2.5
+      force_min_freq: 0.25
+      force_max_freq: 3.0
+      force_min_shift: 0.0
+      force_max_shift: 100.0
+
+    torques:
+      # Torque disturbance generation
+      use_torque_disturbance: True
+      use_constant_torque: True
+      use_sinusoidal_torque: True
+      torque_const_min: 0.0
+      torque_const_max: 1.0
+      torque_sin_min: 0.0
+      torque_sin_max: 1.0
+      torque_min_freq: 0.25
+      torque_max_freq: 3
+      torque_min_shift: 0.0
+      torque_max_shift: 100.0
+
+    observations:
+      # Add noisy observations
+      add_noise_on_pos: True
+      position_noise_min: -0.03 # default - 0.03 m
+      position_noise_max:  0.03 # default - 0.03 m
+      add_noise_on_vel: True
+      velocity_noise_min: -0.03 # default - 0.03 m/s
+      velocity_noise_max:  0.03 # default - 0.03 m/s
+      add_noise_on_heading: True
+      heading_noise_min: -0.025 # default - 0.025 rad
+      heading_noise_max:  0.025 # default - 0.025 rad
+
+    actions:
+      # Add noisy actions
+      add_noise_on_act: True
+      min_action_noise: -0.05
+      max_action_noise:  0.05
+
+    mass:
+      # Add mass randomization
+      add_mass_disturbances: True
+      min_mass: 34.96
+      max_mass: 36.96
+      CoM_max_displacement: 0.0
+      base_mass: 35.96
+
+    drag:
+      # Add drag disturbances
+      use_drag_randomization: True
+      # Proportion of drag randomization for each drag coefficient
+      # If it is 0.1 it means 0.9 to 1.1
+      # Linear
+      u_linear_rand: 0.1 # Forward
+      v_linear_rand: 0.1 # Lateral
+      w_linear_rand: 0.0 # Vertical. In 2D, neglectable
+      p_linear_rand: 0.0 # Roll. In 2D, neglectable
+      q_linear_rand: 0.0 # Pitch. In 2D, neglectable
+      r_linear_rand: 0.1 # Yaw
+      # Quadratic
+      u_quad_rand: 0.1 # Forward
+      v_quad_rand: 0.1 # Lateral
+      w_quad_rand: 0.0 # Vertical. In 2D, neglectable
+      p_quad_rand: 0.0 # Roll. In 2D, neglectable
+      q_quad_rand: 0.0 # Pitch. In 2D, neglectable
+      r_quad_rand: 0.1 # Yaw
+    
+    thruster:
+      # Add thruster disturbances
+      use_thruster_randomization: True
+      thruster_rand: 0.5 # If it is 0.2 it means 0.8 to 1.2
+      use_separate_randomization: False
+      left_rand: 0.5 # If it is 0.2 it means 0.8 to 1.2
+      right_rand: 0.5 # If it is 0.2 it means 0.8 to 1.2
+
+  task_parameters: 
+    name: CaptureXY
+    position_tolerance: 0.1 # 0.1 default
+    kill_after_n_steps_in_tolerance: 1 # 1 means kill after arriving at the goal
+    max_spawn_dist: 12.0
+    min_spawn_dist: 0.3
+    kill_dist: 20.0
+    boundary_cost: 25.0
+    goal_reward: 30.0 # Goal reward for reaching the goal
+    time_reward: -0.2 # Time penalty for each step
+
+  reward_parameters:
+    name: CaptureXY
+    reward_mode: linear
+    exponential_reward_coeff: 0.25
+
+  penalties_parameters:
+    penalize_energy: True
+    penalize_energy_fn: "lambda x,step : (torch.exp(-torch.sum(x**2, dim=-1)) - 1.0) * 0.01" 
+    penalize_energy_c1: 0.00 # Not used in this version
+    penalize_energy_c2: 0.00 # Not used in this version
+    penalize_linear_velocities: False
+    penalize_linear_velocities_fn: "lambda x,step: -torch.norm(x, dim=-1)*0.01"
+    penalize_linear_velocities_c1: 0.00 # Not used in this version
+    penalize_linear_velocities_c2: 0.00 # Not used in this version
+    penalize_angular_velocities: False
+    penalize_angular_velocities_fn: "lambda x,step : -torch.abs(x)*0.01 + 0.0"
+    penalize_angular_velocities_c1: 0.00 # Not used in this version
+    penalize_angular_velocities_c2: 0.00 # Not used in this version
+    penalize_angular_velocities_variation: True
+    penalize_angular_velocities_variation_fn: "lambda x,step: (torch.exp(-0.033 * torch.abs(x)) - 1.0) * 1.0"
+    penalize_angular_velocities_variation_c1: 0.00 # Not used in this version
+    penalize_angular_velocities_variation_c2: 0.00 # Not used in this version
+    penalize_action_variation: False
+    penalize_action_variation_fn: "lambda x,step: (torch.exp(-0.033 * torch.abs(x)) - 1.0) * 0.01"
+    penalize_action_variation_c1: 0.00 # Not used in this version
+    penalize_action_variation_c2: 0.00 # Not used in this version
+
+  platform:
+    randomization:
+      random_permutation: False
+      random_offset: False
+      randomize_thruster_position: False
+      min_random_radius: 0.125
+      max_random_radius: 0.5
+      random_theta: 0.39269908169872414 #2pi/16
+      randomize_thrust_force: False
+      min_thrust_force: 0.5
+      max_thrust_force: 1.0
+      kill_thrusters: False
+      max_thruster_kill: 2
+
+    core:
+      mass: 10.92
+      CoM: [0,0,0]
+      radius: 0.31
+      shape: "sphere"
+      refinement: 2
+
+    configuration:
+      use_four_configurations: False
+      num_anchors: 1
+      offset: 0.75839816339
+      thrust_force: 1.0
+      visualize: False
+      save_path: "config.png"
+
+sim:
+  dt: 0.02
+  use_gpu_pipeline: ${eq:${...pipeline},"gpu"}
+  gravity: [0.0, 0.0, -9.81] # gravity in m/s^2
+  add_ground_plane: True
+  add_distant_light: True
+  use_fabric: True
+  enable_scene_query_support: False
+  # set to True if you use camera sensors in the environment
+  enable_cameras: False
+  disable_contact_processing: False
+
+  physx:
+    worker_thread_count: ${....num_threads}
+    solver_type: ${....solver_type}
+    use_gpu: ${eq:${....sim_device},"gpu"} # set to False to run on CPU
+    solver_position_iteration_count: 6
+    solver_velocity_iteration_count: 1
+    contact_offset: 0.02
+    rest_offset: 0.001
+    bounce_threshold_velocity: 0.2
+    max_depenetration_velocity: 1000.0
+    friction_offset_threshold: 0.04
+    friction_correlation_distance: 0.025
+    enable_sleeping: True
+    enable_stabilization: False
+
+    # GPU buffers
+    gpu_max_rigid_contact_count: 524288
+    gpu_max_rigid_patch_count: 81920
+    gpu_found_lost_pairs_capacity: 1024
+    gpu_found_lost_aggregate_pairs_capacity: 262144
+    gpu_total_aggregate_pairs_capacity: 1024
+    gpu_max_soft_body_contacts: 1048576
+    gpu_max_particle_contacts: 1048576
+    gpu_heap_capacity: 67108864
+    gpu_temp_buffer_capacity: 16777216
+    gpu_max_num_partitions: 8
+
+  USV:
+    # -1 to use default values
+    override_usd_defaults: False
+    enable_self_collisions: False
+    enable_gyroscopic_forces: True
+    # also in stage params
+    # per-actor
+    solver_position_iteration_count: 6
+    solver_velocity_iteration_count: 1
+    sleep_threshold: 0.005
+    stabilization_threshold: 0.001
+    # per-body
+    density: -1
+    max_depenetration_velocity: 1000.0
+
+dynamics:
+  thrusters:
+    cmd_lower_range: -1.0
+    cmd_upper_range: 1.0
+    timeConstant: 0.05
+    interpolation: 
+      numberOfPointsForInterpolation: 1000
+      # CMD                                 -1.0, -0.9, -0.8, -0.7, -0.6,-0.5,-0.4,-0.3,-0.2,-0.1, 0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6,  0.7,  0.8,  0.9,  1.0]
+      interpolationPointsFromRealDataLeft: [-3.8, -3.8, -3.6, -3.6, -1.6, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 4.0, 10.0, 15.0, 21.0, 23.0, 22.0]
+      # Nominal Thruster Model : [-19.88, -16.52, -12.6, -5.6, -1.4, 0.0, 2.24, 9.52, 21.28, 28.0, 33.6]
+      # SID Thruster Model : [-3.8, -3.8, -3.6, -3.6, -1.6, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 4.0, 10.0, 15.0, 21.0, 23.0, 22.0]
+      interpolationPointsFromRealDataRight: [-5.0, -5.0, -5.0, -4.6, -2.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 4.6, 10.0, 17.0, 24.0, 24.0, 23.0]
+      # Nominal Thruster Model : [-19.88, -16.52, -12.6, -5.6, -1.4, 0.0, 2.24, 9.52, 21.28, 28.0, 33.6]
+      # SID Thruster Model : [-5.0, -5.0, -5.0, -4.6, -2.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 4.6, 10.0, 17.0, 24.0, 24.0, 23.0]
+    leastSquareMethod: 
+      neg_cmd_coeff: [88.61013986, 163.99545455, 76.81641608, 11.9476958, 0.20374615]
+      pos_cmd_coeff: [-197.800699, 334.050699, -97.6197902, 7.59341259, -0.0301846154]
+  
+  hydrodynamics:
+    linear_damping: [0.0, 99.99, 99.99, 13.0, 13.0, 0.82985084]
+    # Nominal [16.44998712, 15.79776044, 100, 13, 13, 6]
+    # SID [0.0, 99.99, 99.99, 13.0, 13.0, 0.82985084]
+    quadratic_damping: [17.257603, 99.99, 10.0, 5.0, 5.0, 17.33600724]
+    # Nominal [2.942, 2.7617212, 10, 5, 5, 5]
+    # SID [17.257603, 99.99, 10.0, 5.0, 5.0, 17.33600724]
+    linear_damping_forward_speed: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    offset_linear_damping: 0.0
+    offset_lin_forward_damping_speed: 0.0
+    offset_nonlin_damping: 0.0
+    scaling_damping: 1.0
+    offset_added_mass: 0.0
+    scaling_added_mass: 1.0
+
+  hydrostatics:
+    average_hydrostatics_force_value: 275
+    amplify_torque: 1.0
+    material_density: 133
+    water_density: 1000
+    mass: 35.96
+    box_width: 1.0
+    box_length: 1.3
+    waterplane_area: 0.233333 # Kingfisher/Heron draught 120mm in Spec Sheet
+    heron_zero_height: 0.24
+
+  acceleration:
+    alpha: 0.3
+    last_time: -10.0

@@ -7,22 +7,20 @@ if __name__ == "__main__":
 
     simulation_app = SimulationApp(cfg)
     from omni.isaac.core import World
+    from pxr import UsdLux
     import omni
 
-    from omniisaacgymenvs.robots.articulations.AMR_4WheelsSkidSteer import (
-        AMR_4W_SS,
-        SkidSteerParameters,
+    from omniisaacgymenvs.robots.articulations.AGV_skidsteer_4W import (
+        AGV_SS_4W,
+        AGVSkidsteer4WParameters,
     )
-    from pxr import UsdLux
 
+    # Instantiate simulation
     timeline = omni.timeline.get_timeline_interface()
-
     world = World(stage_units_in_meters=1.0)
-
     world.scene.add_default_ground_plane()
     light = UsdLux.DistantLight.Define(world.stage, "/DistantLight")
     light.CreateIntensityAttr(3000.0)
-
     physics_ctx = world.get_physics_context()
     physics_ctx.set_solver_type("PGS")
 
@@ -174,9 +172,16 @@ if __name__ == "__main__":
             ],
             "orientation": [-90, 0, 0],
         },
+        "wheel_physics_material": {
+            "static_friction": 0.9,
+            "dynamic_friction": 0.7,
+            "restitution": 0.5,
+            "friction_combine_mode": "average",
+            "restitution_combine_mode": "average",
+        },
     }
 
-    AMR_4W_SS("/Husky", cfg={"system": Husky}, translation=[0, 0, 0.3])
+    AGV_SS_4W("/Husky", cfg={"system": Husky}, translation=[0, 0, 0.3])
 
     world.reset()
     for i in range(100):

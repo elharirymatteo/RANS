@@ -27,31 +27,46 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-import hydra
-from omegaconf import DictConfig, OmegaConf
-import yaml
+from typing import Optional
 
-## OmegaConf & Hydra Config
+from omni.isaac.core.robots.robot import Robot
+from omni.isaac.core.utils.nucleus import get_assets_root_path
+from omni.isaac.core.utils.stage import add_reference_to_stage
 
-def read_file(path: str) -> dict:
-    """
-    Read a yaml file and return the config as DictConfig
-    """
-    print(path)
-    with open(path, "r") as stream:
-        output = yaml.safe_load(stream)
-    return output 
+import numpy as np
+import torch
+import carb
 
-# Resolvers used in hydra configs (see https://omegaconf.readthedocs.io/en/2.1_branch/usage.html#resolvers)
-if not OmegaConf.has_resolver("eq"):
-    OmegaConf.register_new_resolver("eq", lambda x, y: x.lower() == y.lower())
-if not OmegaConf.has_resolver("compose"):
-    OmegaConf.register_new_resolver("compose", lambda x: read_file(x))
-if not OmegaConf.has_resolver("contains"):
-    OmegaConf.register_new_resolver("contains", lambda x, y: x.lower() in y.lower())
-if not OmegaConf.has_resolver("if"):
-    OmegaConf.register_new_resolver("if", lambda pred, a, b: a if pred else b)
-# allows us to resolve default arguments which are copied in multiple places in the config. used primarily for
-# num_ensv
-if not OmegaConf.has_resolver("resolve_default"):
-    OmegaConf.register_new_resolver("resolve_default", lambda default, arg: default if arg == "" else arg)
+
+class Heron(Robot):
+    def __init__(
+        self,
+        prim_path: str,
+        # cfg: dict,
+        name: Optional[str] = "Heron",
+        usd_path: Optional[str] = None,
+        translation: Optional[np.ndarray] = None,
+        orientation: Optional[np.ndarray] = None,
+        scale: Optional[np.array] = None,
+    ) -> None:
+        """[summary]"""
+
+        self._usd_path = "/workspace/RANS/omniisaacgymenvs/robots/usd/heron.usd" #TODO: use nucleous or relative path
+        self._name = name
+
+        if self._usd_path is None:
+            assets_root_path = get_assets_root_path()
+            if assets_root_path is None:
+                carb.log_error("Could not find Isaac Sim assets folder")
+            self._usd_path = assets_root_path + "/Isaac/Robots/Heron/heron.usd"
+
+        add_reference_to_stage(self._usd_path, prim_path)
+        # scale = torch.tensor([0.1, 0.1, 0.1])
+
+        super().__init__(
+            prim_path=prim_path,
+            name=name,
+            translation=translation,
+            orientation=orientation,
+            scale=scale,
+        )
