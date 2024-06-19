@@ -2,14 +2,14 @@
 name: ASVVirtual
 
 physics_engine: ${..physics_engine}
-experiment: ASV_GoThroughPosition
+experiment: ASV_GoThroughPositionSequence
 enable_wandb_log: ${..wandb_activate}
 
 defaults:
   - robot: ASV_kingfisher.yaml
   - disturbances: disable_disturbances.yaml
-  - sub_task: GoThroughPosition.yaml
-  - reward: GoThroughPosition.yaml
+  - sub_task: GoThroughPositionSequence.yaml
+  - reward: GoThroughPositionSequence.yaml
   - penalty: penalties.yaml
   - _self_
 
@@ -17,7 +17,7 @@ defaults:
 env:
   numEnvs: ${resolve_default:64,${...num_envs}}
   envSpacing: 12
-  maxEpisodeLength: 1000
+  maxEpisodeLength: 450
   enableDebugVis: False
   action_mode: Continuous
   numQuantizedActions: 1
