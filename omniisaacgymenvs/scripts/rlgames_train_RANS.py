@@ -34,7 +34,7 @@ import hydra
 import torch
 from omegaconf import DictConfig
 import omniisaacgymenvs
-from omniisaacgymenvs.envs.vec_env_rlgames_mfp import VecEnvRLGames
+from omniisaacgymenvs.envs.vec_env_rlgames_RANS import VecEnvRLGames
 from omniisaacgymenvs.utils.config_utils.path_utils import (
     retrieve_checkpoint_path,
     get_experience,

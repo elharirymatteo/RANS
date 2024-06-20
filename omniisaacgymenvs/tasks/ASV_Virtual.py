@@ -274,7 +274,7 @@ class ASVVirtual(RLTask):
 
         # Collects the interactive elements in the scene
         root_path = "/World/envs/.*/heron"
-        self._heron = HeronView(prim_paths_expr=root_path, name="heron_view")
+        self._heron = HeronView(prim_paths_expr=root_path, name="heron_view", track_contact_force=True)
 
         # Add views to scene
         scene.add(self._heron)
@@ -373,12 +373,14 @@ class ASVVirtual(RLTask):
         # get euler angles
         self.get_euler_angles(self.root_quats)  # rpy roll pitch yaws
 
+        net_contact_forces = self.compute_contact_forces()
         # Dump to state
         self.current_state = {
             "position": root_positions[:, :2],
             "orientation": self.heading,
             "linear_velocity": root_velocities[:, :2],
             "angular_velocity": root_velocities[:, -1],
+            "net_contact_forces": net_contact_forces,
         }
 
     def compute_contact_forces(self) -> torch.Tensor:
