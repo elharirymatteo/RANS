@@ -51,7 +51,7 @@ for robot_name in robots_to_process:
     # Loop through each combination of task and seed
     for task in tasks:
         for seed in seeds:
-            experiment_name = f"{task.split('/')[-1]}_{static_params['train'].split('/')[0]}_seed{seed}"
+            experiment_name = f"{robot_name}_{task.split('/')[-1]}_{static_params['train'].split('/')[0]}_seed{seed}"
             
             # Construct the command to execute the experiment
             cmd = [ov_path, "scripts/rlgames_train_RANS.py"]
