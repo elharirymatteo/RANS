@@ -15,16 +15,16 @@ from omniisaacgymenvs.robots.articulations.MFP2D_thrusters import (
 from omniisaacgymenvs.robots.articulations.views.MFP2D_view import (
     ModularFloatingPlatformView,
 )
-from omniisaacgymenvs.tasks.MFP.MFP2D_thruster_generator import (
+from omniisaacgymenvs.tasks.MFP2D.thruster_generator import (
     VirtualPlatform,
 )
-from omniisaacgymenvs.tasks.MFP.MFP2D_task_factory import (
+from omniisaacgymenvs.tasks.MFP2D.task_factory import (
     task_factory,
 )
-from omniisaacgymenvs.tasks.MFP.MFP2D_penalties import (
+from omniisaacgymenvs.tasks.common_3DoF.penalties import (
     EnvironmentPenalties,
 )
-from omniisaacgymenvs.tasks.MFP.MFP2D_disturbances import (
+from omniisaacgymenvs.tasks.common_3DoF.disturbances import (
     Disturbances,
 )
 
@@ -58,7 +58,7 @@ class MFP2DVirtual(RLTask):
         self._cfg = sim_config.config
         self._task_cfg = sim_config.task_config
         self._enable_wandb_logs = self._task_cfg["enable_wandb_log"]
-        self._platform_cfg = self._task_cfg["env"]["platform"]
+        self._platform_cfg = self._task_cfg["robot"]
         self._num_envs = self._task_cfg["env"]["numEnvs"]
         self._env_spacing = self._task_cfg["env"]["envSpacing"]
         self._max_episode_length = self._task_cfg["env"]["maxEpisodeLength"]
@@ -68,15 +68,15 @@ class MFP2DVirtual(RLTask):
         self.step = 0
 
         # Split the maximum amount of thrust across all thrusters.
-        self.split_thrust = self._task_cfg["env"]["split_thrust"]
+        self.split_thrust = self._task_cfg["robot"]["split_thrust"]
 
         # Collects the platform parameters
         self.dt = self._task_cfg["sim"]["dt"]
         # Collects the task parameters
-        task_cfg = self._task_cfg["env"]["task_parameters"]
-        reward_cfg = self._task_cfg["env"]["reward_parameters"]
-        penalty_cfg = self._task_cfg["env"]["penalties_parameters"]
-        domain_randomization_cfg = self._task_cfg["env"]["disturbances"]
+        task_cfg = self._task_cfg["sub_task"]
+        reward_cfg = self._task_cfg["reward"]
+        penalty_cfg = self._task_cfg["penalty"]
+        domain_randomization_cfg = self._task_cfg["disturbances"]
         # Instantiate the task, reward and platform
         self.task = task_factory.get(task_cfg, reward_cfg, self._num_envs, self._device)
         self._penalties = EnvironmentPenalties(**penalty_cfg)

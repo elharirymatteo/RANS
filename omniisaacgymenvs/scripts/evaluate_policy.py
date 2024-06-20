@@ -18,7 +18,7 @@ from omniisaacgymenvs.utils.rlgames.rlgames_utils import RLGPUAlgoObserver
 from rlgames_train import RLGTrainer
 from rl_games.torch_runner import Runner
 from omniisaacgymenvs.utils.task_util import initialize_task
-from omniisaacgymenvs.envs.vec_env_rlgames_mfp import VecEnvRLGames
+from omniisaacgymenvs.envs.vec_env_rlgames_RANS import VecEnvRLGames
 
 from omniisaacgymenvs.utils.plot_experiment import plot_episode_data_virtual
 from omniisaacgymenvs.utils.eval_metrics import (

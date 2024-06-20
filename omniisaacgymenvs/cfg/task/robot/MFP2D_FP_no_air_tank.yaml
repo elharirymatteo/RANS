@@ -1,0 +1,28 @@
+randomization:
+  random_permutation: False
+  random_offset: False
+  randomize_thruster_position: False
+  min_random_radius: 0.125
+  max_random_radius: 0.5
+  random_theta: 0.39269908169872414 #2pi/16
+  randomize_thrust_force: False
+  min_thrust_force: 0.5
+  max_thrust_force: 1.0
+  kill_thrusters: False
+  max_thruster_kill: 2
+core:
+  mass: 5.32
+  CoM: [0,0,0]
+  radius: 0.31
+  shape: "sphere"
+  refinement: 2
+configuration:
+  use_four_configurations: False
+  num_anchors: 4
+  offset: 0.75839816339
+  thrust_force: 1.0
+  visualize: False
+  save_path: "config.png"
+
+# Split the maximum amount of thrust across all thrusters.
+split_thrust: True

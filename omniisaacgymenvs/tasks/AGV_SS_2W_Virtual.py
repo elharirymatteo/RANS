@@ -15,13 +15,13 @@ from omniisaacgymenvs.robots.articulations.AGV_skidsteer_2W import (
 from omniisaacgymenvs.robots.articulations.views.AGV_skidsteer_2W_view import (
     AGVSkidSteer2WView,
 )
-from omniisaacgymenvs.tasks.MFP.MFP2D_task_factory import (
+from omniisaacgymenvs.tasks.common_3DoF.task_factory import (
     task_factory,
 )
-from omniisaacgymenvs.tasks.MFP.MFP2D_penalties import (
+from omniisaacgymenvs.tasks.common_3DoF.penalties import (
     EnvironmentPenalties,
 )
-from omniisaacgymenvs.tasks.MFP.MFP2D_disturbances import (
+from omniisaacgymenvs.tasks.common_3DoF.disturbances import (
     Disturbances,
 )
 from omniisaacgymenvs.robots.actuators.dynamics import Actuator
@@ -68,10 +68,10 @@ class AGVSS2WVirtual(RLTask):
         # Collects the platform parameters
         self.dt = self._task_cfg["sim"]["dt"]
         # Collects the task parameters
-        task_cfg = self._task_cfg["env"]["task_parameters"]
-        reward_cfg = self._task_cfg["env"]["reward_parameters"]
-        penalty_cfg = self._task_cfg["env"]["penalties_parameters"]
-        domain_randomization_cfg = self._task_cfg["env"]["disturbances"]
+        task_cfg = self._task_cfg["sub_task"]
+        reward_cfg = self._task_cfg["reward"]
+        penalty_cfg = self._task_cfg["penalty"]
+        domain_randomization_cfg = self._task_cfg["disturbances"]
         # Instantiate the task, reward and platform
         self.task = task_factory.get(task_cfg, reward_cfg, self._num_envs, self._device)
         self._penalties = EnvironmentPenalties(**penalty_cfg)

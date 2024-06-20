@@ -1,0 +1,14 @@
+defaults:
+  - _self_
+  - force_disturbance: force_disturbance.yaml
+  - torque_disturbance: torque_disturbance.yaml
+  - observations_disturbance: observations_disturbance.yaml
+  - actions_disturbance: actions_disturbance.yaml
+  - mass_disturbance: mass_disturbance.yaml
+
+force_disturbance.enable: True
+torque_disturbance.enable: True
+observations_disturbance.enable_position_noise: True
+observations_disturbance.enable_velocity_noise: True
+observations_disturbance.enable_orientation_noise: True
+actions_disturbance.enable: True

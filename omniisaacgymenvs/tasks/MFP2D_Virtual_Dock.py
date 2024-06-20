@@ -15,16 +15,16 @@ from omniisaacgymenvs.robots.articulations.MFP2D_thrusters import (
 from omniisaacgymenvs.robots.articulations.views.MFP2D_view import (
     ModularFloatingPlatformView,
 )
-from omniisaacgymenvs.tasks.MFP.MFP2D_thruster_generator import (
+from omniisaacgymenvs.tasks.MFP2D.thruster_generator import (
     VirtualPlatform,
 )
-from omniisaacgymenvs.tasks.MFP.MFP2D_task_factory import (
+from omniisaacgymenvs.tasks.MFP2D.task_factory import (
     task_factory,
 )
-from omniisaacgymenvs.tasks.MFP.MFP2D_penalties import (
+from omniisaacgymenvs.tasks.common_3DoF.penalties import (
     EnvironmentPenalties,
 )
-from omniisaacgymenvs.tasks.MFP.MFP2D_disturbances import (
+from omniisaacgymenvs.tasks.common_3DoF.disturbances import (
     Disturbances,
 )
 from omniisaacgymenvs.robots.sensors.exteroceptive.camera import (

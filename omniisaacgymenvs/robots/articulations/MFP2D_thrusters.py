@@ -20,10 +20,10 @@ import math
 import os
 
 from omniisaacgymenvs.robots.articulations.utils.MFP_utils import *
-from omniisaacgymenvs.tasks.MFP.MFP2D_thruster_generator import (
+from omniisaacgymenvs.tasks.MFP2D.thruster_generator import (
     compute_actions,
 )
-from omniisaacgymenvs.tasks.MFP.MFP2D_thruster_generator import (
+from omniisaacgymenvs.tasks.MFP2D.thruster_generator import (
     ConfigurationParameters,
 )
 

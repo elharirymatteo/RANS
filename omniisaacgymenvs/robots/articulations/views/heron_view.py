@@ -34,7 +34,9 @@ from omni.isaac.core.prims import RigidPrimView
 
 class HeronView(ArticulationView):
     def __init__(
-        self, prim_paths_expr: str, name: Optional[str] = "HeronPlatformView"
+        self, prim_paths_expr: str,
+        track_contact_force:bool = False,
+        name: Optional[str] = "HeronPlatformView"
     ) -> None:
         """[summary]"""
 
@@ -45,6 +47,7 @@ class HeronView(ArticulationView):
             prim_paths_expr=f"/World/envs/.*/heron/base_link",
             name="base_view",
             reset_xform_properties=False,
+            track_contact_forces=track_contact_force,
         )
 
         self.thruster_left = RigidPrimView(

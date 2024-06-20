@@ -23,7 +23,7 @@ from omniisaacgymenvs.utils.rlgames.rlgames_utils import RLGPUAlgoObserver
 from rlgames_train import RLGTrainer
 from rl_games.torch_runner import Runner
 from omniisaacgymenvs.utils.task_util import initialize_task
-from omniisaacgymenvs.envs.vec_env_rlgames_mfp import VecEnvRLGames
+from omniisaacgymenvs.envs.vec_env_rlgames_RANS import VecEnvRLGames
 
 
 def run_sdg(cfg, horizon, num_ep=1):

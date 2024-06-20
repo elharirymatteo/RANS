@@ -1,0 +1,3 @@
+name: GoToPosition
+reward_mode: exponential
+exponential_reward_coeff: 0.25
