@@ -1,0 +1,41 @@
+{
+    "boat": {
+        "tasks": ["ASV/GoToPosition", "ASV/GoToPose", "ASV/GoThroughPositionSequence"],
+        "seeds": [0, 1],
+        "static_params": {
+            "headless": "True",
+            "train": "RANS/PPOcontinuous_MLP",
+            "num_envs": "4096",
+            "max_iterations": "2000",
+            "wandb_activate": "True",
+            "wandb_entity": "spacer-rl",
+            "wandb_project": "iclr_benchmark1"
+        }
+    },
+    "floating_platform": {
+        "tasks": ["MFP2D/GoToPosition", "MFP2D/GoToPose", "MFP2D/TrackLinearVelocity", "MFP2D/GoThroughPositionSequence"],
+        "seeds": [0, 1],
+        "static_params": {
+            "headless": "True",
+            "train": "RANS/PPOmulti_discrete_MLP",
+            "num_envs": "4096",
+            "max_iterations": "2000",
+            "wandb_activate": "True",
+            "wandb_entity": "spacer-rl",
+            "wandb_project": "iclr_benchmark1"
+        }
+    },
+    "turtle_bot": {
+            "tasks": ["AGV/GoToPosition", "AGV/GoToPose", "AGV/TrackLinearVelocity", "AGV/GoThroughPositionSequence"],
+            "seeds": [0, 1],
+            "static_params": {
+                "headless": "True",
+                "train": "RANS/PPOcontinuous_MLP",
+                "num_envs": "4096",
+                "max_iterations": "2000",
+                "wandb_activate": "True",
+                "wandb_entity": "spacer-rl",
+                "wandb_project": "iclr_benchmark1"
+            }
+        }
+    }
