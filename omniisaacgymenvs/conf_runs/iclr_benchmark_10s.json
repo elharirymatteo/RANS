@@ -1,7 +1,7 @@
 {
     "boat": {
         "tasks": ["ASV/GoToPosition", "ASV/GoToPose", "ASV/GoThroughPositionSequence"],
-        "seeds": [2, 3, 4, 5, 6, 7, 8, 9],
+        "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
         "static_params": {
             "headless": "True",
             "train": "RANS/PPOcontinuous_MLP",
@@ -9,12 +9,12 @@
             "max_iterations": "2000",
             "wandb_activate": "True",
             "wandb_entity": "spacer-rl",
-            "wandb_project": "iclr_benchmark1"
+            "wandb_project": "iclr_benchmark_10s"
         }
     },
     "floating_platform": {
         "tasks": ["MFP2D/GoToPosition", "MFP2D/GoToPose", "MFP2D/TrackLinearVelocity", "MFP2D/GoThroughPositionSequence"],
-        "seeds": [2, 3, 4, 5, 6, 7, 8, 9],
+        "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
         "static_params": {
             "headless": "True",
             "train": "RANS/PPOmulti_discrete_MLP",
@@ -22,12 +22,12 @@
             "max_iterations": "2000",
             "wandb_activate": "True",
             "wandb_entity": "spacer-rl",
-            "wandb_project": "iclr_benchmark1"
+            "wandb_project": "iclr_benchmark_10s"
         }
     },
     "turtle_bot": {
             "tasks": ["AGV/GoToPosition", "AGV/GoToPose", "AGV/TrackLinearVelocity", "AGV/GoThroughPositionSequence"],
-            "seeds": [2, 3, 4, 5, 6, 7, 8, 9],
+            "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
             "static_params": {
                 "headless": "True",
                 "train": "RANS/PPOcontinuous_MLP",
@@ -35,7 +35,7 @@
                 "max_iterations": "2000",
                 "wandb_activate": "True",
                 "wandb_entity": "spacer-rl",
-                "wandb_project": "iclr_benchmark1"
+                "wandb_project": "iclr_benchmark_10s"
             }
         }
     }
