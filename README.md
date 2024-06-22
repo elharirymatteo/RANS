@@ -13,7 +13,7 @@ This repository serves as an extension to the [OmniIsaacGymEnvs](https://github.
   <style>
     .responsive-img {
       max-height: 100px; /* Adjust this value to your desired height */
-      width: auto;
+      max-width: 250px;
     }
   </style>
 </head>
