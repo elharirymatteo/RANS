@@ -1,45 +1,65 @@
 ![RANS_LOGO](data/RANS_v31_full_2.png) 
-## About this repository
 
-This repo is an extension of the Isaac Gym Envs library present at https://github.com/NVIDIA-Omniverse/OmniIsaacGymEnvs. There, you can find further details and instructions regarding the default tasks (`AllegroHand`, `Ant`, `Anymal`, `AnymalTerrain`, `BallBalance`, `Cartpole`, `Crazyflie`, `FrankaCabinet`, `Humanoid`, `Ingenuity`, `Quadcopter`, `ShadowHand`, `ShadowHandOpenAI_FF`, `ShadowHandOpenAI_LSTM`).
+## About this Repository
 
-The main additions to the Reinforcement Learning examples provided by Omniverse Isaac Gym are environments related to **Space Robotics**. 
+This repository serves as an extension to the [OmniIsaacGymEnvs](https://github.com/NVIDIA-Omniverse/OmniIsaacGymEnvs) framework, enhancing its capabilities with additional robots and advanced features. The primary goal is to provide a more flexible environment for deploying various **code-generated robotic** and performing complex **navigation tasks**. 
+### Key Features
 
-Firstly, we start by providing a 2D environmnet, which serves as a simpler version of a realistic spacecraft. The modelled 2D system can be tested with a real rigid structure floating on top of an extremely flat and smooth surface using air bearings. This system is a common solution to emulate free-floating and free-flying satellite motion. This intermediate step is especially important for demonstrating the sim-to-real transfer of the DRL policies trained within Omniverse. 
+- **Extended Robot Library**: Introduces new robots to the existing OmniIsaacGymEnvs framework, enabling a wider range of simulations and applications.
+- **Navigation Tasks**: Includes a variety of navigation tasks designed to test and benchmark robotic performance in different scenarios.
+- **Modular Extensions**: Supports features like domain randomization to improve robustness and automated curriculum learning to optimize training processes.
 
-Secondly, we provide a full 3D environment to allow the simulation of free flying spacecrafts in space.
+<head>
+  <style>
+    .responsive-img {
+      max-height: 100px; /* Adjust this value to your desired height */
+      width: auto;
+    }
+  </style>
+</head>
 
-| 3DoF go to XY | 3DoF go to Pose | 6DoF go to XYZ |
-| :-: | :-: | :-: |
-| ![3Dof_GoToXY_v2](omniisaacgymenvs/demos/3Dof_GoToXY_v2.gif) | ![3Dof_GoToPose_v2](omniisaacgymenvs/demos/3Dof_GoToPose_v2.gif) | ![6Dof_GoToXYZ_v8](omniisaacgymenvs/demos/6Dof_GoToXYZ_v8.gif) |
+### Robots Included
 
----
-## Task Description
+| 2D Satellite | 3D Satellite | Heron USV | Turtle-bots | Husky car |
+| :-: | :-: | :-: | :-: | :-: |
+| <img src="data/tasks_imgs/3dof_gotoxy.png" class="responsive-img" alt="2D Satellite"/> | <img src="omniisaacgymenvs/images/6DofGoToPose.png" class="responsive-img" alt="3D Satellite"/> | <img src="data/robots_imgs/usv_boat.png" class="responsive-img" alt="Heron USV"/> | <img src="data/robots_imgs/turtlebot2e.png" class="responsive-img" alt="Turtle-bots"/> | <img src="data/robots_imgs/husky_car.png" class="responsive-img" alt="Husky car"/> |
 
-Currently we provide two primary environments, each tailored to simulate distinct robotic systems:
+- **2D Satellite**: Simulates basic satellite maneuvers in a 2D plane.
+- **3D Satellite**: Extends satellite control to 3D space for more complex operations.
+- **Heron USV**: A surface vessel used for aquatic navigation tasks.
+- **Turtle-bots**: Compact mobile robots suitable for indoor navigation.
+- **Husky car**: A rugged, all-terrain robot for outdoor navigation.
 
-1. **3 Degrees of Freedom (3DoF) Robot Simulation:**
-   The simulator replicates the behavior of the 3DoF robot situated in the ZeroG Lab of the University of Luxembourg (SpaceR group). The system is equipped with 8 thrusters.
+## Navigation Tasks Available
 
-   In this environment, the following tasks are defined:
-   - **GoToXY:** Task for position control.
-   - **GoToPose-2D:** Task for position-attitude control.
-   - **TrackXYVelocity:** Agent learns to track linear velocities in the xy plane.
-   - **TrackXYOVelocity:** Agent learns to track both linear and angular velocities.
+This library provides a set of predefined navigation tasks for robotic control and reinforcement learning. It allows for easy extensions to add new tasks or modify existing ones to suit different requirements.
 
-2. **6 Degrees of Freedom (6DoF) Robot Simulation:**
-   The simulator emulates spacecraft maneuvers in space, featuring a 6DoF robot configuration with 16 thrusters.
-   
-   The tasks defined for this environment are:
-   - **GoToXYZ:** Task for precise spatial positioning.
-   - **GoToPose-3D:** Task for accurate spatial positioning and orientation.
+### Tasks list
+- GoToPosition
+- GoToPose
+- Track Linear Velocity
+- Track Linear & Angular Velocity
+- Track Linear Velocity & Heading
+- GoThroughPosition / Sequence
+- GoThroughPose / Sequence
+- GoThroughGate / Sequence
 
-#### Thrusters Configuration
-The default thrusters configuration for both 3DoF and 6DoF scenarios is depicted in the following images, showing the direction of forces applied by the thrusters mounted on the systems.
+<details> 
+  <summary><h3 style="display: inline;">Click to Open Task Descriptions</h3></summary>
 
-| 3DoF Thrusters Configuration | 6DoF Thrusters Configuration |
-| :-: | :-: |
-| <img src="omniisaacgymenvs/images/config3Dof.png" width="200"/> | <img src="omniisaacgymenvs/images/config6Dof.png" width="200"/> |
+
+  | Task                        | Objective and Challenge                                                                                                                                  | Image                           |
+  |-----------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------|
+  | **GoToPosition**            | Navigate to a specific target position. Accurately reach position within a given distance.                                                | <img src="data/tasks_imgs/3dof_gotoxy.png" alt="GoToPosition Image" class="responsive-img"/> |
+  | **GoToPose**                | Reach a specific target position and orientation. Manage both position and heading errors, within a given distance.                       | <img src="data/tasks_imgs/3dof_pose.png" alt="GoToPose Image" class="responsive-img"/> |
+  | **Track Linear Velocity**   | Achieve and maintain a specific linear velocity. Precisely track the target velocity.                                                                     | <img src="path_to_image.png" alt="TrackLinearVelocity Image" class="responsive-img"/> |
+  | **Track Linear & Angular Velocity** | Achieve and maintain specific linear and angular velocities. Manage both linear and angular velocity tracking.                                             | <img src="path_to_image.png" alt="TrackLinearAngularVelocity Image" class="responsive-img"/> |
+  | **Track Linear Velocity & Heading** | Achieve and maintain a specific linear velocity while following a heading. Track linear velocity and heading simultaneously.                           | <img src="path_to_image.png" alt="TrackLinearVelocityHeading Image" class="responsive-img"/> |
+  | **GoThroughPosition / Sequence** | Pass through a specific position or sequence while continuing the trajectory. Ensure precise traversal within a given distance (0.1cm default).                   | <img src="data/tasks_imgs/position_seq.png" alt="GoThroughPosition Image" class="responsive-img"/> |
+  | **GoThroughPose / Sequence** | Pass through a target position and orientation or sequence. Achieve accuracy in both position and heading within a given distance (0.1cm default).                  | <img src="data/tasks_imgs/pose_seq.png" alt="GoThroughPose Image" class="responsive-img"/> |
+  | **GoThroughGate / Sequence** | Pass through a gate or a series of gates in a specific direction without touching them. Maintain accuracy with a tolerance of 1m (default) and avoid crossing in the wrong direction. | <img src="data/tasks_imgs/gate_seq.png" alt="GoThroughGate Image" class="responsive-img"/> |
+
+</details>
 
 ---
 ## Installation
@@ -96,20 +116,20 @@ PYTHON_PATH -m pip install -e .
 <summary><span style="font-size: 1.3em; font-weight: bold;">Training new agents</span></summary>
 
 
-To train your first policy, run:
+To train your first policy, (example for the USV robot) run:
 
 ```bash
-PYTHON_PATH scripts/rlgames_train_mfp.py task=MFP/MFP2D_GoToXY_ideal train=MFP/MFP2D_PPOmulti_dict_MLP headless=True num_envs=1024
+PYTHON_PATH scripts/rlgames_train_RANS.py task=ASV/GoToPose train=RANS/PPOcontinuous_MLP headless=True num_envs=1024
 ```
 Modify num_envs appropriately to scale with your current machine capabilities. Turn headless to `False` if you want to visualize the envs while training occurs.
 
-You should see an Isaac Sim window pop up. Once Isaac Sim initialization completes, the FloatingPlatform scene will be constructed and simulation will start running automatically. The process will terminate once training finishes.
+You should see an Isaac Sim window pop up. Once Isaac Sim initialization completes, the scene for the selected robot will be constructed and simulation will start running automatically. The process will terminate once training finishes.
 
 
-Here's another example - GoToPose - using the multi-threaded training script:
+Here's another example - GoToPose for the Satellite robot (MFP - modular floating platform) - using the multi-threaded training script:
 
 ```bash
-PYTHON_PATH scripts/rlgames_train_mfp.py task=MFP/MFP2D_GoToPose_ideal train=MFP/MFP2D_PPOmulti_dict_MLP
+PYTHON_PATH scripts/rlgames_train_RANS.py task=MFP2D/GoToPose train=RANS/PPOmulti_discrete_MLP
 ```
 
 Note that by default, we show a Viewport window with rendering, which slows down training. You can choose to close the Viewport window during training for better performance. The Viewport window can be re-enabled by selecting `Window > Viewport` from the top menu bar.
@@ -117,7 +137,7 @@ Note that by default, we show a Viewport window with rendering, which slows down
 To achieve maximum performance, launch training in `headless` mode as follows:
 
 ```bash
-PYTHON_PATH scripts/rlgames_train_mfp.py task=virtual_floating_platform/MFP2D_Virtual_GoToPose train=virtual_floating_platform/MFP2D_PPOmulti_dict_MLP headless=True
+PYTHON_PATH scripts/rlgames_train_RANS.py task=MFP2D/GoToPose train=PPOmulti_discrete_MLP headless=True
 ```
 
 #### A Note on the Startup Time of the Simulation
@@ -136,7 +156,7 @@ defaults to the task name, but can also be overridden via the `experiment` argum
 To load a trained checkpoint and continue training, use the `checkpoint` argument:
 
 ```bash
-PYTHON_PATH scripts/rlgames_train_mfp.py task=virtual_floating_platform/MFP2D_Virtual_GoToPose train=virtual_floating_platform/MFP2D_PPOmulti_dict_MLP checkpoint=runs/MFP2D_Virtual_GoToPose/nn/MFP2D_Virtual_GoToPose.pth
+PYTHON_PATH scripts/rlgames_train_RANS.py task=MFP2D/GoToPose train=RANS/PPOmulti_discrete_MLP checkpoint=runs/MFP2D_GoToPose/nn/MFP2D_GoToPose.pth
 ```
 
 To load a trained checkpoint and only perform inference (no training), pass `test=True` 
@@ -144,7 +164,7 @@ as an argument, along with the checkpoint name. To avoid rendering overhead, you
 also want to run with fewer environments using `num_envs=64`:
 
 ```bash
-PYTHON_PATH scripts/rlgames_train_mfp.py task=virtual_floating_platform/MFP2D_Virtual_GoToPose train=virtual_floating_platform/MFP2D_PPOmulti_dict_MLP checkpoint=runs/MFP2D_Virtual_GoToPose/nn/MFP2D_Virtual_GoToPose.pth test=True num_envs=64
+PYTHON_PATH scripts/rlgames_train_RANS.py task=MFP2D/GoToPose train=RANS/PPOmulti_discrete_MLP checkpoint=runs/MFP2D_GoToPose/nn/MFP2D_GoToPose.pth test=True num_envs=64
 ```
 
 Note that if there are special characters such as `[` or `=` in the checkpoint names, 
