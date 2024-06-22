@@ -22,7 +22,7 @@ This repository serves as an extension to the [OmniIsaacGymEnvs](https://github.
 
 | 2D Satellite | 3D Satellite | Heron USV | Turtle-bots | Husky car |
 | :-: | :-: | :-: | :-: | :-: |
-| <img src="data/tasks_imgs/3dof_gotoxy.png" class="responsive-img" alt="2D Satellite"/> | <img src="omniisaacgymenvs/images/6DofGoToPose.png" class="responsive-img" alt="3D Satellite"/> | <img src="data/robots_imgs/usv_boat.png" class="responsive-img" alt="Heron USV"/> | <img src="data/robots_imgs/turtlebot2e.png" class="responsive-img" alt="Turtle-bots"/> | <img src="data/robots_imgs/husky_car.png" class="responsive-img" alt="Husky car"/> |
+| <img src="data/tasks_imgs/3dof_gotoxy.png" alt="2D Satellite"  class="responsive-img"> | <img src="omniisaacgymenvs/images/6DofGoToPose.png" alt="3D Satellite"  class="responsive-img"/> | <img src="data/robots_imgs/usv_boat.png" alt="Heron USV"  class="responsive-img"/> | <img src="data/robots_imgs/turtlebot2e.png" alt="Turtle-bots"  class="responsive-img"/> | <img src="data/robots_imgs/husky_car.png" alt="Husky car"  class="responsive-img"/> |
 
 - **2D Satellite**: Simulates basic satellite maneuvers in a 2D plane.
 - **3D Satellite**: Extends satellite control to 3D space for more complex operations.
