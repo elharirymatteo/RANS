@@ -13,7 +13,7 @@ This repository serves as an extension to the [OmniIsaacGymEnvs](https://github.
   <style>
     .responsive-img {
       max-height: 100px; /* Adjust this value to your desired height */
-      max-width: 250px;
+      width: 200px;
     }
   </style>
 </head>
@@ -22,7 +22,7 @@ This repository serves as an extension to the [OmniIsaacGymEnvs](https://github.
 
 | 2D Satellite | 3D Satellite | Heron USV | Turtle-bots | Husky car |
 | :-: | :-: | :-: | :-: | :-: |
-| <img src="data/tasks_imgs/3dof_gotoxy.png" alt="2D Satellite"  class="responsive-img"> | <img src="omniisaacgymenvs/images/6DofGoToPose.png" alt="3D Satellite"  class="responsive-img"/> | <img src="data/robots_imgs/usv_boat.png" alt="Heron USV"  class="responsive-img"/> | <img src="data/robots_imgs/turtlebot2e.png" alt="Turtle-bots"  class="responsive-img"/> | <img src="data/robots_imgs/husky_car.png" alt="Husky car"  class="responsive-img"/> |
+| <img src="data/tasks_imgs/3dof_gotoxy.png" alt="2D Satellite"  class="responsive-img"> | <img src="omniisaacgymenvs/images/6DofGoToPose.png" alt="3D Satellite"  class="responsive-img"/> | <img src="data/robots_imgs/usv_boat.png" alt="Heron USV"  class="responsive-img"/> | <img src="data/robots_imgs/turtlebot2e.png" alt="Turtle-bots"  width=130/> | <img src="data/robots_imgs/husky_car.png" alt="Husky car"  class="responsive-img"/> |
 
 - **2D Satellite**: Simulates basic satellite maneuvers in a 2D plane.
 - **3D Satellite**: Extends satellite control to 3D space for more complex operations.
@@ -62,13 +62,17 @@ This library provides a set of predefined navigation tasks for robotic control a
 </details>
 
 ---
-## Installation
+
+<details> 
+  <summary><h2 style="display: inline;">Installation</h2></summary>
 
 Follow the Isaac Sim [documentation](https://docs.omniverse.nvidia.com/isaacsim/latest/installation/install_workstation.html) to install the latest Isaac Sim release. 
 
-*Examples in this repository rely on features from the most recent Isaac Sim release. Please make sure to update any existing Isaac Sim build to the latest release version, 2022.2.0, to ensure examples work as expected.*
+*Examples in this repository rely on features from the most recent Isaac Sim release. Please make sure to update any existing Isaac Sim build to the latest release version, 2023.1.1, to ensure examples work as expected.*
 
-### OmniverseIsaacGymEnvs
+<details> 
+  <summary><h3 style="display: inline;">OmniverseIsaacGymEnvs</h3></summary>
+
 Once installed, this repository can be used as a python module, `omniisaacgymenvs`, with the python executable provided in Isaac Sim.
 
 To install `omniisaacgymenvs`, first clone this repository:
@@ -92,8 +96,10 @@ Install `omniisaacgymenvs` as a python module for `PYTHON_PATH`:
 ```bash
 PYTHON_PATH -m pip install -e .
 ```
+</details>
 
-### RL Games
+<details> 
+  <summary><h3 style="display: inline;">RL Games</h3></summary>
 
 We use the [rl-games](https://pypi.org/project/rl-games/1.0.2/) library as a starting point to rework the PPO implementation for the agents we train.
 
@@ -101,12 +107,14 @@ To install the appropriate version of rl-games, clone this repository **INSIDE**
 ```bash
 git clone https://github.com/AntoineRichard/rl_games
 ```
-Make sure to install the rl_gamers library under the OmniverseIsaacGym dependecy:
+from inside the RANS folder:
 ```
 cd rl_games
 PYTHON_PATH -m pip install --upgrade pip
 PYTHON_PATH -m pip install -e .
 ```
+</details>
+</details>
 
 ## Running the examples
 
@@ -181,7 +189,7 @@ All scripts provided in `omniisaacgymenvs/scripts` can be launched directly with
 To test out a task without RL in the loop, run the random policy script with:
 
 ```bash
-PYTHON_PATH scripts/random_policy.py task=virtual_floating_platform/MFP2D_Virtual_GoToXY
+PYTHON_PATH scripts/random_policy.py task=MFP2D/GoToPose
 ```
 
 This script will sample random actions from the action space and apply these actions to your task without running any RL policies. Simulation should start automatically after launching the script, and will run indefinitely until terminated.
@@ -192,7 +200,7 @@ This script will sample random actions from the action space and apply these act
 To run a simple form of PPO from `rl_games`, use the single-threaded training script:
 
 ```bash
-PYTHON_PATH scripts/rlgames_train_mfp.py task=virtual_floating_platform/MFP2D_Virtual_GoToXY
+PYTHON_PATH scripts/rlgames_train_RANS.py task=MFP2D/GoToPosition
 ```
 
 This script creates an instance of the PPO runner in `rl_games` and automatically launches training and simulation. Once training completes (the total number of iterations have been reached), the script will exit. If running inference with `test=True checkpoint=<path/to/checkpoint>`, the script will run indefinitely until terminated. Note that this script will have limitations on interaction with the UI.
@@ -200,15 +208,8 @@ This script creates an instance of the PPO runner in `rl_games` and automaticall
 
 <details>
 <summary><span style="font-size: 1.3em; font-weight: bold;">Train on multiple GPUs</span></summary>
-Lastly, we provide a multi-threaded training script that executes the RL policy on a separate thread than the main thread used for simulation and rendering:
-
-```bash
-PYTHON_PATH scripts/rlgames_train_mfp.py task=virtual_floating_platform/MFP2D_Virtual_GoToXY
-```
-
-This script uses the same RL Games PPO policy as the above, but runs the RL loop on a new thread. Communication between the RL thread and the main thread happens on threaded Queues. Simulation will start automatically, but the script will **not** exit when training terminates, except when running in headless mode. Simulation will stop when training completes or can be stopped by clicking on the Stop button in the UI. Training can be launched again by clicking on the Play button. Similarly, if running inference with `test=True checkpoint=<path/to/checkpoint>`, simulation will run until the Stop button is clicked, or the script will run indefinitely until the process is terminated.
+TBD
 </details>
-
 <details>
 <summary><span style="font-size: 1.3em; font-weight: bold;">Configuration and command line arguments</span></summary>
 
@@ -216,23 +217,24 @@ We use [Hydra](https://hydra.cc/docs/intro/) to manage the config.
  
 Common arguments for the training scripts are:
 
-* `task=TASK` - Selects which task to use. Any of `MFP2D_Virtual_GoToXY`, `MFP2D_Virtual_GoToPose`, `MFP2D_Virtual_TrackXYVelocity`, `MFP2D_Virtual_TrackXYOVelocity`, `MFP3D_Virtual_GoToXYZ`, `MFP3D_Virtual_GoToPose`, (these correspond to the config for each environment in the folder `omniisaacgymenvs/cfg/task/virtual_floating_platform`)
-* `train=TRAIN` - Selects which training config to use. Will automatically default to the correct config for the environment (ie. `<TASK>PPO`).
+* `task=TASK` - Selects which task to use. Examples include `MFP2D/GoToPosition`, `MFP2D/GoToPose`, `MFP2D/TrackLinearVelocity`, `MFP2D/TrackLinearAngularVelocity`, `MFP3D/GoToPosition`, `MFP3D/GoToPose`. These correspond to the config for each environment in the folder `omniisaacgymenvs/cfg/task/` + `MFP2D` or any robot description (eg. `ASV` for the boat or `AGV` for the turtle-bots).
+* `train=TRAIN` - Selects which training config to use. Will automatically default to the correct config for the environment file inside the `train/RANS` folder (e.g., `PPOcontinuous_MLP` or `PPOmulti_discrete_MLP`).
 * `num_envs=NUM_ENVS` - Selects the number of environments to use (overriding the default number of environments set in the task config).
-* `seed=SEED` - Sets a seed value for randomization, and overrides the default seed in the task config
-* `pipeline=PIPELINE` - Which API pipeline to use. Defaults to `gpu`, can also set to `cpu`. When using the `gpu` pipeline, all data stays on the GPU. When using the `cpu` pipeline, simulation can run on either CPU or GPU, depending on the `sim_device` setting, but a copy of the data is always made on the CPU at every step.
+* `seed=SEED` - Sets a seed value for randomization, overriding the default seed in the task config.
+* `pipeline=PIPELINE` - Which API pipeline to use. Defaults to `gpu`, can also be set to `cpu`. When using the `gpu` pipeline, all data stays on the GPU. When using the `cpu` pipeline, simulation can run on either CPU or GPU, depending on the `sim_device` setting, but a copy of the data is always made on the CPU at every step.
 * `sim_device=SIM_DEVICE` - Device used for physics simulation. Set to `gpu` (default) to use GPU and to `cpu` for CPU.
 * `device_id=DEVICE_ID` - Device ID for GPU to use for simulation and task. Defaults to `0`. This parameter will only be used if simulation runs on GPU.
 * `rl_device=RL_DEVICE` - Which device / ID to use for the RL algorithm. Defaults to `cuda:0`, and follows PyTorch-like device syntax.
-* `test=TEST`- If set to `True`, only runs inference on the policy and does not do any training.
+* `test=TEST` - If set to `True`, only runs inference on the policy and does not do any training.
 * `checkpoint=CHECKPOINT_PATH` - Path to the checkpoint to load for training or testing.
 * `headless=HEADLESS` - Whether to run in headless mode.
 * `experiment=EXPERIMENT` - Sets the name of the experiment.
 * `max_iterations=MAX_ITERATIONS` - Sets how many iterations to run for. Reasonable defaults are provided for the provided environments.
-* `warp=WARP` - If set to True, launch the task implemented with Warp backend (Note: not all tasks have a Warp implementation).
+* `warp=WARP` - If set to `True`, launch the task implemented with Warp backend (Note: not all tasks have a Warp implementation).
 * `kit_app=KIT_APP` - Specifies the absolute path to the kit app file to be used.
 
-Hydra also allows setting variables inside config files directly as command line arguments. As an example, to set the minibatch size for a rl_games training run, you can use `train.params.config.minibatch_size=64`. Similarly, variables in task configs can also be set. For example, `task.env.episodeLength=100`.
+Hydra also allows setting variables inside config files directly as command line arguments. For example, to set the minibatch size for an rl_games training run, you can use `train.params.config.minibatch_size=64`. Similarly, variables in task configs can also be set, such as `task.env.episodeLength=100`.
+
 
 #### Hydra Notes
 
