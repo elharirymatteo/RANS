@@ -11,6 +11,7 @@ ros_lab_exp
 lab_tests
 aamas
 mj_runs
+wandb_data
 *.mp4
 *.npy
 *.csv
