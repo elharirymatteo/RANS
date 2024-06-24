@@ -28,7 +28,7 @@ This repository serves as an extension to the [OmniIsaacGymEnvs](https://github.
 - **3D Satellite**: Extends satellite control to 3D space for more complex operations.
 - **Heron USV**: A surface vessel used for aquatic navigation tasks.
 - **Turtle-bots**: Compact mobile robots suitable for indoor navigation.
-- **Husky car**: A rugged, all-terrain robot for outdoor navigation.
+- **Husky**: A rugged, all-terrain robot for outdoor navigation.
 
 ## Navigation Tasks Available
 
