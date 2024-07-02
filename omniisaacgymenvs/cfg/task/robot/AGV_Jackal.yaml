@@ -1,0 +1,121 @@
+shape:
+  name: Cube
+  width: 0.323
+  depth: 0.508
+  height: 0.185
+  has_collider: True
+  is_rigid: True
+  refinement: 2
+
+mass: 50.0
+front_left_wheel:
+  wheel:
+    visual_shape:
+      name: Cylinder
+      radius: 0.1
+      height: 0.05
+      has_collider: False
+      is_rigid: False
+      refinement: 2
+    collider_shape:
+      name: Capsule
+      radius: 0.1
+      height: 0.05
+      has_collider: True
+      is_rigid: True
+      refinement: 2
+    mass: 0.05
+  actuator:
+      name: RevoluteJoint
+      axis: Z
+      enable_drive: True
+      damping: 10000000000.0
+      stiffness: 0.0
+  offset: [0.131, -0.190, -0.0575]
+  orientation: [-90, 0, 0]
+
+front_right_wheel:
+  wheel:
+    visual_shape:
+      name: Cylinder
+      radius: 0.1
+      height: 0.05
+      has_collider: False
+      is_rigid: False
+      refinement: 2
+    collider_shape:
+      name: Capsule
+      radius: 0.1
+      height: 0.05
+      has_collider: True
+      is_rigid: True
+      refinement: 2
+    mass: 0.05
+  actuator:
+    name: RevoluteJoint
+    axis: Z
+    enable_drive: True
+    damping: 10000000000.0
+    stiffness: 0.0
+  offset: [0.131, 0.190, -0.0575]
+  orientation: [-90, 0, 0]
+
+rear_left_wheel:
+  wheel:
+    visual_shape:
+      name: Cylinder
+      radius: 0.1
+      height: 0.05
+      has_collider: False
+      is_rigid: False
+      refinement: 2
+    collider_shape:
+      name: Capsule
+      radius: 0.1
+      height: 0.05
+      has_collider: True
+      is_rigid: True
+      refinement: 2
+    mass: 0.05
+  actuator:
+    name: RevoluteJoint
+    axis: Z
+    enable_drive: True
+    damping: 10000000000.0
+    stiffness: 0.0
+  offset: [-0.131, -0.190, -0.0575]
+  orientation: [-90, 0, 0]
+
+rear_right_wheel:
+  wheel:
+    visual_shape:
+      name: Cylinder
+      radius: 0.1
+      height: 0.05
+      has_collider: False
+      is_rigid: False
+      refinement: 2
+    collider_shape:
+      name: Capsule
+      radius: 0.1
+      height: 0.05
+      has_collider: True
+      is_rigid: True
+      refinement: 2
+    mass: 0.05
+  actuator:
+    name: RevoluteJoint
+    axis: Z
+    enable_drive: True
+    damping: 10000000000.0
+    stiffness: 0.0
+  offset: [-0.131, 0.190, -0.0575]
+  orientation: [-90, 0, 0]
+
+wheel_physics_material:
+  static_friction: 0.9
+  dynamic_friction: 0.7
+  restitution: 0.5
+  friction_combine_mode: average
+  restitution_combine_mode: average
+

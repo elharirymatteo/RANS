@@ -13,7 +13,6 @@ from dataclasses import dataclass, field
 from pxr import Gf, PhysxSchema
 from typing import Optional
 import numpy as np
-from pxr import Gf
 import omni
 
 from omniisaacgymenvs.robots.articulations.utils.MFP_utils import *
@@ -23,37 +22,47 @@ from omniisaacgymenvs.robots.sensors.exteroceptive.camera_module_generator impor
 )
 
 from omniisaacgymenvs.robots.articulations.utils.Types import (
-    DirectDriveWheel,
+    FullyFeaturedWheel,
     GeometricPrimitive,
     PhysicsMaterial,
+    ActuatorCfg,
     GeometricPrimitiveFactory,
 )
 
 
 @dataclass
-class AGVSkidsteer4WParameters:
+class AGVAckermannParameters:
     shape: GeometricPrimitive = field(default_factory=dict)
-    front_left_wheel: DirectDriveWheel = field(default_factory=dict)
-    front_right_wheel: DirectDriveWheel = field(default_factory=dict)
-    rear_left_wheel: DirectDriveWheel = field(default_factory=dict)
-    rear_right_wheel: DirectDriveWheel = field(default_factory=dict)
+    front_left_wheel: FullyFeaturedWheel = field(default_factory=dict)
+    front_right_wheel: FullyFeaturedWheel = field(default_factory=dict)
+    rear_left_wheel: FullyFeaturedWheel = field(default_factory=dict)
+    rear_right_wheel: FullyFeaturedWheel = field(default_factory=dict)
     wheel_physics_material: PhysicsMaterial = field(default_factory=dict)
 
-    mass: float = 5.0
+    steering_dynamics: ActuatorCfg = field(default_factory=dict)
+    throttle_dynamics: ActuatorCfg = field(default_factory=dict)
+
+    mass: float = 2.5
     CoM: tuple = (0, 0, 0)
+    use_software_differential: bool = True
+    use_software_steering_correction: bool = True
 
     def __post_init__(self):
         self.shape = GeometricPrimitiveFactory.get_item(self.shape)
-        self.front_left_wheel = DirectDriveWheel(**self.front_left_wheel)
-        self.front_right_wheel = DirectDriveWheel(**self.front_right_wheel)
-        self.rear_left_wheel = DirectDriveWheel(**self.rear_left_wheel)
-        self.rear_right_wheel = DirectDriveWheel(**self.rear_right_wheel)
+
+        self.front_left_wheel = FullyFeaturedWheel(**self.front_left_wheel)
+        self.front_right_wheel = FullyFeaturedWheel(**self.front_right_wheel)
+        self.rear_left_wheel = FullyFeaturedWheel(**self.rear_left_wheel)
+        self.rear_right_wheel = FullyFeaturedWheel(**self.rear_right_wheel)
         self.wheel_physics_material = PhysicsMaterial(**self.wheel_physics_material)
 
+        self.steering_dynamics = ActuatorCfg(**self.steering_dynamics)
+        self.throttle_dynamics = ActuatorCfg(**self.throttle_dynamics)
 
-class CreateAGVSkidsteer4W:
+
+class CreateAGVAckermann:
     """
-    Creates a 4 wheeled Skidsteer robot."""
+    Creates a 2 wheeled Skidsteer robot."""
 
     def __init__(self, path: str, cfg: dict) -> None:
         self.platform_path = path
@@ -63,7 +72,7 @@ class CreateAGVSkidsteer4W:
         self.stage = omni.usd.get_context().get_stage()
 
         # Reads the thruster configuration and computes the number of virtual thrusters.
-        self.settings = AGVSkidsteer4WParameters(**cfg)
+        self.settings = AGVAckermannParameters(**cfg)
         self.camera_cfg = cfg.get("camera", None)
 
     def build(self) -> None:
@@ -111,13 +120,12 @@ class CreateAGVSkidsteer4W:
         """
         Creates the wheels of the AMR.
         """
-
         # Creates the front left wheel
         front_left_wheel_path, front_left_wheel_prim = (
             self.settings.front_left_wheel.build(
                 self.stage,
                 joint_path=self.joints_path + "/front_left_wheel",
-                wheel_path=self.platform_path + "/front_left_wheel",
+                path=self.platform_path + "/front_left_wheel",
                 body_path=self.core_path,
             )
         )
@@ -127,7 +135,7 @@ class CreateAGVSkidsteer4W:
             self.settings.front_right_wheel.build(
                 self.stage,
                 joint_path=self.joints_path + "/front_right_wheel",
-                wheel_path=self.platform_path + "/front_right_wheel",
+                path=self.platform_path + "/front_right_wheel",
                 body_path=self.core_path,
             )
         )
@@ -137,7 +145,7 @@ class CreateAGVSkidsteer4W:
             self.settings.rear_left_wheel.build(
                 self.stage,
                 joint_path=self.joints_path + "/rear_left_wheel",
-                wheel_path=self.platform_path + "/rear_left_wheel",
+                path=self.platform_path + "/rear_left_wheel",
                 body_path=self.core_path,
             )
         )
@@ -147,7 +155,7 @@ class CreateAGVSkidsteer4W:
             self.settings.rear_right_wheel.build(
                 self.stage,
                 joint_path=self.joints_path + "/rear_right_wheel",
-                wheel_path=self.platform_path + "/rear_right_wheel",
+                path=self.platform_path + "/rear_right_wheel",
                 body_path=self.core_path,
             )
         )
@@ -198,12 +206,12 @@ class CreateAGVSkidsteer4W:
         self.camera.build()
 
 
-class AGV_SkidSteer_4W(Robot):
+class AGV_Ackermann(Robot):
     def __init__(
         self,
         prim_path: str,
         cfg: dict,
-        name: Optional[str] = "AGV_SS_4W",
+        name: Optional[str] = "AGV_SS_2W",
         usd_path: Optional[str] = None,
         translation: Optional[np.ndarray] = None,
         orientation: Optional[np.ndarray] = None,
@@ -214,8 +222,8 @@ class AGV_SkidSteer_4W(Robot):
         self._usd_path = usd_path
         self._name = name
 
-        AGV = CreateAGVSkidsteer4W(prim_path, cfg)
-        AGV.build()
+        AMR = CreateAGVAckermann(prim_path, cfg)
+        AMR.build()
 
         super().__init__(
             prim_path=prim_path,

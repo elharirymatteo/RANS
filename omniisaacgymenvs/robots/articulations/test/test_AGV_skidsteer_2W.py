@@ -24,13 +24,13 @@ if __name__ == "__main__":
     physics_ctx = world.get_physics_context()
     physics_ctx.set_solver_type("PGS")
 
-    with open("cfg/task/robot/turtlebot2_no_caster.yaml", "r") as file:
+    with open("cfg/task/robot/AGV_Turtlebot2_no_caster.yaml", "r") as file:
         TB2_no_caster_wheel = yaml.safe_load(file)
 
-    with open("cfg/task/robot/turtlebot2_with_caster.yaml", "r") as file:
+    with open("cfg/task/robot/AGV_Turtlebot2_with_caster.yaml", "r") as file:
         TB2_caster_wheel = yaml.safe_load(file)
 
-    with open("cfg/task/robot/turtlebot3_burger.yaml", "r") as file:
+    with open("cfg/task/robot/AGV_Turtlebot3_burger.yaml", "r") as file:
         TB3 = yaml.safe_load(file)
 
     AGV_SkidSteer_2W("/Turtlebot2", cfg=TB2_no_caster_wheel, translation=[0, 0, 0.3])

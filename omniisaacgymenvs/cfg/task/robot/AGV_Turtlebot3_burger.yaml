@@ -6,6 +6,7 @@ actuators:
     limits: [-6.0, 6.0]
 shape:
   name: Cylinder
+  marker_scale: 0.5
   radius: 0.080
   height: 0.180
   has_collider: True
