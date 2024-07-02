@@ -31,6 +31,7 @@ class GeometricPrimitive:
     refinement: int = 2
     has_collider: bool = False
     is_rigid: bool = False
+    marker_scale: float = 1.0
 
     def __post_init__(self):
         assert self.refinement > 0, "The refinement level must be larger than 0."
@@ -91,8 +92,8 @@ class Cylinder(GeometricPrimitive):
         pxr_utils.createArrow(
             stage,
             path,
-            0.1,
-            0.5,
+            0.1 * self.marker_scale,
+            0.5 * self.marker_scale,
             [self.radius, 0, 0],
             self.refinement,
         )
@@ -139,8 +140,8 @@ class Sphere(GeometricPrimitive):
         pxr_utils.createArrow(
             stage,
             marker_path + "/marker_arrow",
-            0.1,
-            0.5,
+            0.1 * self.marker_scale,
+            0.5 * self.marker_scale,
             [self.radius, 0, 0],
             self.refinement,
         )
@@ -191,8 +192,8 @@ class Capsule(GeometricPrimitive):
         pxr_utils.createArrow(
             stage,
             marker_path + "/marker_arrow",
-            0.1,
-            0.5,
+            0.1 * self.marker_scale,
+            0.5 * self.marker_scale,
             [self.radius, 0, 0],
             self.refinement,
         )
@@ -246,8 +247,8 @@ class Cube(GeometricPrimitive):
         pxr_utils.createArrow(
             stage,
             marker_path + "/marker_arrow",
-            0.1,
-            0.5,
+            0.1 * self.marker_scale,
+            0.5 * self.marker_scale,
             [self.depth / 2, 0, 0],
             self.refinement,
         )
@@ -560,11 +561,10 @@ class Steering:
     limits: tuple = (-30, 30)
     damping: float = 1e10
     stiffness: float = 0
-    # dynamics: dict = field(default_factory=dict)
 
     def __post_init__(self):
         revolute_joint = {
-            "name": "RevoluteActuator",
+            "name": "RevoluteJoint",
             "axis": "Z",
             "lower_limit": self.limits[0],
             "upper_limit": self.limits[1],
@@ -575,7 +575,6 @@ class Steering:
             "stiffness": self.stiffness,
         }
         self.actuator = JointActuatorFactory.get_item(revolute_joint)
-        # self.dynamics = DynamicsFactory.get_item(self.dynamics)
 
     def build(
         self,
@@ -585,10 +584,16 @@ class Steering:
         body_path: str = None,
     ) -> Tuple[str, Usd.Prim]:
         steering_path, steering_prim = pxr_utils.createXform(stage, path)
+        self.steering_path = steering_path
+        self.body_path = body_path
+        self.joint_path = joint_path
+
         pxr_utils.applyRigidBody(steering_prim)
         pxr_utils.applyMass(steering_prim, 0.05)
-        self.actuator.build(stage, joint_path, body_path, body_path)
         return steering_path, steering_prim
+
+    def create_joints(self, stage):
+        self.actuator.build(stage, self.joint_path, self.body_path, self.steering_path)
 
 
 @dataclass
@@ -598,13 +603,13 @@ class Suspension:
     stiffness: float = 0.0
 
     def __post_init__(self):
-        assert self.damping > 0, "The damping must be larger than 0."
-        assert self.stiffness > 0, "The stiffness must be larger than 0."
+        assert self.damping >= 0, "The damping must be larger than 0."
+        assert self.stiffness >= 0, "The stiffness must be larger than 0."
 
         piston_shape = {
             "name": "Cylinder",
             "height": self.travel,
-            "radius": self.travel / 4,
+            "radius": self.travel / 6,
             "has_collider": False,
             "is_rigid": False,
             "refinement": 2,
@@ -612,15 +617,15 @@ class Suspension:
         rod_shape = {
             "name": "Cylinder",
             "height": self.travel,
-            "radius": self.travel / 5,
+            "radius": self.travel / 8,
             "has_collider": False,
             "is_rigid": False,
             "refinement": 2,
         }
         pristmatic_joint = {
-            "name": "PrismaticActuator",
+            "name": "PrismaticJoint",
             "axis": "Z",
-            "lower_limit": 0,
+            "lower_limit": 0.0,
             "upper_limit": self.travel,
             "velocity_limit": None,
             "enable_drive": True,
@@ -633,35 +638,32 @@ class Suspension:
         self.spring = PrismaticJoint(**pristmatic_joint)
 
     def build(self, stage, joint_path, path, body_path, offset):
-
-        # Build piston
+        
+        # Create Xform to store the suspension
         path, prim = pxr_utils.createXform(stage, path)
-        piston_path, piston_prim = pxr_utils.createXform(stage, path + "/piston")
+        self.body_path = body_path
+        self.joint_path = joint_path
+
+        # Build piston sleeve
+        self.piston_path, piston_prim = self.piston_shape.build(stage, path+"/piston_sleeve")
         pxr_utils.applyRigidBody(piston_prim)
-        pxr_utils.applyMass(piston_prim, 0.05)
-        pxr_utils.setTranslate(
-            piston_prim, Gf.Vec3d(offset[0], offset[1], offset[2] - self.travel * 2)
-        )
-        piston_body_path, piston_body_prim = self.piston_shape.build(
-            stage, path + "/piston/body"
-        )
-        pxr_utils.setTranslate(piston_body_prim, Gf.Vec3d(0, 0, -self.travel / 2))
+        pxr_utils.applyMass(piston_prim, 0.001)
+        pxr_utils.setTranslate(piston_prim, Gf.Vec3d(offset[0], offset[1], offset[2] + self.travel*3/2))
 
         # Build piston rod
-        rod_path, rod_prim = pxr_utils.createXform(stage, path + "/rod")
+        self.rod_path, rod_prim = self.rod_shape.build(stage, path + "/rod")
         pxr_utils.applyRigidBody(rod_prim)
-        pxr_utils.applyMass(rod_prim, 0.05)
-        pxr_utils.setTranslate(rod_prim, Gf.Vec3d(offset[0], offset[1], offset[2]))
-        rod_body_path, rod_body_prim = self.rod_shape.build(stage, path + "/rod/body")
-        pxr_utils.setTranslate(rod_body_prim, Gf.Vec3d(0, 0, self.travel / 2))
+        pxr_utils.applyMass(rod_prim, 0.001)
+        pxr_utils.setTranslate(rod_prim, Gf.Vec3d(offset[0], offset[1], offset[2] + self.travel/2))
+        return self.rod_path, rod_prim
 
-        # Build joint between piston and body
+    def create_joints(self, stage):
+        # Build the joint between the body and the piston
         pxr_utils.createFixedJoint(
-            stage, joint_path + "_body_spring", path, piston_path
+            stage, self.joint_path + "_piston", self.body_path, self.piston_path
         )
         # Build the joint to create the spring
-        self.spring.build(stage, joint_path + "_spring", piston_path, rod_path)
-        return rod_path, rod_prim
+        self.spring.build(stage, self.joint_path + "_spring", self.piston_path, self.rod_path)
 
 
 @dataclass
@@ -680,8 +682,6 @@ class Wheel:
 
         self.visual_shape = GeometricPrimitiveFactory.get_item(self.visual_shape)
         self.collider_shape = GeometricPrimitiveFactory.get_item(self.collider_shape)
-        # self.physics_material = PhysicsMaterial(**self.physics_material)
-        # self.visual_material = SimpleColorTexture(**self.visual_material)
 
     def build(self, stage: Usd.Stage, path: str = None) -> Tuple[str, Usd.Prim]:
         wheel_path, wheel_prim = pxr_utils.createXform(stage, path)
@@ -692,8 +692,6 @@ class Wheel:
         collider_prim.GetAttribute("visibility").Set("invisible")
         pxr_utils.applyRigidBody(wheel_prim)
         pxr_utils.applyMass(wheel_prim, self.mass)
-        # pxr_utils.applyMaterial(visual_prim, self.visual_material)
-        # pxr_utils.applyMaterial(collision_prim, self.visual_material)
         return wheel_path, wheel_prim
 
 
@@ -732,33 +730,45 @@ class DirectDriveWheel:
 
 @dataclass
 class FullyFeaturedWheel:
-    wheel: Wheel = field(default_factory=dict)
+    drive_wheel: DirectDriveWheel = field(default_factory=dict)
+    steering: Steering = field(default_factory=dict)
+    suspension: Suspension = field(default_factory=dict)
     offset: tuple = (0, 0, 0)
     orientation: tuple = (0, 90, 0)
-    steering: Steering = field(default_factory=dict)
-    motor: Motor = field(default_factory=dict)
-    is_driven: bool = True
-    suspension: Suspension = field(default_factory=dict)
 
     def __post_init__(self):
-        self.wheel = Wheel(**self.wheel)
+        self.drive_wheel = DirectDriveWheel(**self.drive_wheel)
         if self.suspension is not None:
             self.suspension = Suspension(**self.suspension)
         if self.steering is not None:
             self.steering = Steering(**self.steering)
 
-    def build(self, stage: Usd.Stage, joint_path: str, path: str, body_path: str):
-        pxr_utils.createXform(stage, path)
+    def build(self, stage: Usd.Stage, joint_path: str = None, path: str = None, body_path: str = None):
+        ffw_path, ffw_prim = pxr_utils.createXform(stage, path)
+        # Create suspension
+        if self.suspension is not None:
+            suspension_offset = (0.0,  - math.copysign(self.suspension.travel, self.offset[1]) / 2, 0.0)
+            body_path, body_prim = self.suspension.build(stage, joint_path + "_suspension", ffw_path + "/suspension", body_path, suspension_offset)
+        # Create steering
+        if self.steering is not None:
+            body_path, body_prim = self.steering.build(stage, joint_path + "_steering", ffw_path + "/steering", body_path)
         # Create wheel
-        wheel_path, wheel_prim = self.wheel.build(stage, path + "/wheel")
-        pxr_utils.setTranslate(wheel_prim, Gf.Vec3d(*self.offset))
+        wheel_path, wheel_prim = self.drive_wheel.build(stage, joint_path + "_wheel", ffw_path + "/wheel", body_path)
+
+        # Move the whole wheel to the desired pose
+        pxr_utils.setTranslate(ffw_prim, Gf.Vec3d(*self.offset))
         q_xyzw = Rotation.from_euler("xyz", self.orientation, degrees=True).as_quat()
         pxr_utils.setOrient(
-            wheel_prim, Gf.Quatd(q_xyzw[3], Gf.Vec3d([q_xyzw[0], q_xyzw[1], q_xyzw[2]]))
+            ffw_prim, Gf.Quatd(q_xyzw[3], Gf.Vec3d([q_xyzw[0], q_xyzw[1], q_xyzw[2]]))
         )
+
+        # Create the joints
+        if self.suspension is not None:
+            self.suspension.create_joints(stage)
         if self.steering is not None:
-            self.steering.build(stage, joint_path + "_steering", body_path)
-        self.suspension.build()
+            self.steering.create_joints(stage)
+
+        return wheel_path, wheel_prim
 
 
 @dataclass

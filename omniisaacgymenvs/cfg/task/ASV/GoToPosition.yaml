@@ -8,8 +8,8 @@ enable_wandb_log: ${..wandb_activate}
 defaults:
   - robot: ASV_kingfisher.yaml
   - disturbances: disable_disturbances.yaml
-  - sub_task: GoThroughPose.yaml
-  - reward: GoThroughPose.yaml
+  - sub_task: GoToPosition.yaml
+  - reward: GoToPosition.yaml
   - penalty: penalties.yaml
   - _self_
 

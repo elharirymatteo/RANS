@@ -11,8 +11,8 @@ if __name__ == "__main__":
     import omni
     import yaml
 
-    from omniisaacgymenvs.robots.articulations.AGV_skidsteer_4W import (
-        AGV_SkidSteer_4W,
+    from omniisaacgymenvs.robots.articulations.AGV_Ackermann import (
+        AGV_Ackermann,
     )
 
     # Instantiate simulation
@@ -24,14 +24,14 @@ if __name__ == "__main__":
     physics_ctx = world.get_physics_context()
     physics_ctx.set_solver_type("PGS")
 
-    with open("cfg/task/robot/AGV_Husky.yaml", "r") as file:
-        Husky = yaml.safe_load(file)
+    with open("cfg/task/robot/Ackermann_rc_car.yaml", "r") as file:
+        rc_car = yaml.safe_load(file)
 
-    with open("cfg/task/robot/AGV_Jackal.yaml", "r") as file:
-        Jackal = yaml.safe_load(file)
+    with open("cfg/task/robot/Ackermann_rc_car_dual_steering.yaml", "r") as file:
+        rc_car_2 = yaml.safe_load(file)
 
-    AGV_SkidSteer_4W("/Husky", cfg=Husky, translation=[0, 0, 0.3])
-    AGV_SkidSteer_4W("/Jackal", cfg=Jackal, translation=[1.0, 0, 0.3])
+    AGV_Ackermann("/RC_Car", cfg=rc_car, translation=[0, 0, 0.5])
+    AGV_Ackermann("/RC_Car_dual_steering", cfg=rc_car_2, translation=[1.0, 0, 0.5])
 
     world.reset()
     for i in range(100):
