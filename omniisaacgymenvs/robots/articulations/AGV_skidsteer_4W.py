@@ -53,9 +53,18 @@ class AGVSkidsteer4WParameters:
 
 class CreateAGVSkidsteer4W:
     """
-    Creates a 4 wheeled Skidsteer robot."""
+    Creates a 4 wheeled Skidsteer robot.
+    """
 
     def __init__(self, path: str, cfg: dict) -> None:
+        """
+        Initializes the procedural AGV builder.
+
+        Args:
+            path (str): The path to the platform.
+            cfg (dict): The configuration of the AGV.
+        """
+        
         self.platform_path = path
         self.joints_path = "joints"
         self.materials_path = "materials"
@@ -68,7 +77,8 @@ class CreateAGVSkidsteer4W:
 
     def build(self) -> None:
         """
-        Builds the platform."""
+        Builds the AGV.
+        """
 
         # Creates articulation root and the Xforms to store materials/joints.
         self.platform_path, self.platform_prim = createArticulation(
@@ -90,7 +100,7 @@ class CreateAGVSkidsteer4W:
 
     def createCore(self) -> None:
         """
-        Creates the core of the AMR.
+        Creates the core of the AGV.
         """
 
         self.core_path, self.core_prim = self.settings.shape.build(
@@ -109,11 +119,11 @@ class CreateAGVSkidsteer4W:
 
     def createDrivingWheels(self) -> None:
         """
-        Creates the wheels of the AMR.
+        Creates the wheels of the AGV.
         """
 
         # Creates the front left wheel
-        front_left_wheel_path, front_left_wheel_prim = (
+        _, _, _, front_left_wheel_prim = (
             self.settings.front_left_wheel.build(
                 self.stage,
                 joint_path=self.joints_path + "/front_left_wheel",
@@ -123,7 +133,7 @@ class CreateAGVSkidsteer4W:
         )
 
         # Creates the front right wheel
-        front_right_wheel_path, front_right_wheel_prim = (
+        _, _, _, front_right_wheel_prim = (
             self.settings.front_right_wheel.build(
                 self.stage,
                 joint_path=self.joints_path + "/front_right_wheel",
@@ -133,7 +143,7 @@ class CreateAGVSkidsteer4W:
         )
 
         # Creates the rear left wheel
-        rear_left_wheel_path, rear_left_wheel_prim = (
+        _, _, _, rear_left_wheel_prim = (
             self.settings.rear_left_wheel.build(
                 self.stage,
                 joint_path=self.joints_path + "/rear_left_wheel",
@@ -143,7 +153,7 @@ class CreateAGVSkidsteer4W:
         )
 
         # Creates the rear right wheel
-        rear_right_wheel_path, rear_right_wheel_prim = (
+        _, _, _, rear_right_wheel_prim = (
             self.settings.rear_right_wheel.build(
                 self.stage,
                 joint_path=self.joints_path + "/rear_right_wheel",
@@ -163,7 +173,8 @@ class CreateAGVSkidsteer4W:
 
     def createBasicColors(self) -> None:
         """
-        Creates a set of basic colors."""
+        Creates a set of basic colors.
+        """
 
         self.colors = {}
         self.colors["red"] = createColor(
@@ -192,6 +203,7 @@ class CreateAGVSkidsteer4W:
         """
         Creates a camera module prim.
         """
+
         self.camera = sensor_module_factory.get(self.camera_cfg["module_name"])(
             self.camera_cfg
         )
@@ -216,6 +228,7 @@ class AGV_SkidSteer_4W(Robot):
 
         AGV = CreateAGVSkidsteer4W(prim_path, cfg)
         AGV.build()
+        self._settings = AGV.settings
 
         super().__init__(
             prim_path=prim_path,

@@ -56,9 +56,18 @@ class AGVSkidsteer2WParameters:
 
 class CreateAGVSkidsteer2W:
     """
-    Creates a 2 wheeled Skidsteer robot."""
+    Creates a 2 wheeled Skidsteer robot.
+    """
 
     def __init__(self, path: str, cfg: dict) -> None:
+        """
+        Initializes the procedural AGV builder.
+
+        Args:
+            path (str): The path to the platform.
+            cfg (dict): The configuration of the AGV.
+        """
+
         self.platform_path = path
         self.joints_path = "joints"
         self.materials_path = "materials"
@@ -71,7 +80,8 @@ class CreateAGVSkidsteer2W:
 
     def build(self) -> None:
         """
-        Builds the platform."""
+        Builds the AGV.
+        """
 
         # Creates articulation root and the Xforms to store materials/joints.
         self.platform_path, self.platform_prim = createArticulation(
@@ -94,7 +104,7 @@ class CreateAGVSkidsteer2W:
 
     def createCore(self) -> None:
         """
-        Creates the core of the AMR.
+        Creates the core of the AGV.
         """
 
         self.core_path, self.core_prim = self.settings.shape.build(
@@ -113,11 +123,11 @@ class CreateAGVSkidsteer2W:
 
     def createDrivingWheels(self) -> None:
         """
-        Creates the wheels of the AMR.
+        Creates the wheels of the AGV.
         """
 
         # Creates the left wheel
-        left_wheel_path, left_wheel_prim = self.settings.left_wheel.build(
+        _, _, _, left_wheel_collider_prim = self.settings.left_wheel.build(
             self.stage,
             joint_path=self.joints_path + "/left_wheel",
             wheel_path=self.platform_path + "/left_wheel",
@@ -125,7 +135,7 @@ class CreateAGVSkidsteer2W:
         )
 
         # Creates the right wheel
-        right_wheel_path, right_wheel_prim = self.settings.right_wheel.build(
+        _, _, _, right_wheel_collider_prim = self.settings.right_wheel.build(
             self.stage,
             joint_path=self.joints_path + "/right_wheel",
             wheel_path=self.platform_path + "/right_wheel",
@@ -137,16 +147,16 @@ class CreateAGVSkidsteer2W:
         )
 
         mat = UsdShade.Material.Get(self.stage, self.materials_path + "/wheel_material")
-        applyMaterial(left_wheel_prim, mat, purpose="physics")
-        applyMaterial(right_wheel_prim, mat, purpose="physics")
+        applyMaterial(left_wheel_collider_prim, mat, purpose="physics")
+        applyMaterial(right_wheel_collider_prim, mat, purpose="physics")
 
     def createPassiveWheels(self) -> None:
         """
-        Creates the wheels of the AMR.
+        Creates the wheels of the AGV.
         """
 
         for i, wheel in enumerate(self.settings.passive_wheels):
-            wheel_path, wheel_prim = wheel.build(
+            _, _, _, _ = wheel.build(
                 self.stage,
                 joint_path=self.joints_path + f"/passive_wheel_{i}",
                 material_path=self.materials_path + "/zero_friction",
@@ -156,7 +166,8 @@ class CreateAGVSkidsteer2W:
 
     def createBasicColors(self) -> None:
         """
-        Creates a set of basic colors."""
+        Creates a set of basic colors.
+        """
 
         self.colors = {}
         self.colors["red"] = createColor(
@@ -185,6 +196,7 @@ class CreateAGVSkidsteer2W:
         """
         Creates a camera module prim.
         """
+
         self.camera = sensor_module_factory.get(self.camera_cfg["module_name"])(
             self.camera_cfg
         )
@@ -207,9 +219,9 @@ class AGV_SkidSteer_2W(Robot):
         self._usd_path = usd_path
         self._name = name
 
-        AMR = CreateAGVSkidsteer2W(prim_path, cfg)
-        AMR.build()
-        self._settings = AMR.settings
+        AGV = CreateAGVSkidsteer2W(prim_path, cfg)
+        AGV.build()
+        self._settings = AGV.settings
 
         super().__init__(
             prim_path=prim_path,

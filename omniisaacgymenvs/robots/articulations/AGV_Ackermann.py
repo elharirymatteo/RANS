@@ -62,9 +62,20 @@ class AGVAckermannParameters:
 
 class CreateAGVAckermann:
     """
-    Creates a 2 wheeled Skidsteer robot."""
+    Creates an ackermann robot with front and or rear steering.
+    The system can also be configured to be AWD, FWD or RWD, or
+    a combination of the three.
+    """
 
     def __init__(self, path: str, cfg: dict) -> None:
+        """
+        Initializes the procedural AGV builder.
+
+        Args:
+            path (str): The path to the platform.
+            cfg (dict): The configuration of the AGV.
+        """
+
         self.platform_path = path
         self.joints_path = "joints"
         self.materials_path = "materials"
@@ -77,7 +88,8 @@ class CreateAGVAckermann:
 
     def build(self) -> None:
         """
-        Builds the platform."""
+        Builds the AGV.
+        """
 
         # Creates articulation root and the Xforms to store materials/joints.
         self.platform_path, self.platform_prim = createArticulation(
@@ -99,7 +111,7 @@ class CreateAGVAckermann:
 
     def createCore(self) -> None:
         """
-        Creates the core of the AMR.
+        Creates the core of the AGV.
         """
 
         self.core_path, self.core_prim = self.settings.shape.build(
@@ -118,10 +130,11 @@ class CreateAGVAckermann:
 
     def createDrivingWheels(self) -> None:
         """
-        Creates the wheels of the AMR.
+        Creates the wheels of the AGV.
         """
+
         # Creates the front left wheel
-        front_left_wheel_path, front_left_wheel_prim = (
+        _, _, _, front_left_wheel_prim = (
             self.settings.front_left_wheel.build(
                 self.stage,
                 joint_path=self.joints_path + "/front_left_wheel",
@@ -131,7 +144,7 @@ class CreateAGVAckermann:
         )
 
         # Creates the front right wheel
-        front_right_wheel_path, front_right_wheel_prim = (
+        _, _, _, front_right_wheel_prim = (
             self.settings.front_right_wheel.build(
                 self.stage,
                 joint_path=self.joints_path + "/front_right_wheel",
@@ -141,7 +154,7 @@ class CreateAGVAckermann:
         )
 
         # Creates the rear left wheel
-        rear_left_wheel_path, rear_left_wheel_prim = (
+        _, _, _, rear_left_wheel_prim = (
             self.settings.rear_left_wheel.build(
                 self.stage,
                 joint_path=self.joints_path + "/rear_left_wheel",
@@ -151,7 +164,7 @@ class CreateAGVAckermann:
         )
 
         # Creates the rear right wheel
-        rear_right_wheel_path, rear_right_wheel_prim = (
+        _, _, _, rear_right_wheel_prim = (
             self.settings.rear_right_wheel.build(
                 self.stage,
                 joint_path=self.joints_path + "/rear_right_wheel",
@@ -171,7 +184,8 @@ class CreateAGVAckermann:
 
     def createBasicColors(self) -> None:
         """
-        Creates a set of basic colors."""
+        Creates a set of basic colors.
+        """
 
         self.colors = {}
         self.colors["red"] = createColor(
@@ -200,6 +214,7 @@ class CreateAGVAckermann:
         """
         Creates a camera module prim.
         """
+
         self.camera = sensor_module_factory.get(self.camera_cfg["module_name"])(
             self.camera_cfg
         )
@@ -211,7 +226,7 @@ class AGV_Ackermann(Robot):
         self,
         prim_path: str,
         cfg: dict,
-        name: Optional[str] = "AGV_SS_2W",
+        name: Optional[str] = "AGV_Ackermann",
         usd_path: Optional[str] = None,
         translation: Optional[np.ndarray] = None,
         orientation: Optional[np.ndarray] = None,
@@ -222,8 +237,9 @@ class AGV_Ackermann(Robot):
         self._usd_path = usd_path
         self._name = name
 
-        AMR = CreateAGVAckermann(prim_path, cfg)
-        AMR.build()
+        AGV = CreateAGVAckermann(prim_path, cfg)
+        AGV.build()
+        self._settings = AGV.settings
 
         super().__init__(
             prim_path=prim_path,
