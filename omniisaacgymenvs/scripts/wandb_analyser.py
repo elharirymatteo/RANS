@@ -2,6 +2,7 @@ import wandb
 import sys
 import matplotlib.pyplot as plt
 import os
+import numpy as np
 
 def login_to_wandb():
     wandb.login()
@@ -13,43 +14,6 @@ def get_project(entity, project_name):
     except wandb.errors.CommError:
         print("Error: Project not found. Please check the entity and project name.")
         sys.exit(1)
-
-def list_charts_for_run(run):
-    files = run.files()
-    categories = {}
-    for file in files:
-        category = file.name.split('.')[0]
-        if category not in categories:
-            categories[category] = []
-        categories[category].append(file.name)
-    
-    for category, charts in categories.items():
-        print(f"\nCategory: {category}")
-        for chart in charts:
-            print(f"  - {chart}")
-
-def show_chart(run, chart_name):
-    files = run.files()
-    for file in files:
-        if chart_name in file.name:
-            file.download(replace=True)
-            print(f"Downloaded {file.name} from run {run.id}")
-            return
-    print("Chart not found in the specified run.")
-
-
-def filter_runs_by_keyword(runs, keyword):
-    filtered_runs = [run for run in runs if keyword in run.name or keyword in str(run.config)]
-    return filtered_runs
-
-def download_charts_from_filtered_runs(runs, variable_type):
-    for run in runs:
-        files = run.files()
-        for file in files:
-            if variable_type in file.name:
-                file.download(replace=True)
-                print(f"Downloaded {file.name} from run {run.id}")
-
 
 def list_available_runs(runs):
     sorted_runs = sorted(runs, key=lambda run: run.name)
@@ -67,20 +31,49 @@ def list_available_metrics(run):
         print(f"  {index}. {metric}")
     return metric_names
 
-def plot_metrics(run, metric_name, save_path):
-    history = run.history(keys=[metric_name])
-    if not history.empty:
-        plt.plot(history['_step'], history[metric_name])
-        plt.xlabel('Step')
-        plt.ylabel(metric_name)
-        plt.title(f'{metric_name}')
+def plot_metric_for_runs(runs, metric_name, save_path, plot_type):
+    all_histories = []
+    
+    for run in runs:
+        run_name = run.name
+        history = run.history(keys=[metric_name])
+        if not history.empty:
+            steps = history['_step']
+            values = history[metric_name]
+            all_histories.append((steps, values))
+            if plot_type == "all":
+                plt.plot(steps, values, label=run.name)
+
+    if plot_type == "average":
+        run_name = run.name + "_average"
+        all_steps = sorted(set(steps_item for steps, _ in all_histories for steps_item in steps))
+        all_values = np.zeros((len(all_histories), len(all_steps)))
+
+        for i, (steps, values) in enumerate(all_histories):
+            for j, step in enumerate(all_steps):
+                if step in steps.tolist():
+                    all_values[i, j] = values[steps.tolist().index(step)] if step in steps.tolist() else np.nan
+                else:
+                    all_values[i, j] = np.nan
+        
+        mean_values = np.nanmean(all_values, axis=0)
+        std_values = np.nanstd(all_values, axis=0)
+
+        plt.plot(all_steps, mean_values, label="Mean")
+        plt.fill_between(all_steps, mean_values - std_values, mean_values + std_values, alpha=0.3, label="Std Dev")
+
+    plt.xlabel('Step')
+    plt.ylabel(metric_name)
+    plt.title(f'{metric_name} over time for runs "{run_name}"')
+    plt.legend()
+
+    if save_path:
         plot_filename = os.path.join(save_path, f"{metric_name.replace('/', '_')}.png")
-        os.makedirs(save_path, exist_ok=True)  # Ensure directory exists
         plt.savefig(plot_filename)
         plt.close()
         print(f"Plot saved as {plot_filename}")
     else:
-        print(f"No data found for metric '{metric_name}' in run '{run.name}'.")
+        plt.show()
 
 def main():
     login_to_wandb()
@@ -89,7 +82,7 @@ def main():
     default_project_name = "iclr_benchmark_10s"  # Replace with your default project name
 
     use_defaults = input("Do you want to use the default entity and project? (yes/no): ").strip().lower()
-    if use_defaults == "yes":
+    if use_defaults == "yes" or use_defaults == "y":
         entity = default_entity
         project_name = default_project_name
     else:
@@ -102,8 +95,9 @@ def main():
     while True:
         print("\nOptions:")
         print("1. Select a run and list its metrics")
-        print("2. Exit")
-        choice = input("Choose an option (1 or 2): ").strip()
+        print("2. Filter runs by keyword and plot a specific metric")
+        print("3. Exit")
+        choice = input("Choose an option (1, 2 or 3): ").strip()
 
         if choice == "1":
             run_number = int(input("Enter the run number: ").strip())
@@ -116,14 +110,35 @@ def main():
                     save_choice = input("Do you want to save the plot? (yes/no): ").strip().lower()
                     if save_choice == "yes":
                         save_path = os.path.join('wandb_data', run.name)
-                        plot_metrics(run, metric_name, save_path)
+                        plot_metric_for_runs([run], metric_name, save_path, "all")
                     else:
-                        print(f"Plot for metric '{metric_name}' will not be saved.")
+                        plot_metric_for_runs([run], metric_name, None, "all")
                 else:
                     print("Metric number not found.")
             else:
                 print("Run number not found.")
         elif choice == "2":
+            keyword = input("Enter the keyword to filter runs: ").strip()
+            filtered_runs = [run for run in runs if keyword in run.name or keyword in str(run.config)]
+            if filtered_runs:
+                metric_names = list_available_metrics(filtered_runs[0])
+                metric_number = int(input("Enter the metric number to plot: ").strip())
+                metric_name = metric_names.get(metric_number)
+                if metric_name:
+                    plot_type = input("Do you want to plot all runs or average with std dev? (all/average): ").strip().lower()
+                    save_choice = input("Do you want to save the plot? (yes/no): ").strip().lower()
+                    if save_choice == "yes" or save_choice == "y":
+                        save_path = os.path.join('wandb_data', keyword)
+                        if save_path:
+                            os.makedirs(save_path, exist_ok=True)
+                        plot_metric_for_runs(filtered_runs, metric_name, save_path, plot_type)
+                    else:
+                        plot_metric_for_runs(filtered_runs, metric_name, None, plot_type)
+                else:
+                    print("Metric number not found.")
+            else:
+                print("No runs found with the specified keyword.")            
+        elif choice == "3":
             print("Exiting the program.")
             sys.exit(0)
         else:
