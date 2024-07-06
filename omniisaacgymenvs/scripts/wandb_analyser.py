@@ -26,6 +26,15 @@ def categorize_runs(runs):
             categorized[robot][task].append(run)
     return categorized
 
+def categorize_runs_by_robot(runs):
+    categorized = defaultdict(list)
+    for run in runs:
+        match = re.match(r'(\w+)_(\w+)_seed\d+.*', run.name)
+        if match:
+            robot, task = match.groups()
+            categorized[robot].append(run)
+    return categorized
+
 def list_categorized_runs(categorized_runs):
     for robot, tasks in categorized_runs.items():
         print(f"\nRobot: {robot}")
@@ -87,6 +96,46 @@ def plot_metric_for_runs(runs, metric_name, save_path, plot_type):
     else:
         plt.show()
 
+def plot_average_metric_for_task(runs, task, metric_name, save_path=None):
+    categorized_runs = categorize_runs_by_robot(runs)
+    all_histories = defaultdict(list)
+
+    for robot, robot_runs in categorized_runs.items():
+        for run in robot_runs:
+            if task in run.name:
+                history = run.history(keys=[metric_name])
+                if not history.empty:
+                    steps = history['_step'].values
+                    values = history[metric_name].values
+                    all_histories[robot].append((steps, values))
+
+    plt.figure(figsize=(10, 6))
+
+    for robot, histories in all_histories.items():
+        if histories:
+            min_length = min(len(values) for _, values in histories)
+            all_steps = histories[0][0][:min_length]
+            all_values = np.array([values[:min_length] for _, values in histories])
+
+            mean_values = np.mean(all_values, axis=0)
+            std_values = np.std(all_values, axis=0)
+
+            plt.plot(all_steps, mean_values, label=f"{robot} Mean")
+            plt.fill_between(all_steps, mean_values - std_values, mean_values + std_values, alpha=0.3, label=f"{robot} Std Dev")
+
+    plt.xlabel('Step')
+    plt.ylabel(metric_name)
+    plt.title(f'{metric_name} over time for task "{task}" across all robots')
+    plt.legend()
+
+    if save_path:
+        plot_filename = f"{save_path}/{metric_name.replace('/', '_')}_all_robots.png"
+        plt.savefig(plot_filename)
+        plt.close()
+        print(f"Plot saved as {plot_filename}")
+    else:
+        plt.show()
+
 def main():
     login_to_wandb()
 
@@ -109,7 +158,8 @@ def main():
         print("\nOptions:")
         print("1. Select a robot and task pair to plot metrics")
         print("2. Interactive session (original functionality)")
-        print("3. Exit")
+        print("3. Print the average metric for a task across all robots")
+        print("4. Exit")
         choice = input("Choose an option (1, 2, or 3): ").strip()
 
         if choice == "1":
@@ -124,7 +174,7 @@ def main():
                     plot_type = input("Do you want to plot all runs or average with std dev? (all/average): ").strip().lower()
                     save_choice = input("Do you want to save the plot? (yes/no): ").strip().lower()
                     if save_choice == "yes" or save_choice == "y":
-                        save_path = os.path.join('wandb_data', f"{robot}_{task}")
+                        save_path = os.path.join('wandb_data', f"{robot}/{task}")
                         os.makedirs(save_path, exist_ok=True)
                         plot_metric_for_runs(selected_runs, metric_name, save_path, plot_type)
                     else:
@@ -155,6 +205,22 @@ def main():
             else:
                 print("No runs found with the specified keyword.")       
         elif choice == "3":
+            task = input("Enter the task name: ").strip()
+            metric_names = list_available_metrics(runs[0])
+            metric_number = int(input("Enter the metric number to plot: ").strip())
+            metric_name = metric_names.get(metric_number)
+            if metric_name:
+                save_choice = input("Do you want to save the plot? (yes/no): ").strip().lower()
+                if save_choice == "yes" or save_choice == "y":
+                    save_path = os.path.join('wandb_data', task)
+                    os.makedirs(save_path, exist_ok=True)
+                    plot_average_metric_for_task(runs, task, metric_name, save_path)
+                else:
+                    plot_average_metric_for_task(runs, task, metric_name)
+                    
+            else:
+                print("Metric number not found.")
+        elif choice == "4":
             print("Exiting the program.")
             sys.exit(0)
         else:
