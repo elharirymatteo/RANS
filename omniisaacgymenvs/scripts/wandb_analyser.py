@@ -1,8 +1,10 @@
+import keyword
 import wandb
 import sys
 import matplotlib.pyplot as plt
 import os
 import numpy as np
+import re
 
 def login_to_wandb():
     wandb.login()
@@ -15,6 +17,13 @@ def get_project(entity, project_name):
         print("Error: Project not found. Please check the entity and project name.")
         sys.exit(1)
 
+def extract_seed(input_string):
+    match = re.search(r'_(seed\d+)_', input_string)
+    if match:
+        return match.group(1)
+    else:
+        return None
+    
 def list_available_runs(runs):
     sorted_runs = sorted(runs, key=lambda run: run.name)
     run_names = {index + 1: run for index, run in enumerate(sorted_runs)}
@@ -31,7 +40,7 @@ def list_available_metrics(run):
         print(f"  {index}. {metric}")
     return metric_names
 
-def plot_metric_for_runs(runs, metric_name, save_path, plot_type):
+def plot_metric_for_runs(runs, metric_name, save_path, plot_type, keyword=None):
     all_histories = []
     
     for run in runs:
@@ -42,33 +51,29 @@ def plot_metric_for_runs(runs, metric_name, save_path, plot_type):
             values = history[metric_name]
             all_histories.append((steps, values))
             if plot_type == "all":
-                plt.plot(steps, values, label=run.name)
+                # retrieve seed from run name for labelling
+                seed = extract_seed(run_name)
+                plt.plot(steps, values, label=f"{seed}")
 
     if plot_type == "average":
-        run_name = run.name + "_average"
-        all_steps = sorted(set(steps_item for steps, _ in all_histories for steps_item in steps))
-        all_values = np.zeros((len(all_histories), len(all_steps)))
+        min_length = min(len(values) for _, values in all_histories)
+        all_steps = all_histories[0][0][:min_length]
+        all_values = np.array([values[:min_length] for _, values in all_histories])
 
-        for i, (steps, values) in enumerate(all_histories):
-            for j, step in enumerate(all_steps):
-                if step in steps.tolist():
-                    all_values[i, j] = values[steps.tolist().index(step)] if step in steps.tolist() else np.nan
-                else:
-                    all_values[i, j] = np.nan
-        
-        mean_values = np.nanmean(all_values, axis=0)
-        std_values = np.nanstd(all_values, axis=0)
+        mean_values = np.mean(all_values, axis=0)
+        std_values = np.std(all_values, axis=0)
 
         plt.plot(all_steps, mean_values, label="Mean")
         plt.fill_between(all_steps, mean_values - std_values, mean_values + std_values, alpha=0.3, label="Std Dev")
 
+
     plt.xlabel('Step')
     plt.ylabel(metric_name)
-    plt.title(f'{metric_name} over time for runs "{run_name}"')
+    plt.title(f'{metric_name} for runs keyword "{keyword}"')
     plt.legend()
 
     if save_path:
-        plot_filename = os.path.join(save_path, f"{metric_name.replace('/', '_')}.png")
+        plot_filename = os.path.join(save_path, f"{metric_name.replace('/', '_')}_{plot_type}.png")
         plt.savefig(plot_filename)
         plt.close()
         print(f"Plot saved as {plot_filename}")
@@ -131,9 +136,9 @@ def main():
                         save_path = os.path.join('wandb_data', keyword)
                         if save_path:
                             os.makedirs(save_path, exist_ok=True)
-                        plot_metric_for_runs(filtered_runs, metric_name, save_path, plot_type)
+                        plot_metric_for_runs(filtered_runs, metric_name, save_path, plot_type, keyword)
                     else:
-                        plot_metric_for_runs(filtered_runs, metric_name, None, plot_type)
+                        plot_metric_for_runs(filtered_runs, metric_name, None, plot_type, keyword)
                 else:
                     print("Metric number not found.")
             else:
