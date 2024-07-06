@@ -1,10 +1,10 @@
-import keyword
 import wandb
 import sys
 import matplotlib.pyplot as plt
 import os
-import numpy as np
 import re
+import numpy as np
+from collections import defaultdict
 
 def login_to_wandb():
     wandb.login()
@@ -17,20 +17,29 @@ def get_project(entity, project_name):
         print("Error: Project not found. Please check the entity and project name.")
         sys.exit(1)
 
+def categorize_runs(runs):
+    categorized = defaultdict(lambda: defaultdict(list))
+    for run in runs:
+        match = re.match(r'(\w+)_(\w+)_seed\d+.*', run.name)
+        if match:
+            robot, task = match.groups()
+            categorized[robot][task].append(run)
+    return categorized
+
+def list_categorized_runs(categorized_runs):
+    for robot, tasks in categorized_runs.items():
+        print(f"\nRobot: {robot}")
+        for task, runs in tasks.items():
+            print(f"  Task: {task}")
+            for run in runs:
+                print(f"    {run.name}")
+
 def extract_seed(input_string):
     match = re.search(r'_(seed\d+)_', input_string)
     if match:
         return match.group(1)
     else:
-        return None
-    
-def list_available_runs(runs):
-    sorted_runs = sorted(runs, key=lambda run: run.name)
-    run_names = {index + 1: run for index, run in enumerate(sorted_runs)}
-    print("\nAvailable runs:")
-    for index, run in run_names.items():
-        print(f"  {index}. {run.name}")
-    return run_names
+        return "unknown_seed"
 
 def list_available_metrics(run):
     metrics = sorted(run.summary._json_dict.keys())
@@ -40,22 +49,21 @@ def list_available_metrics(run):
         print(f"  {index}. {metric}")
     return metric_names
 
-def plot_metric_for_runs(runs, metric_name, save_path, plot_type, keyword=None):
+def plot_metric_for_runs(runs, metric_name, save_path, plot_type):
     all_histories = []
     
     for run in runs:
         run_name = run.name
         history = run.history(keys=[metric_name])
         if not history.empty:
-            steps = history['_step']
-            values = history[metric_name]
+            steps = history['_step'].values
+            values = history[metric_name].values
             all_histories.append((steps, values))
             if plot_type == "all":
-                # retrieve seed from run name for labelling
                 seed = extract_seed(run_name)
                 plt.plot(steps, values, label=f"{seed}")
 
-    if plot_type == "average":
+    if plot_type == "average" and all_histories:
         min_length = min(len(values) for _, values in all_histories)
         all_steps = all_histories[0][0][:min_length]
         all_values = np.array([values[:min_length] for _, values in all_histories])
@@ -66,11 +74,10 @@ def plot_metric_for_runs(runs, metric_name, save_path, plot_type, keyword=None):
         plt.plot(all_steps, mean_values, label="Mean")
         plt.fill_between(all_steps, mean_values - std_values, mean_values + std_values, alpha=0.3, label="Std Dev")
 
-
     plt.xlabel('Step')
     plt.ylabel(metric_name)
-    plt.title(f'{metric_name} for runs keyword "{keyword}"')
-    plt.legend()
+    plt.title(f'{metric_name} over time for runs')
+    plt.legend(loc='best')
 
     if save_path:
         plot_filename = os.path.join(save_path, f"{metric_name.replace('/', '_')}_{plot_type}.png")
@@ -95,33 +102,37 @@ def main():
         project_name = input("Enter the wandb project name: ").strip()
 
     runs = get_project(entity, project_name)
-    run_names = list_available_runs(runs)
+    categorized_runs = categorize_runs(runs)
+    list_categorized_runs(categorized_runs)
 
     while True:
         print("\nOptions:")
-        print("1. Select a run and list its metrics")
-        print("2. Filter runs by keyword and plot a specific metric")
+        print("1. Select a robot and task pair to plot metrics")
+        print("2. Interactive session (original functionality)")
         print("3. Exit")
-        choice = input("Choose an option (1, 2 or 3): ").strip()
+        choice = input("Choose an option (1, 2, or 3): ").strip()
 
         if choice == "1":
-            run_number = int(input("Enter the run number: ").strip())
-            run = run_names.get(run_number)
-            if run:
-                metric_names = list_available_metrics(run)
+            robot = input("Enter the robot name: ").strip()
+            task = input("Enter the task name: ").strip()
+            if robot in categorized_runs and task in categorized_runs[robot]:
+                selected_runs = categorized_runs[robot][task]
+                metric_names = list_available_metrics(selected_runs[0])
                 metric_number = int(input("Enter the metric number to plot: ").strip())
                 metric_name = metric_names.get(metric_number)
                 if metric_name:
+                    plot_type = input("Do you want to plot all runs or average with std dev? (all/average): ").strip().lower()
                     save_choice = input("Do you want to save the plot? (yes/no): ").strip().lower()
-                    if save_choice == "yes":
-                        save_path = os.path.join('wandb_data', run.name)
-                        plot_metric_for_runs([run], metric_name, save_path, "all")
+                    if save_choice == "yes" or save_choice == "y":
+                        save_path = os.path.join('wandb_data', f"{robot}_{task}")
+                        os.makedirs(save_path, exist_ok=True)
+                        plot_metric_for_runs(selected_runs, metric_name, save_path, plot_type)
                     else:
-                        plot_metric_for_runs([run], metric_name, None, "all")
+                        plot_metric_for_runs(selected_runs, metric_name, None, plot_type)
                 else:
                     print("Metric number not found.")
             else:
-                print("Run number not found.")
+                print("Robot or task not found.")
         elif choice == "2":
             keyword = input("Enter the keyword to filter runs: ").strip()
             filtered_runs = [run for run in runs if keyword in run.name or keyword in str(run.config)]
@@ -142,7 +153,7 @@ def main():
                 else:
                     print("Metric number not found.")
             else:
-                print("No runs found with the specified keyword.")            
+                print("No runs found with the specified keyword.")       
         elif choice == "3":
             print("Exiting the program.")
             sys.exit(0)
