@@ -136,6 +136,19 @@ def plot_average_metric_for_task(runs, task, metric_name, save_path=None):
     else:
         plt.show()
 
+def plot_average_metric_for_all_tasks(runs, metric_name, save_path=None):
+    categorized = defaultdict(lambda: defaultdict(list))
+    for run in runs:
+        match = re.match(r'(\w+)_(\w+)_seed\d+.*', run.name)
+        if match:
+            robot, task = match.groups()
+            categorized[task][robot].append(run)
+
+    for task, robots in categorized.items():
+        task_runs = [run for robot_runs in robots.values() for run in robot_runs]
+        plot_average_metric_for_task(task_runs, task, metric_name, save_path+'/'+task if save_path else None)
+
+
 def main():
     login_to_wandb()
 
@@ -157,10 +170,11 @@ def main():
     while True:
         print("\nOptions:")
         print("1. Select a robot and task pair to plot metrics")
-        print("2. Interactive session (original functionality)")
-        print("3. Print the average metric for a task across all robots")
-        print("4. Exit")
-        choice = input("Choose an option (1, 2, or 3): ").strip()
+        print("2. Plot average metric for all robots and tasks")
+        print("3. Interactive session (original functionality)")
+        print("4. Print the average metric for a task across all robots")
+        print("5. Exit")
+        choice = input("Choose an option (1, 2, 3, 4 or 5): ").strip()
 
         if choice == "1":
             robot = input("Enter the robot name: ").strip()
@@ -184,6 +198,15 @@ def main():
             else:
                 print("Robot or task not found.")
         elif choice == "2":
+            metric_name = input("Enter the metric name to plot: ").strip()
+            save_choice = input("Do you want to save the plots? (yes/no): ").strip().lower()
+            if save_choice == "yes" or save_choice == "y":
+                save_path = 'wandb_data'
+                os.makedirs(save_path, exist_ok=True)
+                plot_average_metric_for_all_tasks(runs, metric_name, save_path)
+            else:
+                plot_average_metric_for_all_tasks(runs, metric_name)
+        elif choice == "3":
             keyword = input("Enter the keyword to filter runs: ").strip()
             filtered_runs = [run for run in runs if keyword in run.name or keyword in str(run.config)]
             if filtered_runs:
@@ -204,7 +227,7 @@ def main():
                     print("Metric number not found.")
             else:
                 print("No runs found with the specified keyword.")       
-        elif choice == "3":
+        elif choice == "4":
             task = input("Enter the task name: ").strip()
             metric_names = list_available_metrics(runs[0])
             metric_number = int(input("Enter the metric number to plot: ").strip())
@@ -220,7 +243,7 @@ def main():
                     
             else:
                 print("Metric number not found.")
-        elif choice == "4":
+        elif choice == "5":
             print("Exiting the program.")
             sys.exit(0)
         else:
