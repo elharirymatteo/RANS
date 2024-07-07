@@ -210,7 +210,7 @@ class AGVSS2WVirtual(RLTask):
         """
 
         # Add the floating platform, and the marker
-        self.get_floating_platform()
+        self.get_agv_skidsteer()
         self.get_target()
 
         RLTask.set_up_scene(self, scene, replicate_physics=False)
@@ -230,7 +230,7 @@ class AGVSS2WVirtual(RLTask):
         scene, self._marker = self.task.add_visual_marker_to_scene(scene)
         return
 
-    def get_floating_platform(self):
+    def get_agv_skidsteer(self):
         """
         Adds the floating platform to the scene.
         """
