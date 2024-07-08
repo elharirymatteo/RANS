@@ -58,14 +58,14 @@ def list_available_metrics(run):
         print(f"  {index}. {metric}")
     return metric_names
 
-def plot_metric_for_runs(runs, metric_name, save_path, plot_type):
+def plot_metric_for_runs(runs, metric_name, save_path, plot_type, x_axis='global_step'):
     all_histories = []
     
     for run in runs:
         run_name = run.name
-        history = run.history(keys=[metric_name])
+        history = run.history(keys=[x_axis, metric_name])
         if not history.empty:
-            steps = history['_step'].values
+            steps = history[x_axis].values
             values = history[metric_name].values
             all_histories.append((steps, values))
             if plot_type == "all":
@@ -96,20 +96,22 @@ def plot_metric_for_runs(runs, metric_name, save_path, plot_type):
     else:
         plt.show()
 
-def plot_average_metric_for_task(runs, task, metric_name, save_path=None):
+def plot_average_metric_for_task(runs, task, metric_name, x_axis='global_step', save_path=None):
     categorized_runs = categorize_runs_by_robot(runs)
     all_histories = defaultdict(list)
 
     for robot, robot_runs in categorized_runs.items():
         for run in robot_runs:
             if task in run.name:
-                history = run.history(keys=[metric_name])
+                history = run.history(keys=[x_axis, metric_name])
                 if not history.empty:
-                    steps = history['_step'].values
+                    steps = history[x_axis].values
                     values = history[metric_name].values
                     all_histories[robot].append((steps, values))
 
     plt.figure(figsize=(10, 6))
+    handles = []
+    labels = []
 
     for robot, histories in all_histories.items():
         if histories:
@@ -120,17 +122,22 @@ def plot_average_metric_for_task(runs, task, metric_name, save_path=None):
             mean_values = np.mean(all_values, axis=0)
             std_values = np.std(all_values, axis=0)
 
-            plt.plot(all_steps, mean_values, label=f"{robot} Mean")
-            plt.fill_between(all_steps, mean_values - std_values, mean_values + std_values, alpha=0.3, label=f"{robot} Std Dev")
+            mean_line, = plt.plot(all_steps, mean_values, label=f"{robot} Mean")
+            std_fill = plt.fill_between(all_steps, mean_values - std_values, mean_values + std_values, alpha=0.3, label=f"{robot} Std Dev")
+
+            handles.append(mean_line)
+            handles.append(std_fill)
+            labels.append(f"{robot} Mean")
+            labels.append(f"{robot} Std Dev")
 
     plt.xlabel('Step')
     plt.ylabel(metric_name)
     plt.title(f'{metric_name} over time for task "{task}" across all robots')
-    plt.legend()
+    plt.legend(handles=handles, labels=labels, loc='upper left', bbox_to_anchor=(1, 1), ncol=1)
 
     if save_path:
         plot_filename = f"{save_path}/{metric_name.replace('/', '_')}_all_robots.png"
-        plt.savefig(plot_filename)
+        plt.savefig(plot_filename, bbox_inches='tight')
         plt.close()
         print(f"Plot saved as {plot_filename}")
     else:
@@ -146,7 +153,7 @@ def plot_average_metric_for_all_tasks(runs, metric_name, save_path=None):
 
     for task, robots in categorized.items():
         task_runs = [run for robot_runs in robots.values() for run in robot_runs]
-        plot_average_metric_for_task(task_runs, task, metric_name, save_path+'/'+task if save_path else None)
+        plot_average_metric_for_task(task_runs, task, metric_name, save_path=save_path+'/'+task if save_path else None)
 
 
 def main():
@@ -237,7 +244,7 @@ def main():
                 if save_choice == "yes" or save_choice == "y":
                     save_path = os.path.join('wandb_data', task)
                     os.makedirs(save_path, exist_ok=True)
-                    plot_average_metric_for_task(runs, task, metric_name, save_path)
+                    plot_average_metric_for_task(runs, task, metric_name, save_path=save_path)
                 else:
                     plot_average_metric_for_task(runs, task, metric_name)
                     
