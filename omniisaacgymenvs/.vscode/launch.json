@@ -13,8 +13,8 @@
             "env": {
                 "RESOURCE_NAME": "IsaacSim"
             },
-            "python": "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.1/kit/python/bin/python3",
-            "envFile": "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.1/.vscode/.standalone_examples.env",
+            "python": "~/.local/share/ov/pkg/isaac_sim-2023.1.1/kit/python/bin/python3",
+            "envFile": "~/.local/share/ov/pkg/isaac_sim-2023.1.1/.vscode/.standalone_examples.env",
             "preLaunchTask": "setup_python_env"
         },
         {
@@ -28,12 +28,12 @@
             "name": "(Linux) isaac-sim",
             "type": "cppdbg",
             "request": "launch",
-            "program": "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.1/kit/kit",
-            "args": ["/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.1/apps/omni.isaac.sim.kit",
-                "--ext-folder", "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.1/exts",
-                "--ext-folder", "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.1/apps"],
+            "program": "~/.local/share/ov/pkg/isaac_sim-2023.1.1/kit/kit",
+            "args": ["~/.local/share/ov/pkg/isaac_sim-2023.1.1/apps/omni.isaac.sim.kit",
+                "--ext-folder", "~/.local/share/ov/pkg/isaac_sim-2023.1.1/exts",
+                "--ext-folder", "~/.local/share/ov/pkg/isaac_sim-2023.1.1/apps"],
             "stopAtEntry": false,
-            "cwd": "/home/matteo/.local/share/ov/pkg/isaac_sim-2022.2.1",
+            "cwd": "~/.local/share/ov/pkg/isaac_sim-2023.1.1",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
