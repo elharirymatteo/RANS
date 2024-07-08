@@ -110,8 +110,6 @@ def plot_average_metric_for_task(runs, task, metric_name, x_axis='global_step', 
                     all_histories[robot].append((steps, values))
 
     plt.figure(figsize=(10, 6))
-    handles = []
-    labels = []
 
     for robot, histories in all_histories.items():
         if histories:
@@ -122,22 +120,17 @@ def plot_average_metric_for_task(runs, task, metric_name, x_axis='global_step', 
             mean_values = np.mean(all_values, axis=0)
             std_values = np.std(all_values, axis=0)
 
-            mean_line, = plt.plot(all_steps, mean_values, label=f"{robot} Mean")
-            std_fill = plt.fill_between(all_steps, mean_values - std_values, mean_values + std_values, alpha=0.3, label=f"{robot} Std Dev")
-
-            handles.append(mean_line)
-            handles.append(std_fill)
-            labels.append(f"{robot} Mean")
-            labels.append(f"{robot} Std Dev")
+            plt.plot(all_steps, mean_values, label=f"{robot}")
+            plt.fill_between(all_steps, mean_values - std_values, mean_values + std_values, alpha=0.3)
 
     plt.xlabel('Step')
     plt.ylabel(metric_name)
     plt.title(f'{metric_name} over time for task "{task}" across all robots')
-    plt.legend(handles=handles, labels=labels, loc='upper left', bbox_to_anchor=(1, 1), ncol=1)
+    plt.legend()
 
     if save_path:
         plot_filename = f"{save_path}/{metric_name.replace('/', '_')}_all_robots.png"
-        plt.savefig(plot_filename, bbox_inches='tight')
+        plt.savefig(plot_filename)
         plt.close()
         print(f"Plot saved as {plot_filename}")
     else:
