@@ -2,6 +2,7 @@ name: GoThroughPosition
 position_tolerance: 0.1
 kill_after_n_steps_in_tolerance: 1 # 10seconds
 kill_dist: 8.0
+reference_frame: global
 target_linear_velocity_curriculum:
   rate_parameters:
     function: ${if:${.....test},none,sigmoid}

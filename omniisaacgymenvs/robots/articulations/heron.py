@@ -52,7 +52,7 @@ class Heron(Robot):
 
         # get script execution path
         script_path = os.path.join(os.getcwd())
-        self._usd_path = os.path.join(script_path,"robots/usd/heron.usd") #TODO: use nucleous or relative path
+        self._usd_path = os.path.join(script_path,"robots/usd/heron.usd")
         self._name = name
 
         if self._usd_path is None:

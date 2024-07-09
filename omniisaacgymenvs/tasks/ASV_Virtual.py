@@ -203,7 +203,7 @@ class ASVVirtual(RLTask):
             self.action_space = spaces.Tuple([spaces.Discrete(2)] * self._max_actions)
         elif self._discrete_actions == "Continuous":
             self.action_space = spaces.Box(
-                low=np.array([-1.0, -1.0]), high=np.array([1.0, 1.0]), dtype=np.float32
+                low=np.array([-1.0, -1.0]), high=np.array([1.0, 1.0]), dtype=np.float64
             )
         elif self._discrete_actions == "Discrete":
             raise NotImplementedError("The Discrete control mode is not supported.")
