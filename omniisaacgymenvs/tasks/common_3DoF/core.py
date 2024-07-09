@@ -14,6 +14,7 @@ import torch
 
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
+
 def quat_addition(q1, q2):
     q3 = torch.zeros_like(q1)
     q3[:, 0] = (
@@ -42,6 +43,7 @@ def quat_addition(q1, q2):
     )
     q3 /= torch.norm(q3 + EPS, dim=-1, keepdim=True)
     return q3
+
 
 class Core:
     """
@@ -80,7 +82,7 @@ class Core:
             self._dim_orientation + self._dim_velocity + self._dim_omega + self._dim_task_label + dim_task_data
         )
         self._dim_task_data = dim_task_data
-        
+
         self._obs_buffer = torch.zeros(
             (self._num_envs, self._num_observations),
             device=self._device,
@@ -111,21 +113,16 @@ class Core:
         sin_theta = current_state["orientation"][:, 1]
 
         # Transform linear velocity to the local frame
-        vel_i = (
-            cos_theta * current_state["linear_velocity"][:, 0]
-            + sin_theta * current_state["linear_velocity"][:, 1]
-        )
-        vel_j = (
-            -sin_theta * current_state["linear_velocity"][:, 0]
-            + cos_theta * current_state["linear_velocity"][:, 1]
-        )
-        transformed_velocity = torch.stack((vel_i, vel_j), dim=1)
+        lin_vel_global = current_state["linear_velocity"]
+        lin_vel_local = torch.zeros_like(lin_vel_global)
+        lin_vel_local[:, 0] = cos_theta * lin_vel_global[:, 0] + sin_theta * lin_vel_global[:, 1]
+        lin_vel_local[:, 1] = -sin_theta * lin_vel_global[:, 0] + cos_theta * lin_vel_global[:, 1]
 
-        self._obs_buffer[:, 0:2] = current_state["orientation"]
-        self._obs_buffer[:, 2:4] = transformed_velocity
+        self._obs_buffer[:, 0:2] = torch.zeros_like(current_state["orientation"]) # Irrelevant in local frame
+        self._obs_buffer[:, 2:4] = lin_vel_local
         self._obs_buffer[:, 4] = current_state["angular_velocity"]
         self._obs_buffer[:, 5] = self._task_label
-        self._obs_buffer[:, 6:6 + self._dim_task_data] = self._task_data
+        self._obs_buffer[:, 6 : 6 + self._dim_task_data] = self._task_data
 
     def update_observation_tensor_global(self, current_state: dict):
         """
@@ -168,7 +165,7 @@ class Core:
             raise ValueError("The reference frame must be either 'local' or 'global'.")
 
         return self._obs_buffer
-    
+
     def create_stats(self, stats: dict) -> dict:
         """
         Creates a dictionary to store the training statistics for the task.

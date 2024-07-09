@@ -68,7 +68,7 @@ class GoThroughPositionTask(Core):
         # Define the specific observation space dimensions for this task
         self._dim_task_data = 5  # position error (x, y), heading error (cos, sin), linear velocity error
         self.define_observation_space(self._dim_task_data)
-        
+
         # Curriculum samplers
         self._spawn_position_sampler = CurriculumSampler(
             self._task_parameters.spawn_position_curriculum
@@ -157,30 +157,28 @@ class GoThroughPositionTask(Core):
         cos_theta = current_state["orientation"][:, 0]
         sin_theta = current_state["orientation"][:, 1]
 
-        # Position error in global frame
-        position_error_global = self._target_positions - current_state["position"]
         # Transform position error to local frame
+        position_error_global = self._target_positions - current_state["position"]
         position_error_local = torch.zeros_like(position_error_global)
-        position_error_local[:, 0] =  cos_theta * position_error_global[:, 0] + sin_theta * position_error_global[:, 1]
+        position_error_local[:, 0] = cos_theta * position_error_global[:, 0] + sin_theta * position_error_global[:, 1]
         position_error_local[:, 1] = -sin_theta * position_error_global[:, 0] + cos_theta * position_error_global[:, 1]
         self._position_error = position_error_local
 
         # Convert linear velocity to local frame
-        linear_velocity_global = current_state["linear_velocity"]
-        linear_velocity_local = torch.zeros_like(linear_velocity_global)
-        linear_velocity_local[:, 0] =  cos_theta * linear_velocity_global[:, 0] + sin_theta * linear_velocity_global[:, 1]
-        linear_velocity_local[:, 1] = -sin_theta * linear_velocity_global[:, 0] + cos_theta * linear_velocity_global[:, 1]
+        lin_vel_local = current_state["linear_velocity"]
+        lin_vel_local = torch.zeros_like(lin_vel_local)
+        lin_vel_local[:, 0] = cos_theta * lin_vel_local[:, 0] + sin_theta * lin_vel_local[:, 1]
+        lin_vel_local[:, 1] = -sin_theta * lin_vel_local[:, 0] + cos_theta * lin_vel_local[:, 1]
 
         # linear velocity error (normed velocity)
-        self.linear_velocity_err = self._target_velocities - torch.norm(
-            linear_velocity_local, dim=-1
-        )
-        # Heading error in local frame
-        heading = torch.arctan2(sin_theta, cos_theta)
-        self._heading_error = torch.arctan2(
-            torch.sin(self._target_headings - heading),
-            torch.cos(self._target_headings - heading),
-        )
+        self.linear_velocity_err = self._target_velocities - torch.norm(lin_vel_local, dim=-1)
+
+        # Target heading already in the local frame since the position error is in the local frame
+        self._target_headings = torch.arctan2(self._position_error[:, 1], self._position_error[:, 0])
+
+        # The heading error is directly the target heading in the local frame
+        self._heading_error = self._target_headings
+
         # Encode task data
         self._task_data[:, :2] = self._position_error
         self._task_data[:, 2] = torch.cos(self._heading_error)
