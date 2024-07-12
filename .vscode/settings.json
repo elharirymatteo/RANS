@@ -589,7 +589,7 @@
         "~/.local/share/ov/pkg/isaac_sim-2023.1.1/kit/extscore/usdrt.scenegraph",
         "~/.local/share/ov/pkg/isaac_sim-2023.1.1/kit/kernel/py",
         "~/.local/share/ov/pkg/isaac_sim-2023.1.1/kit/plugins/bindings-python",
-        "~/.local/share/ov/pkg/isaac_sim-2023.1.1/kit/python/lib/python3.7/site-packages/rl_games",
+        "~/Projects/rl_games",
         "~/.local/share/ov/pkg/isaac_sim-2023.1.1/exts/omni.isaac.ros_bridge/noetic/lib/python3.7/site-packages"
 ],
     "python.defaultInterpreterPath": "~/.local/share/ov/pkg/isaac_sim-2023.1.1/python.sh",
