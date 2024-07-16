@@ -20,7 +20,7 @@ asv_domain_randomization:
     r_quad_rand: 0.1 # Yaw
   thruster:
     # Add thruster disturbances
-    use_thruster_randomization: False
+    use_thruster_randomization: True
     thruster_rand: 0.1 # If it is 0.2 it means 0.8 to 1.2
     use_separate_randomization: True
     left_rand: 0.5 # If it is 0.2 it means 0.8 to 1.2

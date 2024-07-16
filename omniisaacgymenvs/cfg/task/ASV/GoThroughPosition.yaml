@@ -13,6 +13,94 @@ defaults:
   - penalty: penalties.yaml
   - _self_
 
+reward:
+  heading_scale: 0.9
+  time_penalty: 1.0
+
+penalty:
+  linear_velocity_penalty:
+    enable: False
+
+  angular_velocity_penalty:
+    enable: True
+    weight: 0.5
+    scaling_function: linear
+    min_value: 0.5
+    max_value: 20.0
+    curriculum:
+      function: linear
+      start: 5
+      end: 10
+  energy_penalty:
+    enable: True
+    weight: 0.5
+    curriculum:
+      function: linear
+      start: 5
+      end: 10
+
+sub_task:
+  name: GoThroughPosition
+  position_tolerance: 0.1
+  kill_after_n_steps_in_tolerance: 1 # 10seconds
+  kill_dist: 15.0
+  spawn_position_curriculum:
+    rate_parameters:
+      function: linear
+      start: 1
+      end: 100
+      extent: 4.5
+    sampling_parameters:
+      distribution: truncated_normal
+      start_mean: 3.0
+      start_std: 1.5
+      end_mean: 6.0
+      end_std: 3.0
+      min_value: 1.0
+      max_value: 10.0
+  spawn_heading_curriculum:
+    rate_parameters:
+      function: linear
+      start: 1
+      end: 100
+      extent: 4.5
+    sampling_parameters:
+      distribution: truncated_normal
+      start_mean: 0.0
+      start_std: 0.25
+      end_mean: 0.0 #2pi
+      end_std: 4.71238898038469 #3/2 pi
+      min_value: -3.141592653589793 # -pi
+      max_value: 3.141592653589793 # pi
+  spawn_linear_velocity_curriculum:
+    rate_parameters:
+      function: linear
+      start: 1
+      end: 100
+      extent: 4.5
+    sampling_parameters:
+      distribution: truncated_normal
+      start_mean: 0.0
+      start_std: 0.0001
+      end_mean: 1.0
+      end_std: 0.5
+      min_value: 0.0
+      max_value: 1.5
+  spawn_angular_velocity_curriculum:
+    rate_parameters:
+      function: linear
+      start: 1
+      end: 100
+      extent: 4.5
+    sampling_parameters:
+      distribution: truncated_normal
+      start_mean: 0.0
+      start_std: 0.0001
+      end_mean: 0.0
+      end_std: 0.5
+      min_value: -0.5
+      max_value: 0.5
+
 # if given, will override the device setting in gym. 
 env:
   numEnvs: ${resolve_default:64,${...num_envs}}

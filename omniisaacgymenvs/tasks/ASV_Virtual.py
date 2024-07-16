@@ -18,7 +18,7 @@ from omniisaacgymenvs.robots.articulations.views.heron_view import (
 from omniisaacgymenvs.utils.pin import VisualPin
 from omniisaacgymenvs.utils.arrow import VisualArrow
 
-from omniisaacgymenvs.tasks.common_3DoF.task_factory import (
+from omniisaacgymenvs.tasks.ASV.task_factory import (
     task_factory,
 )
 from omniisaacgymenvs.tasks.common_3DoF.penalties import (
@@ -473,7 +473,7 @@ class ASVVirtual(RLTask):
         thrusts = thrust_cmds
 
         # Adds random noise on the actions
-        thrusts = self.DR.noisy_actions.add_noise_on_act(thrusts, step=self.step)
+        # thrusts = self.DR.noisy_actions.add_noise_on_act(thrusts, step=self.step)
 
         # Clip the actions
         thrusts = torch.clamp(thrusts, -1.0, 1.0)
