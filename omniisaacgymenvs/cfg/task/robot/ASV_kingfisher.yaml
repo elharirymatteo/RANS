@@ -21,8 +21,8 @@ asv_domain_randomization:
   thruster:
     # Add thruster disturbances
     use_thruster_randomization: False
-    thruster_rand: 0.5 # If it is 0.2 it means 0.8 to 1.2
-    use_separate_randomization: False
+    thruster_rand: 0.1 # If it is 0.2 it means 0.8 to 1.2
+    use_separate_randomization: True
     left_rand: 0.5 # If it is 0.2 it means 0.8 to 1.2
     right_rand: 0.5 # If it is 0.2 it means 0.8 to 1.2
 
@@ -35,10 +35,11 @@ dynamics:
     interpolation: 
       numberOfPointsForInterpolation: 1000
       # CMD                                 -1.0, -0.9, -0.8, -0.7, -0.6,-0.5,-0.4,-0.3,-0.2,-0.1, 0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6,  0.7,  0.8,  0.9,  1.0]
-      interpolationPointsFromRealDataLeft: [-3.8, -3.8, -3.6, -3.6, -1.6, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 4.0, 10.0, 15.0, 21.0, 23.0, 22.0]
+      # 3d printed thruster model : [-4.0, -4.0, -4.0, -4.0, -2.0, -1.0, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.50, 1.50, 4.75, 8.25, 16.0, 19.5, 19.5, 19.5]
+      interpolationPointsFromRealDataLeft: [-4.0, -4.0, -4.0, -4.0, -2.0, -1.0, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.50, 1.50, 4.75, 8.25, 16.0, 19.5, 19.5, 19.5]
       # Nominal Thruster Model : [-19.88, -16.52, -12.6, -5.6, -1.4, 0.0, 2.24, 9.52, 21.28, 28.0, 33.6]
       # SID Thruster Model : [-3.8, -3.8, -3.6, -3.6, -1.6, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 4.0, 10.0, 15.0, 21.0, 23.0, 22.0]
-      interpolationPointsFromRealDataRight: [-5.0, -5.0, -5.0, -4.6, -2.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 4.6, 10.0, 17.0, 24.0, 24.0, 23.0]
+      interpolationPointsFromRealDataRight: [-4.0, -4.0, -4.0, -4.0, -2.0, -1.0, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.50, 1.50, 4.75, 8.25, 16.0, 19.5, 19.5, 19.5]
       # Nominal Thruster Model : [-19.88, -16.52, -12.6, -5.6, -1.4, 0.0, 2.24, 9.52, 21.28, 28.0, 33.6]
       # SID Thruster Model : [-5.0, -5.0, -5.0, -4.6, -2.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 4.6, 10.0, 17.0, 24.0, 24.0, 23.0]
     leastSquareMethod: 
