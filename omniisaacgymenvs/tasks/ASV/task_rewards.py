@@ -37,6 +37,11 @@ class GoThroughPositionReward:
         Checks that the reward parameters are valid."""
 
 
+        assert self.velocity_reward_mode.lower() in [
+            "linear",
+            "square",
+            "exponential",
+        ], "Linear, Square and Exponential are the only currently supported mode."
         assert self.heading_reward_mode.lower() in [
             "linear",
             "square",
@@ -51,6 +56,7 @@ class GoThroughPositionReward:
         actions: torch.Tensor,
         position_progress: torch.Tensor,
         heading_error: torch.Tensor,
+        velocity_error: torch.Tensor,
     ) -> None:
         """
         Defines the function used to compute the reward for the GoToPose task."""
@@ -69,5 +75,17 @@ class GoThroughPositionReward:
         else:
             raise ValueError("Unknown reward type.")
 
-        return position_reward, heading_reward
+        if self.velocity_reward_mode.lower() == "linear":
+            velocity_reward = 1.0 / (1.0 + heading_error) * self.velocity_scale
+        elif self.velocity_reward_mode.lower() == "square":
+            velocity_reward = 1.0 / (1.0 + heading_error) * self.velocity_scale
+        elif self.velocity_reward_mode.lower() == "exponential":
+            velocity_reward = (
+                torch.exp(-velocity_error / self.velocity_exponential_reward_coeff)
+                * self.velocity_scale
+            )
+        else:
+            raise ValueError("Unknown reward type.")
+
+        return position_reward, heading_reward, velocity_reward
 

@@ -46,8 +46,7 @@ class GoThroughPositionTask(Core):
         self._reward_parameters = GoThroughPositionReward(**reward_param)
 
         # Define the specific observation space dimensions for this task
-        self._dim_task_data = 3 #distance (2) target_bearing (1)
-        self.define_observation_space(self._dim_task_data)
+        self.define_observation_space()
 
         # Curriculum samplers
         self._spawn_position_sampler = CurriculumSampler(
@@ -76,13 +75,15 @@ class GoThroughPositionTask(Core):
         self._target_headings = torch.zeros(
             (self._num_envs), device=self._device, dtype=torch.float32
         )
+        self._target_velocities = torch.zeros(
+            (self._num_envs), device=self._device, dtype=torch.float32
+        )
         self._delta_headings = torch.zeros(
             (self._num_envs), device=self._device, dtype=torch.float32
         )
         self._previous_position_dist = torch.zeros(
             (self._num_envs), device=self._device, dtype=torch.float32
         )
-        self._task_label = self._task_label * 1
 
     def create_stats(self, stats: dict) -> dict:
         """
@@ -104,6 +105,8 @@ class GoThroughPositionTask(Core):
             stats["position_error"] = torch_zeros()
         if not "heading_reward" in stats.keys():
             stats["heading_reward"] = torch_zeros()
+        if not "linear_velocity_reward" in stats.keys():
+            stats["linear_velocity_reward"] = torch_zeros()
         if not "linear_velocity_error" in stats.keys():
             stats["linear_velocity_error"] = torch_zeros()
         if not "heading_error" in stats.keys():
@@ -151,16 +154,19 @@ class GoThroughPositionTask(Core):
         (
             self.progress_reward,
             self.heading_reward,
+            self.linear_velocity_reward,
         ) = self._reward_parameters.compute_reward(
             current_state,
             actions,
             position_progress,
             self.heading_dist,
+            self.linear_velocity_error,
         )
         self._previous_position_dist = self.position_dist.clone()
         reward = (
             self.progress_reward
             + self.heading_reward
+            + self.linear_velocity_reward
             - self.boundary_penalty
             - self._reward_parameters.time_penalty
             + self._reward_parameters.terminal_reward * self._goal_reached
@@ -197,8 +203,10 @@ class GoThroughPositionTask(Core):
 
         stats["progress_reward"] += self.progress_reward
         stats["heading_reward"] += self.heading_reward
+        stats["linear_velocity_reward"] += self.linear_velocity_reward
         stats["position_error"] += self.position_dist
         stats["heading_error"] += self.heading_dist
+        stats["linear_velocity_error"] += self.linear_velocity_error
         stats["boundary_dist"] += self.boundary_dist
         stats = self._task_parameters.boundary_penalty.update_statistics(stats)
         return stats
@@ -247,7 +255,8 @@ class GoThroughPositionTask(Core):
         )
         q = torch.zeros((num_goals, 4), dtype=torch.float32, device=self._device)
         q[:, 0] = 1
-
+        # TODO: Get the target linear velocity from a sampler
+        self._target_velocities[env_ids] = 1.0
         return p, q
 
     def get_initial_conditions(
@@ -471,7 +480,7 @@ class GoThroughPositionTask(Core):
 
 
     # Overload from Core to simplify observation space definition
-    def define_observation_space(self, dim_task_data: int):
+    def define_observation_space(self):
         """
         Define the observation space dimensions.
 
@@ -479,22 +488,16 @@ class GoThroughPositionTask(Core):
             dim_observation (int): Dimension of the observation.
             dim_task_data (int): Dimension of the task-specific data part of the observation.
         """
+        dim_heading_error = 2
+        dim_distance_error = 1
+        dim_velocity_error = 1
 
         self._num_observations = (
-            self._dim_velocity + self._dim_omega + dim_task_data
+            self._dim_velocity + self._dim_omega + dim_heading_error + dim_distance_error + dim_velocity_error
         )
-        self._dim_task_data = dim_task_data
 
         self._obs_buffer = torch.zeros(
             (self._num_envs, self._num_observations),
-            device=self._device,
-            dtype=torch.float32,
-        )
-        self._task_label = torch.ones(
-            (self._num_envs), device=self._device, dtype=torch.float32
-        )
-        self._task_data = torch.zeros(
-            (self._num_envs, self._dim_task_data),
             device=self._device,
             dtype=torch.float32,
         )
@@ -538,8 +541,14 @@ class GoThroughPositionTask(Core):
         # Get the angle in radians 
         self.target_bearing_rad = torch.atan2(self._position_error[:, 1], self._position_error[:, 0])
 
+        # Get linear velocity error
+        self.linear_velocity_error = self._target_velocities - self.lin_vel_local[:, 0]
+
         # Set the observation tensor
         self._obs_buffer[:, :2] = self.lin_vel_local # Linear velocity in local frame
         self._obs_buffer[:, 2] = current_state["angular_velocity"] # Angular velocity
         self._obs_buffer[:, 3:5] = self.target_bearing # Tartget bearing in local frame (cos, sin)
         self._obs_buffer[:, 5] = self.target_distance # Target distance
+        self._obs_buffer[:, 6] = self.linear_velocity_error # Linear velocity error
+        # average_lin_vel_error = torch.mean(self.linear_velocity_error)
+        # print(f"Debug: linear velocity error {average_lin_vel_error}")
