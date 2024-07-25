@@ -239,20 +239,8 @@ class GoThroughPositionTask(Core):
         """
 
         num_goals = len(env_ids)
-        # Randomize position
-        self._target_positions[env_ids] = (
-            torch.rand((num_goals, 2), device=self._device)
-            * self._task_parameters.goal_random_position
-            * 2
-            - self._task_parameters.goal_random_position
-        )
         p = torch.zeros((num_goals, 3), dtype=torch.float32, device=self._device)
-        p[:, :2] += self._target_positions[env_ids]
-        p[:, 2] = 2
-        # Randomize heading
-        self._delta_headings[env_ids] = self._spawn_heading_sampler.sample(
-            num_goals, step, device=self._device
-        )
+        p[:, 2] = 2.0
         q = torch.zeros((num_goals, 4), dtype=torch.float32, device=self._device)
         q[:, 0] = 1
         # TODO: Get the target linear velocity from a sampler
@@ -279,45 +267,38 @@ class GoThroughPositionTask(Core):
         num_resets = len(env_ids)
         # Resets the counter of steps for which the goal was reached
         self.reset(env_ids)
+
         # Randomizes the starting position of the platform
-        initial_position = torch.zeros(
-            (num_resets, 3), device=self._device, dtype=torch.float32
-        )
         r = self._spawn_position_sampler.sample(num_resets, step, device=self._device)
+        # Initial angle to define the position of the platform around the target
         theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
-        initial_position[:, 0] = (
-            r * torch.cos(theta) + self._target_positions[env_ids, 0]
-        )
-        initial_position[:, 1] = (
-            r * torch.sin(theta) + self._target_positions[env_ids, 1]
-        )
-        # Randomizes the heading of the platform
-        initial_orientation = torch.zeros(
-            (num_resets, 4), device=self._device, dtype=torch.float32
-        )
-        target_position_local = (
-            self._target_positions[env_ids, :2] - initial_position[:, :2]
-        )
-        target_heading = torch.arctan2(
-            target_position_local[:, 1], target_position_local[:, 0]
-        )
+        # theta = torch.zeros((num_resets,), device=self._device) # Fix initial positions
+        initial_position = torch.zeros((num_resets, 3), device=self._device, dtype=torch.float32)
+        initial_position[:, 0] = (r * torch.cos(theta) + self._target_positions[env_ids, 0])
+        initial_position[:, 1] = (r * torch.sin(theta) + self._target_positions[env_ids, 1])
+
+        # Computes the heading of the platform in the global frame to face the target
+        target_position_local = (self._target_positions[env_ids, :2] - initial_position[:, :2])
+        target_heading = torch.arctan2(target_position_local[:, 1], target_position_local[:, 0])
+
+        # Randomize heading of the platform
+        self._delta_headings[env_ids] = self._spawn_heading_sampler.sample(num_resets, step, device=self._device)
         theta = target_heading + self._delta_headings[env_ids]
+
+        # Set the initial_orientation in quaternion
+        initial_orientation = torch.zeros((num_resets, 4), device=self._device, dtype=torch.float32)
         initial_orientation[:, 0] = torch.cos(theta * 0.5)
         initial_orientation[:, 3] = torch.sin(theta * 0.5)
+
         # Randomizes the linear velocity of the platform
-        initial_velocity = torch.zeros(
-            (num_resets, 6), device=self._device, dtype=torch.float32
-        )
-        linear_velocity = self._spawn_linear_velocity_sampler.sample(
-            num_resets, step, device=self._device
-        )
-        theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
-        initial_velocity[:, 0] = linear_velocity * torch.cos(theta)
-        initial_velocity[:, 1] = linear_velocity * torch.sin(theta)
+        initial_velocity = torch.zeros((num_resets, 6), device=self._device, dtype=torch.float32)
+        linear_velocity = self._spawn_linear_velocity_sampler.sample(num_resets, step, device=self._device)
+        # Rotate the linear velocity to the local frame
+        initial_velocity[:, 0] = torch.cos(theta) * linear_velocity
+        initial_velocity[:, 1] = torch.sin(theta) * linear_velocity
+
         # Randomizes the angular velocity of the platform
-        angular_velocity = self._spawn_angular_velocity_sampler.sample(
-            num_resets, step, device=self._device
-        )
+        angular_velocity = self._spawn_angular_velocity_sampler.sample(num_resets, step, device=self._device)
         initial_velocity[:, 5] = angular_velocity
 
         return (
@@ -474,7 +455,7 @@ class GoThroughPositionTask(Core):
         """
 
         dict = self._task_parameters.boundary_penalty.get_logs()
-        if step % 50 == 0:
+        if step % 50 == 1:
             dict = {**dict, **self.log_spawn_data(step)}
         return dict
 
