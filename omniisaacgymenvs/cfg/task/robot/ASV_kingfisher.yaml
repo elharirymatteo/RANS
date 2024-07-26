@@ -1,7 +1,7 @@
 asv_domain_randomization:
   drag:
     # Add drag disturbances
-    use_drag_randomization: False
+    use_drag_randomization: True
     # Proportion of drag randomization for each drag coefficient
     # If it is 0.1 it means 0.9 to 1.1
     # Linear

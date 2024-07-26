@@ -73,7 +73,6 @@ class ASVVirtual(RLTask):
         self._env_spacing = self._task_cfg["env"]["envSpacing"]
         self._max_episode_length = self._task_cfg["env"]["maxEpisodeLength"]
         self._discrete_actions = self._task_cfg["env"]["action_mode"]
-        self._observation_frame = self._task_cfg["env"]["observation_frame"]
         self.iteration = 0
         self.step = 0
 
@@ -133,7 +132,7 @@ class ASVVirtual(RLTask):
         # Episode statistics
         self.episode_sums = self.task.create_stats({})
         self.add_stats(self._penalties.get_stats_name())
-        self.add_stats(["normed_linear_vel", "normed_angular_vel", "actions_sum"])
+        # self.add_stats(["normed_linear_vel", "normed_angular_vel", "actions_sum"])
 
         # obs variables
         self.root_pos = torch.zeros(
@@ -489,9 +488,7 @@ class ASVVirtual(RLTask):
         """
         Applies all the forces to the platform and its thrusters."""
         disturbance_forces = self.DR.force_disturbances.get_force_disturbance(self.root_pos)
-        torque_disturbance = self.DR.torque_disturbances.get_torque_disturbance(
-            self.root_pos
-        )
+        torque_disturbance = self.DR.torque_disturbances.get_torque_disturbance(self.root_pos)
         # Hydrostatic force
         self.hydrostatic_force[:, :] = (
             self.hydrostatics.compute_archimedes_metacentric_local(
@@ -628,7 +625,7 @@ class ASVVirtual(RLTask):
         # Randomizes the starting position of the platform within a disk around the target
         root_pos, root_quat, root_vel = self.task.get_initial_conditions(env_ids, step=self.step)
         root_pos[:, :2] = root_pos[:, :2] + self.initial_root_pos[env_ids, :2]
-        root_pos[:, 2] = 0.05
+        root_pos[:, 2] = 0.1
         self._heron.set_world_poses(
             root_pos, root_quat, indices=env_ids
         )

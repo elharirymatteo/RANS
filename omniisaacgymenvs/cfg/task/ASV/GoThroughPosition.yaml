@@ -13,6 +13,90 @@ defaults:
   - penalty: penalties.yaml
   - _self_
 
+disturbances:
+  force_disturbance:
+    enable: True
+    use_sinusoidal_patterns: False
+    min_freq: 0.25
+    max_freq: 3
+    min_offset: -6
+    max_offset: 6
+    force_curriculum:
+      rate_parameters:
+        function: linear
+        start: 50
+        end: 300
+      sampling_parameters:
+        distribution: truncated_normal
+        start_mean: 0.0
+        start_std: 0.0001
+        end_mean: 0.3
+        end_std: 1.0
+        min_value: 0.0
+        max_value: 5.0
+  torque_disturbance:
+    enable: True
+    use_sinusoidal_patterns: False
+    min_freq: 0.25
+    max_freq: 3
+    min_offset: -6
+    max_offset: 6
+    torque_curriculum:
+      rate_parameters:
+        function: linear
+        start: 50
+        end: 300
+      sampling_parameters:
+        distribution: truncated_normal
+        start_mean: 0.0
+        start_std: 0.0001
+        end_mean: 0.0
+        end_std: 0.2
+        min_value: -0.1
+        max_value: 0.1
+  observations_disturbance:
+    enable_position_noise: True
+    enable_velocity_noise: True
+    enable_orientation_noise: True
+    position_curriculum:
+      rate_parameters:
+        function: linear
+        start: 50
+        end: 300
+      sampling_parameters:
+        distribution: truncated_normal
+        start_mean: 0.0
+        start_std: 0.0001
+        end_mean: 0.0
+        end_std: 0.03
+        min_value: -0.015
+        max_value: 0.015
+    velocity_curriculum:
+      rate_parameters:
+        function: linear
+        start: 50
+        end: 300
+      sampling_parameters:
+        distribution: truncated_normal
+        start_mean: 0.0
+        start_std: 0.0001
+        end_mean: 0.0
+        end_std: 0.03
+        min_value: -0.015
+        max_value: 0.015
+    orientation_curriculum:
+      rate_parameters:
+        function: linear
+        start: 50
+        end: 300
+      sampling_parameters:
+        distribution: truncated_normal
+        start_mean: 0.0
+        start_std: 0.0001
+        end_mean: 0.0
+        end_std: 0.05
+        min_value: -0.025
+        max_value: 0.025
 
 reward:
   name: GoThroughPosition
@@ -57,8 +141,8 @@ sub_task:
   spawn_position_curriculum:
     rate_parameters:
       function: linear
-      start: 25
-      end: 150
+      start: 10
+      end: 100
     sampling_parameters:
       distribution: truncated_normal
       start_mean: 4.0
@@ -70,8 +154,8 @@ sub_task:
   spawn_heading_curriculum:
     rate_parameters:
       function: linear
-      start: 25
-      end: 150
+      start: 10
+      end: 100
     sampling_parameters:
       distribution: truncated_normal
       start_mean: 0.0
@@ -83,8 +167,8 @@ sub_task:
   spawn_linear_velocity_curriculum:
     rate_parameters:
       function: linear
-      start: 50
-      end: 200
+      start: 25
+      end: 250
     sampling_parameters:
       distribution: truncated_normal
       start_mean: 0.0
@@ -96,8 +180,8 @@ sub_task:
   spawn_angular_velocity_curriculum:
     rate_parameters:
       function: linear
-      start: 50
-      end: 200
+      start: 25
+      end: 250
     sampling_parameters:
       distribution: truncated_normal
       start_mean: 0.0
@@ -111,7 +195,7 @@ sub_task:
 env:
   numEnvs: ${resolve_default:64,${...num_envs}}
   envSpacing: 12
-  maxEpisodeLength: 1000
+  maxEpisodeLength: 600
   enableDebugVis: False
   action_mode: Continuous
   numQuantizedActions: 1
