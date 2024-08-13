@@ -64,6 +64,7 @@ def import_tasks():
     from omniisaacgymenvs.tasks.MFP2D_Virtual_Dock_RGBD import MFP2DVirtual_Dock_RGBD
     from omniisaacgymenvs.tasks.MFP3D_Virtual import MFP3DVirtual
     from omniisaacgymenvs.tasks.ASV_Virtual import ASVVirtual
+    from omniisaacgymenvs.tasks.DAR_Virtual import DARVirtual
 
     from omniisaacgymenvs.tasks.warp.ant import (
         AntLocomotionTask as AntLocomotionTaskWarp,
@@ -100,6 +101,7 @@ def import_tasks():
         "MFP2DVirtual_Dock_RGBD": MFP2DVirtual_Dock_RGBD,
         "MFP3DVirtual": MFP3DVirtual,
         "ASVVirtual": ASVVirtual,
+        "DARVirtual": DARVirtual,
     }
 
     task_map_warp = {
