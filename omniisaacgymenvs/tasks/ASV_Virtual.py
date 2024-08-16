@@ -145,9 +145,6 @@ class ASVVirtual(RLTask):
         self.root_velocities = torch.zeros(
             (self._num_envs, 6), device=self._device, dtype=torch.float32
         )
-        self.euler_angles = torch.zeros(
-            (self._num_envs, 3), device=self._device, dtype=torch.float32
-        )
 
         # volume submerged
         self.high_submerged = torch.zeros(
@@ -369,9 +366,6 @@ class ASVVirtual(RLTask):
         self.heading[:, 0] = torch.cos(orient_z)
         self.heading[:, 1] = torch.sin(orient_z)
 
-        # get euler angles
-        self.get_euler_angles(self.root_quats)  # rpy roll pitch yaws
-
         net_contact_forces = self.compute_contact_forces()
         # Dump to state
         self.current_state = {
@@ -392,33 +386,6 @@ class ASVVirtual(RLTask):
         net_contact_forces = self._heron.base.get_net_contact_forces(clone=False)
         return torch.norm(net_contact_forces, dim=-1)
 
-    def get_euler_angles(self, quaternions):
-        """quaternions to euler"""
-
-        w, x, y, z = quaternions.unbind(dim=1)
-        rotation_matrices = torch.stack(
-            [
-                1 - 2 * y**2 - 2 * z**2,
-                2 * x * y - 2 * w * z,
-                2 * x * z + 2 * w * y,
-                2 * x * y + 2 * w * z,
-                1 - 2 * x**2 - 2 * z**2,
-                2 * y * z - 2 * w * x,
-                2 * x * z - 2 * w * y,
-                2 * y * z + 2 * w * x,
-                1 - 2 * x**2 - 2 * y**2,
-            ],
-            dim=1,
-        ).view(-1, 3, 3)
-
-        angle_x = torch.atan2(rotation_matrices[:, 2, 1], rotation_matrices[:, 2, 2])
-        angle_y = torch.asin(-rotation_matrices[:, 2, 0])
-        angle_z = torch.atan2(rotation_matrices[:, 1, 0], rotation_matrices[:, 0, 0])
-
-        euler = torch.stack((angle_x, angle_y, angle_z), dim=1)
-
-        """quaternions to euler"""
-        self.euler_angles[:, :] = euler
 
     def get_observations(self) -> Dict[str, torch.Tensor]:
         """
@@ -431,9 +398,7 @@ class ASVVirtual(RLTask):
         # implement logic to retrieve observation states
         self.update_state()
         # Get the state
-        self.obs_buf["state"] = self.task.get_state_observations(
-            self.current_state,
-        )
+        self.obs_buf["state"] = self.task.get_state_observations(self.current_state)
 
         observations = {self._heron.name: {"obs_buf": self.obs_buf}}
         return observations
@@ -491,9 +456,7 @@ class ASVVirtual(RLTask):
         torque_disturbance = self.DR.torque_disturbances.get_torque_disturbance(self.root_pos)
         # Hydrostatic force
         self.hydrostatic_force[:, :] = (
-            self.hydrostatics.compute_archimedes_metacentric_local(
-                self.root_pos, self.euler_angles, self.root_quats
-            )
+            self.hydrostatics.compute_archimedes_metacentric_local(self.root_pos, self.root_quats)
         )
         # Hydrodynamic forces
         self.drag[:, :] = self.hydrodynamics.ComputeHydrodynamicsEffects(

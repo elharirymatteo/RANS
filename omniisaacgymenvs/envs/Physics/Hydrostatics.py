@@ -6,6 +6,33 @@ Following Fossen's Equation,
 Fossen, T. I. (1991). Nonlinear modeling and control of Underwater Vehicles. Doctoral thesis, Department of Engineering Cybernetics, Norwegian Institute of Technology (NTH), June 1991.
 """
 
+def get_euler_angles(quaternions):
+    """quaternions to euler"""
+
+    w, x, y, z = quaternions.unbind(dim=1)
+    rotation_matrices = torch.stack(
+        [
+            1 - 2 * y**2 - 2 * z**2,
+            2 * x * y - 2 * w * z,
+            2 * x * z + 2 * w * y,
+            2 * x * y + 2 * w * z,
+            1 - 2 * x**2 - 2 * z**2,
+            2 * y * z - 2 * w * x,
+            2 * x * z - 2 * w * y,
+            2 * y * z + 2 * w * x,
+            1 - 2 * x**2 - 2 * y**2,
+        ],
+        dim=1,
+    ).view(-1, 3, 3)
+
+    angle_x = torch.atan2(rotation_matrices[:, 2, 1], rotation_matrices[:, 2, 2])
+    angle_y = torch.asin(-rotation_matrices[:, 2, 0])
+    angle_z = torch.atan2(rotation_matrices[:, 1, 0], rotation_matrices[:, 0, 0])
+
+    euler = torch.stack((angle_x, angle_y, angle_z), dim=1)
+
+    """quaternions to euler"""
+    return euler
 
 class Hydrostatics:
     def __init__(
@@ -105,11 +132,13 @@ class Hydrostatics:
 
         return submerged_volume
 
-    def compute_archimedes_metacentric_local(self, position, rpy, quaternions):
+    def compute_archimedes_metacentric_local(self, position, quaternions):
+
+        euler = get_euler_angles(quaternions)
         # get archimedes global force
 
         submerged_volume = self.compute_submerged_volume(position)
-        self.compute_archimedes_metacentric_global(submerged_volume, rpy)
+        self.compute_archimedes_metacentric_global(submerged_volume, euler)
 
         # get rotation matrix from quaternions in world frame, size is (3*num_envs, 3)
         R = getWorldToLocalRotationMatrix(quaternions)
