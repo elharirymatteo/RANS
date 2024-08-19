@@ -1,6 +1,6 @@
 base:
-  shape:
-    name: Box
+  shape: 
+    name: Cube
     size: [0.320, 0.160, 0.1]
     has_collider: True
     is_rigid: True
@@ -71,15 +71,8 @@ actuators:
   limits:
     limits: [-17.0, 17.0]
 
-wheel_physics_material:
-  static_friction: 0.9
-  dynamic_friction: 0.7
-  restitution: 0.5
-  friction_combine_mode: average
-  restitution_combine_mode: average
-
-camera:
-  module_name: "CameraModule"
-  resolution: [640, 480]
-  position: [0.0, 0.0, 0.1]
-  orientation: [0.0, 0.0, 0.0]
+# camera:
+#   module_name: "CameraModule"
+#   resolution: [640, 480]
+#   position: [0.0, 0.0, 0.1]
+#   orientation: [0.0, 0.0, 0.0]

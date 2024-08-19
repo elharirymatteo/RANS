@@ -10,6 +10,7 @@ __status__ = "development"
 
 from omni.isaac.core.robots.robot import Robot
 from dataclasses import dataclass, field
+from omniisaacgymenvs.robots import actuators
 from pxr import Gf, PhysxSchema, UsdShade
 from typing import Optional
 import numpy as np
@@ -22,12 +23,11 @@ from omniisaacgymenvs.robots.sensors.exteroceptive.camera_module_generator impor
 )
 
 from omniisaacgymenvs.robots.articulations.utils.Types import (
-    DirectDriveWheel,
     GeometricPrimitive,
-    PhysicsMaterial,
     ActuatorCfg,
     GeometricPrimitiveFactory,
     PassiveWheelFactory,
+    Cube,
 )
 
 
@@ -36,6 +36,7 @@ class DualArmRobotParameters:
     base: GeometricPrimitive = field(default_factory=dict)
     links: list = field(default_factory=list)
     end_effectors: list = field(default_factory=list)
+    actuators: ActuatorCfg = field(default_factory=dict)
     mass: float = 0.0
     CoM: tuple = (0, 0, 0)
 
@@ -167,29 +168,29 @@ class DualArmRobot(Robot):
 
 
 # Configuration dictionary based on the paper https://arxiv.org/pdf/2405.00943 (Table 1)
-dual_arm_robot_config = {
-    "base": {
-        "type": "box",
-        "size": [0.320, 0.160, 0.1],  # dimensions of the base
-        "mass": 8.31,
-        "inertia": [0.135, 0.135, 0.135],  # Assuming isotropic inertia for simplicity
-        "CoM": [0.0761, 0.0, 0.05]
-    },
-    "links": [
-        {"type": "cylinder", "radius": 0.025, "height": 0.25, "mass": 0.633, "inertia": [0.00255, 0.00255, 0.00255], "CoM": [0.229, 0.0, 0.125]},
-        {"type": "cylinder", "radius": 0.025, "height": 0.175, "mass": 0.647, "inertia": [0.00119, 0.00119, 0.00119], "CoM": [0.162, 0.0, 0.0875]},
-        {"type": "cylinder", "radius": 0.025, "height": 0.137, "mass": 0.207, "inertia": [0.000552, 0.000552, 0.000552], "CoM": [0.0631, 0.0, 0.0685]}
-    ],
-    "end_effectors": [
-        {"type": "sphere", "radius": 0.03, "mass": 0.05, "inertia": [0.0001, 0.0001, 0.0001], "CoM": [0.0, 0.0, 0.0]}
-    ],
-    "mass": 8.31 + 0.633*2 + 0.647*2 + 0.207*2 + 0.05*2,  # Total mass of the robot
-    "CoM": [0.0761, 0.0, 0.05]  # Approximate center of mass of the robot
-}
+# dual_arm_robot_config = {
+#     "base": {
+#         "name": "Cube",
+#         "size": [0.320, 0.160, 0.1],  # dimensions of the base
+#         "mass": 8.31,
+#         "inertia": [0.135, 0.135, 0.135],  # Assuming isotropic inertia for simplicity
+#         "CoM": [0.0761, 0.0, 0.05]
+#     },
+#     "links": [
+#         {"type": "cylinder", "radius": 0.025, "height": 0.25, "mass": 0.633, "inertia": [0.00255, 0.00255, 0.00255], "CoM": [0.229, 0.0, 0.125]},
+#         {"type": "cylinder", "radius": 0.025, "height": 0.175, "mass": 0.647, "inertia": [0.00119, 0.00119, 0.00119], "CoM": [0.162, 0.0, 0.0875]},
+#         {"type": "cylinder", "radius": 0.025, "height": 0.137, "mass": 0.207, "inertia": [0.000552, 0.000552, 0.000552], "CoM": [0.0631, 0.0, 0.0685]}
+#     ],
+#     "end_effectors": [
+#         {"type": "sphere", "radius": 0.03, "mass": 0.05, "inertia": [0.0001, 0.0001, 0.0001], "CoM": [0.0, 0.0, 0.0]}
+#     ],
+#     "mass": 8.31 + 0.633*2 + 0.647*2 + 0.207*2 + 0.05*2,  # Total mass of the robot
+#     "CoM": [0.0761, 0.0, 0.05]  # Approximate center of mass of the robot
+# }
 
-# Instantiate the robot
-dual_arm_robot = DualArmRobot(
-    prim_path="/World/Robots/DualArmRobot",
-    cfg=dual_arm_robot_config,
-    name="DualArmRobot",
-)
+# # Instantiate the robot
+# dual_arm_robot = DualArmRobot(
+#     prim_path="/World/Robots/DualArmRobot",
+#     cfg=dual_arm_robot_config,
+#     name="DualArmRobot",
+# )
