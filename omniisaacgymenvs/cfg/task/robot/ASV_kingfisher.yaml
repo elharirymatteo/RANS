@@ -69,8 +69,9 @@ dynamics:
     amplify_torque: 1.0
     material_density: 133
     water_density: 1000
-    mass: 35.96
+    mass: 35.0
     box_width: 1.0
     box_length: 1.3
-    waterplane_area: 0.233333 # Kingfisher/Heron draught 120mm in Spec Sheet
-    heron_zero_height: 0.84
+    waterplane_area: 0.52 # 0.2 width * 1.3 length * 2 hulls
+    draught_offset: 0.24 # Distance from heron to bottom of the hull
+    max_draught: 0.20 # Kingfisher/Heron draught 120mm in Spec Sheet

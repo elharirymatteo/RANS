@@ -49,15 +49,14 @@ class Hydrostatics:
         )
 
         # data
-        # TODO: Move to dataclass implementation
         self.average_hydrostatics_force_value = params["average_hydrostatics_force_value"]
         self.amplify_torque = params["amplify_torque"]
         self.metacentric_width = params["box_width"]/2
         self.metacentric_length = params["box_length"]/2
         self.waterplane_area = params["waterplane_area"]
-        self.heron_zero_height = params["heron_zero_height"]
         self.water_density = params["water_density"]
-        self.max_volume = (params["box_width"] * params["box_length"]) #TODO: Review and fix
+        self.max_draught = params["max_draught"]
+        self.draught_offset = params["draught_offset"]
 
         # Buoyancy
         self.gravity = gravity
@@ -74,11 +73,6 @@ class Hydrostatics:
         self.archimedes_torque_local = torch.zeros(
             (self._num_envs, 3), dtype=torch.float32, device=self.device
         )
-
-
-        # acceleration
-        self._filtered_acc = torch.zeros([6], device=self.device)
-        self._last_vel_rel = torch.zeros([6], device=self.device)
 
         return
 
@@ -121,14 +115,9 @@ class Hydrostatics:
 
     def compute_submerged_volume(self, position):
 
-        high_submerged = torch.clamp(
-            (self.heron_zero_height) - position[:, 2], # Consider only the z position
-            0,
-            self.heron_zero_height + 20,  # TODO: Fix
-        )
-        submerged_volume = torch.clamp(
-            high_submerged * self.waterplane_area, 0, self.max_volume
-        )
+        draught = torch.clamp(self.draught_offset - position[:, 2], 0, self.max_draught)
+
+        submerged_volume = draught * self.waterplane_area
 
         return submerged_volume
 
