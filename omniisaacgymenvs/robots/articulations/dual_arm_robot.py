@@ -27,22 +27,20 @@ from omniisaacgymenvs.robots.articulations.utils.Types import (
     ActuatorCfg,
     GeometricPrimitiveFactory,
     PassiveWheelFactory,
-    Cube,
+    RigidBody,
 )
 
 
 @dataclass
 class DualArmRobotParameters:
-    base: GeometricPrimitive = field(default_factory=dict)
+    base: RigidBody = field(default_factory=dict)
     links: list = field(default_factory=list)
     end_effectors: list = field(default_factory=list)
     actuators: ActuatorCfg = field(default_factory=dict)
-    mass: float = 0.0
-    CoM: tuple = (0, 0, 0)
 
     def __post_init__(self):
-        self.base = GeometricPrimitiveFactory.get_item(self.base)
-        self.links = [GeometricPrimitiveFactory.get_item(link) for link in self.links]
+        self.base = RigidBody(**self.base)
+        self.links = [RigidBody(**link) for link in self.links]
         self.end_effectors = [GeometricPrimitiveFactory.get_item(ee) for ee in self.end_effectors]
 
 

@@ -1,13 +1,13 @@
 base:
-  shape: 
-    name: Cube
-    size: [0.320, 0.160, 0.1]
-    has_collider: True
-    is_rigid: True
-    refinement: 2
-  mass: 8.31
-  inertia: [0.135, 0.135, 0.135]
-  CoM: [0.0761, 0.0, 0.05]
+  - shape:
+      name: Cube
+      size: [0.320, 0.160, 0.1]
+      has_collider: True
+      is_rigid: True
+      refinement: 2
+    mass: 8.31
+    inertia: [0.135, 0.135, 0.135]
+    CoM: [0.0761, 0.0, 0.05]
 
 links:
   - shape:

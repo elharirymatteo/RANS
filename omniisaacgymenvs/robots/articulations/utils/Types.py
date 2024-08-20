@@ -1311,7 +1311,6 @@ class ZeroFrictionSphere:
         pxr_utils.applyMaterial(prim, mat, purpose="physics")
         return None, None, path, prim
 
-
 @dataclass
 class CasterWheel:
     """
@@ -1393,3 +1392,51 @@ class CasterWheel:
 PassiveWheelFactory = TypeFactoryBuilder()
 PassiveWheelFactory.register_instance(ZeroFrictionSphere)
 PassiveWheelFactory.register_instance(CasterWheel)
+
+
+@dataclass
+class RigidBody:
+    """
+    A Rigidbody.
+    
+    Args:
+        visual_shape (dict): The visual shape of the wheel.
+        collider_shape (dict): The collider shape of the wheel.
+        mass (float): The mass of the wheel.
+    """
+
+    shape: GeometricPrimitive = field(default_factory=dict)
+    mass: float = 1.0
+    inertia: Tuple = (1, 1, 1)
+    CoM: Tuple = (0, 0, 0)
+    # visual_material: SimpleColorTexture = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        # Force the collision shape to have a collider
+        self.shape["has_collider"] = True
+        # Force the visual and collision shapes to be non-rigid
+        self.shape["is_rigid"] = True
+
+        self.shape = GeometricPrimitiveFactory.get_item(self.shape)
+
+    def build(self, stage: Usd.Stage, path: str = None) -> Tuple[str, Usd.Prim, str, Usd.Prim]:
+        """
+        Builds the wheel.
+        
+        Args:
+            stage (Usd.Stage): The USD stage.
+            path (str): The path to the wheel.
+        
+        Returns:
+            Tuple[str, Usd.Prim, str, Usd.Prim]: The path and the prim of the wheel and the collider of that wheel.
+        """
+
+        rb_path, rb_prim = pxr_utils.createXform(stage, path)
+        collider_path, collider_prim = self.shape.build(
+            stage, path + "/collision"
+        )
+        collider_prim.GetAttribute("visibility").Set("invisible")
+        pxr_utils.applyRigidBody(rb_prim)
+        pxr_utils.applyMass(rb_prim, self.mass)
+        return rb_path, rb_prim, collider_path, collider_prim
+
