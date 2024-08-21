@@ -41,7 +41,8 @@ class DualArmRobotParameters:
     def __post_init__(self):
         self.base = RigidBody(**self.base)
         self.links = [RigidBody(**link) for link in self.links]
-        self.end_effectors = [GeometricPrimitiveFactory.get_item(ee) for ee in self.end_effectors]
+        self.end_effectors = [RigidBody(**ee) for ee in self.end_effectors]
+        self.actuators = ActuatorCfg(**self.actuators)
 
 
 class CreateDualArmRobot:
@@ -72,17 +73,17 @@ class CreateDualArmRobot:
         self.createEndEffectors()
 
     def createCore(self) -> None:
-        self.core_path, self.core_prim = self.settings.base.build(
+        self.core_path, self.core_prim = self.settings.base.shape.build(
             self.stage, self.platform_path + "/base"
         )
-        applyMass(self.core_prim, self.settings.mass, Gf.Vec3d(*self.settings.CoM))
+        applyMass(self.core_prim, self.settings.base.mass, Gf.Vec3d(*self.settings.base.CoM))
         if self.camera_cfg is not None:
             self.createCamera()
         else:
-            self.settings.base.add_orientation_marker(
+            self.settings.base.shape.add_orientation_marker(
                 self.stage, self.core_path + "/arrow", self.colors["red"]
             )
-            self.settings.base.add_positional_marker(
+            self.settings.base.shape.add_positional_marker(
                 self.stage, self.core_path + "/marker", self.colors["green"]
             )
 
@@ -90,18 +91,18 @@ class CreateDualArmRobot:
         for i, link in enumerate(self.settings.links):
             _, _, _, link_prim = link.build(
                 self.stage,
-                joint_path=self.joints_path + f"/link_{i+1}",
-                wheel_path=self.platform_path + f"/link_{i+1}",
-                body_path=self.core_path,
+                path=self.joints_path + f"/link_{i+1}",
+                #wheel_path=self.platform_path + f"/link_{i+1}",
+                #body_path=self.core_path,
             )
 
     def createEndEffectors(self) -> None:
         for i, ee in enumerate(self.settings.end_effectors):
             _, _, _, ee_prim = ee.build(
                 self.stage,
-                joint_path=self.joints_path + f"/end_effector_{i+1}",
-                path=self.platform_path + f"/end_effector_{i+1}",
-                body_path=self.core_path,
+                path=self.joints_path + f"/end_effector_{i+1}",
+                #path=self.platform_path + f"/end_effector_{i+1}",
+                #body_path=self.core_path,
             )
 
     def createBasicColors(self) -> None:
@@ -163,32 +164,3 @@ class DualArmRobot(Robot):
         stage = omni.usd.get_context().get_stage()
         art = PhysxSchema.PhysxArticulationAPI.Apply(stage.GetPrimAtPath(prim_path))
         art.CreateEnabledSelfCollisionsAttr().Set(False)
-
-
-# Configuration dictionary based on the paper https://arxiv.org/pdf/2405.00943 (Table 1)
-# dual_arm_robot_config = {
-#     "base": {
-#         "name": "Cube",
-#         "size": [0.320, 0.160, 0.1],  # dimensions of the base
-#         "mass": 8.31,
-#         "inertia": [0.135, 0.135, 0.135],  # Assuming isotropic inertia for simplicity
-#         "CoM": [0.0761, 0.0, 0.05]
-#     },
-#     "links": [
-#         {"type": "cylinder", "radius": 0.025, "height": 0.25, "mass": 0.633, "inertia": [0.00255, 0.00255, 0.00255], "CoM": [0.229, 0.0, 0.125]},
-#         {"type": "cylinder", "radius": 0.025, "height": 0.175, "mass": 0.647, "inertia": [0.00119, 0.00119, 0.00119], "CoM": [0.162, 0.0, 0.0875]},
-#         {"type": "cylinder", "radius": 0.025, "height": 0.137, "mass": 0.207, "inertia": [0.000552, 0.000552, 0.000552], "CoM": [0.0631, 0.0, 0.0685]}
-#     ],
-#     "end_effectors": [
-#         {"type": "sphere", "radius": 0.03, "mass": 0.05, "inertia": [0.0001, 0.0001, 0.0001], "CoM": [0.0, 0.0, 0.0]}
-#     ],
-#     "mass": 8.31 + 0.633*2 + 0.647*2 + 0.207*2 + 0.05*2,  # Total mass of the robot
-#     "CoM": [0.0761, 0.0, 0.05]  # Approximate center of mass of the robot
-# }
-
-# # Instantiate the robot
-# dual_arm_robot = DualArmRobot(
-#     prim_path="/World/Robots/DualArmRobot",
-#     cfg=dual_arm_robot_config,
-#     name="DualArmRobot",
-# )

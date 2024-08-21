@@ -1,68 +1,71 @@
+# Configuration dictionary based on the paper https://arxiv.org/pdf/2405.00943 (Table 1)
 base:
-  - shape:
-      name: Cube
-      size: [0.320, 0.160, 0.1]
-      has_collider: True
-      is_rigid: True
-      refinement: 2
-    mass: 8.31
-    inertia: [0.135, 0.135, 0.135]
-    CoM: [0.0761, 0.0, 0.05]
+  shape:
+    name: Cube
+    depth: 0.320
+    width:  0.160
+    height: 0.1
+    has_collider: True
+    is_rigid: True
+    refinement: 2
+  mass: 8.31
+  inertia: [0.135, 0.135, 0.135]
+  CoM: [0.0761, 0.0, 0.05]
 
 links:
-  - shape:
-      name: Cylinder
-      radius: 0.025
-      height: 0.25
-      has_collider: True
-      is_rigid: True
-      refinement: 2
-    mass: 0.633
-    inertia: [0.00255, 0.00255, 0.00255]
-    CoM: [0.229, 0.0, 0.125]
+  shape:
+    name: Cylinder
+    radius: 0.025
+    height: 0.25
+    has_collider: True
+    is_rigid: True
+    refinement: 2
+  mass: 0.633
+  inertia: [0.00255, 0.00255, 0.00255]
+  CoM: [0.229, 0.0, 0.125]
 
-  - shape:
-      name: Cylinder
-      radius: 0.025
-      height: 0.175
-      has_collider: True
-      is_rigid: True
-      refinement: 2
-    mass: 0.647
-    inertia: [0.00119, 0.00119, 0.00119]
-    CoM: [0.162, 0.0, 0.0875]
+  shape:
+    name: Cylinder
+    radius: 0.025
+    height: 0.175
+    has_collider: True
+    is_rigid: True
+    refinement: 2
+  mass: 0.647
+  inertia: [0.00119, 0.00119, 0.00119]
+  CoM: [0.162, 0.0, 0.0875]
 
-  - shape:
-      name: Cylinder
-      radius: 0.025
-      height: 0.137
-      has_collider: True
-      is_rigid: True
-      refinement: 2
-    mass: 0.207
-    inertia: [0.000552, 0.000552, 0.000552]
-    CoM: [0.0631, 0.0, 0.0685]
+  shape:
+    name: Cylinder
+    radius: 0.025
+    height: 0.137
+    has_collider: True
+    is_rigid: True
+    refinement: 2
+  mass: 0.207
+  inertia: [0.000552, 0.000552, 0.000552]
+  CoM: [0.0631, 0.0, 0.0685]
 
 end_effectors:
-  - shape:
-      name: Sphere
-      radius: 0.03
-      has_collider: True
-      is_rigid: True
-      refinement: 2
-    mass: 0.05
-    inertia: [0.0001, 0.0001, 0.0001]
-    CoM: [0.0, 0.0, 0.0]
+  shape:
+    name: Sphere
+    radius: 0.03
+    has_collider: True
+    is_rigid: True
+    refinement: 2
+  mass: 0.05
+  inertia: [0.0001, 0.0001, 0.0001]
+  CoM: [0.0, 0.0, 0.0]
 
-  - shape:
-      name: Sphere
-      radius: 0.03
-      has_collider: True
-      is_rigid: True
-      refinement: 2
-    mass: 0.05
-    inertia: [0.0001, 0.0001, 0.0001]
-    CoM: [0.0, 0.0, 0.0]
+  shape:
+    name: Sphere
+    radius: 0.03
+    has_collider: True
+    is_rigid: True
+    refinement: 2
+  mass: 0.05
+  inertia: [0.0001, 0.0001, 0.0001]
+  CoM: [0.0, 0.0, 0.0]
 
 actuators:
   dynamics:
