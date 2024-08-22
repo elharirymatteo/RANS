@@ -201,14 +201,14 @@ env:
   numQuantizedActions: 1
   horizon_length: ${...train.params.config.horizon_length}
 
-  controlFrequencyInv: 10
+  controlFrequencyInv: 5 # 20Hz at dt=0.01s
   observation_frame: "local"
 
-  clipObservations: {state: 8.0}
+  clipObservations: {state: 10.0}
   clipActions: 1.0
 
 sim:
-  dt: 0.02
+  dt: 0.01 # 100Hz
   use_gpu_pipeline: ${eq:${...pipeline},"gpu"}
   gravity: [0.0, 0.0, -9.81]
   add_ground_plane: True
