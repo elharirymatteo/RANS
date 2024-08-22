@@ -116,6 +116,7 @@ class GoThroughPositionParameters:
     kill_after_n_steps_in_tolerance: int = 1
     goal_random_position: float = 0.0
     kill_dist: float = 10.0
+    reference_frame: str = "world"
 
     target_linear_velocity_curriculum: CurriculumParameters = field(
         default_factory=dict

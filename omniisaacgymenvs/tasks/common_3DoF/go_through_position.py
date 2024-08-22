@@ -68,7 +68,7 @@ class GoThroughPositionTask(Core):
         # Define the specific observation space dimensions for this task
         self._dim_task_data = 5  # position error (x, y), heading error (cos, sin), linear velocity error
         self.define_observation_space(self._dim_task_data)
-        
+
         # Curriculum samplers
         self._spawn_position_sampler = CurriculumSampler(
             self._task_parameters.spawn_position_curriculum
@@ -142,17 +142,59 @@ class GoThroughPositionTask(Core):
                 stats[name] = torch_zeros()
         return stats
 
-    def get_state_observations(self, current_state: dict) -> torch.Tensor:
+    def update_task_data_local(self, current_state):
         """
-        Computes the observation tensor from the current state of the robot.
+        Update the task data in local frame based on the current state.
 
         Args:
-            current_state (dict): The current state of the robot.
+            current_state (dict): The current state of the system.
 
         Returns:
-            torch.Tensor: The observation tensor.
+            None
         """
 
+        # Orientation cos, sin of USV in the global frame
+        cos_theta = current_state["orientation"][:, 0]
+        sin_theta = current_state["orientation"][:, 1]
+
+        # Transform position error to local frame
+        position_error_global = self._target_positions - current_state["position"]
+        position_error_local = torch.zeros_like(position_error_global)
+        position_error_local[:, 0] = cos_theta * position_error_global[:, 0] + sin_theta * position_error_global[:, 1]
+        position_error_local[:, 1] = -sin_theta * position_error_global[:, 0] + cos_theta * position_error_global[:, 1]
+        self._position_error = position_error_local
+
+        # Convert linear velocity to local frame
+        lin_vel_local = current_state["linear_velocity"]
+        lin_vel_local = torch.zeros_like(lin_vel_local)
+        lin_vel_local[:, 0] = cos_theta * lin_vel_local[:, 0] + sin_theta * lin_vel_local[:, 1]
+        lin_vel_local[:, 1] = -sin_theta * lin_vel_local[:, 0] + cos_theta * lin_vel_local[:, 1]
+
+        # linear velocity error (normed velocity)
+        self.linear_velocity_err = self._target_velocities - torch.norm(lin_vel_local, dim=-1)
+
+        # Target heading already in the local frame since the position error is in the local frame
+        self._target_headings = torch.arctan2(self._position_error[:, 1], self._position_error[:, 0])
+
+        # The heading error is directly the target heading in the local frame
+        self._heading_error = self._target_headings
+
+        # Encode task data
+        self._task_data[:, :2] = self._position_error
+        self._task_data[:, 2] = torch.cos(self._heading_error)
+        self._task_data[:, 3] = torch.sin(self._heading_error)
+        self._task_data[:, 4] = self.linear_velocity_err
+
+    def update_task_data_global(self, current_state):
+        """
+        Update the task data in global frame based on the current state.
+
+        Args:
+            current_state (dict): The current state of the system.
+
+        Returns:
+            None
+        """
         # position distance
         self._position_error = self._target_positions - current_state["position"]
         # linear velocity error (normed velocity)
@@ -176,7 +218,31 @@ class GoThroughPositionTask(Core):
         self._task_data[:, 2] = torch.cos(self._heading_error)
         self._task_data[:, 3] = torch.sin(self._heading_error)
         self._task_data[:, 4] = self.linear_velocity_err
-        return self.update_observation_tensor(current_state)
+
+    def get_state_observations(self, current_state: dict) -> torch.Tensor:
+        """
+        Computes the observation tensor from the current state of the robot.
+
+        Args:
+            current_state (dict): The current state of the robot.
+
+        Returns:
+            torch.Tensor: The observation tensor.
+        """
+        reference_frame = self._task_parameters.reference_frame
+
+        # Update task data
+        if reference_frame == "global":
+            self.update_task_data_global(current_state)
+        elif reference_frame == "local":
+            self.update_task_data_local(current_state)
+        else:
+            raise ValueError(f"Invalid reference_frame {reference_frame}")
+
+        # Update observation tensor
+        self.update_observation_tensor(current_state, reference_frame)
+
+        return self._obs_buffer
 
     def compute_reward(
         self,

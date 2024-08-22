@@ -13,6 +13,9 @@ defaults:
   - penalty: penalties.yaml
   - _self_
 
+sub_task:
+  reference_frame: local
+
 # if given, will override the device setting in gym. 
 env:
   numEnvs: ${resolve_default:64,${...num_envs}}
