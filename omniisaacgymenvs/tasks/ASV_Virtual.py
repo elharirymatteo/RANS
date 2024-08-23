@@ -594,9 +594,14 @@ class ASVVirtual(RLTask):
         # Updates the coms of the platforms
         self._heron.base.set_coms(com_pos, com_ori, indices=env_ids)
 
-        # Update the inertias of the platforms
-        # inertias = self.DR.mass_disturbances.get_inertias(env_ids)
-        # self._heron.base.set_inertias(inertias=inertias, indices=env_ids)
+        # Read the initial moments of inertia
+        inertias = self._heron.base.get_inertias(indices=env_ids, clone=True) # (num_envs, 9)
+        # Randomize the moments of inertia only in the z axis
+        mi_z = self.DR.mass_disturbances.get_moments_of_inertia(env_ids)
+        inertias[:, -1] = mi_z[:] # Set the last element of the diagonal matrix (zz)
+        # Updates the inertias of the platforms
+        self._heron.base.set_inertias(values=inertias, indices=env_ids)
+        inertias = self._heron.base.get_inertias(indices=env_ids, clone=True) # (num_envs, 9)
 
         # Resets hydrodynamic coefficients
         self.hydrodynamics.reset_coefficients(env_ids, num_resets)

@@ -42,6 +42,20 @@ disturbances:
         end_std: 0.05
         min_value: 0.0
         max_value: 0.1
+    mi_curriculum:
+      rate_parameters:
+        function: linear
+        start: 50
+        end: 300
+      sampling_parameters:
+        distribution: truncated_normal
+        start_mean: 8.0
+        start_std: 0.0001
+        end_mean: 10.0
+        end_std: 5.00
+        min_value: 2.0
+        max_value: 20.0
+
   force_disturbance:
     enable: True
     use_sinusoidal_patterns: False
@@ -223,7 +237,7 @@ sub_task:
 env:
   numEnvs: ${resolve_default:64,${...num_envs}}
   envSpacing: 12
-  maxEpisodeLength: 600
+  maxEpisodeLength: 1200 # 60 seconds at 20Hz
   enableDebugVis: False
   action_mode: Continuous
   numQuantizedActions: 1

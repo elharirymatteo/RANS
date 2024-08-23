@@ -52,6 +52,7 @@ class MassDistributionDisturbances:
 
         self.mass_sampler = CurriculumSampler(parameters.mass_curriculum)
         self.CoM_sampler = CurriculumSampler(parameters.com_curriculum)
+        self.mi_sampler = CurriculumSampler(parameters.mi_curriculum)
         self.parameters = parameters
         self._num_envs = num_envs
         self._device = device
@@ -70,6 +71,10 @@ class MassDistributionDisturbances:
         self.platforms_CoM = torch.zeros(
             (self._num_envs, 2), device=self._device, dtype=torch.float32
         )
+        self.platforms_mi = (
+            torch.ones((self._num_envs, 1), device=self._device, dtype=torch.float32)
+            * self.mi_sampler.get_min()
+        )
 
     def randomize_masses(self, env_ids: torch.Tensor, step: int = 0) -> None:
         """
@@ -87,6 +92,7 @@ class MassDistributionDisturbances:
             theta = (torch.rand((num_resets), dtype=torch.float32, device=self._device)* math.pi* 2)
             self.platforms_CoM[env_ids, 0] = torch.cos(theta) * r
             self.platforms_CoM[env_ids, 1] = torch.sin(theta) * r
+            self.platforms_mi[env_ids, 0] = self.mi_sampler.sample(num_resets, step, device=self._device)
 
     def get_masses(self, env_ids: torch.Tensor) -> torch.Tensor:
         """
@@ -125,6 +131,19 @@ class MassDistributionDisturbances:
         """
 
         return self.platforms_CoM[env_ids]
+
+    def get_moments_of_inertia(self, env_ids: torch.Tensor) -> torch.Tensor:
+        """
+        Returns the moments of inertia of the platforms. (A single value for the Z axis)
+
+        Args:
+            env_ids (torch.Tensor): The ids of the environments to reset.
+
+        Returns:
+            torch.Tensor: The moments of inertia of the platforms.
+        """
+
+        return self.platforms_mi[env_ids, 0]
 
     def get_image_logs(self, step: int) -> dict:
         """
