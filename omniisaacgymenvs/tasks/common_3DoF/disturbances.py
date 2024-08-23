@@ -82,22 +82,13 @@ class MassDistributionDisturbances:
 
         if self.parameters.enable:
             num_resets = len(env_ids)
-            self.platforms_mass[env_ids, 0] = self.mass_sampler.sample(
-                num_resets, step, device=self._device
-            )
+            self.platforms_mass[env_ids, 0] = self.mass_sampler.sample(num_resets, step, device=self._device)
             r = self.CoM_sampler.sample(num_resets, step, device=self._device)
-            theta = (
-                torch.rand((num_resets), dtype=torch.float32, device=self._device)
-                * math.pi
-                * 2
-            )
+            theta = (torch.rand((num_resets), dtype=torch.float32, device=self._device)* math.pi* 2)
             self.platforms_CoM[env_ids, 0] = torch.cos(theta) * r
             self.platforms_CoM[env_ids, 1] = torch.sin(theta) * r
 
-    def get_masses(
-        self,
-        env_ids: torch.Tensor,
-    ) -> torch.Tensor:
+    def get_masses(self, env_ids: torch.Tensor) -> torch.Tensor:
         """
         Returns the masses and CoM of the platforms.
 
@@ -105,10 +96,10 @@ class MassDistributionDisturbances:
             env_ids (torch.Tensor): The ids of the environments to reset.
 
         Returns:
-            Tuple(torch.Tensor, torch.Tensor): The masses and CoM of the platforms.
+            Tuple(torch.Tensor, torch.Tensor): The masses of the platforms
         """
 
-        return self.platforms_mass[:, 0]
+        return self.platforms_mass[env_ids, 0]
 
     def get_masses_and_com(
         self,
@@ -163,8 +154,8 @@ class MassDistributionDisturbances:
             plt.close(fig)
             dict["disturbance/mass_disturbance"] = wandb.Image(data)
         if self.parameters.enable:
-            com = torch.norm(self.platforms_CoM.cpu(), axis=-1).numpy().flatten()
-            fig, ax = plt.subplots(1, 2, dpi=100, figsize=(8, 8), sharey=True)
+            com = torch.norm(self.platforms_CoM.cpu(), dim=-1).numpy().flatten()
+            fig, ax = plt.subplots(1, 1, dpi=100, figsize=(8, 8), sharey=True)
             ax.hist(com, bins=32)
             ax.set_title("CoM disturbance")
             ax.set_xlim(

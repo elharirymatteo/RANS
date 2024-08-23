@@ -575,12 +575,29 @@ class ASVVirtual(RLTask):
         self.task.reset(env_ids)
         self.set_targets(env_ids)
         self.DR.force_disturbances.generate_forces(env_ids, num_resets, step=self.step)
-        self.DR.torque_disturbances.generate_torques(
-            env_ids, num_resets, step=self.step
-        )
+        self.DR.torque_disturbances.generate_torques(env_ids, num_resets, step=self.step)
+
+        # randomize masses, coms, and inertias
         self.DR.mass_disturbances.randomize_masses(env_ids, step=self.step)
-        CoM_shift = self.DR.mass_disturbances.get_CoM(env_ids)
-        random_mass = self.DR.mass_disturbances.get_masses(env_ids)
+
+        # Updates the masses of the platforms
+        masses = self.DR.mass_disturbances.get_masses(env_ids)
+        self._heron.base.set_masses(masses=masses, indices=env_ids)
+
+        # Read the initial CoM position and orientation
+        com_pos, com_ori = self._heron.base.get_coms(indices=env_ids)
+
+        # Randomize the CoM position only in 2D
+        com_pos_2d = self.DR.mass_disturbances.get_CoM(env_ids)
+        com_pos[:, 0, :2] = com_pos_2d[:, :] # Map to 3d position
+
+        # Updates the coms of the platforms
+        self._heron.base.set_coms(com_pos, com_ori, indices=env_ids)
+
+        # Update the inertias of the platforms
+        # inertias = self.DR.mass_disturbances.get_inertias(env_ids)
+        # self._heron.base.set_inertias(inertias=inertias, indices=env_ids)
+
         # Resets hydrodynamic coefficients
         self.hydrodynamics.reset_coefficients(env_ids, num_resets)
         # Resets thruster randomization
