@@ -113,6 +113,8 @@ class GoThroughPositionTask(Core):
             stats["heading_error"] = torch_zeros()
         if not "boundary_dist" in stats.keys():
             stats["boundary_dist"] = torch_zeros()
+        if not "energy_sum" in stats.keys():
+            stats["energy_sum"] = torch_zeros()
         self.log_with_wandb = []
         self.log_with_wandb += self._task_parameters.boundary_penalty.get_stats_name()
         for name in self._task_parameters.boundary_penalty.get_stats_name():
@@ -146,6 +148,8 @@ class GoThroughPositionTask(Core):
         self.heading_dist = torch.abs(self._heading_error)
         self.boundary_dist = torch.abs(self._task_parameters.kill_dist - self.position_dist)
         self.boundary_penalty = self._task_parameters.boundary_penalty.compute_penalty(self.boundary_dist, step)
+        self.linear_velocity_dist = torch.abs(self.linear_velocity_error)
+        self.energy_sum = actions.pow(2).sum(dim=-1).sqrt().mean()
 
         # Checks if the goal is reached
         self._goal_reached = (self.position_dist < self._task_parameters.position_tolerance).int()
@@ -160,7 +164,7 @@ class GoThroughPositionTask(Core):
             actions,
             position_progress,
             self.heading_dist,
-            self.linear_velocity_error,
+            self.linear_velocity_dist,
         )
         self._previous_position_dist = self.position_dist.clone()
         reward = (
@@ -208,6 +212,7 @@ class GoThroughPositionTask(Core):
         stats["heading_error"] += self.heading_dist
         stats["linear_velocity_error"] += self.linear_velocity_error
         stats["boundary_dist"] += self.boundary_dist
+        stats["energy_sum"] += self.energy_sum
         stats = self._task_parameters.boundary_penalty.update_statistics(stats)
         return stats
 
@@ -244,7 +249,7 @@ class GoThroughPositionTask(Core):
         q = torch.zeros((num_goals, 4), dtype=torch.float32, device=self._device)
         q[:, 0] = 1
         # TODO: Get the target linear velocity from a sampler
-        self._target_velocities[env_ids] = 1.0
+        self._target_velocities[env_ids] = torch.rand((num_goals,), device=self._device) + 0.5 # [0.5, 1.5]
         return p, q
 
     def get_initial_conditions(

@@ -146,14 +146,6 @@ class ASVVirtual(RLTask):
             (self._num_envs, 6), device=self._device, dtype=torch.float32
         )
 
-        # volume submerged
-        self.high_submerged = torch.zeros(
-            (self._num_envs), device=self._device, dtype=torch.float32
-        )
-        self.submerged_volume = torch.zeros(
-            (self._num_envs), device=self._device, dtype=torch.float32
-        )
-
         # forces to be applied
         self.hydrostatic_force = torch.zeros(
             (self._num_envs, 6), device=self._device, dtype=torch.float32

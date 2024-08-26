@@ -156,7 +156,6 @@ reward:
 penalty:
   linear_velocity_penalty:
     enable: False
-
   angular_velocity_penalty:
     enable: True
     weight: 0.5
