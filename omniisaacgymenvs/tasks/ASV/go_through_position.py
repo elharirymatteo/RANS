@@ -476,12 +476,15 @@ class GoThroughPositionTask(Core):
         self._num_observations = (
             self._dim_velocity + self._dim_omega + dim_heading_error + dim_distance_error + dim_velocity_error
         )
+        self._obs_buffer_len = self._task_parameters.obs_history_length
 
-        self._obs_buffer = torch.zeros(
-            (self._num_envs, self._num_observations),
+        self._obs_buffer_history = torch.zeros(
+            (self._num_envs, self._obs_buffer_len, self._num_observations),
             device=self._device,
             dtype=torch.float32,
         )
+        # Observation buffer must be flat
+        self._obs_buffer = self._obs_buffer_history.view(self._num_envs, -1)
 
     # Overload from Core to simplify observation tensor update
     def update_observation_tensor(self, current_state: dict):
@@ -526,10 +529,13 @@ class GoThroughPositionTask(Core):
         self.linear_velocity_error = self._target_velocities - self.lin_vel_local[:, 0]
 
         # Set the observation tensor
-        self._obs_buffer[:, :2] = self.lin_vel_local # Linear velocity in local frame
-        self._obs_buffer[:, 2] = current_state["angular_velocity"] # Angular velocity
-        self._obs_buffer[:, 3:5] = self.target_bearing # Tartget bearing in local frame (cos, sin)
-        self._obs_buffer[:, 5] = self.target_distance # Target distance
-        self._obs_buffer[:, 6] = self.linear_velocity_error # Linear velocity error
-        # average_lin_vel_error = torch.mean(self.linear_velocity_error)
-        # print(f"Debug: linear velocity error {average_lin_vel_error}")
+        # Shift the buffer
+        self._obs_buffer_history[:,:-1,:] = self._obs_buffer_history[:,1:,:]
+        # Include the new observation
+        self._obs_buffer_history[:,-1, :2] = self.lin_vel_local # Linear velocity in local frame
+        self._obs_buffer_history[:,-1, 2] = current_state["angular_velocity"] # Angular velocity
+        self._obs_buffer_history[:,-1, 3:5] = self.target_bearing # Tartget bearing in local frame (cos, sin)
+        self._obs_buffer_history[:,-1, 5] = self.target_distance # Target distance
+        self._obs_buffer_history[:,-1, 6] = self.linear_velocity_error # Linear velocity error
+        # Flatten the buffer
+        self._obs_buffer = self._obs_buffer_history.view(self._num_envs, -1)

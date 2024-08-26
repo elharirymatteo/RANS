@@ -116,6 +116,7 @@ class GoThroughPositionParameters:
     kill_after_n_steps_in_tolerance: int = 1
     goal_random_position: float = 0.0
     kill_dist: float = 10.0
+    obs_history_length: int = 1
 
     target_linear_velocity_curriculum: CurriculumParameters = field(
         default_factory=dict
@@ -138,6 +139,7 @@ class GoThroughPositionParameters:
         ), "Kill after n steps in tolerance must be positive."
         assert self.goal_random_position >= 0, "Goal random position must be positive."
         assert self.kill_dist > 0, "Kill distance must be positive."
+        assert self.obs_history_length > 0, "Observation history length must be positive integer."
 
         self.boundary_penalty = BoundaryPenalty(**self.boundary_penalty)
         self.target_linear_velocity_curriculum = CurriculumParameters(

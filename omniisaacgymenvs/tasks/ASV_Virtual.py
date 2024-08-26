@@ -105,7 +105,7 @@ class ASVVirtual(RLTask):
             num_envs=self._num_envs,
             device=self._device,
         )
-        self._num_observations = self.task._num_observations
+        self._num_observations = self.task._num_observations * self.task._obs_buffer_len
         self._max_actions = 2  # Number of thrusters
         self._num_actions = 2  # Number of thrusters
         RLTask.__init__(self, name, env)

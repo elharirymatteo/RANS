@@ -180,6 +180,7 @@ sub_task:
   position_tolerance: 0.1
   kill_after_n_steps_in_tolerance: 1 # 10seconds
   kill_dist: 15.0
+  obs_history_length: 1
   spawn_position_curriculum:
     rate_parameters:
       function: linear
