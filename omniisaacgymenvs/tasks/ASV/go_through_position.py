@@ -149,6 +149,7 @@ class GoThroughPositionTask(Core):
         self.boundary_dist = torch.abs(self._task_parameters.kill_dist - self.position_dist)
         self.boundary_penalty = self._task_parameters.boundary_penalty.compute_penalty(self.boundary_dist, step)
         self.linear_velocity_dist = torch.abs(self.linear_velocity_error)
+        self.linear_velocity_dist = self.linear_velocity_dist * 0.0
         self.energy_sum = actions.pow(2).sum(dim=-1).sqrt().mean()
 
         # Checks if the goal is reached
@@ -532,6 +533,7 @@ class GoThroughPositionTask(Core):
 
         # Get linear velocity error
         self.linear_velocity_error = self._target_velocities - self.lin_vel_local[:, 0]
+        self.linear_velocity_error = self.linear_velocity_error * 0.0
 
         # Set the observation tensor
         # Shift the buffer
