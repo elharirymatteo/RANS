@@ -20,9 +20,9 @@ This repository serves as an extension to the [OmniIsaacGymEnvs](https://github.
 
 ### Robots Included
 
-| 2D Satellite | 3D Satellite | Heron USV | Turtle-bots | Husky car |
+| 2D Satellite | 3D Satellite | Heron USV | Turtle-bots | Husky |
 | :-: | :-: | :-: | :-: | :-: |
-| <img src="data/tasks_imgs/3dof_gotoxy.png" alt="2D Satellite"  class="responsive-img"> | <img src="omniisaacgymenvs/images/6DofGoToPose.png" alt="3D Satellite"  class="responsive-img"/> | <img src="data/robots_imgs/usv_boat.png" alt="Heron USV"  class="responsive-img"/> | <img src="data/robots_imgs/turtlebot2e.png" alt="Turtle-bots"  width=130/> | <img src="data/robots_imgs/husky_car.png" alt="Husky car"  class="responsive-img"/> |
+| <img src="data/tasks_imgs/3dof_gotoxy.png" alt="2D Satellite"  class="responsive-img"> | <img src="omniisaacgymenvs/images/6DofGoToPose.png" alt="3D Satellite"  class="responsive-img"/> | <img src="data/robots_imgs/usv_boat.png" alt="Heron USV"  class="responsive-img"/> | <img src="data/robots_imgs/turtlebot2e.png" alt="Turtle-bots"  width=130/> | <img src="data/robots_imgs/husky_car.png" alt="Husky"  class="responsive-img"/> |
 
 - **2D Satellite**: Simulates basic satellite maneuvers in a 2D plane.
 - **3D Satellite**: Extends satellite control to 3D space for more complex operations.
@@ -63,71 +63,94 @@ This library provides a set of predefined navigation tasks for robotic control a
 
 ---
 
-<details> 
-  <summary><h2 style="display: inline;">Installation</h2></summary>
+## Installation
 
+### Native
 Follow the Isaac Sim [documentation](https://docs.omniverse.nvidia.com/isaacsim/latest/installation/install_workstation.html) to install the latest Isaac Sim release. 
 
 *Examples in this repository rely on features from the most recent Isaac Sim release. Please make sure to update any existing Isaac Sim build to the latest release version, 2023.1.1, to ensure examples work as expected.*
 
-<details> 
-  <summary><h3 style="display: inline;">OmniverseIsaacGymEnvs</h3></summary>
+> [!IMPORTANT]
+> Make sure Isaac sim was installed localy.
+> Locate it's python executable path, it can usually be found here: `~/.local/share/ov/pkg/isaac-sim-2023.1.1/python.sh` 
+> or here: `~/.local/share/ov/pkg/isaac-sim-2023.1.1/python.sh`
 
-Once installed, this repository can be used as a python module, `omniisaacgymenvs`, with the python executable provided in Isaac Sim.
-
-To install `omniisaacgymenvs`, first clone this repository:
+Clone this repository:
 
 ```bash
 git clone https://github.com/elharirymatteo/RANS.git
+cd RANS
 ```
 
-Once cloned, locate the [python executable in Isaac Sim](https://docs.omniverse.nvidia.com/isaacsim/latest/installation/install_python.html). By default, this should be `python.sh`. We will refer to this path as `PYTHON_PATH`.
-
-To set a `PYTHON_PATH` variable in the terminal that links to the python executable, we can run a command that resembles the following. Make sure to update the paths to your local path.
-
-```
-For Linux: alias PYTHON_PATH=~/.local/share/ov/pkg/isaac_sim-*/python.sh
-For Windows: doskey PYTHON_PATH=C:\Users\user\AppData\Local\ov\pkg\isaac_sim-*\python.bat $*
-For IsaacSim Docker: alias PYTHON_PATH=/isaac-sim/python.sh
-```
-
-Install `omniisaacgymenvs` as a python module for `PYTHON_PATH`:
+> [!CAUTION]
+> In the following we refer to `python.sh` as the full path to the python executable of isaac sim.
+> Make sure you use the full path.
 
 ```bash
-PYTHON_PATH -m pip install -e .
+python.sh -m pip install -e .
 ```
-</details>
+  
+We use a modified version of the [rl-games](https://pypi.org/project/rl-games/1.0.2/) library to train our agents.
 
-<details> 
-  <summary><h3 style="display: inline;">RL Games</h3></summary>
-
-We use the [rl-games](https://pypi.org/project/rl-games/1.0.2/) library as a starting point to rework the PPO implementation for the agents we train.
-
-To install the appropriate version of rl-games, clone this repository **INSIDE** RANS:
+To install it clone this repository **INSIDE** RANS:
 ```bash
 git clone https://github.com/AntoineRichard/rl_games
 ```
-from inside the RANS folder:
-```
+
+Then install the module:
+```bash
 cd rl_games
-PYTHON_PATH -m pip install --upgrade pip
-PYTHON_PATH -m pip install -e .
+python.sh -m pip install --upgrade pip
+pythons.sh -m pip install -e .
 ```
-</details>
-</details>
 
-## Running the examples
+With these steps done you should be all set! Refer to the [Getting Started](#getting-started) section to learn how
+to launch your first trainings.
 
-*Note: All commands should be executed from `OmniIsaacGymEnvs/omniisaacgymenvs`.*
+### Docker
 
-<details>
-<summary><span style="font-size: 1.3em; font-weight: bold;">Training new agents</span></summary>
+Before we install the simulation, please follow the procedure [here](https://docs.omniverse.nvidia.com/isaacsim/latest/installation/install_container.html) to install all the required components to install IsaacSim in a docker container.
+
+> [!TIP]
+> You will need an [nvcr.io](https://catalog.ngc.nvidia.com/) account.
+
+Once you're all set, clone this repository as well as our own version of RL_games.
+```bash
+git clone https://github.com/elharirymatteo/RANS.git
+cd RANS
+git clone https://github.com/AntoineRichard/rl_games
+```
+> [!IMPORTANT]
+> RL games must be cloned inside the RANS repository.
+
+One this is done, the docker image can be built by calling the build script.
+
+```bash
+./docker/build_docker.sh
+```
+
+With this out of the way you should be off to the races! Check the [Getting Started](#getting-started) section to start your first training.
+
+
+## Getting Started
+
+> [!IMPORTANT]
+> If you are using docker you can start a new docker container by running the `docker/run_docker.sh` or `docker/run_docker_viewer.sh`.
+> The viewer version allows the user to visualize the environments.
+
+> [!Note]
+> All commands should be executed from `RANS/omniisaacgymenvs`.*
+> `python.sh` referes to the python.sh inside Isaac's sim folder.
+> In docker this will be at `/isaac-sim/python.sh`.
+
+
+### Training new agents
 
 
 To train your first policy, (example for the USV robot) run:
 
 ```bash
-PYTHON_PATH scripts/rlgames_train_RANS.py task=ASV/GoToPose train=RANS/PPOcontinuous_MLP headless=True num_envs=1024
+python.sh scripts/rlgames_train_RANS.py task=ASV/GoToPose train=RANS/PPOcontinuous_MLP headless=True num_envs=1024
 ```
 Modify num_envs appropriately to scale with your current machine capabilities. Turn headless to `False` if you want to visualize the envs while training occurs.
 
@@ -137,7 +160,7 @@ You should see an Isaac Sim window pop up. Once Isaac Sim initialization complet
 Here's another example - GoToPose for the Satellite robot (MFP - modular floating platform) - using the multi-threaded training script:
 
 ```bash
-PYTHON_PATH scripts/rlgames_train_RANS.py task=MFP2D/GoToPose train=RANS/PPOmulti_discrete_MLP
+python.sh scripts/rlgames_train_RANS.py task=MFP2D/GoToPose train=RANS/PPOmulti_discrete_MLP
 ```
 
 Note that by default, we show a Viewport window with rendering, which slows down training. You can choose to close the Viewport window during training for better performance. The Viewport window can be re-enabled by selecting `Window > Viewport` from the top menu bar.
@@ -145,18 +168,13 @@ Note that by default, we show a Viewport window with rendering, which slows down
 To achieve maximum performance, launch training in `headless` mode as follows:
 
 ```bash
-PYTHON_PATH scripts/rlgames_train_RANS.py task=MFP2D/GoToPose train=PPOmulti_discrete_MLP headless=True
+python.sh scripts/rlgames_train_RANS.py task=MFP2D/GoToPose train=PPOmulti_discrete_MLP headless=True
 ```
 
-#### A Note on the Startup Time of the Simulation
+> [!NOTE]
+> Some of the examples could take a few minutes to load because the startup time scales based on the number of environments. The startup time will continually be optimized in future releases.
 
-Some of the examples could take a few minutes to load because the startup time scales based on the number of environments. The startup time will continually
-be optimized in future releases.
-
-</details>
-
-<details>
-<summary><span style="font-size: 1.3em; font-weight: bold;">Loading trained models (or checkpoints)</span></summary>
+### Loading trained models (or checkpoints)
 
 Checkpoints are saved in the folder `runs/EXPERIMENT_NAME/nn` where `EXPERIMENT_NAME` 
 defaults to the task name, but can also be overridden via the `experiment` argument.
@@ -164,7 +182,7 @@ defaults to the task name, but can also be overridden via the `experiment` argum
 To load a trained checkpoint and continue training, use the `checkpoint` argument:
 
 ```bash
-PYTHON_PATH scripts/rlgames_train_RANS.py task=MFP2D/GoToPose train=RANS/PPOmulti_discrete_MLP checkpoint=runs/MFP2D_GoToPose/nn/MFP2D_GoToPose.pth
+python.sh scripts/rlgames_train_RANS.py task=MFP2D/GoToPose train=RANS/PPOmulti_discrete_MLP checkpoint=runs/MFP2D_GoToPose/nn/MFP2D_GoToPose.pth
 ```
 
 To load a trained checkpoint and only perform inference (no training), pass `test=True` 
@@ -172,15 +190,14 @@ as an argument, along with the checkpoint name. To avoid rendering overhead, you
 also want to run with fewer environments using `num_envs=64`:
 
 ```bash
-PYTHON_PATH scripts/rlgames_train_RANS.py task=MFP2D/GoToPose train=RANS/PPOmulti_discrete_MLP checkpoint=runs/MFP2D_GoToPose/nn/MFP2D_GoToPose.pth test=True num_envs=64
+python.sh scripts/rlgames_train_RANS.py task=MFP2D/GoToPose train=RANS/PPOmulti_discrete_MLP checkpoint=runs/MFP2D_GoToPose/nn/MFP2D_GoToPose.pth test=True num_envs=64
 ```
 
 Note that if there are special characters such as `[` or `=` in the checkpoint names, 
 you will need to escape them and put quotes around the string. For example,
 `checkpoint="runs/Ant/nn/last_Antep\=501rew\[5981.31\].pth"`
-</details>
 
-## Training Scripts
+## Going further
 
 All scripts provided in `omniisaacgymenvs/scripts` can be launched directly with `PYTHON_PATH`.
 
@@ -189,7 +206,7 @@ All scripts provided in `omniisaacgymenvs/scripts` can be launched directly with
 To test out a task without RL in the loop, run the random policy script with:
 
 ```bash
-PYTHON_PATH scripts/random_policy.py task=MFP2D/GoToPose
+python.sh scripts/random_policy.py task=MFP2D/GoToPose
 ```
 
 This script will sample random actions from the action space and apply these actions to your task without running any RL policies. Simulation should start automatically after launching the script, and will run indefinitely until terminated.
@@ -200,7 +217,7 @@ This script will sample random actions from the action space and apply these act
 To run a simple form of PPO from `rl_games`, use the single-threaded training script:
 
 ```bash
-PYTHON_PATH scripts/rlgames_train_RANS.py task=MFP2D/GoToPosition
+python.sh scripts/rlgames_train_RANS.py task=MFP2D/GoToPosition
 ```
 
 This script creates an instance of the PPO runner in `rl_games` and automatically launches training and simulation. Once training completes (the total number of iterations have been reached), the script will exit. If running inference with `test=True checkpoint=<path/to/checkpoint>`, the script will run indefinitely until terminated. Note that this script will have limitations on interaction with the UI.
@@ -254,7 +271,7 @@ In some places in the config you will find other variables referenced (for examp
 
 Tensorboard can be launched during training via the following command:
 ```bash
-PYTHON_PATH -m tensorboard.main --logdir runs/EXPERIMENT_NAME/summaries
+python.sh -m tensorboard.main --logdir runs/EXPERIMENT_NAME/summaries
 ```
 
 ## WandB support
