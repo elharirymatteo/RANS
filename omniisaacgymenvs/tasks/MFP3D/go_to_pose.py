@@ -8,7 +8,7 @@ __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
-from omniisaacgymenvs.tasks.MFP3D.core import (
+from omniisaacgymenvs.tasks.common_6DoF.core import (
     Core,
     quat_to_mat,
 )
@@ -27,8 +27,6 @@ from omniisaacgymenvs.tasks.common_3DoF.curriculum_helpers import (
 
 from omniisaacgymenvs.utils.arrow3D import VisualArrow3D
 from omni.isaac.core.prims import XFormPrimView
-from pxr import Usd
-
 from matplotlib import pyplot as plt
 from typing import Tuple
 import numpy as np
@@ -65,6 +63,11 @@ class GoToPoseTask(GoToPoseTask2D, Core):
         # Task and reward parameters
         self._task_parameters = GoToPoseParameters(**task_param)
         self._reward_parameters = GoToPoseReward(**reward_param)
+
+        # Define the task specific observation space dimensions for this task
+        self._dim_task_data = 9
+        self.define_observation_space(self._dim_task_data)
+
         # Curriculum samplers
         self._spawn_position_sampler = CurriculumSampler(
             self._task_parameters.spawn_position_curriculum
@@ -188,8 +191,6 @@ class GoToPoseTask(GoToPoseTask2D, Core):
     def get_goals(
         self,
         env_ids: torch.Tensor,
-        target_positions: torch.Tensor,
-        target_orientations: torch.Tensor,
         step: int = 0,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
@@ -213,19 +214,18 @@ class GoToPoseTask(GoToPoseTask2D, Core):
             * 2
             - self._task_parameters.goal_random_position
         )
-        target_positions[env_ids, :3] += self._target_positions[env_ids]
+        p = self._target_positions[env_ids]
         # Randomize heading
         uvw = torch.rand((num_goals, 3), device=self._device)
-        quat = torch.zeros((num_goals, 4), device=self._device)
-        quat[:, 0] = torch.sqrt(uvw[:, 0]) * torch.cos(uvw[:, 2] * 2 * math.pi)
-        quat[:, 1] = torch.sqrt(1 - uvw[:, 0]) * torch.sin(uvw[:, 1] * 2 * math.pi)
-        quat[:, 2] = torch.sqrt(1 - uvw[:, 0]) * torch.cos(uvw[:, 1] * 2 * math.pi)
-        quat[:, 3] = torch.sqrt(uvw[:, 0]) * torch.sin(uvw[:, 2] * 2 * math.pi)
-        target_orientations[env_ids] = quat
+        q = torch.zeros((num_goals, 4), device=self._device)
+        q[:, 0] = torch.sqrt(uvw[:, 0]) * torch.cos(uvw[:, 2] * 2 * math.pi)
+        q[:, 1] = torch.sqrt(1 - uvw[:, 0]) * torch.sin(uvw[:, 1] * 2 * math.pi)
+        q[:, 2] = torch.sqrt(1 - uvw[:, 0]) * torch.cos(uvw[:, 1] * 2 * math.pi)
+        q[:, 3] = torch.sqrt(uvw[:, 0]) * torch.sin(uvw[:, 2] * 2 * math.pi)
         # cast quaternions to rotation matrix
-        self._target_quat[env_ids] = quat
-        self._target_headings[env_ids] = quat_to_mat(quat)
-        return target_positions, target_orientations
+        self._target_quat[env_ids] = q
+        self._target_headings[env_ids] = quat_to_mat(q)
+        return p, q
 
     def get_initial_conditions(
         self,
@@ -344,14 +344,6 @@ class GoToPoseTask(GoToPoseTask2D, Core):
             head_length=head_length,
             color=color,
         )
-
-    def add_visual_marker_to_scene(self, scene):
-        """
-        Adds the visual marker to the scene."""
-
-        arrows = XFormPrimView(prim_paths_expr="/World/envs/.*/arrow")
-        scene.add(arrows)
-        return scene, arrows
 
     def log_spawn_data(self, step: int) -> dict:
         """

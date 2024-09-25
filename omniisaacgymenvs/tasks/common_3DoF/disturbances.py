@@ -108,7 +108,7 @@ class MassDistributionDisturbances:
             Tuple(torch.Tensor, torch.Tensor): The masses and CoM of the platforms.
         """
 
-        return self.platforms_mass[:, 0]
+        return self.platforms_mass[env_ids, 0]
 
     def get_masses_and_com(
         self,
@@ -784,8 +784,8 @@ class NoisyActions:
                 step
             )
         return dict
-    
-    
+
+
 class NoisyImages:
     """
     Adds noise to the actions of the robot."""
@@ -823,7 +823,9 @@ class NoisyImages:
         if self.parameters.enable:
             self.shape = image.shape
             image += self.image_sampler.sample(
-                self._num_envs * self.shape[1] * self.shape[2] * self.shape[3], step, device=self._device
+                self._num_envs * self.shape[1] * self.shape[2] * self.shape[3],
+                step,
+                device=self._device,
             ).reshape(-1, self.shape[1], self.shape[2], self.shape[3])
         return image
 
@@ -841,7 +843,9 @@ class NoisyImages:
 
         if self.parameters.enable:
             image = self.image_sampler.sample(
-                self._num_envs * self.shape[1] * self.shape[2] * self.shape[3], step, device=self._device
+                self._num_envs * self.shape[1] * self.shape[2] * self.shape[3],
+                step,
+                device=self._device,
             ).reshape(-1, self.shape[1], self.shape[2], self.shape[3])
             image = image.squeeze().cpu().numpy()[0]
             fig, ax = plt.subplots(1, 1, dpi=100, figsize=(8, 8), sharey=True)
@@ -867,8 +871,8 @@ class NoisyImages:
         dict = {}
 
         if self.parameters.enable:
-            dict[f"disturbance/{self.parameters.modality}_disturbance_rate"] = self.image_sampler.get_rate(
-                step
+            dict[f"disturbance/{self.parameters.modality}_disturbance_rate"] = (
+                self.image_sampler.get_rate(step)
             )
         return dict
 
@@ -922,14 +926,10 @@ class Disturbances:
             device,
         )
         self.noisy_rgb_images = NoisyImages(
-            self.parameters.rgb_disturbance, 
-            num_envs, 
-            device
+            self.parameters.rgb_disturbance, num_envs, device
         )
         self.noisy_depth_images = NoisyImages(
-            self.parameters.depth_disturbance, 
-            num_envs, 
-            device
+            self.parameters.depth_disturbance, num_envs, device
         )
 
     def get_logs(self, step: int) -> dict:

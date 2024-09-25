@@ -8,7 +8,7 @@ __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
-from omniisaacgymenvs.tasks.MFP3D.core import (
+from omniisaacgymenvs.tasks.common_6DoF.core import (
     Core,
 )
 from omniisaacgymenvs.tasks.MFP3D.task_rewards import (

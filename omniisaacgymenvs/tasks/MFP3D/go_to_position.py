@@ -8,7 +8,7 @@ __maintainer__ = "Antoine Richard"
 __email__ = "antoine.richard@uni.lu"
 __status__ = "development"
 
-from omniisaacgymenvs.tasks.common_3DoF.core import (
+from omniisaacgymenvs.tasks.common_6DoF.core import (
     Core,
 )
 from omniisaacgymenvs.tasks.MFP3D.task_rewards import (
@@ -26,8 +26,6 @@ from omniisaacgymenvs.tasks.common_3DoF.curriculum_helpers import (
 )
 
 from omniisaacgymenvs.utils.pin3D import VisualPin3D
-from omni.isaac.core.prims import XFormPrimView
-from pxr import Usd
 from matplotlib import pyplot as plt
 from typing import Tuple
 import numpy as np
@@ -63,6 +61,11 @@ class GoToPositionTask(GoToPositionTask2D, Core):
         # Task and reward parameters
         self._task_parameters = GoToPositionParameters(**task_param)
         self._reward_parameters = GoToPositionReward(**reward_param)
+
+        # Define the specific observation space dimensions for this task
+        self._dim_task_data = 3
+        self.define_observation_space(self._dim_task_data)
+
         # Curriculum samplers
         self._spawn_position_sampler = CurriculumSampler(
             self._task_parameters.spawn_position_curriculum
@@ -81,7 +84,7 @@ class GoToPositionTask(GoToPositionTask2D, Core):
         self._target_positions = torch.zeros(
             (self._num_envs, 3), device=self._device, dtype=torch.float32
         )
-        self._task_label = self._task_label * 1
+        self._task_label = self._task_label * 0
 
     def update_observation_tensor(self, current_state: dict) -> torch.Tensor:
         """
@@ -114,8 +117,6 @@ class GoToPositionTask(GoToPositionTask2D, Core):
     def get_goals(
         self,
         env_ids: torch.Tensor,
-        targets_position: torch.Tensor,
-        targets_orientation: torch.Tensor,
         step: int = 0,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
@@ -138,8 +139,10 @@ class GoToPositionTask(GoToPositionTask2D, Core):
             * 2
             - self._task_parameters.goal_random_position
         )
-        targets_position[env_ids, :3] += self._target_positions[env_ids]
-        return targets_position, targets_orientation
+        p = self._target_positions[env_ids]
+        q = torch.zeros((num_goals, 4), device=self._device)
+        q[:, 0] = 1
+        return p, q
 
     def get_initial_conditions(
         self,

@@ -16,7 +16,10 @@ from omni.isaac.core.prims import RigidPrimView
 
 class ModularFloatingPlatformView(ArticulationView):
     def __init__(
-        self, prim_paths_expr: str, name: Optional[str] = "ModularFloatingPlatformView"
+        self,
+        prim_paths_expr: str,
+        name: Optional[str] = "ModularFloatingPlatformView",
+        track_contact_forces: bool = False,
     ) -> None:
         """[summary]"""
 
@@ -27,22 +30,9 @@ class ModularFloatingPlatformView(ArticulationView):
         self.base = RigidPrimView(
             prim_paths_expr=f"/World/envs/.*/Modular_floating_platform/core/body",
             name="base_view",
-        )
-        self.CoM = RigidPrimView(
-            prim_paths_expr=f"/World/envs/.*/Modular_floating_platform/movable_CoM/CoM",
-            name="CoM_view",
+            track_contact_forces=track_contact_forces,
         )
         self.thrusters = RigidPrimView(
             prim_paths_expr=f"/World/envs/.*/Modular_floating_platform/v_thruster_*",
             name="thrusters",
         )
-
-    def get_CoM_indices(self):
-        self.CoM_shifter_indices = [
-            self.get_dof_index("com_x_axis_joint"),
-            self.get_dof_index("com_y_axis_joint"),
-            self.get_dof_index("com_z_axis_joint"),
-        ]
-
-    def get_plane_lock_indices(self):
-        self.lock_indices = []

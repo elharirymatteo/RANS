@@ -166,27 +166,27 @@ class Core(Core2D):
         self._device = device
 
         # Dimensions of the observation tensors
-        self._dim_orientation: (
-            6  # theta heading in the world frame (cos(theta), sin(theta)) [0:6]
-        )
-        self._dim_velocity: 3  # velocity in the world (x_dot, y_dot) [6:9]
-        self._dim_omega: 3  # rotation velocity (theta_dot) [9:12]
-        self._dim_task_label: 1  # label of the task to be executed (int) [12]
-        self._dim_task_data: 9  # data to be used to fullfil the task (floats) [13:22]
+        self._dim_orientation = 6  # theta heading in the world frame (R[:2,:3]) [0:6]
+        self._dim_velocity = 3  # velocity in the world (x_dot, y_dot) [6:9]
+        self._dim_omega = 3  # rotation velocity (theta_dot) [9:12]
+        self._dim_task_label = 1  # label of the task to be executed (int) [12]
+        # self._dim_task_data: 9  # data to be used to fullfil the task (floats) [13:22]
 
         # Observation buffers
-        self._num_observations = 22
-        self._obs_buffer = torch.zeros(
-            (self._num_envs, self._num_observations),
-            device=self._device,
-            dtype=torch.float32,
-        )
-        self._task_label = torch.ones(
-            (self._num_envs), device=self._device, dtype=torch.float32
-        )
-        self._task_data = torch.zeros(
-            (self._num_envs, 9), device=self._device, dtype=torch.float32
-        )
+        # self._num_observations = 22
+        # self._obs_buffer = torch.zeros(
+        #    (self._num_envs, self._num_observations),
+        #    device=self._device,
+        #    dtype=torch.float32,
+        # )
+        # self._task_label = torch.ones(
+        #    (self._num_envs), device=self._device, dtype=torch.float32
+        # )
+        # self._task_data = torch.zeros(
+        #    (self._num_envs, 9), device=self._device, dtype=torch.float32
+        # )
+
+        # print(self._task_label)
 
     def update_observation_tensor(self, current_state: dict) -> torch.Tensor:
         """

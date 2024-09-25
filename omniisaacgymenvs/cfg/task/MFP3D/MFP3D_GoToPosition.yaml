@@ -2,11 +2,11 @@
 name: MFP3DVirtual
 
 physics_engine: ${..physics_engine}
-experiment: MFP3D_Virtual_GoToPose
+experiment: MFP3D_Virtual_GoToPosition
 enable_wandb_log: ${..wandb_activate}
 
-sub_task:
-  name: GoToPose
+sub_task: 
+  name: GoToPosition
   position_tolerance: 0.01
   kill_after_n_steps_in_tolerance: 50 # 10seconds
   kill_dist: 8.0
@@ -24,29 +24,11 @@ sub_task:
       end_std: 3.0
       min_value: 0.25
       max_value: 6.0
-  spawn_heading_curriculum:
-    rate_parameters:
-      function: sigmoid
-      start: 25
-      end: 1000
-      extent: 4.5
-    sampling_parameters:
-      distribution: truncated_normal
-      start_mean: 0.0
-      start_std: 0.25
-      end_mean: 0.0 #2pi
-      end_std: 4.71238898038469 #3/2 pi
-      min_value: -3.141592653589793 # -pi
-      max_value: 3.141592653589793 # pi
-  
+
 reward:
-  name: GoToPose
-  position_reward_mode: exponential
-  heading_reward_mode: exponential
-  position_exponential_reward_coeff: 0.25
-  heading_exponential_reward_coeff: 0.25
-  position_scale: 0.666
-  heading_scale: 0.333
+  name: GoToPosition
+  reward_mode: exponential
+  exponential_reward_coeff: 0.25
 
 robot:
   split_thrust: True
@@ -74,12 +56,12 @@ robot:
     offset: 0.75839816339
     thrust_force: 1.0
     visualize: True
-    save_path: "config.png"
+    save_path: "config3D.png"
 
 penalty:
   energy_penalty:
-    enable: True
-    weight: 0.03
+    enable: False
+    weight: 0.15
     curriculum:
       function: sigmoid
       start: 250
@@ -101,7 +83,7 @@ penalty:
     weight: 0.5
     scaling_function: linear
     min_value: 0.5
-    max_value: 2.0
+    max_value: 10.0
     curriculum:
       function: sigmoid
       start: 0
@@ -252,7 +234,7 @@ env:
   enableDebugVis: False
   action_mode: MultiDiscrete
   numQuantizedActions: 1
-  horizon_length: 16
+  horizon_length: ${...train.params.config.horizon_length} 
 
   controlFrequencyInv: 10
 
@@ -260,6 +242,7 @@ env:
   clipActions: 1.0
 
   # Split the maximum amount of thrust across all thrusters.
+
 
 sim:
   dt: 0.02

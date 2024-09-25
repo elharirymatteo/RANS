@@ -14,6 +14,7 @@ import torch
 
 EPS = 1e-6  # small constant to avoid divisions by 0 and log(0)
 
+
 def quat_addition(q1, q2):
     q3 = torch.zeros_like(q1)
     q3[:, 0] = (
@@ -42,6 +43,7 @@ def quat_addition(q1, q2):
     )
     q3 /= torch.norm(q3 + EPS, dim=-1, keepdim=True)
     return q3
+
 
 class Core:
     """
@@ -77,10 +79,14 @@ class Core:
         """
 
         self._num_observations = (
-            self._dim_orientation + self._dim_velocity + self._dim_omega + self._dim_task_label + dim_task_data
+            self._dim_orientation
+            + self._dim_velocity
+            + self._dim_omega
+            + self._dim_task_label
+            + dim_task_data
         )
         self._dim_task_data = dim_task_data
-        
+
         self._obs_buffer = torch.zeros(
             (self._num_envs, self._num_observations),
             device=self._device,
@@ -109,9 +115,9 @@ class Core:
         self._obs_buffer[:, 2:4] = current_state["linear_velocity"]
         self._obs_buffer[:, 4] = current_state["angular_velocity"]
         self._obs_buffer[:, 5] = self._task_label
-        self._obs_buffer[:, 6:6 + self._dim_task_data] = self._task_data
+        self._obs_buffer[:, 6 : 6 + self._dim_task_data] = self._task_data
         return self._obs_buffer
-    
+
     def create_stats(self, stats: dict) -> dict:
         """
         Creates a dictionary to store the training statistics for the task.

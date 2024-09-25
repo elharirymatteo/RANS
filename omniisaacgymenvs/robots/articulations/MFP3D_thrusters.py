@@ -54,7 +54,9 @@ class PlatformParameters:
         assert self.mass > 0, "The mass must be larger than 0."
         assert len(self.CoM) == 3, "The length of the CoM coordinates must be 3."
         assert self.refinement > 0, "The refinement level must be larger than 0."
-        assert type(self.enable_collision) == bool, "The enable_collision must be a bool."
+        assert (
+            type(self.enable_collision) == bool
+        ), "The enable_collision must be a bool."
         self.refinement = int(self.refinement)
 
 
@@ -99,8 +101,8 @@ class CreatePlatform:
                 self.platform_path + "/core",
                 "body",
                 self.settings.radius,
-                Gf.Vec3d([0, 0, 0]),
-                0.0001,
+                Gf.Vec3d(*self.settings.CoM),
+                self.settings.mass,
             )
         elif self.settings.shape == "cylinder":
             self.core_path = self.createRigidCylinder(
@@ -108,20 +110,12 @@ class CreatePlatform:
                 "body",
                 self.settings.radius,
                 self.settings.height,
-                Gf.Vec3d([0, 0, 0]),
-                0.0001,
+                Gf.Vec3d(*self.settings.CoM),
+                self.settings.mass,
             )
-        # Creates the movable CoM and the joints to control it.
-        self.createMovableCoM(
-            self.platform_path + "/movable_CoM",
-            "CoM",
-            self.settings.radius / 2,
-            self.settings.CoM,
-            self.settings.mass,
-        )
         if self.camera_cfg is not None:
             self.createCamera()
-        else: 
+        else:
             self.createArrowXform(self.core_path + "/arrow")
             self.createPositionMarkerXform(self.core_path + "/marker")
 
@@ -132,56 +126,8 @@ class CreatePlatform:
                 self.joints_path + "/v_thruster_joint_" + str(i),
                 self.core_path,
                 0.0001,
-                Gf.Vec3d([0, 0, 0]),
+                Gf.Vec3d(0, 0, 0),
             )
-
-    def createMovableCoM(
-        self, path: str, name: str, radius: float, CoM: Gf.Vec3d, mass: float
-    ) -> None:
-        """
-        Creates a movable Center of Mass (CoM).
-
-        Args:
-            path (str): The path to the movable CoM.
-            name (str): The name of the sphere used as CoM.
-            radius (float): The radius of the sphere used as CoM.
-            CoM (Gf.Vec3d): The resting position of the center of mass.
-            mass (float): The mass of the Floating Platform.
-
-        Returns:
-            str: The path to the movable CoM.
-        """
-
-        # Create Xform
-        CoM_path, CoM_prim = createXform(self.stage, path)
-        # Add shapes
-        cylinder_path = CoM_path + "/" + name
-        cylinder_path, cylinder_geom = createCylinder(
-            self.stage, CoM_path + "/" + name, radius, radius, self.settings.refinement
-        )
-        cylinder_prim = self.stage.GetPrimAtPath(cylinder_geom.GetPath())
-        applyRigidBody(cylinder_prim)
-        # Sets the collider
-        applyCollider(cylinder_prim)
-        # Sets the mass and CoM
-        applyMass(cylinder_prim, mass, Gf.Vec3d(0, 0, 0))
-
-        # Add dual prismatic joint
-        CoM_path, CoM_prim = createXform(
-            self.stage, os.path.join(self.joints_path, "/CoM_joints")
-        )
-        createP3Joint(
-            self.stage,
-            os.path.join(self.joints_path, "CoM_joints"),
-            self.core_path,
-            cylinder_path,
-            damping=1e6,
-            stiffness=1e12,
-            prefix="com_",
-            enable_drive=True,
-        )
-
-        return cylinder_path
 
     def createBasicColors(self) -> None:
         """
@@ -342,14 +288,14 @@ class CreatePlatform:
         # Create joint
         createFixedJoint(self.stage, joint_path, parent_path, thruster_path)
         return thruster_path
-    
+
     def createCamera(self) -> None:
         """
         Creates a camera module prim.
         """
-        self.camera = sensor_module_factory.get(
-            self.camera_cfg["module_name"]
-        )(self.camera_cfg)
+        self.camera = sensor_module_factory.get(self.camera_cfg["module_name"])(
+            self.camera_cfg
+        )
         self.camera.build()
 
 
