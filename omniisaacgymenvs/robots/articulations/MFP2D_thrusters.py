@@ -71,7 +71,7 @@ class CreatePlatform:
 
         # Reads the thruster configuration and computes the number of virtual thrusters.
         self.settings = PlatformParameters(**cfg["core"])
-        thruster_cfg = ConfigurationParameters(**cfg["configuration"])
+        thruster_cfg = ConfigurationParameters(cfg["configuration"])
         self.num_virtual_thrusters = compute_actions(thruster_cfg)
         self.camera_cfg = cfg.get("camera", None)
 

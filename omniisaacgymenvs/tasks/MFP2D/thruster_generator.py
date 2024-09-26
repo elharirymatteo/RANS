@@ -28,6 +28,23 @@ class ConfigurationParameters:
     def __post_init__(self):
         assert self.num_anchors > 1, "num_anchors must be larger or equal to 2."
 
+@dataclass
+class ReactionWheelConfigurationParameters:
+    """
+    Reaction wheel configuration parameters.
+    """
+
+    max_reaction_wheel_velocity: float = 1.0
+    mass: float = 0.5
+    radius: float = 0.05
+    scale_actions: bool = False
+    shape: str = "disk"
+
+    def __post_init__(self):
+        assert self.shape in ["disk", "ring"], "reaction wheel only have shape disk or ring."
+        assert self.mass > 0, "mass must be larger than 0."
+        assert self.radius > 0, "radius must be larger than 0."
+
 
 @dataclass
 class PlatformParameters:
@@ -70,6 +87,16 @@ def compute_actions(cfg_param: ConfigurationParameters):
         return 10
     else:
         return cfg_param.num_anchors * 2
+    
+def compute_moi(cfg_param: ReactionWheelConfigurationParameters):
+    """
+    Computes the moment of inertia of the reaction wheel
+    """
+    if cfg_param.shape == "ring":
+        return cfg_param.mass * cfg_param.radius * cfg_param.radius
+    else:
+        return 0.5 * cfg_param.mass * cfg_param.radius * cfg_param.radius
+
 
 
 class VirtualPlatform:
@@ -83,9 +110,13 @@ class VirtualPlatform:
         # Generates dataclasses from the configuration file
         self.core_cfg = PlatformParameters(**platform_cfg["core"])
         self.rand_cfg = PlatformRandomization(**platform_cfg["randomization"])
-        self.thruster_cfg = ConfigurationParameters(**platform_cfg["configuration"])
+        self.thruster_cfg = ConfigurationParameters(platform_cfg["configuration"])
+        self.reaction_wheel_cfg = ReactionWheelConfigurationParameters(**platform_cfg["reaction_wheel"])
+        # Copmutes reaction wheel moment of inertia
+        self._reaction_wheel_moi = compute_moi(self.reaction_wheel_cfg)
         # Computes the number of actions
         self._max_thrusters = compute_actions(self.thruster_cfg)
+        self._max_actions = self._max_thrusters + 1
         # Sets the empty buffers
         self.transforms2D = torch.zeros(
             (num_envs, self._max_thrusters, 3, 3),
@@ -93,10 +124,10 @@ class VirtualPlatform:
             dtype=torch.float32,
         )
         self.current_transforms = torch.zeros(
-            (num_envs, self._max_thrusters, 5), device=self._device, dtype=torch.float32
+            (num_envs, self._max_actions, 5), device=self._device, dtype=torch.float32
         )
         self.action_masks = torch.zeros(
-            (num_envs, self._max_thrusters), device=self._device, dtype=torch.long
+            (num_envs, self._max_actions), device=self._device, dtype=torch.long
         )
         self.thrust_force = torch.zeros(
             (num_envs, self._max_thrusters), device=self._device, dtype=torch.float32
@@ -131,7 +162,7 @@ class VirtualPlatform:
         Projects the forces on the platform."""
 
         # Applies force scaling, applies action masking
-        rand_forces = forces * self.thrust_force * (1 - self.action_masks)
+        rand_forces = forces * self.thrust_force * (1 - self.action_masks[:,:self._max_thrusters])
         # Split transforms into translation and rotation
         R = self.transforms2D[:, :, :2, :2].reshape(-1, 2, 2)
         T = self.transforms2D[:, :, 2, :2].reshape(-1, 2)
@@ -283,7 +314,7 @@ class VirtualPlatform:
             final_kill_ids = kills * kill_ids + (1 - kills) * self._max_thrusters
             # Creates a mask from the kills:
             kill_mask = torch.sum(
-                torch.nn.functional.one_hot(final_kill_ids, self._max_thrusters + 1),
+                torch.nn.functional.one_hot(final_kill_ids, self._max_thrusters),
                 dim=1,
             )
             # Removes the duplicates
@@ -351,14 +382,18 @@ class VirtualPlatform:
         transforms2D[:, :, 2, 0] = torch.cos(theta2) * radius * mask
         transforms2D[:, :, 2, 1] = torch.sin(theta2) * radius * mask
         transforms2D[:, :, 2, 2] = 1 * mask
-        # Actions masks to define which thrusters can be used.
-        action_masks[:, :] = 1 - mask.long()
+        #Add padding to the mask to fit the reaction wheel 
+        expanded_mask = torch.cat([mask, torch.zeros(self._num_envs, 1, device=self._device)], dim=1).to(self._device)
+        expanded_theta = torch.cat([theta, torch.zeros(self._num_envs, 1, device=self._device)], dim=1).to(self._device)
+        expanded_forces = torch.cat([thrust_force, torch.zeros(self._num_envs, 1, device=self._device)], dim=1).to(self._device)
+        #Actions masks to define which thrusters can be used.
+        action_masks[:, :] = 1 - expanded_mask.long()
         # Transforms to feed to the transformer.
-        current_transforms[:, :, 0] = torch.cos(theta) * mask
-        current_transforms[:, :, 1] = torch.sin(-theta) * mask
-        current_transforms[:, :, 2] = torch.cos(theta2) * radius * mask
-        current_transforms[:, :, 3] = torch.sin(theta2) * radius * mask
-        current_transforms[:, :, 4] = thrust_force * mask
+        current_transforms[:, :, 0] = torch.cos(expanded_theta) * expanded_mask
+        current_transforms[:, :, 1] = torch.sin(-expanded_theta) * expanded_mask
+        current_transforms[:, :, 2] = torch.cos(expanded_theta) * radius * expanded_mask
+        current_transforms[:, :, 3] = torch.sin(expanded_theta) * radius * expanded_mask
+        current_transforms[:, :, 4] = expanded_forces * expanded_mask
 
         # Applies random permutations to the thrusters while keeping the non-used thrusters at the end of the sequence.
         if self.rand_cfg.random_permutation:

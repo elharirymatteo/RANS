@@ -19,7 +19,7 @@ env:
   envSpacing: 12
   maxEpisodeLength: 450
   enableDebugVis: False
-  action_mode: MultiDiscrete
+  action_mode: Hybrit  #Continuous #MultiDiscrete #Hybrit
   numQuantizedActions: 1
   horizon_length: ${...train.params.config.horizon_length}
 

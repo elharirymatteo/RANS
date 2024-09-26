@@ -876,6 +876,7 @@ class ActuatorCfg:
     """
     dynamics: dict = field(default_factory=dict)
     limits: dict = field(default_factory=dict)
+    scale_actions: bool = False
 
     def __post_init__(self) -> None:
         self.dynamics = DynamicsFactory.get_item(self.dynamics)

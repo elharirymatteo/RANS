@@ -2,25 +2,25 @@ params:
   seed: ${...seed}
 
   algo:
-    name: a2c_continuous
+    name: a2c_hybrit
 
   model:
-    name: continuous_a2c_logstd
+    name: hybrit_a2c
 
   network:
-    name: actor_critic_mlp_dict
+    name: actor_critic_mlp_dict_hybrid
     separate: True
     mlp:
       units: [128, 128]
       activation: tanh
       d2rl: False
-
+      
       initializer:
         name: default
       regularizer:
         name: None
     space:
-      continuous:
+      hybrit:
         mu_activation: None
         sigma_activation: None
         mu_init:
@@ -34,7 +34,7 @@ params:
   load_path: ${...checkpoint} # path to the checkpoint to load
 
   config:
-    name: ${resolve_default:AGVSS2W,${....experiment}}
+    name: ${resolve_default:FloatingPlatform,${....experiment}}
     full_experiment_name: ${.name}
     env_name: rlgpu
     device: ${....rl_device}

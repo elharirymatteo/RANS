@@ -23,6 +23,12 @@ configuration:
   thrust_force: 1.0
   visualize: False
   save_path: "config.png"
+reaction_wheel:
+  max_reaction_wheel_velocity: 100.0 #rad/s ?
+  mass: 0.25
+  radius: 0.2
+  scale_actions: False
+  shape: "disk"
 
 # Split the maximum amount of thrust across all thrusters.
 split_thrust: True

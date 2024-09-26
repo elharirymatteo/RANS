@@ -3,22 +3,75 @@ import numpy as np
 import torch
 import warnings
 from omniisaacgymenvs.robots.articulations.utils.Types import DynamicsCfg, ZeroOrderDynamicsCfg, FirstOrderDynamicsCfg, SecondOrderDynamicsCfg, ActuatorCfg
+# DO something similar for the raction wheel. Second order dynamic. MOdel acceleration and deaccelarition. given a user input (full power) output the amount of torque. With that torque value appliy it. GO to robot, add a rigid body and apply the torque to the rigid body. Iplement it with warp with no for loops .Add a wheel with no mass that spins as /10 of the torque
+
 
 @wp.func
 def first_order_dynamics(action: wp.float32, x: wp.float32, dt: wp.float32, T: wp.float32) -> wp.float32:
+    """
+    This function models first-order dynamics, typically used for systems like low-pass filters, which gradually adjust the state `x` toward the input `action`.
+
+    Arguments:
+        action (wp.float32): Input action or control signal that the system responds to.
+        x (wp.float32): Current state or position of the system.
+        dt (wp.float32): Time step over which the dynamics are being calculated.
+        T (wp.float32): Time constant, determining how fast the system reacts to changes in the input.
+
+    Returns:
+        wp.float32: The updated state after applying the first-order dynamics.
+    """
     return x + dt * (1. / T) * (action - x)
 
 @wp.func
 def second_order_dynamics_p1(x: wp.float32, x_dot: wp.float32, dt: wp.float32) -> wp.float32:
+    """
+    This function models the first part of second-order dynamics, which updates the position based on the current velocity.
+
+    Arguments:
+        x (wp.float32): Current position or state of the system.
+        x_dot (wp.float32): Current velocity (time derivative of the position).
+        dt (wp.float32): Time step over which the dynamics are being calculated.
+
+    Returns:
+        wp.float32: The updated position after applying the first-order dynamics.
+    """
     return x + dt * x_dot
 
 @wp.func
 def second_order_dynamics_p2(action: wp.float32, x: wp.float32, x_dot: wp.float32, dt: wp.float32, omega_0: wp.float32, zeta: wp.float32) -> wp.float32:
+    """
+    This function models second-order dynamics, which describes the behavior of a damped harmonic oscillator.
+
+    Arguments:
+        action (wp.float32): Input action or force applied to the system.
+        x (wp.float32): Current position or state of the system.
+        x_dot (wp.float32): Current velocity (time derivative of the position).
+        dt (wp.float32): Time step over which the dynamics are being calculated.
+        omega_0 (wp.float32): Natural frequency of the system, related to stiffness and mass.
+        zeta (wp.float32): Damping ratio, controlling how quickly oscillations decay over time.
+
+    Returns:
+        wp.float32: The updated velocity after applying the second-order dynamics.
+    """
     return x_dot + dt * (-2. * zeta * omega_0 * x_dot - omega_0*omega_0 * x + omega_0*omega_0 * action)
 
 @wp.func
 def scale_action(action: wp.float32, lower_limits: wp.float32, upper_limit: wp.float32) -> wp.float32:
+    """
+    This function scales an action value from a normalized range (e.g., [-0.5, 0.5]) to a specified range defined by `lower_limits` and `upper_limit`.
+
+    Arguments:
+        action (wp.float32): The input action value to be scaled (assumed to be in the range [-0.5, 0.5]).
+        lower_limits (wp.float32): The lower limit of the target range.
+        upper_limit (wp.float32): The upper limit of the target range.
+
+    Returns:
+        wp.float32: The scaled action value in the range [lower_limits, upper_limit].
+    """
     return (action + 0.5) * (upper_limit - lower_limits) + lower_limits
+
+
+
 
 @wp.kernel
 def apply_first_order_dynamics(actions: wp.array(dtype=wp.float32), xs: wp.array(dtype=wp.float32), dt: wp.float32, T: wp.float32) -> None:
@@ -26,15 +79,17 @@ def apply_first_order_dynamics(actions: wp.array(dtype=wp.float32), xs: wp.array
     xs[tid] = first_order_dynamics(actions[tid], xs[tid], dt, T)
 
 @wp.kernel
-def apply_second_order_dynamics(actions: wp.array(dtype=wp.float32), xs: wp.array(dtype=wp.float32), x_dots: wp.array(dtype=wp.float32), dt: wp.float32, omega_0: wp.float32, zeta: wp.float32) -> None:
+def apply_second_order_dynamics(actions: wp.array2d(dtype=wp.float32), xs: wp.array(dtype=wp.float32), x_dots: wp.array(dtype=wp.float32), dt: wp.float32, omega_0: wp.float32, zeta: wp.float32) -> None:
     tid = wp.tid()
     xs[tid] = second_order_dynamics_p1(xs[tid], x_dots[tid], dt)
-    x_dots[tid] = second_order_dynamics_p2(actions[tid], xs[tid], x_dots[tid], dt, omega_0, zeta)
+    x_dots[tid] = second_order_dynamics_p2(actions[tid, 0], xs[tid], x_dots[tid], dt, omega_0, zeta)
 
 @wp.kernel
 def scale_actions(actions: wp.array(dtype=wp.float32), lower_limit: wp.float32, upper_limit: wp.float32):
     tid = wp.tid()
     actions[tid] = scale_action(actions[tid], lower_limit, upper_limit)
+
+
 
 class BaseDynamics:
     """
@@ -216,7 +271,11 @@ class SecondOrderDynamics(BaseDynamics):
             ],
             device=self._device,
         )
-        return self._x
+
+        return {"x": self._x, "x_dot": self._x_dot}
+
+
+
 
 class Factory:
     def __init__(self) -> None:
@@ -243,24 +302,27 @@ class Actuator:
         self._device = device
         self._dynamics = dynamics_factory(dt, num_envs, device, cfg.dynamics)
         self._limits = cfg.limits.limits
+        self._scale_actions = cfg.scale_actions
 
-    def apply_dynamics(self, actions: wp.array) -> wp.array:
-        wp.launch(
-            kernel=scale_actions,
-            dim=self._num_envs,
-            inputs=[
-                actions,
-                self._limits[0],
-                self._limits[1],
-            ],
-            device=self._device,
-        )
+    def apply_dynamics(self, actions: wp.array2d) -> wp.array:
+        if self._scale_actions:
+            wp.launch(
+                kernel=scale_actions,
+                dim=self._num_envs,
+                inputs=[
+                    actions,
+                    self._limits[0],
+                    self._limits[1],
+                ],
+                device=self._device,
+            )
         return self._dynamics.apply_dynamics(actions)
     
     def apply_dynamics_torch(self, actions: torch.Tensor) -> torch.Tensor:
         a = wp.from_torch(actions)
         output = self.apply_dynamics(a)
-        return wp.to_torch(output)
+        torch_data = {key: wp.to_torch(value) for key, value in output.items()}
+        return torch_data #wp.to_torch(output)
 
     
     def reset(self) -> None:
@@ -271,6 +333,7 @@ class Actuator:
     
 if __name__ == "__main__":
     # Test the dynamics
+
 
     from matplotlib import pyplot as plt
     import numpy as np
@@ -338,3 +401,6 @@ if __name__ == "__main__":
     plt.ylabel("Thrust percentage (%)")
     plt.legend()
     plt.show()
+
+
+    
