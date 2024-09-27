@@ -71,8 +71,9 @@ class RLGTrainer:
         self.rlg_config_dict = omegaconf_to_dict(self.cfg.train)
 
     def run(self, module_path, experiment_dir):
+        time_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         self.rlg_config_dict["params"]["config"]["train_dir"] = os.path.join(
-            module_path, "runs"
+            module_path, "runs", self.cfg.train.params.config.name, time_str
         )
 
         # create runner and set the settings

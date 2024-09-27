@@ -3,8 +3,6 @@ import numpy as np
 import torch
 import warnings
 from omniisaacgymenvs.robots.articulations.utils.Types import DynamicsCfg, ZeroOrderDynamicsCfg, FirstOrderDynamicsCfg, SecondOrderDynamicsCfg, ActuatorCfg
-# DO something similar for the raction wheel. Second order dynamic. MOdel acceleration and deaccelarition. given a user input (full power) output the amount of torque. With that torque value appliy it. GO to robot, add a rigid body and apply the torque to the rigid body. Iplement it with warp with no for loops .Add a wheel with no mass that spins as /10 of the torque
-
 
 @wp.func
 def first_order_dynamics(action: wp.float32, x: wp.float32, dt: wp.float32, T: wp.float32) -> wp.float32:

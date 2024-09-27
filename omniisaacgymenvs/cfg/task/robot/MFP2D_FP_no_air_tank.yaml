@@ -21,11 +21,11 @@ configuration:
   num_anchors: 4
   offset: 0.75839816339
   thrust_force: 1.0
-  visualize: False
-  save_path: "config.png"
+  visualize: True
+  save_path: "config2.png"
 reaction_wheel:
-  max_reaction_wheel_velocity: 100.0 #rad/s ?
-  mass: 0.25
+  max_reaction_wheel_velocity: 100 #rad/s ?
+  mass: 0.025
   radius: 0.2
   scale_actions: False
   shape: "disk"

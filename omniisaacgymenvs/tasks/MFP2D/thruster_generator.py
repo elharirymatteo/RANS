@@ -110,7 +110,7 @@ class VirtualPlatform:
         # Generates dataclasses from the configuration file
         self.core_cfg = PlatformParameters(**platform_cfg["core"])
         self.rand_cfg = PlatformRandomization(**platform_cfg["randomization"])
-        self.thruster_cfg = ConfigurationParameters(platform_cfg["configuration"])
+        self.thruster_cfg = ConfigurationParameters(**platform_cfg["configuration"])
         self.reaction_wheel_cfg = ReactionWheelConfigurationParameters(**platform_cfg["reaction_wheel"])
         # Copmutes reaction wheel moment of inertia
         self._reaction_wheel_moi = compute_moi(self.reaction_wheel_cfg)
