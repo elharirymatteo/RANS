@@ -393,30 +393,19 @@ class VirtualPlatform:
         import numpy as np
 
         # Creates a list of color
-        cmap = cm.get_cmap("hsv")
+        cmap = plt.colormaps.get_cmap("hsv")
         colors = []
         for i in range(self._max_thrusters):
             colors.append(cmap(i / self._max_thrusters))
 
         # Split into 1/4th of the envs, so that we can visualize all the configs in use_four_configuration mode.
-        env_ids = [
-            0,
-            1,
-            2,
-            3,
-            self._num_envs // 4,
-            self._num_envs // 4 + 1,
-            self._num_envs // 4 + 2,
-            self._num_envs // 4 + 3,
-            2 * self._num_envs // 4,
-            2 * self._num_envs // 4 + 1,
-            2 * self._num_envs // 4 + 2,
-            2 * self._num_envs // 4 + 3,
-            3 * self._num_envs // 4,
-            3 * self._num_envs // 4 + 1,
-            3 * self._num_envs // 4 + 2,
-            3 * self._num_envs // 4 + 3,
-        ]
+        # Construct env_ids dynamically
+        env_ids = []
+        for i in range(4):
+            for j in range(4):
+                idx = i * (self._num_envs // 4) + j
+                if idx < self._num_envs:
+                    env_ids.append(idx)
 
         # Generates a thrust on all the thrusters
         forces = torch.ones(
@@ -439,26 +428,30 @@ class VirtualPlatform:
             colors = list(filter(lambda x: x != (0.0, 0.0, 0.0), colors))
             return colors + repeatForEach(colors, 2)
 
+        # Plot
+        num_plots = len(env_ids)
+        rows = (num_plots + 3) // 4  # calculate rows needed
         fig = plt.figure()
-        fig.set_size_inches(20, 20)
-        for i in range(4):
-            for j in range(4):
-                idx = env_ids[i * 4 + j]
-                ax = fig.add_subplot(4, 4, i * 4 + (j + 1), projection="3d")
-                ax.quiver(
-                    p[idx, :, 0],
-                    p[idx, :, 1],
-                    p[idx, :, 2],
-                    f[idx, :, 0],
-                    f[idx, :, 1],
-                    f[idx, :, 2],
-                    color=renderColorsForQuiver3d(colors),
-                    length=0.2,
-                    normalize=True,
-                )
-                ax.set_xlim([-0.4, 0.4])
-                ax.set_ylim([-0.4, 0.4])
-                ax.set_zlim([-0.4, 0.4])
+        fig.set_size_inches(20, 5 * rows)
+        
+        for i in range(num_plots):
+            idx = env_ids[i]
+            ax = fig.add_subplot(rows, 4, i + 1, projection="3d")
+            ax.quiver(
+            p[idx, :, 0],
+            p[idx, :, 1],
+            p[idx, :, 2],
+            f[idx, :, 0],
+            f[idx, :, 1],
+            f[idx, :, 2],
+            color=renderColorsForQuiver3d(colors),
+            length=0.2,
+            normalize=True,
+            )
+            ax.set_xlim([-0.4, 0.4])
+            ax.set_ylim([-0.4, 0.4])
+            ax.set_zlim([-0.4, 0.4])
+        
         fig.tight_layout()
         fig.savefig(save_path, dpi=300)
         plt.close()
