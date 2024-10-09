@@ -103,7 +103,7 @@ class VirtualPlatform:
     """
     Generates a virtual floating platform with thrusters."""
 
-    def __init__(self, num_envs: int, platform_cfg: dict, device: str) -> None:
+    def __init__(self, num_envs: int, platform_cfg: dict, device: str, action_mode: str) -> None:
         self._num_envs = num_envs
         self._device = device
 
@@ -116,7 +116,12 @@ class VirtualPlatform:
         self._reaction_wheel_moi = compute_moi(self.reaction_wheel_cfg)
         # Computes the number of actions
         self._max_thrusters = compute_actions(self.thruster_cfg)
-        self._max_actions = self._max_thrusters + 1
+        self.action_mode = action_mode
+        if self.action_mode == 'Hybrit':
+            self._max_actions = self._max_thrusters + 1
+        else:
+            self._max_actions = self._max_thrusters
+        
         # Sets the empty buffers
         self.transforms2D = torch.zeros(
             (num_envs, self._max_thrusters, 3, 3),
@@ -382,18 +387,29 @@ class VirtualPlatform:
         transforms2D[:, :, 2, 0] = torch.cos(theta2) * radius * mask
         transforms2D[:, :, 2, 1] = torch.sin(theta2) * radius * mask
         transforms2D[:, :, 2, 2] = 1 * mask
-        #Add padding to the mask to fit the reaction wheel 
-        expanded_mask = torch.cat([mask, torch.zeros(self._num_envs, 1, device=self._device)], dim=1).to(self._device)
-        expanded_theta = torch.cat([theta, torch.zeros(self._num_envs, 1, device=self._device)], dim=1).to(self._device)
-        expanded_forces = torch.cat([thrust_force, torch.zeros(self._num_envs, 1, device=self._device)], dim=1).to(self._device)
-        #Actions masks to define which thrusters can be used.
-        action_masks[:, :] = 1 - expanded_mask.long()
-        # Transforms to feed to the transformer.
-        current_transforms[:, :, 0] = torch.cos(expanded_theta) * expanded_mask
-        current_transforms[:, :, 1] = torch.sin(-expanded_theta) * expanded_mask
-        current_transforms[:, :, 2] = torch.cos(expanded_theta) * radius * expanded_mask
-        current_transforms[:, :, 3] = torch.sin(expanded_theta) * radius * expanded_mask
-        current_transforms[:, :, 4] = expanded_forces * expanded_mask
+
+        if self.action_mode == "Hybrit":
+            #Add padding to the mask to fit the reaction wheel 
+            expanded_mask = torch.cat([mask, torch.zeros(self._num_envs, 1, device=self._device)], dim=1).to(self._device)
+            expanded_theta = torch.cat([theta, torch.zeros(self._num_envs, 1, device=self._device)], dim=1).to(self._device)
+            expanded_forces = torch.cat([thrust_force, torch.zeros(self._num_envs, 1, device=self._device)], dim=1).to(self._device)
+            #Actions masks to define which thrusters can be used.
+            action_masks[:, :] = 1 - expanded_mask.long()
+            # Transforms to feed to the transformer.
+            current_transforms[:, :, 0] = torch.cos(expanded_theta) * expanded_mask
+            current_transforms[:, :, 1] = torch.sin(-expanded_theta) * expanded_mask
+            current_transforms[:, :, 2] = torch.cos(expanded_theta) * radius * expanded_mask
+            current_transforms[:, :, 3] = torch.sin(expanded_theta) * radius * expanded_mask
+            current_transforms[:, :, 4] = expanded_forces * expanded_mask
+        else:
+            # Actions masks to define which thrusters can be used.
+            action_masks[:, :] = 1 - mask.long()
+            # Transforms to feed to the transformer.
+            current_transforms[:, :, 0] = torch.cos(theta) * mask
+            current_transforms[:, :, 1] = torch.sin(-theta) * mask
+            current_transforms[:, :, 2] = torch.cos(theta2) * radius * mask
+            current_transforms[:, :, 3] = torch.sin(theta2) * radius * mask
+            current_transforms[:, :, 4] = thrust_force * mask
 
         # Applies random permutations to the thrusters while keeping the non-used thrusters at the end of the sequence.
         if self.rand_cfg.random_permutation:

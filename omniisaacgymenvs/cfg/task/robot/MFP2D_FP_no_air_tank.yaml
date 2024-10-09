@@ -25,7 +25,7 @@ configuration:
   save_path: "config2.png"
 reaction_wheel:
   max_reaction_wheel_velocity: 100 #rad/s ?
-  mass: 0.025
+  mass: 0.25
   radius: 0.2
   scale_actions: False
   shape: "disk"

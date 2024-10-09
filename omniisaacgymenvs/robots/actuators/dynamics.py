@@ -7,7 +7,7 @@ from omniisaacgymenvs.robots.articulations.utils.Types import DynamicsCfg, ZeroO
 @wp.func
 def first_order_dynamics(action: wp.float32, x: wp.float32, dt: wp.float32, T: wp.float32) -> wp.float32:
     """
-    This function models first-order dynamics, typically used for systems like low-pass filters, which gradually adjust the state `x` toward the input `action`.
+    This function models first-order dynamics, which gradually adjust the state `x` toward the input `action`.
 
     Arguments:
         action (wp.float32): Input action or control signal that the system responds to.
@@ -80,7 +80,14 @@ def apply_first_order_dynamics(actions: wp.array(dtype=wp.float32), xs: wp.array
 def apply_second_order_dynamics(actions: wp.array2d(dtype=wp.float32), xs: wp.array(dtype=wp.float32), x_dots: wp.array(dtype=wp.float32), dt: wp.float32, omega_0: wp.float32, zeta: wp.float32) -> None:
     tid = wp.tid()
     xs[tid] = second_order_dynamics_p1(xs[tid], x_dots[tid], dt)
-    x_dots[tid] = second_order_dynamics_p2(actions[tid, 0], xs[tid], x_dots[tid], dt, omega_0, zeta)
+    new_x_dot = second_order_dynamics_p2(actions[tid, 0], xs[tid], x_dots[tid], dt, omega_0, zeta)
+
+    if new_x_dot < -300.0:
+        new_x_dot = wp.float32(-300.0)
+    elif new_x_dot > 300.0:
+        new_x_dot = wp.float32(300.0)
+        
+    x_dots[tid] = new_x_dot
 
 @wp.kernel
 def scale_actions(actions: wp.array(dtype=wp.float32), lower_limit: wp.float32, upper_limit: wp.float32):

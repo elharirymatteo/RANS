@@ -87,7 +87,7 @@ class MFP2DVirtual(RLTask):
         self.task = task_factory.get(task_cfg, reward_cfg, self._num_envs, self._device)
         self._penalties = EnvironmentPenalties(**penalty_cfg)
         self.virtual_platform = VirtualPlatform(
-            self._num_envs, self._platform_cfg, self._device
+            self._num_envs, self._platform_cfg, self._device, self._discrete_actions
         )
         self.DR = Disturbances(
             domain_randomization_cfg,
@@ -95,8 +95,12 @@ class MFP2DVirtual(RLTask):
             device=self._device,
         )
         self._num_observations = self.task._num_observations
-        self._max_actions = self.virtual_platform._max_thrusters + 1
-        self._num_actions = self.virtual_platform._max_thrusters + 1
+        self._max_actions = self.virtual_platform._max_thrusters
+        self._num_actions = self.virtual_platform._max_thrusters
+        if self._discrete_actions == "Hybrit":
+            self._max_actions += 1
+            self._num_actions += 1
+
         RLTask.__init__(self, name, env)
         # Instantiate the action and observations spaces
         self.set_action_and_observation_spaces()
@@ -153,7 +157,7 @@ class MFP2DVirtual(RLTask):
         elif self._discrete_actions == "Continuous":
             pass
         elif self._discrete_actions == "Hybrit":
-            # Hybrid action space: all but last are Discrete, last is Continuous
+            # Hybrid action space: all but last are Discrete, last is Continuous TODO aboid hard coded code
             discrete_actions = [spaces.Discrete(2)] * (self._max_actions - 1)
             continuous_action = [spaces.Box(low=-1.0, high=1.0, shape=(1,), dtype=np.float32)]
             # Combine discrete and continuous actions into a Tuple space
@@ -289,7 +293,7 @@ class MFP2DVirtual(RLTask):
         """create torque physics"""
         torque_actuator_cfg = ActuatorCfg(dynamics={"name":"second_order", "natural_frequency":100.0, "damping_ratio":0.707}, limits={"limits":(-20, 20)}, scale_actions = False)
         self.torque_actuator = Actuator(
-                                    dt=0.001, 
+                                    dt=self.dt, 
                                     num_envs=self._num_envs, 
                                     device=self._device, 
                                     cfg=torque_actuator_cfg
@@ -396,8 +400,7 @@ class MFP2DVirtual(RLTask):
         # Remap actions to the correct values
         if self._discrete_actions == "MultiDiscrete":
             # If actions are multidiscrete [0, 1]
-            thrust_cmds = self.actions[:,:self._max_actions - 1].float() #Last dimension is for the reaction wheel
-            reaction_wheel_cmds = self.actions[:,self._max_actions - 1:].float()
+            thrust_cmds = self.actions.float()
         elif self._discrete_actions == "Continuous":
             # Transform continuous actions to [0, 1] discrete actions.
             thrust_cmds = torch.clamp((self.actions + 1) / 2, min=0.0, max=1.0)
@@ -405,20 +408,25 @@ class MFP2DVirtual(RLTask):
         elif self._discrete_actions == "Hybrit":
             thrust_cmds = torch.clamp((self.actions[:,:-1] + 1) / 2, min=0.0, max=1.0)
             reaction_wheel_cmds = torch.clamp(self.actions[:,self._max_actions - 1:], min=-1.0, max=1.0)
+            self.reaction_wheel_velocity_cmd = self.virtual_platform.reaction_wheel_cfg.max_reaction_wheel_velocity * reaction_wheel_cmds
+            #Control directly the torque
+            # self.reaction_wheel_velocity_cmd = 1.0 * reaction_wheel_cmds 
+
+            # self.reaction_wheel_velocity_cmd = self.DR.noisy_actions.add_noise_on_act(self.reaction_wheel_velocity_cmd, step=self.step)
+            self.reaction_wheel_velocity_cmd[reset_env_ids] = 0
         else:
             raise NotImplementedError("")
 
         # Applies the thrust multiplier
         thrusts = self.virtual_platform.thruster_cfg.thrust_force * thrust_cmds
-        self.reaction_wheel_velocity_cmd = self.virtual_platform.reaction_wheel_cfg.max_reaction_wheel_velocity * reaction_wheel_cmds
 
         # Adds random noise on the actions
         thrusts = self.DR.noisy_actions.add_noise_on_act(thrusts, step=self.step)
-        # self.reaction_wheel_velocity_cmd = self.DR.noisy_actions.add_noise_on_act(self.reaction_wheel_velocity_cmd, step=self.step)
+        
 
         # clear actions for reset envs
         thrusts[reset_env_ids] = 0
-        self.reaction_wheel_velocity_cmd[reset_env_ids] = 0
+        
 
         # If split thrust, equally shares the maximum amount of thrust across thrusters.
         if self.split_thrust:
@@ -443,11 +451,16 @@ class MFP2DVirtual(RLTask):
             forces=self.forces, positions=self.positions, is_global=False
         )
 
-        #Torque forces (reaction wheel)
-        second_order_dynamics = self.torque_actuator.apply_dynamics_torch(self.reaction_wheel_velocity_cmd)
         self.torque_force = torch.zeros((self._num_envs, 3), device=self._device) # 3 for the X,Y,Z dim
-        torque_z = self.virtual_platform._reaction_wheel_moi * second_order_dynamics["x_dot"]
-        self.torque_force[:, 2] = -torque_z
+        if self._discrete_actions == "Hybrit":
+            #Torque forces (reaction wheel)
+            second_order_dynamics = self.torque_actuator.apply_dynamics_torch(self.reaction_wheel_velocity_cmd)
+            torque_z = self.virtual_platform._reaction_wheel_moi * second_order_dynamics["x_dot"]
+            self.torque_force[:, 2] = -torque_z
+
+            #Control directly the torque
+            # torque_z = self.reaction_wheel_velocity_cmd.squeeze()
+            # self.torque_force[:, 2] = -torque_z
 
         # Applies the domain randomization
         floor_forces = self.DR.force_disturbances.get_force_disturbance(self.root_pos)

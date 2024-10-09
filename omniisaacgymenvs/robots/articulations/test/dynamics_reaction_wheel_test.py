@@ -25,7 +25,7 @@ if __name__ == "__main__":
     from omniisaacgymenvs.robots.articulations.utils.Types import DynamicsCfg, ZeroOrderDynamicsCfg, FirstOrderDynamicsCfg, SecondOrderDynamicsCfg, ActuatorCfg
 
     # Set the simulation parameters
-    dt = 0.0005  # Time step
+    dt = 0.02  # Time step
     num_envs = 4  # Number of environments
     device = "cuda"  # Device for Warp computation
     wp.init()

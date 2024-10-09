@@ -73,7 +73,7 @@ class RLGTrainer:
     def run(self, module_path, experiment_dir):
         time_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         self.rlg_config_dict["params"]["config"]["train_dir"] = os.path.join(
-            module_path, "runs", self.cfg.train.params.config.name, time_str
+            module_path, "runs", self.cfg.train.params.config.name, f"{time_str}_{self.cfg.task.env.action_mode}"
         )
 
         # create runner and set the settings
@@ -181,7 +181,7 @@ def parse_hydra_configs(cfg: DictConfig):
         # Make sure to install WandB if you actually use this.
         import wandb
 
-        run_name = f"{cfg.wandb_name}_{time_str}"
+        run_name = f"{cfg.wandb_name}_{time_str}_{cfg.task.env.action_mode}"
 
         wandb.init(
             project=cfg.wandb_project,
