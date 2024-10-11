@@ -1,7 +1,5 @@
 __author__ = "Antoine Richard, Matteo El Hariry"
-__copyright__ = (
-    "Copyright 2023-24, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-)
+__copyright__ = "Copyright 2023-24, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
 __license__ = "GPL"
 __version__ = "2.1.0"
 __maintainer__ = "Antoine Richard"
@@ -67,23 +65,15 @@ class GoToPositionTask(GoToPositionTask2D, Core):
         self.define_observation_space(self._dim_task_data)
 
         # Curriculum samplers
-        self._spawn_position_sampler = CurriculumSampler(
-            self._task_parameters.spawn_position_curriculum
-        )
-        self._spawn_linear_velocity_sampler = CurriculumSampler(
-            self._task_parameters.spawn_linear_velocity_curriculum
-        )
+        self._spawn_position_sampler = CurriculumSampler(self._task_parameters.spawn_position_curriculum)
+        self._spawn_linear_velocity_sampler = CurriculumSampler(self._task_parameters.spawn_linear_velocity_curriculum)
         self._spawn_angular_velocity_sampler = CurriculumSampler(
             self._task_parameters.spawn_angular_velocity_curriculum
         )
 
         # Buffers
-        self._goal_reached = torch.zeros(
-            (self._num_envs), device=self._device, dtype=torch.int32
-        )
-        self._target_positions = torch.zeros(
-            (self._num_envs, 3), device=self._device, dtype=torch.float32
-        )
+        self._goal_reached = torch.zeros((self._num_envs), device=self._device, dtype=torch.int32)
+        self._target_positions = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
         self._task_label = self._task_label * 0
 
     def update_observation_tensor(self, current_state: dict) -> torch.Tensor:
@@ -133,12 +123,10 @@ class GoToPositionTask(GoToPositionTask2D, Core):
         """
 
         num_goals = len(env_ids)
-        self._target_positions[env_ids] = (
-            torch.rand((num_goals, 3), device=self._device)
-            * self._task_parameters.goal_random_position
-            * 2
-            - self._task_parameters.goal_random_position
+        self._target_positions[env_ids, :2] = self._spawn_position_sampler.sample(
+            (num_goals, 2), step, device=self._device
         )
+        self._target_positions[env_ids, 2] = 0
         p = self._target_positions[env_ids]
         q = torch.zeros((num_goals, 4), device=self._device)
         q[:, 0] = 1
@@ -165,9 +153,7 @@ class GoToPositionTask(GoToPositionTask2D, Core):
         # Resets the counter of steps for which the goal was reached
         self._goal_reached[env_ids] = 0
         # Randomizes the starting position of the platform
-        initial_position = torch.zeros(
-            (num_resets, 3), device=self._device, dtype=torch.float32
-        )
+        initial_position = torch.zeros((num_resets, 3), device=self._device, dtype=torch.float32)
         r = self._spawn_position_sampler.sample(num_resets, step, device=self._device)
         theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
         phi = torch.rand((num_resets,), device=self._device) * math.pi
@@ -175,38 +161,22 @@ class GoToPositionTask(GoToPositionTask2D, Core):
         initial_position[:, 1] = r * torch.sin(theta) * torch.sin(phi)
         initial_position[:, 1] = r * torch.cos(phi)
         # Randomizes the orientation of the platform
-        initial_orientation = torch.zeros(
-            (num_resets, 4), device=self._device, dtype=torch.float32
-        )
+        initial_orientation = torch.zeros((num_resets, 4), device=self._device, dtype=torch.float32)
         uvw = torch.rand((num_resets, 3), device=self._device)
-        initial_orientation[:, 0] = torch.sqrt(uvw[:, 0]) * torch.cos(
-            uvw[:, 2] * 2 * math.pi
-        )
-        initial_orientation[:, 1] = torch.sqrt(1 - uvw[:, 0]) * torch.sin(
-            uvw[:, 1] * 2 * math.pi
-        )
-        initial_orientation[:, 2] = torch.sqrt(1 - uvw[:, 0]) * torch.cos(
-            uvw[:, 1] * 2 * math.pi
-        )
-        initial_orientation[:, 3] = torch.sqrt(uvw[:, 0]) * torch.sin(
-            uvw[:, 2] * 2 * math.pi
-        )
+        initial_orientation[:, 0] = torch.sqrt(uvw[:, 0]) * torch.cos(uvw[:, 2] * 2 * math.pi)
+        initial_orientation[:, 1] = torch.sqrt(1 - uvw[:, 0]) * torch.sin(uvw[:, 1] * 2 * math.pi)
+        initial_orientation[:, 2] = torch.sqrt(1 - uvw[:, 0]) * torch.cos(uvw[:, 1] * 2 * math.pi)
+        initial_orientation[:, 3] = torch.sqrt(uvw[:, 0]) * torch.sin(uvw[:, 2] * 2 * math.pi)
         # Randomizes the linear velocity of the platform
-        initial_velocity = torch.zeros(
-            (num_resets, 6), device=self._device, dtype=torch.float32
-        )
-        linear_velocity = self._spawn_linear_velocity_sampler.sample(
-            num_resets, step, device=self._device
-        )
+        initial_velocity = torch.zeros((num_resets, 6), device=self._device, dtype=torch.float32)
+        linear_velocity = self._spawn_linear_velocity_sampler.sample(num_resets, step, device=self._device)
         theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
         phi = torch.rand((num_resets,), device=self._device) * math.pi
         initial_velocity[:, 0] = linear_velocity * torch.cos(theta) * torch.sin(phi)
         initial_velocity[:, 1] = linear_velocity * torch.sin(theta) * torch.sin(phi)
         initial_velocity[:, 2] = linear_velocity * torch.cos(phi)
         # Randomizes the angular velocity of the platform
-        angular_velocity = self._spawn_angular_velocity_sampler.sample(
-            num_resets, step, device=self._device
-        )
+        angular_velocity = self._spawn_angular_velocity_sampler.sample(num_resets, step, device=self._device)
         theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
         phi = torch.rand((num_resets,), device=self._device) * math.pi
         initial_velocity[:, 3] = angular_velocity * torch.cos(theta) * torch.sin(phi)
@@ -250,13 +220,9 @@ class GoToPositionTask(GoToPositionTask2D, Core):
         # Resets the counter of steps for which the goal was reached
         r = self._spawn_position_sampler.sample(num_resets, step, device=self._device)
         # Randomizes the linear velocity of the platform
-        linear_velocities = self._spawn_linear_velocity_sampler.sample(
-            num_resets, step, device=self._device
-        )
+        linear_velocities = self._spawn_linear_velocity_sampler.sample(num_resets, step, device=self._device)
         # Randomizes the angular velocity of the platform
-        angular_velocities = self._spawn_angular_velocity_sampler.sample(
-            num_resets, step, device=self._device
-        )
+        angular_velocities = self._spawn_angular_velocity_sampler.sample(num_resets, step, device=self._device)
 
         r = r.cpu().numpy()
         linear_velocities = linear_velocities.cpu().numpy()

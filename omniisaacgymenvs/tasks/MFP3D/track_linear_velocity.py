@@ -1,7 +1,5 @@
 __author__ = "Antoine Richard, Matteo El Hariry"
-__copyright__ = (
-    "Copyright 2023-24, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
-)
+__copyright__ = "Copyright 2023-24, Space Robotics Lab, SnT, University of Luxembourg, SpaceR"
 __license__ = "GPL"
 __version__ = "2.1.0"
 __maintainer__ = "Antoine Richard"
@@ -43,9 +41,7 @@ class TrackLinearVelocityTask(TrackLinearVelocityTask2D, Core):
     Implements the TrackXYVelocity task. The robot has to reach a target linear velocity.
     """
 
-    def __init__(
-        self, task_param: dict, reward_param: dict, num_envs: int, device: str
-    ):
+    def __init__(self, task_param: dict, reward_param: dict, num_envs: int, device: str):
         """
         Initializes the task.
 
@@ -60,6 +56,10 @@ class TrackLinearVelocityTask(TrackLinearVelocityTask2D, Core):
         self._task_parameters = TrackLinearVelocityParameters(**task_param)
         self._reward_parameters = TrackLinearVelocityReward(**reward_param)
 
+        # Define the specific observation space dimensions for this task
+        self._dim_task_data = 3
+        self.define_observation_space(self._dim_task_data)
+
         # Curriculum
         self._target_linear_velocity_sampler = CurriculumSampler(
             self._task_parameters.target_linear_velocity_curriculum,
@@ -72,12 +72,8 @@ class TrackLinearVelocityTask(TrackLinearVelocityTask2D, Core):
         )
 
         # Buffers
-        self._goal_reached = torch.zeros(
-            (self._num_envs), device=self._device, dtype=torch.int32
-        )
-        self._target_velocities = torch.zeros(
-            (self._num_envs, 3), device=self._device, dtype=torch.float32
-        )
+        self._goal_reached = torch.zeros((self._num_envs), device=self._device, dtype=torch.int32)
+        self._target_velocities = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
         self._task_label = self._task_label * 2
 
     def update_observation_tensor(self, current_state: dict) -> torch.Tensor:
@@ -104,9 +100,7 @@ class TrackLinearVelocityTask(TrackLinearVelocityTask2D, Core):
             torch.Tensor: The observation tensor.
         """
 
-        self._velocity_error = (
-            self._target_velocities - current_state["linear_velocity"]
-        )
+        self._velocity_error = self._target_velocities - current_state["linear_velocity"]
         self._position_error = current_state["position"]
         self._task_data[:, :3] = self._velocity_error
         return self.update_observation_tensor(current_state)
@@ -114,8 +108,6 @@ class TrackLinearVelocityTask(TrackLinearVelocityTask2D, Core):
     def get_goals(
         self,
         env_ids: torch.Tensor,
-        target_positions: torch.Tensor,
-        target_orientations: torch.Tensor,
         step: int = 0,
     ) -> list:
         """
@@ -132,9 +124,7 @@ class TrackLinearVelocityTask(TrackLinearVelocityTask2D, Core):
 
         num_goals = len(env_ids)
         # Randomizes the target linear velocity
-        r = self._target_linear_velocity_sampler.sample(
-            num_goals, step=step, device=self._device
-        )
+        r = self._target_linear_velocity_sampler.sample(num_goals, step=step, device=self._device)
         theta = torch.rand((num_goals,), device=self._device) * 2 * math.pi
         phi = torch.rand((num_goals,), device=self._device) * math.pi
 
@@ -142,8 +132,10 @@ class TrackLinearVelocityTask(TrackLinearVelocityTask2D, Core):
         self._target_velocities[env_ids, 1] = r * torch.sin(theta) * torch.sin(phi)
         self._target_velocities[env_ids, 2] = r * torch.cos(phi)
 
+        p = torch.zeros((num_goals, 3), device=self._device, dtype=torch.float32)
+        q = torch.zeros((num_goals, 4), device=self._device, dtype=torch.float32)
         # This does not matter
-        return target_positions, target_orientations
+        return p, q
 
     def get_initial_conditions(
         self, env_ids: torch.Tensor, step: int = 0
@@ -164,42 +156,24 @@ class TrackLinearVelocityTask(TrackLinearVelocityTask2D, Core):
         # Resets the counter of steps for which the goal was reached
         self.reset(env_ids)
         # Randomizes the starting position of the platform
-        initial_position = torch.zeros(
-            (num_resets, 3), device=self._device, dtype=torch.float32
-        )
+        initial_position = torch.zeros((num_resets, 3), device=self._device, dtype=torch.float32)
         # Randomizes the heading of the platform
-        initial_orientation = torch.zeros(
-            (num_resets, 4), device=self._device, dtype=torch.float32
-        )
+        initial_orientation = torch.zeros((num_resets, 4), device=self._device, dtype=torch.float32)
         uvw = torch.rand((num_resets, 3), device=self._device)
-        initial_orientation[:, 0] = torch.sqrt(uvw[:, 0]) * torch.cos(
-            uvw[:, 2] * 2 * math.pi
-        )
-        initial_orientation[:, 1] = torch.sqrt(1 - uvw[:, 0]) * torch.sin(
-            uvw[:, 1] * 2 * math.pi
-        )
-        initial_orientation[:, 2] = torch.sqrt(1 - uvw[:, 0]) * torch.cos(
-            uvw[:, 1] * 2 * math.pi
-        )
-        initial_orientation[:, 3] = torch.sqrt(uvw[:, 0]) * torch.sin(
-            uvw[:, 2] * 2 * math.pi
-        )
+        initial_orientation[:, 0] = torch.sqrt(uvw[:, 0]) * torch.cos(uvw[:, 2] * 2 * math.pi)
+        initial_orientation[:, 1] = torch.sqrt(1 - uvw[:, 0]) * torch.sin(uvw[:, 1] * 2 * math.pi)
+        initial_orientation[:, 2] = torch.sqrt(1 - uvw[:, 0]) * torch.cos(uvw[:, 1] * 2 * math.pi)
+        initial_orientation[:, 3] = torch.sqrt(uvw[:, 0]) * torch.sin(uvw[:, 2] * 2 * math.pi)
         # Randomizes the linear velocity of the platform
-        initial_velocity = torch.zeros(
-            (num_resets, 6), device=self._device, dtype=torch.float32
-        )
-        linear_velocity = self._spawn_linear_velocity_sampler.sample(
-            num_resets, step, device=self._device
-        )
+        initial_velocity = torch.zeros((num_resets, 6), device=self._device, dtype=torch.float32)
+        linear_velocity = self._spawn_linear_velocity_sampler.sample(num_resets, step, device=self._device)
         theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
         phi = torch.rand((num_resets,), device=self._device) * math.pi
         initial_velocity[:, 0] = linear_velocity * torch.cos(theta) * torch.sin(phi)
         initial_velocity[:, 1] = linear_velocity * torch.sin(theta) * torch.sin(phi)
         initial_velocity[:, 2] = linear_velocity * torch.cos(phi)
         # Randomizes the angular velocity of the platform
-        angular_velocity = self._spawn_angular_velocity_sampler.sample(
-            num_resets, step, device=self._device
-        )
+        angular_velocity = self._spawn_angular_velocity_sampler.sample(num_resets, step, device=self._device)
         theta = torch.rand((num_resets,), device=self._device) * 2 * math.pi
         phi = torch.rand((num_resets,), device=self._device) * math.pi
         initial_velocity[:, 3] = angular_velocity * torch.cos(theta) * torch.sin(phi)
@@ -227,14 +201,10 @@ class TrackLinearVelocityTask(TrackLinearVelocityTask2D, Core):
 
         num_resets = self._num_envs
         # Randomizes the linear velocity of the platform
-        linear_velocities = self._spawn_linear_velocity_sampler.sample(
-            num_resets, step, device=self._device
-        )
+        linear_velocities = self._spawn_linear_velocity_sampler.sample(num_resets, step, device=self._device)
 
         # Randomizes the angular velocity of the platform
-        angular_velocities = self._spawn_angular_velocity_sampler.sample(
-            num_resets, step, device=self._device
-        )
+        angular_velocities = self._spawn_angular_velocity_sampler.sample(num_resets, step, device=self._device)
 
         linear_velocities = linear_velocities.cpu().numpy()
         angular_velocities = angular_velocities.cpu().numpy()
@@ -279,12 +249,8 @@ class TrackLinearVelocityTask(TrackLinearVelocityTask2D, Core):
 
         num_resets = self._num_envs
         # Randomizes the target linear velocity of the platform
-        target_velocities = torch.zeros(
-            (num_resets, 3), device=self._device, dtype=torch.float32
-        )
-        r = self._target_linear_velocity_sampler.sample(
-            num_resets, step=step, device=self._device
-        )
+        target_velocities = torch.zeros((num_resets, 3), device=self._device, dtype=torch.float32)
+        r = self._target_linear_velocity_sampler.sample(num_resets, step=step, device=self._device)
 
         r = r.cpu().numpy()
 
