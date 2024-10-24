@@ -18,7 +18,7 @@ core:
   refinement: 2
 configuration:
   use_four_configurations: False
-  num_anchors: 4
+  num_anchors: 2
   offset: 0.75839816339
   thrust_force: 1.0
   visualize: True

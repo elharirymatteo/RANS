@@ -103,7 +103,7 @@ class EnergyPenalty(BasePenalty):
 
         if self.enable:
             self.last_rate = self.get_rate(step)
-            self.last_penalties = torch.sum(torch.abs(actions), -1)
+            self.last_penalties = torch.sum(torch.abs(actions[:,:-1]), -1) #remove reaction wheel from energy penalty
             return self.last_penalties * self.last_rate * self.weight
         else:
             return torch.zeros(

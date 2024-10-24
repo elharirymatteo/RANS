@@ -274,11 +274,9 @@ class MFP2DVirtual(RLTask):
             translation=self._fp_position,
             cfg=self._platform_cfg,
         )
-        self._sim_config.apply_articulation_settings(
-            "modular_floating_platform",
-            get_prim_at_path(fp.prim_path),
-            self._sim_config.parse_actor_config("modular_floating_platform"),
-        )
+
+        self._sim_config.apply_articulation_settings("modular_floating_platform",get_prim_at_path(fp.prim_path),self._sim_config.parse_actor_config("modular_floating_platform"),)
+
 
     def get_target(self) -> None:
         """
@@ -291,7 +289,7 @@ class MFP2DVirtual(RLTask):
 
     def get_torque_dynamics(self) -> None:
         """create torque physics"""
-        torque_actuator_cfg = ActuatorCfg(dynamics={"name":"second_order", "natural_frequency":100.0, "damping_ratio":0.707}, limits={"limits":(-20, 20)}, scale_actions = False)
+        torque_actuator_cfg = ActuatorCfg(dynamics={"name":"second_order", "natural_frequency":20.0, "damping_ratio":0.999}, limits={"limits":(-20, 20)}, scale_actions = False)
         self.torque_actuator = Actuator(
                                     dt=self.dt, 
                                     num_envs=self._num_envs, 
@@ -454,7 +452,7 @@ class MFP2DVirtual(RLTask):
         self.torque_force = torch.zeros((self._num_envs, 3), device=self._device) # 3 for the X,Y,Z dim
         if self._discrete_actions == "Hybrit":
             #Torque forces (reaction wheel)
-            second_order_dynamics = self.torque_actuator.apply_dynamics_torch(self.reaction_wheel_velocity_cmd)
+            second_order_dynamics = self.torque_actuator.apply_dynamics_torch(self.reaction_wheel_velocity_cmd.squeeze())
             torque_z = self.virtual_platform._reaction_wheel_moi * second_order_dynamics["x_dot"]
             self.torque_force[:, 2] = -torque_z
 

@@ -1,6 +1,6 @@
 energy_penalty:
   enable: True
-  weight: 0.03
+  weight: 0.5
   curriculum:
     function: sigmoid
     start: 250

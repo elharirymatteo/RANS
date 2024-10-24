@@ -166,6 +166,8 @@ class VirtualPlatform:
         """
         Projects the forces on the platform."""
 
+        
+
         # Applies force scaling, applies action masking
         rand_forces = forces * self.thrust_force * (1 - self.action_masks[:,:self._max_thrusters])
         # Split transforms into translation and rotation
@@ -179,6 +181,8 @@ class VirtualPlatform:
         force_vector = self.unit_vector * rand_forces.view(-1, self._max_thrusters, 1)
         rotated_forces = torch.matmul(R.reshape(-1, 2, 2), force_vector.view(-1, 2, 1))
         projected_forces = torch.cat([rotated_forces[:, :, 0], zero], dim=-1)
+
+        breakpoint()
 
         return positions, projected_forces
 

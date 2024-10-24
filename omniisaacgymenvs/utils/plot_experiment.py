@@ -944,6 +944,7 @@ def plot_one_episode(
             plot_single_xy_position_heading,
             plot_single_GoToPose_distance_to_target,
             plot_single_GoToPose_log_distance_to_target,
+            plot_single_GoToPose_reaction_wheel_velocity,
         ]
     elif task_flag == 2:  # TrackXYVelocity
         task_data_label = ["error_vx", "error_vy"]
@@ -1389,6 +1390,44 @@ def plot_single_xy_position_heading(
         plt.show()
     plt.close()
     
+    return fig_count
+
+def plot_single_GoToPose_reaction_wheel_velocity(
+    state_history: np.ndarray, control_history: np.ndarray, tgrid: np.ndarray, save_dir: str, fig_count: int, show: bool, **kwargs
+) -> int:
+    """
+    Plot acceleration with heading."""
+
+    ang_vel_z = state_history[:, 4].flatten()
+
+    # Scale the control history to represent the target angular velocity for the z-axis wheel
+    target_ang_vel_z = control_history[:-1, 0] * 100  # Assuming the first column is the z-axis reaction wheel control
+
+    # Create a new figure
+    fig_count += 1
+    plt.figure(fig_count)
+    plt.clf()
+    
+    # Plot angular velocity
+    plt.plot(tgrid, ang_vel_z, label="Angular Velocity (z)", color="blue", linewidth=2)
+
+    # Plot target angular velocity for the z-axis reaction wheel
+    plt.plot(tgrid[:-1], target_ang_vel_z, label="Target RW (z) Velocity", linestyle="--", color="orange")
+
+    # Add labels, title, and legend
+    plt.xlabel("Time steps")
+    plt.ylabel("Angular Velocity [rad/s]")
+    plt.title("Angular Speed and Target Reaction Wheel Angular Velocity Over Time (z-axis)")
+    plt.legend(loc="best")
+    plt.grid(True)
+
+    # Save and show the plot
+    if save_dir:
+        plt.savefig(save_dir + "combined_angular_velocity_target_rw_actions.png")
+    if show:
+        plt.show()
+    plt.close()
+
     return fig_count
 
 

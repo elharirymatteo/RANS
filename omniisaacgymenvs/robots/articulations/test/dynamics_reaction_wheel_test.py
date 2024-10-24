@@ -30,12 +30,12 @@ if __name__ == "__main__":
     device = "cuda"  # Device for Warp computation
     wp.init()
 
-    cfg = ActuatorCfg(dynamics={"name":"second_order", "natural_frequency":100.0, "damping_ratio":0.707}, limits={"limits":(-20, 20)}, scale_actions = False)
+    cfg = ActuatorCfg(dynamics={"name":"second_order", "natural_frequency":20.0, "damping_ratio":0.999}, limits={"limits":(-20, 20)}, scale_actions = False)
     actuator = Actuator(dt, num_envs, device, cfg)
 
 
     # Set initial actions for the reaction wheel
-    action = wp.zeros((num_envs, 1), device=device, dtype=wp.float32)
+    action = wp.zeros((num_envs), device=device, dtype=wp.float32)
     mass = 0.25
     radius = 0.2
     moment_of_innertia = 0.5 * mass * radius * radius #0.5 * mass * radius^2
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     # Run the simulation and record values over time
     for i in range(1000):
         if i < 333:
-            action.fill_(100)  # Apply constant positive torque for the first 500 steps
+            action.fill_(1)  # Apply constant positive torque for the first 500 steps
             dynamics_dic = actuator.apply_dynamics(action)
             actions.append(action.to('cpu').numpy()[0])
             ang_vels.append(dynamics_dic["x"].to('cpu').numpy()[0])
@@ -57,7 +57,7 @@ if __name__ == "__main__":
             torque = dynamics_dic["x_dot"].to('cpu').numpy()[0] * moment_of_innertia
             torques.append(torque)
         elif i < 666:
-            action.fill_(-100)  # Apply constant negative torque for the next 500 steps
+            action.fill_(-1)  # Apply constant negative torque for the next 500 steps
             dynamics_dic = actuator.apply_dynamics(action)
             actions.append(action.to('cpu').numpy()[0])
             ang_vels.append(dynamics_dic["x"].to('cpu').numpy()[0])
@@ -98,7 +98,7 @@ if __name__ == "__main__":
     cfg = ActuatorCfg(dynamics={"name":"second_order", "natural_frequency":100.0, "damping_ratio":0.707}, limits={"limits":(-20, 20)}, scale_actions = False)
     actuator = Actuator(dt, num_envs, device, cfg)
 
-    action = wp.zeros((num_envs, 1), device=device, dtype=wp.float32)
+    action = wp.zeros((num_envs), device=device, dtype=wp.float32)
 
     actions = []
     values = []

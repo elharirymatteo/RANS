@@ -71,7 +71,6 @@ def eval_multi_agents(cfg, horizon):
     for _ in range(horizon):
         actions = agent.get_action(obs["obs"], is_deterministic=True)
         obs, reward, done, info = env.step(actions)
-
         if store_all_agents:
             ep_data["act"].append(actions.cpu().numpy())
             ep_data["obs"].append(obs["obs"]["state"].cpu().numpy())
