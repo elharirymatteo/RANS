@@ -285,7 +285,7 @@ If you use the current repository in your work, we suggest citing the following 
 @article{el2023drift,
   title={DRIFT: Deep Reinforcement Learning for Intelligent Floating Platforms Trajectories},
   author={El-Hariry, Matteo and Richard, Antoine and Muralidharan, Vivek and Yalcin, Baris Can and Geist, Matthieu and Olivares-Mendez, Miguel},
-  journal={arXiv preprint arXiv:2310.04266},
+  conference={17th Symposium on Advanced Space Technologies in Robotics and Automation (ASTRA '23)},
   year={2023}
 }
 
