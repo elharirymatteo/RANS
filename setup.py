@@ -48,6 +48,9 @@ INSTALL_REQUIRES = [
     "wandb>=0.13",
     "cvxpy==1.3.2",
     "mujoco==2.3.6",
+    "pandas==1.3.5",
+    "matplotlib==3.4.3",
+    "seaborn==0.11.2",
 ]
 
 # Installation operation
